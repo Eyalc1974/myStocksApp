@@ -1,0 +1,79 @@
+{
+  "symbol" : "AAPL",
+  "asOfEpochMillis" : 1765571404350,
+  "returnsByDays" : {
+    "2" : 0.3066599321740262,
+    "3" : 0.0503796466227595,
+    "4" : -0.2690293421335821,
+    "5" : -0.9511934449590367
+  },
+  "recommendationByDays" : {
+    "2" : "HOLD",
+    "3" : "HOLD",
+    "4" : "HOLD",
+    "5" : "HOLD"
+  },
+  "scoreByDays" : {
+    "2" : -0.04667003391298696,
+    "3" : -0.1748101766886203,
+    "4" : -0.3345146710667911,
+    "5" : -0.6755967224795184
+  },
+  "indicatorValues" : {
+    "TEMA_10_weekly_open" : 280.0466,
+    "SAR_weekly" : 270.9,
+    "ATR_14_daily" : 5.0193,
+    "BBANDS_upper" : 285.6941,
+    "BBANDS_lower" : 266.1299,
+    "BBANDS_mid" : 275.912,
+    "AD_daily" : 8.15052934756066E10,
+    "OBV_weekly" : 2.60478536338E11
+  },
+  "indicatorNotes" : {
+    "TEMA_10_weekly_open" : "TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=278.0300, TEMA=280.0466 => BEARISH.",
+    "SAR_weekly" : "Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=278.0300, SAR=270.9000 => UPTREND.",
+    "ATR_14_daily" : "ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=5.0193 (1.81% of price).",
+    "BBANDS" : "Bollinger Bands describe a volatility envelope around a moving average (middle band). Interpretation: price near upper band suggests strength; near lower band suggests weakness; mid band is the mean. Current: close=278.0300. Close is between mid and upper band (moderate bullish bias).",
+    "AD_daily" : "Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.",
+    "OBV_weekly" : "On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: DOWN."
+  },
+  "fundamentals" : {
+    "Name" : "Apple Inc",
+    "Sector" : "TECHNOLOGY",
+    "Industry" : "CONSUMER ELECTRONICS",
+    "MarketCapitalization" : "4126073422000",
+    "PERatio" : "37.32",
+    "PriceToBookRatio" : "55.87",
+    "DividendYield" : "0.0037"
+  },
+  "risk" : {
+    "ATR_pct" : "1.81"
+  },
+  "newsSentimentScore" : null,
+  "newsTop" : [ {
+    "title" : "Danaher Corporation Stock (DHR) Today: Latest News, Analyst Forecasts, and What Investors Are Watching on Dec. 12, 2025",
+    "url" : "https://ts2.tech/en/danaher-corporation-stock-dhr-today-latest-news-analyst-forecasts-and-what-investors-are-watching-on-dec-12-2025/",
+    "summary" : "Danaher Corporation (NYSE: DHR) is trading around $231 today, with investors focused on new valuation analyses, institutional positioning updates, and analyst forecasts. The stock is near a key technical level and analysts are largely constructive, with price targets often clustering in the mid-$240s to low-$260s. Key factors include the recovery of bioprocessing, potential China diagnostics headwinds, and academic/government spending trends.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Most Expensive Stock in the World 2025: Why Berkshire Hathaway’s $755,000 Shares Still Dominate Wall Street",
+    "url" : "https://ts2.tech/en/most-expensive-stock-in-the-world-2025-why-berkshire-hathaways-755000-shares-still-dominate-wall-street/",
+    "summary" : "Berkshire Hathaway Class A (BRK.A) remains the world's most expensive stock by share price, trading above $755,000 in late 2025. This high price is primarily due to Warren Buffett's lifelong refusal to split Class A shares, fostering a long-term investor culture. With a market capitalization over $1 trillion, a record cash pile of $382 billion, and a leadership transition as Greg Abel takes over as CEO from Buffett, the company continues to evolve its diverse business empire.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "Apple Manufacturing Academy launches virtual programming",
+    "url" : "https://www.ctemag.com/news/apple-manufacturing-academy-launches-virtual-programming",
+    "summary" : "Apple has expanded its Apple Manufacturing Academy with new virtual programming aimed at small and medium-sized businesses. Designed by Apple experts and developed with Michigan State University, the free online courses cover advanced manufacturing topics and professional development to foster innovation and strengthen the U.S. manufacturing sector. This initiative is part of Apple's commitment to invest $600 billion in the U.S. economy, building on the success of its Detroit-based hands-on training.",
+    "sentiment" : "Bullish"
+  }, {
+    "title" : "TD Cowen Stays Bullish on Amazon (AMZN), Sees Multiple Growth Drivers Into 2026",
+    "url" : "https://finviz.com/news/252796/td-cowen-stays-bullish-on-amazon-amzn-sees-multiple-growth-drivers-into-2026",
+    "summary" : "TD Cowen reiterated a \"Buy\" rating on Amazon (AMZN) with a $300 price target, identifying it as their \"Top Mega Cap Internet Pick.\" The firm anticipates strong growth drivers for Amazon into 2026, including accelerated AWS revenue, momentum in eCommerce and advertising, and continued operating margin expansion. These factors are expected to be fueled by AI workload demand, improved delivery speeds, and an expanding Prime Video ad business.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Citi Keeps A Sell Rating On Intel Corporation (INTC)",
+    "url" : "https://finance.yahoo.com/news/citi-keeps-sell-rating-intel-135004656.html",
+    "summary" : "Citi analyst Christopher Danely reaffirmed a Sell rating and $29 price target on Intel Corporation (NASDAQ: INTC) due to anticipated market shifts. Despite a brief surge, Intel's stock saw a drop after reports suggested a potential partnership with Apple for its lowest-end M processor by 2027. Intel also announced its decision to retain its networking and communications unit (NEX), citing an improved financial standing and better integration opportunities, despite earlier considerations for divestiture.",
+    "sentiment" : "Neutral"
+  } ]
+}

@@ -1,0 +1,4 @@
+{
+"recommendation": [{"buy":12,"hold":9,"period":"2025-12-01","sell":2,"strongBuy":7,"strongSell":0,"symbol":"MNST"},{"buy":12,"hold":9,"period":"2025-11-01","sell":2,"strongBuy":7,"strongSell":0,"symbol":"MNST"},{"buy":12,"hold":9,"period":"2025-10-01","sell":2,"strongBuy":7,"strongSell":0,"symbol":"MNST"},{"buy":12,"hold":11,"period":"2025-09-01","sell":2,"strongBuy":7,"strongSell":0,"symbol":"MNST"}],
+"priceTarget": {}
+}

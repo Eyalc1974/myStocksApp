@@ -1,0 +1,78 @@
+{
+  "symbol" : "MNST",
+  "asOfEpochMillis" : 1765571410107,
+  "returnsByDays" : {
+    "2" : -1.4679896697023223,
+    "3" : -1.9610494995942696,
+    "4" : -1.6951451044209385,
+    "5" : -1.051051051051065
+  },
+  "recommendationByDays" : {
+    "2" : "HOLD",
+    "3" : "HOLD",
+    "4" : "HOLD",
+    "5" : "HOLD"
+  },
+  "scoreByDays" : {
+    "2" : -0.9339948348511612,
+    "3" : -1.1805247497971347,
+    "4" : -1.047572552210469,
+    "5" : -0.7255255255255327
+  },
+  "indicatorValues" : {
+    "TEMA_10_weekly_open" : 74.4752,
+    "SAR_weekly" : 69.5728,
+    "ATR_14_daily" : 1.3576,
+    "BBANDS_upper" : 76.8275,
+    "BBANDS_lower" : 69.0005,
+    "BBANDS_mid" : 72.914,
+    "AD_daily" : 3.6642879281436E9,
+    "OBV_weekly" : 5.744617982E9
+  },
+  "indicatorNotes" : {
+    "TEMA_10_weekly_open" : "TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=72.4900, TEMA=74.4752 => BEARISH.",
+    "SAR_weekly" : "Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=72.4900, SAR=69.5728 => UPTREND.",
+    "ATR_14_daily" : "ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=1.3576 (1.87% of price).",
+    "BBANDS" : "Bollinger Bands describe a volatility envelope around a moving average (middle band). Interpretation: price near upper band suggests strength; near lower band suggests weakness; mid band is the mean. Current: close=72.4900. Close is between lower and mid band (moderate bearish/mean-reversion zone).",
+    "AD_daily" : "Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: DOWN.",
+    "OBV_weekly" : "On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: DOWN."
+  },
+  "fundamentals" : {
+    "Name" : "Monster Beverage Corp",
+    "Sector" : "CONSUMER DEFENSIVE",
+    "Industry" : "BEVERAGES - NON-ALCOHOLIC",
+    "MarketCapitalization" : "70824264000",
+    "PERatio" : "41.19",
+    "PriceToBookRatio" : "9.32"
+  },
+  "risk" : {
+    "ATR_pct" : "1.87"
+  },
+  "newsSentimentScore" : null,
+  "newsTop" : [ {
+    "title" : "Monster Beverage and Bassett Furniture have been highlighted as Zacks Bull and Bear of the Day",
+    "url" : "https://finance.yahoo.com/news/monster-beverage-bassett-furniture-highlighted-141200651.html",
+    "summary" : "Zacks Equity Research identifies Monster Beverage Corp. as the Bull of the Day due to strong energy drink demand and record revenue, making it a \"Strong Buy.\" Conversely, Bassett Furniture Industries, Inc. is declared the Bear of the Day, labeled a \"Strong Sell\" given its reliance on a struggling housing market, despite recent strong quarterly results. The article also provides insight into Robinhood Markets, Inc. and its competitors, Interactive Brokers and Tradeweb Markets Inc.",
+    "sentiment" : "Bullish"
+  }, {
+    "title" : "Stifel raises Monster Beverage stock price target to $82 on growth outlook",
+    "url" : "https://www.investing.com/news/analyst-ratings/stifel-raises-monster-beverage-stock-price-target-to-82-on-growth-outlook-93CH-4405861",
+    "summary" : "Stifel has increased its price target on Monster Beverage (NASDAQ:MNST) to $82.00 from $78.00, maintaining a Buy rating and citing expectations for \"advantaged growth\" in 2026, continued international expansion, and solid price realization. This move aligns with other analysts who have recently raised their price targets for Monster Beverage, indicating a positive outlook for the company's growth prospects. Monster is highlighted as Stifel's \"top pick in Energy Drinks\" due to its strong base business growth, international contribution, and innovation pipeline.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Stifel Nicolaus Sticks to Its Hold Rating for Conagra Brands (CAG)",
+    "url" : "https://www.theglobeandmail.com/investing/markets/stocks/CAG/pressreleases/36591305/stifel-nicolaus-sticks-to-its-hold-rating-for-conagra-brands-cag/",
+    "summary" : "Stifel Nicolaus analyst Matthew Smith, CFA, has maintained a Hold rating on Conagra Brands (CAG) with a price target of $19.00. This aligns with a general Street consensus of a Hold rating and an average price target of $19.85. The company recently reported quarterly revenue of $2.63 billion and a net profit of $164.5 million, marking a decrease compared to the previous year.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Occudo Quantitative Strategies LP Acquires New Holdings in Monster Beverage Corporation $MNST",
+    "url" : "https://www.marketbeat.com/instant-alerts/filing-occudo-quantitative-strategies-lp-acquires-new-holdings-in-monster-beverage-corporation-mnst-2025-12-12/",
+    "summary" : "Occudo Quantitative Strategies LP recently acquired a new position in Monster Beverage Corporation (NASDAQ:MNST) during",
+    "sentiment" : "Bullish"
+  }, {
+    "title" : "Quantinno Capital Management LP Has $37.44 Million Stake in Monster Beverage Corporation $MNST",
+    "url" : "https://www.marketbeat.com/instant-alerts/filing-quantinno-capital-management-lp-has-3744-million-stake-in-monster-beverage-corporation-mnst-2025-12-12/",
+    "summary" : "Quantinno Capital Management LP significantly increased its stake in Monster Beverage Corporation by 41.3% during the second quarter, now owning 597,634 shares valued at over $37.4 million. Several other institutional investors also adjusted their holdings in MNST, with Prudential PLC and VestGen Advisors LLC notably increasing their positions, while insider Guy Carling sold a substantial number of shares. Monster Beverage recently reported strong quarterly earnings, beating analyst estimates, and analysts generally maintain a \"Moderate Buy\" consensus rating for the stock.",
+    "sentiment" : "Somewhat-Bullish"
+  } ]
+}

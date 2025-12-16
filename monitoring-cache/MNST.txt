@@ -1,0 +1,34 @@
+Monitoring Snapshot
+Symbol: MNST
+As Of: 2025-12-12T22:30:10.107+02:00[Asia/Jerusalem]
+
+Signals (2/3/4/5 trading days)
+2d: HOLD | return=-1.47% | score=-0.93
+3d: HOLD | return=-1.96% | score=-1.18
+4d: HOLD | return=-1.70% | score=-1.05
+5d: HOLD | return=-1.05% | score=-0.73
+
+Indicators
+- AD_daily: 3664287928.143600 | Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: DOWN.
+- ATR_14_daily: 1.357600 | ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=1.3576 (1.87% of price).
+- BBANDS_lower: 69.000500
+- BBANDS_mid: 72.914000
+- BBANDS_upper: 76.827500
+- OBV_weekly: 5744617982.000000 | On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: DOWN.
+- SAR_weekly: 69.572800 | Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=72.4900, SAR=69.5728 => UPTREND.
+- TEMA_10_weekly_open: 74.475200 | TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=72.4900, TEMA=74.4752 => BEARISH.
+
+Fundamentals (Overview)
+- Industry: BEVERAGES - NON-ALCOHOLIC
+- MarketCapitalization: 70824264000
+- Name: Monster Beverage Corp
+- PERatio: 41.19
+- PriceToBookRatio: 9.32
+- Sector: CONSUMER DEFENSIVE
+
+Top News
+- Monster Beverage and Bassett Furniture have been highlighted as Zacks Bull and Bear of the Day [Bullish] https://finance.yahoo.com/news/monster-beverage-bassett-furniture-highlighted-141200651.html
+- Stifel raises Monster Beverage stock price target to $82 on growth outlook [Neutral] https://www.investing.com/news/analyst-ratings/stifel-raises-monster-beverage-stock-price-target-to-82-on-growth-outlook-93CH-4405861
+- Stifel Nicolaus Sticks to Its Hold Rating for Conagra Brands (CAG) [Neutral] https://www.theglobeandmail.com/investing/markets/stocks/CAG/pressreleases/36591305/stifel-nicolaus-sticks-to-its-hold-rating-for-conagra-brands-cag/
+- Occudo Quantitative Strategies LP Acquires New Holdings in Monster Beverage Corporation $MNST [Bullish] https://www.marketbeat.com/instant-alerts/filing-occudo-quantitative-strategies-lp-acquires-new-holdings-in-monster-beverage-corporation-mnst-2025-12-12/
+- Quantinno Capital Management LP Has $37.44 Million Stake in Monster Beverage Corporation $MNST [Somewhat-Bullish] https://www.marketbeat.com/instant-alerts/filing-quantinno-capital-management-lp-has-3744-million-stake-in-monster-beverage-corporation-mnst-2025-12-12/

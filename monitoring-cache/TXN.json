@@ -1,0 +1,79 @@
+{
+  "symbol" : "TXN",
+  "asOfEpochMillis" : 1765571414682,
+  "returnsByDays" : {
+    "2" : 1.1976381461675452,
+    "3" : 0.40344865701336896,
+    "4" : -0.47660786676892986,
+    "5" : 0.8605374194981028
+  },
+  "recommendationByDays" : {
+    "2" : "BUY",
+    "3" : "BUY",
+    "4" : "HOLD",
+    "5" : "BUY"
+  },
+  "scoreByDays" : {
+    "2" : 1.9988190730837725,
+    "3" : 1.6017243285066844,
+    "4" : 1.161696066615535,
+    "5" : 1.8302687097490513
+  },
+  "indicatorValues" : {
+    "TEMA_10_weekly_open" : 168.8701,
+    "SAR_weekly" : 155.933,
+    "ATR_14_daily" : 4.759,
+    "BBANDS_upper" : 200.9052,
+    "BBANDS_lower" : 139.5788,
+    "BBANDS_mid" : 170.242,
+    "AD_daily" : 1.1117155558431E9,
+    "OBV_weekly" : 2.81900091E8
+  },
+  "indicatorNotes" : {
+    "TEMA_10_weekly_open" : "TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=181.6700, TEMA=168.8701 => BULLISH.",
+    "SAR_weekly" : "Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=181.6700, SAR=155.9330 => UPTREND.",
+    "ATR_14_daily" : "ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=4.7590 (2.62% of price).",
+    "BBANDS" : "Bollinger Bands describe a volatility envelope around a moving average (middle band). Interpretation: price near upper band suggests strength; near lower band suggests weakness; mid band is the mean. Current: close=181.6700. Close is between mid and upper band (moderate bullish bias).",
+    "AD_daily" : "Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.",
+    "OBV_weekly" : "On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: DOWN."
+  },
+  "fundamentals" : {
+    "Name" : "Texas Instruments Incorporated",
+    "Sector" : "TECHNOLOGY",
+    "Industry" : "SEMICONDUCTORS",
+    "MarketCapitalization" : "165162942000",
+    "PERatio" : "33.09",
+    "PriceToBookRatio" : "9.93",
+    "DividendYield" : "0.0299"
+  },
+  "risk" : {
+    "ATR_pct" : "2.62"
+  },
+  "newsSentimentScore" : null,
+  "newsTop" : [ {
+    "title" : "Here’s What Dampens Motorola Solutions’ (MSI) Performance",
+    "url" : "https://www.insidermonkey.com/blog/heres-what-dampens-motorola-solutions-msi-performance-1658945/",
+    "summary" : "Mairs & Power Balanced Fund highlighted Motorola Solutions, Inc. (NYSE: MSI) in its Q3 2025 investor letter, noting that while underlying results were positive, an acquisition and expected tariff headwinds dampened the stock's performance. The stock saw a one-month return of -3.14% and a 52-week loss of 21.66%, with only 51 hedge funds holding MSI shares by the end of Q3. This underperformance occurred despite a market driven by AI-related mega-cap stocks, to which the fund had limited exposure.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Quantinno Capital Management LP Raises Stake in Texas Instruments Incorporated $TXN",
+    "url" : "https://www.marketbeat.com/instant-alerts/filing-quantinno-capital-management-lp-raises-stake-in-texas-instruments-incorporated-txn-2025-12-12/",
+    "summary" : "Quantinno Capital Management LP increased its holdings in Texas Instruments (NASDAQ:TXN) by 26.8% in Q2, acquiring an additional 50,149 shares, bringing its total ownership to 237,080 shares valued at $49,223,000. Other institutional investors have also adjusted their positions, and the company recently announced a quarterly dividend increase. Analysts currently have a \"Hold\" consensus rating on the stock with a target price of $191.67.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "Texas Instruments Incorporated $TXN Stake Lowered by MIRAE ASSET GLOBAL ETFS HOLDINGS Ltd.",
+    "url" : "https://www.marketbeat.com/instant-alerts/filing-texas-instruments-incorporated-txn-stake-lowered-by-mirae-asset-global-etfs-holdings-ltd-2025-12-12/",
+    "summary" : "MIRAE ASSET GLOBAL ETFS HOLDINGS Ltd. has reduced its stake in Texas Instruments Incorporated ($TXN) by 8.7% in the second quarter, selling 67,874 shares and now owning 714,232 shares valued at $148,255,000. Other institutions have also adjusted their positions, and Texas Instruments recently reported earnings of $1.48 per share and revenue of $4.74 billion, while also increasing its quarterly dividend to $1.42. The company faces a \"Hold\" consensus rating from analysts with an average price target of $191.67.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Canada Pension Plan Investment Board Acquires 640,725 Shares of Texas Instruments Incorporated $TXN",
+    "url" : "https://www.marketbeat.com/instant-alerts/filing-canada-pension-plan-investment-board-acquires-640725-shares-of-texas-instruments-incorporated-txn-2025-12-12/",
+    "summary" : "Canada Pension Plan Investment Board significantly increased its stake in Texas Instruments by 107.4%, acquiring an additional 640,725 shares to hold a total of 1,237,026 shares valued at $256.83 million. Other major institutions like Vanguard, State Street, Geode, and Invesco also added to their positions, while Norges Bank initiated a substantial new position, bringing institutional ownership to nearly 84.99%. Texas Instruments reported quarterly EPS of $1.48, revenue of $4.74 billion (up 14.2% YoY), and raised its quarterly dividend to $1.42.",
+    "sentiment" : "Bullish"
+  }, {
+    "title" : "Texas Instruments, Intel Corporation microchips in Russian missiles, lawsuits say",
+    "url" : "https://www.axios.com/local/dallas/2025/12/11/texas-instruments-intel-lawsuit-russia-weapons-ukraine",
+    "summary" : "Several lawsuits accuse Texas Instruments, Intel Corporation, Advanced Micro Devices, and Mouser Electronics of supplying microchips found in Russian missiles used in attacks against Ukrainian civilians. The lawsuits allege these companies knowingly or unknowingly contributed to wrongful deaths by allowing their products to be used in Russian and Iranian military weapons, despite U.S. export laws. The accused companies generally deny direct involvement with the Russian military, stating their compliance with export laws and cessation of business in Russia.",
+    "sentiment" : "Neutral"
+  } ]
+}

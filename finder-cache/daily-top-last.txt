@@ -1,0 +1,10 @@
+--- 🎯 Daily Nasdaq Top 5 (GREEN) candidates ---
+--- ⏳ מריץ ניתוח על 30 מניות שנבחרו אקראית: [CTAS, MRNA, VRSK, SFIX, GILD, RIVN, FISV, SNPS, CSCO, MDLZ, ROST, EXAS, LCID, WDC, EXC, CHTR, OKTA, IDXX, TEAM, XEL, SIRI, LULU, DXCM, ATVI, ENPH, CDNS, WDC, COST, QCOM, BIIB] ---
+
+| TICKER | PRICE    | טכני (כניסה)    | פונדמנטלי         | ADX (חוזק) |
+|--------|----------|-----------------|-------------------|-----------|
+| SIRI  | $21.75    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 16.29 |
+| GILD  | $120.40   | NEUTRAL         | STRONG BUY (Long Term) | ADX: 16.95 |
+| TEAM  | $162.04   | NEUTRAL         | STRONG BUY (Long Term) | ADX: 17.24 |
+| CTAS  | $187.53   | NEUTRAL         | STRONG BUY (Long Term) | ADX: 17.91 |
+| MRNA  | $29.46    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 18.24 |

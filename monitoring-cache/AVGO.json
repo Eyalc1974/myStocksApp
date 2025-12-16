@@ -1,0 +1,77 @@
+{
+  "symbol" : "AVGO",
+  "asOfEpochMillis" : 1765571406905,
+  "returnsByDays" : {
+    "2" : 0.01969036894828425,
+    "3" : 1.3138868112690056,
+    "4" : 4.133353833538334,
+    "5" : 6.650394982022421
+  },
+  "recommendationByDays" : {
+    "2" : "HOLD",
+    "3" : "BUY",
+    "4" : "BUY",
+    "5" : "BUY"
+  },
+  "scoreByDays" : {
+    "2" : 0.8098451844741422,
+    "3" : 1.4569434056345028,
+    "4" : 2.8,
+    "5" : 2.8
+  },
+  "indicatorValues" : {
+    "TEMA_10_weekly_open" : 387.844,
+    "ATR_14_daily" : 15.3031,
+    "BBANDS_upper" : 463.9878,
+    "BBANDS_lower" : 288.9042,
+    "BBANDS_mid" : 376.446,
+    "AD_daily" : 5.3868332847609E9,
+    "OBV_weekly" : 1.0715486346E10
+  },
+  "indicatorNotes" : {
+    "TEMA_10_weekly_open" : "TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=406.3700, TEMA=387.8440 => BULLISH.",
+    "ATR_14_daily" : "ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=15.3031 (3.77% of price).",
+    "BBANDS" : "Bollinger Bands describe a volatility envelope around a moving average (middle band). Interpretation: price near upper band suggests strength; near lower band suggests weakness; mid band is the mean. Current: close=406.3700. Close is between mid and upper band (moderate bullish bias).",
+    "AD_daily" : "Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.",
+    "OBV_weekly" : "On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: UP."
+  },
+  "fundamentals" : {
+    "Name" : "Broadcom Inc",
+    "Sector" : "TECHNOLOGY",
+    "Industry" : "SEMICONDUCTORS",
+    "MarketCapitalization" : "1919027380000",
+    "PERatio" : "104.73",
+    "PriceToBookRatio" : "26.61",
+    "DividendYield" : "0.0057"
+  },
+  "risk" : {
+    "ATR_pct" : "3.77"
+  },
+  "newsSentimentScore" : null,
+  "newsTop" : [ {
+    "title" : "KLA Corporation Stock (KLAC) News Today: Why Shares Are Moving, Latest Forecasts, and Key Risks to Watch (Dec. 12, 2025)",
+    "url" : "https://ts2.tech/en/kla-corporation-stock-klac-news-today-why-shares-are-moving-latest-forecasts-and-key-risks-to-watch-dec-12-2025/",
+    "summary" : "KLA Corporation (KLAC) shares pulled back on Friday, December 12, 2025, amidst a broader weakening in the Nasdaq and reassessment of the AI-driven semiconductor upcycle. The stock was down 3.10% to $1,207.57, influenced by pressures on AI-linked tech stocks and notable \"whale\" options activity flagged by Benzinga. KLA's latest earnings showed continued strength and robust guidance, but China's export-control risks remain a significant factor impacting its near-term revenue trajectory.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Leveraged Broadcom ETFs See Volatility After Earnings",
+    "url" : "https://etfdb.com/leveraged-inverse-content-hub/leveraged-broadcom-etfs-see-volatility/",
+    "summary" : "Leveraged Broadcom ETFs experienced significant volatility following the company's earnings report, with the Direxion Daily AVGO Bear 1X Shares (AVS) climbing 9.7% and the Direxion Daily AVGO Bull 2X Shares (AVL) dropping 33%. Despite beating analyst estimates for Q4 earnings and raising its dividend, Broadcom shares fell due to investor concerns about the pace of AI growth following comments from CEO Hock Tan. The funds magnify daily movements in Broadcom stock, attracting traders looking to capitalize on short-term price swings.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "AI Stocks Get Pummeled as Oracle Delay Adds to Broadcom Concerns",
+    "url" : "https://www.bloomberg.com/news/articles/2025-12-12/ai-stocks-get-pummeled-as-oracle-delay-adds-to-broadcom-concerns",
+    "summary" : "Shares of companies involved in artificial intelligence infrastructure experienced a significant decline following reports of Oracle Corp. data center delays, exacerbating an existing selloff. This market downturn was already influenced by disappointing earnings from chipmaker Broadcom Inc., leading to a substantial drop in the Philadelphia Stock Exchange Semiconductor Index. Several AI-related stocks, including Astera Labs and Coherent Corp., saw double-digit percentage losses.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Costco Earnings: Digital Focus Gains Traction Amid Strong Results",
+    "url" : "https://www.morningstar.com/stocks/costco-earnings-digital-focus-gains-traction-amid-strong-results",
+    "summary" : "Costco's first-quarter results show 8.2% net sales growth, with digitally enabled comparable sales up 20.5% and AI improvements boosting pharmacy gross margin. Despite strong membership fee growth, the company notes slight renewal softness among younger, digitally acquired members. Morningstar plans to modestly increase its fair value estimate but still considers the stock overvalued by more than 35%.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Oracle stock falls as OpenAI data center completion pushed to 2028",
+    "url" : "https://www.investing.com/news/stock-market-news/oracle-stock-falls-as-openai-data-center-completion-pushed-to-2028-4406331",
+    "summary" : "Oracle's stock fell 5% after Bloomberg reported that the completion of data centers for OpenAI has been delayed from 2027 to 2028 due to labor and material shortages. This news follows a previous decline in Oracle shares after softer-than-expected quarterly results, contributing to broader concerns about a potential bubble in artificial intelligence stocks. The postponement affects a $300 billion contract to provide computing power for OpenAI's models.",
+    "sentiment" : "Neutral"
+  } ]
+}

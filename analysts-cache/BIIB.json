@@ -1,0 +1,4 @@
+{
+"recommendation": [{"buy":12,"hold":21,"period":"2025-12-01","sell":0,"strongBuy":9,"strongSell":0,"symbol":"BIIB"},{"buy":13,"hold":21,"period":"2025-11-01","sell":0,"strongBuy":8,"strongSell":0,"symbol":"BIIB"},{"buy":13,"hold":21,"period":"2025-10-01","sell":0,"strongBuy":8,"strongSell":0,"symbol":"BIIB"},{"buy":14,"hold":20,"period":"2025-09-01","sell":1,"strongBuy":7,"strongSell":0,"symbol":"BIIB"}],
+"priceTarget": {}
+}

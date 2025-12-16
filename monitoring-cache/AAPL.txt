@@ -1,0 +1,35 @@
+Monitoring Snapshot
+Symbol: AAPL
+As Of: 2025-12-12T22:30:04.35+02:00[Asia/Jerusalem]
+
+Signals (2/3/4/5 trading days)
+2d: HOLD | return=0.31% | score=-0.05
+3d: HOLD | return=0.05% | score=-0.17
+4d: HOLD | return=-0.27% | score=-0.33
+5d: HOLD | return=-0.95% | score=-0.68
+
+Indicators
+- AD_daily: 81505293475.606600 | Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.
+- ATR_14_daily: 5.019300 | ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=5.0193 (1.81% of price).
+- BBANDS_lower: 266.129900
+- BBANDS_mid: 275.912000
+- BBANDS_upper: 285.694100
+- OBV_weekly: 260478536338.000000 | On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: DOWN.
+- SAR_weekly: 270.900000 | Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=278.0300, SAR=270.9000 => UPTREND.
+- TEMA_10_weekly_open: 280.046600 | TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=278.0300, TEMA=280.0466 => BEARISH.
+
+Fundamentals (Overview)
+- DividendYield: 0.0037
+- Industry: CONSUMER ELECTRONICS
+- MarketCapitalization: 4126073422000
+- Name: Apple Inc
+- PERatio: 37.32
+- PriceToBookRatio: 55.87
+- Sector: TECHNOLOGY
+
+Top News
+- Danaher Corporation Stock (DHR) Today: Latest News, Analyst Forecasts, and What Investors Are Watching on Dec. 12, 2025 [Neutral] https://ts2.tech/en/danaher-corporation-stock-dhr-today-latest-news-analyst-forecasts-and-what-investors-are-watching-on-dec-12-2025/
+- Most Expensive Stock in the World 2025: Why Berkshire Hathaway’s $755,000 Shares Still Dominate Wall Street [Somewhat-Bullish] https://ts2.tech/en/most-expensive-stock-in-the-world-2025-why-berkshire-hathaways-755000-shares-still-dominate-wall-street/
+- Apple Manufacturing Academy launches virtual programming [Bullish] https://www.ctemag.com/news/apple-manufacturing-academy-launches-virtual-programming
+- TD Cowen Stays Bullish on Amazon (AMZN), Sees Multiple Growth Drivers Into 2026 [Neutral] https://finviz.com/news/252796/td-cowen-stays-bullish-on-amazon-amzn-sees-multiple-growth-drivers-into-2026
+- Citi Keeps A Sell Rating On Intel Corporation (INTC) [Neutral] https://finance.yahoo.com/news/citi-keeps-sell-rating-intel-135004656.html

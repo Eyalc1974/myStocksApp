@@ -1,0 +1,35 @@
+Monitoring Snapshot
+Symbol: TXN
+As Of: 2025-12-12T22:30:14.682+02:00[Asia/Jerusalem]
+
+Signals (2/3/4/5 trading days)
+2d: BUY | return=1.20% | score=2.00
+3d: BUY | return=0.40% | score=1.60
+4d: HOLD | return=-0.48% | score=1.16
+5d: BUY | return=0.86% | score=1.83
+
+Indicators
+- AD_daily: 1111715555.843100 | Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.
+- ATR_14_daily: 4.759000 | ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=4.7590 (2.62% of price).
+- BBANDS_lower: 139.578800
+- BBANDS_mid: 170.242000
+- BBANDS_upper: 200.905200
+- OBV_weekly: 281900091.000000 | On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: DOWN.
+- SAR_weekly: 155.933000 | Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=181.6700, SAR=155.9330 => UPTREND.
+- TEMA_10_weekly_open: 168.870100 | TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=181.6700, TEMA=168.8701 => BULLISH.
+
+Fundamentals (Overview)
+- DividendYield: 0.0299
+- Industry: SEMICONDUCTORS
+- MarketCapitalization: 165162942000
+- Name: Texas Instruments Incorporated
+- PERatio: 33.09
+- PriceToBookRatio: 9.93
+- Sector: TECHNOLOGY
+
+Top News
+- Here’s What Dampens Motorola Solutions’ (MSI) Performance [Neutral] https://www.insidermonkey.com/blog/heres-what-dampens-motorola-solutions-msi-performance-1658945/
+- Quantinno Capital Management LP Raises Stake in Texas Instruments Incorporated $TXN [Somewhat-Bullish] https://www.marketbeat.com/instant-alerts/filing-quantinno-capital-management-lp-raises-stake-in-texas-instruments-incorporated-txn-2025-12-12/
+- Texas Instruments Incorporated $TXN Stake Lowered by MIRAE ASSET GLOBAL ETFS HOLDINGS Ltd. [Neutral] https://www.marketbeat.com/instant-alerts/filing-texas-instruments-incorporated-txn-stake-lowered-by-mirae-asset-global-etfs-holdings-ltd-2025-12-12/
+- Canada Pension Plan Investment Board Acquires 640,725 Shares of Texas Instruments Incorporated $TXN [Bullish] https://www.marketbeat.com/instant-alerts/filing-canada-pension-plan-investment-board-acquires-640725-shares-of-texas-instruments-incorporated-txn-2025-12-12/
+- Texas Instruments, Intel Corporation microchips in Russian missiles, lawsuits say [Neutral] https://www.axios.com/local/dallas/2025/12/11/texas-instruments-intel-lawsuit-russia-weapons-ukraine

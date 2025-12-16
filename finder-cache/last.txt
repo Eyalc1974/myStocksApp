@@ -1,0 +1,10 @@
+--- 🎯 מציאת 5 מועמדי Long Term Buy מובילים ---
+--- ⏳ מריץ ניתוח על 10 מניות שנבחרו אקראית: [HBAN, DXCM, INTU, ENPH, KLAC, BKNG, MU, WDC, IDXX, KHC] ---
+
+| TICKER | PRICE    | טכני (כניסה)    | פונדמנטלי         | ADX (חוזק) |
+|--------|----------|-----------------|-------------------|-----------|
+| MU    | $241.14   | NEUTRAL         | STRONG BUY (Long Term) | ADX: 16.87 |
+| DXCM  | $66.96    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 19.74 |
+| KHC   | $24.45    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 20.82 |
+| ENPH  | $32.18    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 21.71 |
+| WDC   | $176.34   | NEUTRAL         | STRONG BUY (Long Term) | ADX: 31.31 |
