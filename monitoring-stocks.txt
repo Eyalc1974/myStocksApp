@@ -1,0 +1,4 @@
+AAPL
+AVGO
+MNST
+TXN

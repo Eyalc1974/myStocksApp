@@ -1,0 +1,28 @@
+
+public class StockAnalysisResult {
+    public final String ticker;
+    public final double price;
+    public final double dcfFairValue;
+
+    // מודלי החלטה
+    public String technicalSignal = "NEUTRAL"; // קצר: BUY, SELL, SHORT
+    public String fundamentalSignal = "NEUTRAL"; // ארוך: BUY, SELL
+    public final double adxStrength;
+    // בתוך StockAnalysisResult.java
+    public String finalVerdict = "NEUTRAL"; // שדה חדש
+
+
+    public StockAnalysisResult(String ticker, double price, double dcfFairValue, double adxStrength) {
+        this.ticker = ticker;
+        this.price = price;
+        this.dcfFairValue = dcfFairValue;
+        this.adxStrength = adxStrength;
+    }
+
+    // מתודה להדפסת שורה מסכמת
+    @Override
+    public String toString() {
+        return String.format("| %-5s | $%-8.2f | %-15s | %-15s | ADX: %.2f |",
+                ticker, price, technicalSignal, fundamentalSignal, adxStrength);
+    }
+}
