@@ -1,0 +1,94 @@
+{
+  "symbol" : "AVGO",
+  "asOfEpochMillis" : 1766428203828,
+  "returnsByDays" : {
+    "2" : 4.398503159315389,
+    "3" : -0.27541752124230817,
+    "4" : 0.16185515435096418,
+    "5" : -5.437168338287998,
+    "6" : -16.24381721091616,
+    "7" : -17.582390972709884,
+    "8" : -16.227325309507986,
+    "9" : -15.143355771628025,
+    "10" : -12.781877818778186
+  },
+  "recommendationByDays" : {
+    "2" : "HOLD",
+    "3" : "DROP",
+    "4" : "DROP",
+    "5" : "DROP",
+    "6" : "DROP",
+    "7" : "DROP",
+    "8" : "DROP",
+    "9" : "DROP",
+    "10" : "DROP"
+  },
+  "scoreByDays" : {
+    "2" : 0.6,
+    "3" : -1.5377087606211541,
+    "4" : -1.3190724228245179,
+    "5" : -3.4,
+    "6" : -3.4,
+    "7" : -3.4,
+    "8" : -3.4,
+    "9" : -3.4,
+    "10" : -3.4
+  },
+  "indicatorValues" : {
+    "TEMA_10_weekly_open" : 379.3106,
+    "SAR_weekly" : 414.61,
+    "ATR_14_daily" : 17.6906,
+    "BBANDS_upper" : 443.9353,
+    "BBANDS_lower" : 289.5407,
+    "BBANDS_mid" : 366.738,
+    "AD_daily" : 5.294545228253E9,
+    "OBV_weekly" : 9.947929954E9
+  },
+  "indicatorNotes" : {
+    "TEMA_10_weekly_open" : "TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=340.3600, TEMA=379.3106 => BEARISH.",
+    "SAR_weekly" : "Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=340.3600, SAR=414.6100 => DOWNTREND.",
+    "ATR_14_daily" : "ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=17.6906 (5.20% of price).",
+    "BBANDS" : "Bollinger Bands describe a volatility envelope around a moving average (middle band). Interpretation: price near upper band suggests strength; near lower band suggests weakness; mid band is the mean. Current: close=340.3600. Close is between lower and mid band (moderate bearish/mean-reversion zone).",
+    "AD_daily" : "Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.",
+    "OBV_weekly" : "On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: DOWN."
+  },
+  "fundamentals" : {
+    "Name" : "Broadcom Inc",
+    "Sector" : "TECHNOLOGY",
+    "Industry" : "SEMICONDUCTORS",
+    "MarketCapitalization" : "1613739852000",
+    "PERatio" : "71.35",
+    "PriceToBookRatio" : "19.85",
+    "DividendYield" : "0.0073"
+  },
+  "risk" : {
+    "ATR_pct" : "5.20"
+  },
+  "newsSentimentScore" : null,
+  "newsTop" : [ {
+    "title" : "Advanced Micro Devices Climbs 18% on Minor Tech Rally",
+    "url" : "https://www.fxleaders.com/news/2025/12/22/advanced-micro-devices-climbs-18-on-minor-tech-rally/",
+    "summary" : "Advanced Micro Devices (AMD) stock has surged over 18% since Thursday, continuing to climb on Monday with a 0.3% gain, defying fears about AI profitability. The company benefits from strong investor sentiment, positive chip demand data, and ambitious AI development targets, projecting 70% stock growth in 2025. Despite recent insider selling, AMD's strong orders for AI accelerators like the MI300 and MI350 suggest robust demand and a secure position in the AI GPU processing market as a cost-effective alternative to competitors.",
+    "sentiment" : "Bullish"
+  }, {
+    "title" : "Tesla Stock (TSLA) News & Forecast — Dec. 22, 2025: Musk Pay Deal Restored, Robotaxi Testing Accelerates, and Wall Street Splits on 2026",
+    "url" : "https://ts2.tech/en/tesla-stock-tsla-news-forecast-dec-22-2025-musk-pay-deal-restored-robotaxi-testing-accelerates-and-wall-street-splits-on-2026/",
+    "summary" : "Tesla, Inc. (NASDAQ: TSLA) is experiencing upward stock movement due to the Delaware Supreme Court restoring Elon Musk's 2018 pay package and accelerated robotaxi testing, including vehicles without safety monitors. However, the company faces contradictions with regulatory challenges to its \"Autopilot\" marketing and pressure on its core car business. Analyst targets for TSLA stock vary widely, reflecting a split on whether to value Tesla as an automaker or an AI/autonomy platform.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Intel Corporation Stock (INTC) Today: Price, Latest News, Analyst Forecasts, and What Investors Are Watching in 2026",
+    "url" : "https://ts2.tech/en/intel-corporation-stock-intc-today-price-latest-news-analyst-forecasts-and-what-investors-are-watching-in-2026/",
+    "summary" : "Intel Corporation (NASDAQ: INTC) is experiencing a surge in its stock price, trading around $36.82, fueled by a broad \"AI-rebound\" mood and strategic developments including NVIDIA's $5 billion investment and a significant $8.9 billion investment from the U.S. government. Investors are also closely monitoring Intel's foundry turnaround efforts, particularly its technology roadmap and the progress of its 14A and 18A chip production. Despite these positive catalysts, analyst sentiment remains cautious, with a \"Reduce\" consensus rating and an average price target of $34.84, suggesting that Intel needs to demonstrate consistent execution and profitability to gain further market trust.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "Broadcom Stock (AVGO) News Today, Dec. 22, 2025: AI Backlog, Dividend Date, Analyst Targets, and What Investors Are Watching",
+    "url" : "https://ts2.tech/en/broadcom-stock-avgo-news-today-dec-22-2025-ai-backlog-dividend-date-analyst-targets-and-what-investors-are-watching/",
+    "summary" : "Broadcom (NASDAQ: AVGO) is experiencing renewed investor interest due to its significant AI backlog, strong dividend, and positive analyst targets, despite recent volatility. The company reported robust Q4 2025 earnings with substantial AI semiconductor revenue growth and projects continued expansion in Q1 2026. While concerns about margin pressure from custom AI processors persist, analysts remain bullish on Broadcom's long-term AI driven growth trajectory.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "Morgan Stanley drops tech stocks to buy list for 2026",
+    "url" : "https://www.thestreet.com/investing/stocks/morgan-stanley-drops-tech-stocks-to-buy-list-for-2026",
+    "summary" : "Morgan Stanley has updated its list of top tech stocks to buy for 2026, emphasizing a more disciplined approach to AI-driven investments due to anticipated choppier growth. The firm's selections focus on companies with strong earnings visibility, durable market advantages, and realistic valuations, with Nvidia and Broadcom remaining core AI chip plays. The report also highlights opportunities in memory (Micron), equipment (Applied Materials, Taiwan Semiconductor), and analog chips (NXP Semiconductors, Analog Devices).",
+    "sentiment" : "Somewhat-Bullish"
+  } ]
+}

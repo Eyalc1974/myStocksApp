@@ -1,0 +1,11 @@
+{
+  "nyDate" : "2025-12-22",
+  "createdAtNy" : "2025-12-22T10:37:53.411587-05:00[America/New_York]",
+  "rows" : [ {
+    "ticker" : "MU",
+    "startOpen" : null,
+    "startClose" : 265.92,
+    "eodClose" : null,
+    "lastUpdatedNy" : "2025-12-22T10:37:53.709566-05:00[America/New_York]"
+  } ]
+}

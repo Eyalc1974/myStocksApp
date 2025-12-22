@@ -1,0 +1,81 @@
+{
+  "createdAtNy" : "2025-12-22T14:14:04.888381-05:00[America/New_York]",
+  "startNyDate" : "2025-12-22",
+  "trackingDays" : 14,
+  "positions" : [ {
+    "ticker" : "EBAY",
+    "startNyDate" : "2025-12-22",
+    "lastNyDate" : "2025-12-22",
+    "startPrice" : 84.66,
+    "lastPrice" : 84.66
+  }, {
+    "ticker" : "PAYX",
+    "startNyDate" : "2025-12-22",
+    "lastNyDate" : "2025-12-22",
+    "startPrice" : 112.28,
+    "lastPrice" : 112.28
+  }, {
+    "ticker" : "AEP",
+    "startNyDate" : "2025-12-22",
+    "lastNyDate" : "2025-12-22",
+    "startPrice" : 114.49,
+    "lastPrice" : 114.49
+  }, {
+    "ticker" : "META",
+    "startNyDate" : "2025-12-22",
+    "lastNyDate" : "2025-12-22",
+    "startPrice" : 658.77,
+    "lastPrice" : 658.77
+  }, {
+    "ticker" : "BIDU",
+    "startNyDate" : "2025-12-22",
+    "lastNyDate" : "2025-12-22",
+    "startPrice" : 123.82,
+    "lastPrice" : 123.82
+  }, {
+    "ticker" : "TCOM",
+    "startNyDate" : "2025-12-22",
+    "lastNyDate" : "2025-12-22",
+    "startPrice" : 72.22,
+    "lastPrice" : 72.22
+  }, {
+    "ticker" : "BIIB",
+    "startNyDate" : "2025-12-22",
+    "lastNyDate" : "2025-12-22",
+    "startPrice" : 174.8,
+    "lastPrice" : 174.8
+  }, {
+    "ticker" : "GPN",
+    "startNyDate" : "2025-12-22",
+    "lastNyDate" : "2025-12-22",
+    "startPrice" : 80.85,
+    "lastPrice" : 80.85
+  }, {
+    "ticker" : "CMCSA",
+    "startNyDate" : "2025-12-22",
+    "lastNyDate" : "2025-12-22",
+    "startPrice" : 29.57,
+    "lastPrice" : 29.57
+  }, {
+    "ticker" : "FMC",
+    "startNyDate" : "2025-12-22",
+    "lastNyDate" : "2025-12-22",
+    "startPrice" : 13.32,
+    "lastPrice" : 13.32
+  } ],
+  "benchNasdaq100" : {
+    "ticker" : "QQQ",
+    "startNyDate" : "2025-12-22",
+    "lastNyDate" : "2025-12-22",
+    "startPrice" : 617.05,
+    "lastPrice" : 617.05
+  },
+  "benchSp500" : {
+    "ticker" : "SPY",
+    "startNyDate" : "2025-12-22",
+    "lastNyDate" : "2025-12-22",
+    "startPrice" : 680.59,
+    "lastPrice" : 680.59
+  },
+  "lastError" : null
+}

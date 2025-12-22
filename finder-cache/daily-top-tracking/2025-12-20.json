@@ -1,0 +1,11 @@
+{
+  "nyDate" : "2025-12-20",
+  "createdAtNy" : "2025-12-20T03:07:27.293207-05:00[America/New_York]",
+  "rows" : [ {
+    "ticker" : "TEAM",
+    "startOpen" : null,
+    "startClose" : 161.07,
+    "eodClose" : null,
+    "lastUpdatedNy" : "2025-12-20T04:00:55.632314-05:00[America/New_York]"
+  } ]
+}

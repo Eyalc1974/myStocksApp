@@ -1,0 +1,148 @@
+
+=== 📊 Portfolio Weekly Summary (Next Week Forecast) ===
+
+פורמט תצוגה: שורה-לפי-מניה (ללא טבלה)
+
+------------------------------------------------------------
+מניה: AMZN
+מחיר נוכחי: $227.35
+כיוון (Bias): Down
+תחזית לשבוע הבא (Low-High): $217.07 - $237.63
+פסק-דין סופי: AVOID/SELL (Overvalued)
+ADX: 9.55
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: OVERVALUED (Avoid)
+מומנטום 12-1: -7.25%
+שיא ירידה (Max Drawdown): 14.51%
+
+------------------------------------------------------------
+מניה: UNH
+מחיר נוכחי: $327.42
+כיוון (Bias): Up
+תחזית לשבוע הבא (Low-High): $308.03 - $346.81
+פסק-דין סופי: NEUTRAL (No clear edge)
+ADX: 12.30
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: NEUTRAL
+מומנטום 12-1: 24.84%
+שיא ירידה (Max Drawdown): 16.44%
+
+------------------------------------------------------------
+מניה: IGV
+מחיר נוכחי: $107.76
+כיוון (Bias): Neutral
+תחזית לשבוע הבא (Low-High): $103.40 - $112.12
+פסק-דין סופי: NEUTRAL (No clear edge)
+ADX: 22.71
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: NEUTRAL
+מומנטום 12-1: -9.73%
+שיא ירידה (Max Drawdown): 14.42%
+
+------------------------------------------------------------
+מניה: CSCO
+מחיר נוכחי: $78.42
+כיוון (Bias): Neutral
+תחזית לשבוע הבא (Low-High): $74.91 - $81.93
+פסק-דין סופי: AVOID/SELL (Overvalued)
+ADX: 27.01
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: OVERVALUED (Avoid)
+מומנטום 12-1: 10.81%
+שיא ירידה (Max Drawdown): 7.79%
+
+------------------------------------------------------------
+מניה: INTC
+מחיר נוכחי: $36.82
+כיוון (Bias): Down
+תחזית לשבוע הבא (Low-High): $32.32 - $41.32
+פסק-דין סופי: AVOID/SELL (Overvalued)
+ADX: 19.46
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: OVERVALUED (Avoid)
+מומנטום 12-1: 69.80%
+שיא ירידה (Max Drawdown): 19.05%
+
+------------------------------------------------------------
+מניה: BIIB
+מחיר נוכחי: $174.80
+כיוון (Bias): Neutral
+תחזית לשבוע הבא (Low-High): $162.93 - $186.67
+פסק-דין סופי: AVOID/SELL (Overvalued)
+ADX: 21.62
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: OVERVALUED (Avoid)
+מומנטום 12-1: 31.39%
+שיא ירידה (Max Drawdown): 11.02%
+
+------------------------------------------------------------
+מניה: AVGO
+מחיר נוכחי: $340.36
+כיוון (Bias): Down
+תחזית לשבוע הבא (Low-High): $300.94 - $379.78
+פסק-דין סופי: AVOID/SELL (Overvalued)
+ADX: 20.28
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: OVERVALUED (Avoid)
+מומנטום 12-1: 18.09%
+שיא ירידה (Max Drawdown): 21.05%
+
+------------------------------------------------------------
+מניה: MSTR
+מחיר נוכחי: $164.82
+כיוון (Bias): Neutral
+תחזית לשבוע הבא (Low-High): $138.77 - $190.87
+פסק-דין סופי: AVOID/SELL (Overvalued)
+ADX: 39.05
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: OVERVALUED (Avoid)
+מומנטום 12-1: -55.92%
+שיא ירידה (Max Drawdown): 60.64%
+
+------------------------------------------------------------
+מניה: JD
+מחיר נוכחי: $28.82
+כיוון (Bias): Neutral
+תחזית לשבוע הבא (Low-High): $27.75 - $29.89
+פסק-דין סופי: STRONG BUY (Long Term Entry)
+ADX: 31.80
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: STRONG BUY (Long Term)
+מומנטום 12-1: -9.84%
+שיא ירידה (Max Drawdown): 21.51%
+
+[MonitoringScheduler] refresh started at 2025-12-22T13:30:00.008856-05:00[America/New_York]
+------------------------------------------------------------
+מניה: MU
+מחיר נוכחי: $265.92
+כיוון (Bias): Up
+תחזית לשבוע הבא (Low-High): $231.90 - $299.94
+פסק-דין סופי: AVOID/SELL (Overvalued)
+ADX: 15.06
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: OVERVALUED (Avoid)
+מומנטום 12-1: 84.51%
+שיא ירידה (Max Drawdown): 20.50%
+
+[MonitoringScheduler] refresh finished
+------------------------------------------------------------
+מניה: MNST
+מחיר נוכחי: $76.26
+כיוון (Bias): Up
+תחזית לשבוע הבא (Low-High): $73.14 - $79.38
+פסק-דין סופי: AVOID/SELL (Overvalued)
+ADX: 24.63
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: OVERVALUED (Avoid)
+מומנטום 12-1: 22.93%
+שיא ירידה (Max Drawdown): 5.57%
+
+
+--- 📈 Portfolio Rollup ---
+Bias counts -> Up: 3, Down: 3, Neutral: 5
+Average ATR(14): 6.41
+Average Momentum 12-1: 16.33%
+Average Max Drawdown: 19.32%
+
+Done.
+

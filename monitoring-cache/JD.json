@@ -1,0 +1,94 @@
+{
+  "symbol" : "JD",
+  "asOfEpochMillis" : 1766428216411,
+  "returnsByDays" : {
+    "2" : 0.7692307692307652,
+    "3" : -0.10398613518197969,
+    "4" : -0.10398613518197969,
+    "5" : -2.1059782608695685,
+    "6" : -2.4373730534867937,
+    "7" : -2.66801756163458,
+    "8" : -2.9629629629629597,
+    "9" : -3.6764705882352984,
+    "10" : -3.6120401337792587
+  },
+  "recommendationByDays" : {
+    "2" : "HOLD",
+    "3" : "DROP",
+    "4" : "DROP",
+    "5" : "DROP",
+    "6" : "DROP",
+    "7" : "DROP",
+    "8" : "DROP",
+    "9" : "DROP",
+    "10" : "DROP"
+  },
+  "scoreByDays" : {
+    "2" : -1.0153846153846176,
+    "3" : -1.45199306759099,
+    "4" : -1.45199306759099,
+    "5" : -2.4529891304347844,
+    "6" : -2.618686526743397,
+    "7" : -2.73400878081729,
+    "8" : -2.88148148148148,
+    "9" : -3.2382352941176493,
+    "10" : -3.2060200668896295
+  },
+  "indicatorValues" : {
+    "TEMA_10_weekly_open" : 29.0592,
+    "SAR_weekly" : 30.8187,
+    "ATR_14_daily" : 0.6102,
+    "BBANDS_upper" : 30.7206,
+    "BBANDS_lower" : 28.0474,
+    "BBANDS_mid" : 29.384,
+    "AD_daily" : 6.78359363635E7,
+    "OBV_weekly" : 4.68233687E8
+  },
+  "indicatorNotes" : {
+    "TEMA_10_weekly_open" : "TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=28.8200, TEMA=29.0592 => BEARISH.",
+    "SAR_weekly" : "Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=28.8200, SAR=30.8187 => DOWNTREND.",
+    "ATR_14_daily" : "ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=0.6102 (2.12% of price).",
+    "BBANDS" : "Bollinger Bands describe a volatility envelope around a moving average (middle band). Interpretation: price near upper band suggests strength; near lower band suggests weakness; mid band is the mean. Current: close=28.8200. Close is between lower and mid band (moderate bearish/mean-reversion zone).",
+    "AD_daily" : "Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.",
+    "OBV_weekly" : "On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: DOWN."
+  },
+  "fundamentals" : {
+    "Name" : "JD.com Inc Adr",
+    "Sector" : "CONSUMER CYCLICAL",
+    "Industry" : "INTERNET RETAIL",
+    "MarketCapitalization" : "42521203000",
+    "PERatio" : "9.54",
+    "PriceToBookRatio" : "1.242",
+    "DividendYield" : "0.0347"
+  },
+  "risk" : {
+    "ATR_pct" : "2.12"
+  },
+  "newsSentimentScore" : null,
+  "newsTop" : [ {
+    "title" : "Osaic Holdings Inc. Boosts Stock Holdings in JD.com, Inc. $JD",
+    "url" : "https://www.marketbeat.com/instant-alerts/filing-osaic-holdings-inc-boosts-stock-holdings-in-jdcom-inc-jd-2025-12-21/",
+    "summary" : "Osaic Holdings Inc. significantly increased its stake in JD.com, Inc. by 148.4% in the second quarter, bringing its total holdings to 261,269 shares valued at $9.39 million. This increase follows JD.com's better-than-expected quarterly earnings, which reported an EPS of $0.52 against an estimated $0.44 and revenue of $41.98 billion. Despite some recent analyst downgrades, JD.com maintains a consensus rating of \"Moderate Buy\" with an average price target of $39.14.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "Cloudflare (NET) Partners with JD.com to Create an International Platform",
+    "url" : "https://finviz.com/news/259357/cloudflare-net-partners-with-jdcom-to-create-an-international-platform",
+    "summary" : "Cloudflare (NET) and JD Cloud, a branch of JD.com, have expanded their 5-year partnership to create an international platform for developers to manage, deploy, and scale AI workloads. This collaboration aims to streamline running trained AI models, reduce AI inference workloads, and enhance security with Cloudflare's WAF and DDoS protection. Wall Street analysts have reiterated \"Buy\" ratings on Cloudflare, recognizing its crucial role in the growing need for AI security.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Matauro LLC Invests $5.02 Million in JD.com, Inc. $JD",
+    "url" : "https://www.marketbeat.com/instant-alerts/filing-matauro-llc-invests-502-million-in-jdcom-inc-jd-2025-12-20/",
+    "summary" : "Matauro LLC has acquired a new stake in JD.com, Inc. (NASDAQ:JD) during Q3, purchasing 143,472 shares valued at approximately $5.02 million, making it 0.8% of their portfolio. JD.com reported stronger-than-expected Q3 earnings and revenue, leading analysts to maintain a \"Moderate Buy\" rating with an average price target of $39.14. Institutional investors hold 15.98% of the company's stock, which currently trades around $28.82.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "JINGDONG Property, EZA Hill And Major Institutional Investor Announce Acquisition of 1.9M Sq Ft Singapore Logistics Portfolio",
+    "url" : "https://jdcorporateblog.com/jingdong-property-eza-hill-and-major-institutional-investor-announce-acquisition-of-1-9m-sq-ft-singapore-logistics-portfolio/",
+    "summary" : "JINGDONG Property, EZA Hill, and a global real estate private equity institutional investor have announced the acquisition of a 1.9 million square feet logistics portfolio in Singapore. This acquisition, comprising four modern warehouses, significantly expands JINGDONG Property’s presence in Southeast Asia, reinforcing its commitment to the Asia Pacific region. The investment supports regional supply chains and growing e-commerce demand, building on a successful 2023 acquisition.",
+    "sentiment" : "Bullish"
+  }, {
+    "title" : "Assenagon Asset Management S.A. Purchases New Shares in JD.com, Inc. $JD",
+    "url" : "https://www.marketbeat.com/instant-alerts/filing-assenagon-asset-management-sa-purchases-new-shares-in-jdcom-inc-jd-2025-12-19/",
+    "summary" : "Assenagon Asset Management S.A. has acquired a new position of over one million shares in JD.com, Inc. (NASDAQ:JD), valued at approximately $36.75 million. This purchase represents 0.07% of the company, which recently reported strong earnings, beating analyst expectations with $0.52 EPS and $41.98 billion in revenue. Despite a recent downgrade from Morgan Stanley, the consensus among analysts is a \"Moderate Buy\" for JD.com, with an average price target of $39.14.",
+    "sentiment" : "Neutral"
+  } ]
+}

@@ -1,0 +1,94 @@
+{
+  "symbol" : "CSCO",
+  "asOfEpochMillis" : 1766428210845,
+  "returnsByDays" : {
+    "2" : 3.1842105263157916,
+    "3" : 1.1218568665377235,
+    "4" : 0.21725239616613637,
+    "5" : 0.7969151670951216,
+    "6" : -1.0722845969471355,
+    "7" : -2.280373831775699,
+    "8" : -1.3708967425481113,
+    "9" : -0.5579507988840955,
+    "10" : 0.5771450557906924
+  },
+  "recommendationByDays" : {
+    "2" : "BUY",
+    "3" : "HOLD",
+    "4" : "HOLD",
+    "5" : "HOLD",
+    "6" : "HOLD",
+    "7" : "DROP",
+    "8" : "HOLD",
+    "9" : "HOLD",
+    "10" : "HOLD"
+  },
+  "scoreByDays" : {
+    "2" : 1.3921052631578958,
+    "3" : 0.3609284332688617,
+    "4" : -0.0913738019169319,
+    "5" : 0.1984575835475607,
+    "6" : -0.7361422984735678,
+    "7" : -1.3401869158878497,
+    "8" : -0.8854483712740558,
+    "9" : -0.4789753994420477,
+    "10" : 0.08857252789534609
+  },
+  "indicatorValues" : {
+    "TEMA_10_weekly_open" : 78.9278,
+    "SAR_weekly" : 75.65,
+    "ATR_14_daily" : 1.6763,
+    "BBANDS_upper" : 79.9258,
+    "BBANDS_lower" : 74.9662,
+    "BBANDS_mid" : 77.446,
+    "AD_daily" : -2.9549495861675E9,
+    "OBV_weekly" : 2.96494002E8
+  },
+  "indicatorNotes" : {
+    "TEMA_10_weekly_open" : "TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=78.4200, TEMA=78.9278 => BEARISH.",
+    "SAR_weekly" : "Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=78.4200, SAR=75.6500 => UPTREND.",
+    "ATR_14_daily" : "ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=1.6763 (2.14% of price).",
+    "BBANDS" : "Bollinger Bands describe a volatility envelope around a moving average (middle band). Interpretation: price near upper band suggests strength; near lower band suggests weakness; mid band is the mean. Current: close=78.4200. Close is between mid and upper band (moderate bullish bias).",
+    "AD_daily" : "Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.",
+    "OBV_weekly" : "On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: UP."
+  },
+  "fundamentals" : {
+    "Name" : "Cisco Systems Inc",
+    "Sector" : "TECHNOLOGY",
+    "Industry" : "COMMUNICATION EQUIPMENT",
+    "MarketCapitalization" : "309844836000",
+    "PERatio" : "30.28",
+    "PriceToBookRatio" : "6.61",
+    "DividendYield" : "0.0212"
+  },
+  "risk" : {
+    "ATR_pct" : "2.14"
+  },
+  "newsSentimentScore" : null,
+  "newsTop" : [ {
+    "title" : "Cisco (CSCO) Stock News, Forecasts, and Outlook: AI Networking Tailwinds vs. Security and Valuation Risks (Dec. 22, 2025)",
+    "url" : "https://ts2.tech/en/cisco-csco-stock-news-forecasts-and-outlook-ai-networking-tailwinds-vs-security-and-valuation-risks-dec-22-2025/",
+    "summary" : "Cisco Systems, Inc. (CSCO) is nearing its 52-week highs, driven by accelerating AI-era networking demand and efforts to integrate networking, security, and observability. While AI infrastructure orders and a campus networking refresh provide strong tailwinds, the company faces valuation concerns after a significant run-up and a newly discovered critical zero-day vulnerability impacting its email security appliances. Investors are focused on the sustainability of AI-driven growth and how Cisco addresses its security challenges amidst increased market optimism.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "Morgan Stanley Sees Cisco (CSCO) Benefiting From AI Infrastructure Demand",
+    "url" : "https://www.insidermonkey.com/blog/morgan-stanley-sees-cisco-csco-benefiting-from-ai-infrastructure-demand-1664293/",
+    "summary" : "Morgan Stanley increased its price target for Cisco Systems (CSCO) to $91 from $82, maintaining an Overweight rating, as the firm anticipates Cisco will benefit from wider AI infrastructure demand beyond just semiconductor stocks. The company's networking strength, particularly with products like Nexus HyperFabric integrating with Nvidia, and its push into AI-native cybersecurity with Hypershield, are contributing to its revenue growth, with fiscal 2026 revenue projected between $60.2 billion and $61 billion.",
+    "sentiment" : "Bullish"
+  }, {
+    "title" : "Global $31.45 Billion Wireless Mesh Network Market Outlook",
+    "url" : "https://www.globenewswire.com/news-release/2025/12/22/3209139/0/en/Global-31-45-Billion-Wireless-Mesh-Network-Market-Outlook-2025-2032-Featuring-Strategic-Analysis-of-Cisco-Systems-Hewlett-Packard-Fortinet-Extreme-Networks-NETGEAR-and-Other-Key-Pl.html",
+    "summary" : "The global wireless mesh network market is projected to reach $31.45 billion by 2032, growing at a CAGR of 12.3% from an estimated $13.86 billion in 2025. This growth is driven by increasing digitization across critical sectors, the need for continuous operations, and adaptable deployment strategies, with key players including Cisco Systems, Hewlett Packard, and Fortinet. The market emphasizes flexible, resilient, and secure digital infrastructure solutions for various applications and end-users worldwide.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "Global $31.45 Billion Wireless Mesh Network Market Outlook, 2025-2032 Featuring Strategic Analysis of Cisco Systems, Hewlett Packard, Fortinet, Extreme Networks, NETGEAR and Other Key Players",
+    "url" : "https://ca.finance.yahoo.com/news/global-31-45-billion-wireless-123200781.html",
+    "summary" : "The global wireless mesh network market is projected to reach $31.45 billion by 2032, driven by increasing digitization across critical sectors and the need for resilient, adaptive connectivity solutions. The market snapshot highlights strong growth due to rising enterprise adoption, with key takeaways emphasizing the benefits of decentralized architectures, streamlined deployment, and secure coverage in challenging environments. The report provides strategic insights for leaders to accelerate digital initiatives, manage risks, and navigate evolving technological and regulatory landscapes.",
+    "sentiment" : "Bullish"
+  }, {
+    "title" : "Matrix Asset Advisors Inc. NY Sells 26,914 Shares of Cisco Systems, Inc. $CSCO",
+    "url" : "https://www.marketbeat.com/instant-alerts/filing-matrix-asset-advisors-inc-ny-sells-26914-shares-of-cisco-systems-inc-csco-2025-12-22/",
+    "summary" : "Matrix Asset Advisors Inc. NY has reduced its stake in Cisco Systems, Inc. by 16.7% in the third quarter, selling 26,914 shares. The firm now holds 134,350 shares of Cisco, valued at approximately $9.19 million. Despite this, several other institutional investors increased their positions, while company insiders, including CEO Charles Robbins, have sold a significant number of shares recently.",
+    "sentiment" : "Somewhat-Bullish"
+  } ]
+}

@@ -1,0 +1,40 @@
+Monitoring Snapshot
+Symbol: CSCO
+As Of: 2025-12-22T20:30:10.845+02:00[Asia/Jerusalem]
+
+Signals (2-10 trading days)
+2d: BUY | return=3.18% | score=1.39
+3d: HOLD | return=1.12% | score=0.36
+4d: HOLD | return=0.22% | score=-0.09
+5d: HOLD | return=0.80% | score=0.20
+6d: HOLD | return=-1.07% | score=-0.74
+7d: DROP | return=-2.28% | score=-1.34
+8d: HOLD | return=-1.37% | score=-0.89
+9d: HOLD | return=-0.56% | score=-0.48
+10d: HOLD | return=0.58% | score=0.09
+
+Indicators
+- AD_daily: -2954949586.167500 | Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.
+- ATR_14_daily: 1.676300 | ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=1.6763 (2.14% of price).
+- BBANDS_lower: 74.966200
+- BBANDS_mid: 77.446000
+- BBANDS_upper: 79.925800
+- OBV_weekly: 296494002.000000 | On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: UP.
+- SAR_weekly: 75.650000 | Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=78.4200, SAR=75.6500 => UPTREND.
+- TEMA_10_weekly_open: 78.927800 | TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=78.4200, TEMA=78.9278 => BEARISH.
+
+Fundamentals (Overview)
+- DividendYield: 0.0212
+- Industry: COMMUNICATION EQUIPMENT
+- MarketCapitalization: 309844836000
+- Name: Cisco Systems Inc
+- PERatio: 30.28
+- PriceToBookRatio: 6.61
+- Sector: TECHNOLOGY
+
+Top News
+- Cisco (CSCO) Stock News, Forecasts, and Outlook: AI Networking Tailwinds vs. Security and Valuation Risks (Dec. 22, 2025) [Somewhat-Bullish] https://ts2.tech/en/cisco-csco-stock-news-forecasts-and-outlook-ai-networking-tailwinds-vs-security-and-valuation-risks-dec-22-2025/
+- Morgan Stanley Sees Cisco (CSCO) Benefiting From AI Infrastructure Demand [Bullish] https://www.insidermonkey.com/blog/morgan-stanley-sees-cisco-csco-benefiting-from-ai-infrastructure-demand-1664293/
+- Global $31.45 Billion Wireless Mesh Network Market Outlook [Somewhat-Bullish] https://www.globenewswire.com/news-release/2025/12/22/3209139/0/en/Global-31-45-Billion-Wireless-Mesh-Network-Market-Outlook-2025-2032-Featuring-Strategic-Analysis-of-Cisco-Systems-Hewlett-Packard-Fortinet-Extreme-Networks-NETGEAR-and-Other-Key-Pl.html
+- Global $31.45 Billion Wireless Mesh Network Market Outlook, 2025-2032 Featuring Strategic Analysis of Cisco Systems, Hewlett Packard, Fortinet, Extreme Networks, NETGEAR and Other Key Players [Bullish] https://ca.finance.yahoo.com/news/global-31-45-billion-wireless-123200781.html
+- Matrix Asset Advisors Inc. NY Sells 26,914 Shares of Cisco Systems, Inc. $CSCO [Somewhat-Bullish] https://www.marketbeat.com/instant-alerts/filing-matrix-asset-advisors-inc-ny-sells-26914-shares-of-cisco-systems-inc-csco-2025-12-22/

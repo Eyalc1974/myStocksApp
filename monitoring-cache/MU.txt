@@ -1,0 +1,40 @@
+Monitoring Snapshot
+Symbol: MU
+As Of: 2025-12-22T18:30:27.592+02:00[Asia/Jerusalem]
+
+Signals (2-10 trading days)
+2d: BUY | return=17.91% | score=3.40
+3d: BUY | return=14.37% | score=3.40
+4d: BUY | return=11.97% | score=3.40
+5d: BUY | return=10.28% | score=3.40
+6d: BUY | return=2.89% | score=2.84
+7d: BUY | return=0.84% | score=1.82
+8d: BUY | return=5.35% | score=3.40
+9d: BUY | return=7.69% | score=3.40
+10d: BUY | return=12.10% | score=3.40
+
+Indicators
+- AD_daily: -514435268.899900 | Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.
+- ATR_14_daily: 15.716900 | ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=15.7169 (5.91% of price).
+- BBANDS_lower: 181.826000
+- BBANDS_mid: 237.626000
+- BBANDS_upper: 293.426000
+- OBV_weekly: 6265798830.000000 | On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: UP.
+- SAR_weekly: 196.198000 | Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=265.9200, SAR=196.1980 => UPTREND.
+- TEMA_10_weekly_open: 250.945400 | TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=265.9200, TEMA=250.9454 => BULLISH.
+
+Fundamentals (Overview)
+- DividendYield: 0.0019
+- Industry: SEMICONDUCTORS
+- MarketCapitalization: 299295441000
+- Name: Micron Technology Inc
+- PERatio: 25.25
+- PriceToBookRatio: 5.09
+- Sector: TECHNOLOGY
+
+Top News
+- Tesla and Philip Morris among market cap stock movers on Monday [Bullish] https://www.investing.com/news/stock-market-news/tesla-and-philip-morris-among-market-cap-stock-movers-on-monday-93CH-4419730
+- Morgan Stanley drops tech stocks to buy list for 2026 [Somewhat-Bullish] https://www.thestreet.com/investing/stocks/morgan-stanley-drops-tech-stocks-to-buy-list-for-2026
+- Jefferies Upgrades KLA (KLAC) to Buy, Sees Run Just Beginning [Somewhat-Bullish] https://www.insidermonkey.com/blog/jefferies-upgrades-kla-klac-to-buy-sees-run-just-beginning-1664076/
+- Douglas Lane & Associates LLC Trims Stock Holdings in GE Vernova Inc. $GEV [Somewhat-Bullish] https://www.marketbeat.com/instant-alerts/filing-douglas-lane-associates-llc-trims-stock-holdings-in-ge-vernova-inc-gev-2025-12-22/
+- “We’re Gonna See Seagate (STX) Go Up,” Says Jim Cramer [Somewhat-Bullish] https://www.insidermonkey.com/blog/were-gonna-see-seagate-stx-go-up-says-jim-cramer-1664069/

@@ -1,0 +1,40 @@
+Monitoring Snapshot
+Symbol: AVGO
+As Of: 2025-12-22T20:30:03.828+02:00[Asia/Jerusalem]
+
+Signals (2-10 trading days)
+2d: HOLD | return=4.40% | score=0.60
+3d: DROP | return=-0.28% | score=-1.54
+4d: DROP | return=0.16% | score=-1.32
+5d: DROP | return=-5.44% | score=-3.40
+6d: DROP | return=-16.24% | score=-3.40
+7d: DROP | return=-17.58% | score=-3.40
+8d: DROP | return=-16.23% | score=-3.40
+9d: DROP | return=-15.14% | score=-3.40
+10d: DROP | return=-12.78% | score=-3.40
+
+Indicators
+- AD_daily: 5294545228.253000 | Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.
+- ATR_14_daily: 17.690600 | ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=17.6906 (5.20% of price).
+- BBANDS_lower: 289.540700
+- BBANDS_mid: 366.738000
+- BBANDS_upper: 443.935300
+- OBV_weekly: 9947929954.000000 | On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: DOWN.
+- SAR_weekly: 414.610000 | Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=340.3600, SAR=414.6100 => DOWNTREND.
+- TEMA_10_weekly_open: 379.310600 | TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=340.3600, TEMA=379.3106 => BEARISH.
+
+Fundamentals (Overview)
+- DividendYield: 0.0073
+- Industry: SEMICONDUCTORS
+- MarketCapitalization: 1613739852000
+- Name: Broadcom Inc
+- PERatio: 71.35
+- PriceToBookRatio: 19.85
+- Sector: TECHNOLOGY
+
+Top News
+- Advanced Micro Devices Climbs 18% on Minor Tech Rally [Bullish] https://www.fxleaders.com/news/2025/12/22/advanced-micro-devices-climbs-18-on-minor-tech-rally/
+- Tesla Stock (TSLA) News & Forecast — Dec. 22, 2025: Musk Pay Deal Restored, Robotaxi Testing Accelerates, and Wall Street Splits on 2026 [Neutral] https://ts2.tech/en/tesla-stock-tsla-news-forecast-dec-22-2025-musk-pay-deal-restored-robotaxi-testing-accelerates-and-wall-street-splits-on-2026/
+- Intel Corporation Stock (INTC) Today: Price, Latest News, Analyst Forecasts, and What Investors Are Watching in 2026 [Somewhat-Bullish] https://ts2.tech/en/intel-corporation-stock-intc-today-price-latest-news-analyst-forecasts-and-what-investors-are-watching-in-2026/
+- Broadcom Stock (AVGO) News Today, Dec. 22, 2025: AI Backlog, Dividend Date, Analyst Targets, and What Investors Are Watching [Somewhat-Bullish] https://ts2.tech/en/broadcom-stock-avgo-news-today-dec-22-2025-ai-backlog-dividend-date-analyst-targets-and-what-investors-are-watching/
+- Morgan Stanley drops tech stocks to buy list for 2026 [Somewhat-Bullish] https://www.thestreet.com/investing/stocks/morgan-stanley-drops-tech-stocks-to-buy-list-for-2026

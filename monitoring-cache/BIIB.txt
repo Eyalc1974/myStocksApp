@@ -1,0 +1,39 @@
+Monitoring Snapshot
+Symbol: BIIB
+As Of: 2025-12-22T20:30:13.843+02:00[Asia/Jerusalem]
+
+Signals (2-10 trading days)
+2d: HOLD | return=1.57% | score=0.58
+3d: HOLD | return=1.92% | score=0.76
+4d: HOLD | return=-0.53% | score=-0.47
+5d: HOLD | return=0.40% | score=0.00
+6d: HOLD | return=1.33% | score=0.47
+7d: HOLD | return=-1.55% | score=-0.97
+8d: HOLD | return=-0.59% | score=-0.50
+9d: DROP | return=-3.13% | score=-1.76
+10d: DROP | return=-3.59% | score=-1.99
+
+Indicators
+- AD_daily: 135056372.161500 | Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.
+- ATR_14_daily: 5.383000 | ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=5.3830 (3.08% of price).
+- BBANDS_lower: 167.195500
+- BBANDS_mid: 177.518000
+- BBANDS_upper: 187.840500
+- OBV_weekly: 982788884.000000 | On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: UP.
+- SAR_weekly: 165.288000 | Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=174.8000, SAR=165.2880 => UPTREND.
+- TEMA_10_weekly_open: 181.079500 | TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=174.8000, TEMA=181.0795 => BEARISH.
+
+Fundamentals (Overview)
+- Industry: DRUG MANUFACTURERS - GENERAL
+- MarketCapitalization: 25643557000
+- Name: Biogen Inc
+- PERatio: 15.92
+- PriceToBookRatio: 1.408
+- Sector: HEALTHCARE
+
+Top News
+- Biogen’s QALSODY shows sustained benefits for SOD1-ALS patients [Bullish] https://in.investing.com/news/company-news/biogens-qalsody-shows-sustained-benefits-for-sod1als-patients-93CH-5163425
+- The Journal of the American Medical Association (JAMA) Neurology Publishes Long Term Results from the QALSODY Phase 3 VALOR Study and its Open-Label Extension in SOD1-ALS [Bullish] https://investors.biogen.com/news-releases/news-release-details/journal-american-medical-association-jama-neurology-publishes
+- Some ALS patients regained lost function in long-term QALSODY study [Somewhat-Bullish] https://www.stocktitan.net/news/BIIB/the-journal-of-the-american-medical-association-jama-neurology-349vcao1nszs.html
+- 4 Cheap Stock Picks We Still Like for 2026 [Somewhat-Bullish] https://www.morningstar.com/stocks/4-cheap-stock-picks-we-still-like-2026-2
+- Two XOMA preferred share classes pay cash to holders in January [Somewhat-Bullish] https://www.stocktitan.net/news/XOMA/xoma-royalty-declares-quarterly-preferred-stock-aa7iyeky2fnc.html

@@ -1,0 +1,16 @@
+--- 🎯 Daily Nasdaq Top 5 (GREEN) candidates ---
+--- ⏳ מריץ ניתוח על 10 מניות שנבחרו אקראית: [AMD, CRWD, SFIX, WBA, RIVN, TTEK, DLR, AMZN, AMAT, NFLX] ---
+| AMD    | $213.43   | FV $51.73    | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 18.21 |
+| CRWD   | $481.28   | FV $94.53    | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 20.56 |
+| SFIX   | $5.22     | FV $0.95     | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 31.33 |
+| WBA    | $11.98    | FV $0.00     | NEUTRAL (No clear edge)      | NEUTRAL            | NEUTRAL                  | ADX 42.10 |
+| RIVN   | $22.45    | FV $-81.87   | AVOID/SELL (Overvalued)      | SELL/PROFIT TAKE   | DISTRESS (Altman Z < 1.81) | ADX 28.33 |
+| TTEK   | $34.45    | FV $16.89    | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 16.49 |
+| DLR    | $149.99   | FV $-24.37   | AVOID/SELL (Overvalued)      | STRONG SELL/SHORT  | DISTRESS (Altman Z < 1.81) | ADX 26.73 |
+| AMZN   | $227.35   | FV $49.34    | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 9.55 |
+| AMAT   | $256.41   | FV $58.30    | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 18.13 |
+| NFLX   | $94.39    | FV $30.28    | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 71.97 |
+
+| TICKER | PRICE    | טכני (כניסה)    | פונדמנטלי         | ADX (חוזק) |
+|--------|----------|-----------------|-------------------|-----------|
+No GREEN candidates found today (based on current filters). Try again later.

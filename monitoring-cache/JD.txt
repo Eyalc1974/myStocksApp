@@ -1,0 +1,40 @@
+Monitoring Snapshot
+Symbol: JD
+As Of: 2025-12-22T20:30:16.411+02:00[Asia/Jerusalem]
+
+Signals (2-10 trading days)
+2d: HOLD | return=0.77% | score=-1.02
+3d: DROP | return=-0.10% | score=-1.45
+4d: DROP | return=-0.10% | score=-1.45
+5d: DROP | return=-2.11% | score=-2.45
+6d: DROP | return=-2.44% | score=-2.62
+7d: DROP | return=-2.67% | score=-2.73
+8d: DROP | return=-2.96% | score=-2.88
+9d: DROP | return=-3.68% | score=-3.24
+10d: DROP | return=-3.61% | score=-3.21
+
+Indicators
+- AD_daily: 67835936.363500 | Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.
+- ATR_14_daily: 0.610200 | ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=0.6102 (2.12% of price).
+- BBANDS_lower: 28.047400
+- BBANDS_mid: 29.384000
+- BBANDS_upper: 30.720600
+- OBV_weekly: 468233687.000000 | On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: DOWN.
+- SAR_weekly: 30.818700 | Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=28.8200, SAR=30.8187 => DOWNTREND.
+- TEMA_10_weekly_open: 29.059200 | TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=28.8200, TEMA=29.0592 => BEARISH.
+
+Fundamentals (Overview)
+- DividendYield: 0.0347
+- Industry: INTERNET RETAIL
+- MarketCapitalization: 42521203000
+- Name: JD.com Inc Adr
+- PERatio: 9.54
+- PriceToBookRatio: 1.242
+- Sector: CONSUMER CYCLICAL
+
+Top News
+- Osaic Holdings Inc. Boosts Stock Holdings in JD.com, Inc. $JD [Somewhat-Bullish] https://www.marketbeat.com/instant-alerts/filing-osaic-holdings-inc-boosts-stock-holdings-in-jdcom-inc-jd-2025-12-21/
+- Cloudflare (NET) Partners with JD.com to Create an International Platform [Neutral] https://finviz.com/news/259357/cloudflare-net-partners-with-jdcom-to-create-an-international-platform
+- Matauro LLC Invests $5.02 Million in JD.com, Inc. $JD [Somewhat-Bullish] https://www.marketbeat.com/instant-alerts/filing-matauro-llc-invests-502-million-in-jdcom-inc-jd-2025-12-20/
+- JINGDONG Property, EZA Hill And Major Institutional Investor Announce Acquisition of 1.9M Sq Ft Singapore Logistics Portfolio [Bullish] https://jdcorporateblog.com/jingdong-property-eza-hill-and-major-institutional-investor-announce-acquisition-of-1-9m-sq-ft-singapore-logistics-portfolio/
+- Assenagon Asset Management S.A. Purchases New Shares in JD.com, Inc. $JD [Neutral] https://www.marketbeat.com/instant-alerts/filing-assenagon-asset-management-sa-purchases-new-shares-in-jdcom-inc-jd-2025-12-19/

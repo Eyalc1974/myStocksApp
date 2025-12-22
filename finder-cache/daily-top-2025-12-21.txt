@@ -1,0 +1,5 @@
+--- 🎯 Daily Nasdaq Top 5 (GREEN) candidates ---
+
+| TICKER | PRICE    | טכני (כניסה)    | פונדמנטלי         | ADX (חוזק) |
+|--------|----------|-----------------|-------------------|-----------|
+No GREEN candidates found today (based on current filters). Try again later.

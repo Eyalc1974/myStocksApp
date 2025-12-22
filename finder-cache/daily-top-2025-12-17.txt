@@ -1,0 +1,10 @@
+--- 🎯 Daily Nasdaq Top 5 (GREEN) candidates ---
+--- ⏳ מריץ ניתוח על 30 מניות שנבחרו אקראית: [WDAY, SPLK, ZS, TRMB, AMGN, TSCO, SGEN, ENPH, GPN, AMD, PEP, FTNT, EA, MRVL, TMUS, LRCX, MAR, CEG, VRSK, SGEN, CEG, CPRT, CDNS, AMD, MTCH, MCHP, AZN, GILD, HUBS, PAYX] ---
+
+| TICKER | PRICE    | טכני (כניסה)    | פונדמנטלי         | ADX (חוזק) |
+|--------|----------|-----------------|-------------------|-----------|
+| CEG   | $365.63   | NEUTRAL         | STRONG BUY (Long Term) | ADX: 13.40 |
+| CEG   | $365.63   | NEUTRAL         | STRONG BUY (Long Term) | ADX: 13.40 |
+| TSCO  | $52.64    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 13.44 |
+| LRCX  | $163.26   | NEUTRAL         | STRONG BUY (Long Term) | ADX: 13.44 |
+| TRMB  | $80.50    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 13.47 |

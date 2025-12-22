@@ -1,0 +1,10 @@
+--- 🎯 Daily Nasdaq Top 5 (GREEN) candidates ---
+--- ⏳ מריץ ניתוח על 30 מניות שנבחרו אקראית: [PENN, TEAM, AZN, HOLX, AMGN, BIIB, TGTX, AMAT, BIIB, AMD, KDP, ZLAB, SIRI, ROST, MU, GILD, DOCU, FTNT, TTEK, FAST, AEP, CHTR, MRVL, SBUX, CTSH, GILD, ZS, COST, ISRG, CEG] ---
+
+| TICKER | PRICE    | טכני (כניסה)    | פונדמנטלי         | ADX (חוזק) |
+|--------|----------|-----------------|-------------------|-----------|
+| SBUX  | $85.40    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 10.21 |
+| DOCU  | $68.19    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 12.30 |
+| CEG   | $357.14   | NEUTRAL         | STRONG BUY (Long Term) | ADX: 12.93 |
+| MRVL  | $84.26    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 15.40 |
+| TGTX  | $31.41    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 15.55 |

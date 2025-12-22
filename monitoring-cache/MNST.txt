@@ -1,0 +1,39 @@
+Monitoring Snapshot
+Symbol: MNST
+As Of: 2025-12-22T20:30:07.123+02:00[Asia/Jerusalem]
+
+Signals (2-10 trading days)
+2d: BUY | return=2.59% | score=2.69
+3d: BUY | return=1.22% | score=2.01
+4d: BUY | return=1.88% | score=2.34
+5d: BUY | return=3.10% | score=2.95
+6d: BUY | return=5.20% | score=3.40
+7d: BUY | return=3.25% | score=3.02
+8d: BUY | return=3.66% | score=3.23
+9d: BUY | return=3.14% | score=2.97
+10d: BUY | return=3.42% | score=3.11
+
+Indicators
+- AD_daily: 3680309393.598000 | Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.
+- ATR_14_daily: 1.431400 | ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=1.4314 (1.88% of price).
+- BBANDS_lower: 70.000500
+- BBANDS_mid: 74.200000
+- BBANDS_upper: 78.399500
+- OBV_weekly: 5828116373.000000 | On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: UP.
+- SAR_weekly: 70.914000 | Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=76.2600, SAR=70.9140 => UPTREND.
+- TEMA_10_weekly_open: 74.929600 | TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=76.2600, TEMA=74.9296 => BULLISH.
+
+Fundamentals (Overview)
+- Industry: BEVERAGES - NON-ALCOHOLIC
+- MarketCapitalization: 74507641000
+- Name: Monster Beverage Corp
+- PERatio: 43.33
+- PriceToBookRatio: 9.62
+- Sector: CONSUMER DEFENSIVE
+
+Top News
+- Monster Beverage (MNST): Taking a Fresh Look at Valuation After Rising Institutional Attention and Webinar Buzz [Somewhat-Bullish] https://simplywall.st/stocks/us/food-beverage-tobacco/nasdaq-mnst/monster-beverage/news/monster-beverage-mnst-taking-a-fresh-look-at-valuation-after
+- Monster Beverage (MNST) Gains Favor with Morgan Stanley's Positive Outlook [Bullish] https://www.gurufocus.com/news/4079438/monster-beverage-mnst-gains-favor-with-morgan-stanleys-positive-outlook
+- USA Financial Formulas Reduces Stock Holdings in Monster Beverage Corporation $MNST [Neutral] https://www.marketbeat.com/instant-alerts/filing-usa-financial-formulas-reduces-stock-holdings-in-monster-beverage-corporation-mnst-2025-12-21/
+- Oak Thistle LLC Trims Holdings in Monster Beverage Corporation $MNST [Somewhat-Bullish] https://www.marketbeat.com/instant-alerts/filing-oak-thistle-llc-trims-holdings-in-monster-beverage-corporation-mnst-2025-12-20/
+- Monster Beverage Corp. stock outperforms competitors on strong trading day [Bullish] https://www.marketwatch.com/data-news/monster-beverage-corp-stock-outperforms-competitors-on-strong-trading-day-32d4d88a-b4c763c9fe55?gaa_at=eafs&gaa_n=AWEtsqcsg9nMzEiMV-8aNJpz4ycaqJ_JYeIWbuxCTTgJtYD6p7W9F1B5vZgq&gaa_ts=6948f16a&gaa_sig=ubKlIlpxsRRETnEzlt6aNTisN6QYMCcIhtjQQk05MV3czLWy8EqYoXRZEMB9myFkfAfxbjSNtw067os8SvVlZw%3D%3D

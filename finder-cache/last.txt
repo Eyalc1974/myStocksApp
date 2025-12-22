@@ -1,0 +1,18 @@
+--- 🎯 מציאת 5 מועמדי Long Term Buy מובילים ---
+| TICKER | PRICE     | DCF FV     | FINAL VERDICT                 | TECHNICAL          | FUNDAMENTAL               | TREND | 
+|--------|-----------|------------|------------------------------|--------------------|--------------------------|-------|
+--- ⏳ מריץ ניתוח על 5 מניות שנבחרו אקראית: [WMT, REGN, ASML, BKR, KHC] ---
+| WMT    | $114.36   | FV $18.90    | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 27.28 |
+| REGN   | $767.96   | FV $345.90   | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 29.61 |
+| ASML   | $1056.02  | FV $236.76   | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 21.19 |
+| BKR    | $44.71    | FV $20.80    | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 23.95 |
+| KHC    | $24.51    | FV $22.78    | NEUTRAL (No clear edge)      | NEUTRAL            | DISTRESS (Altman Z < 1.81) | ADX 15.79 |
+
+לא נמצאו מועמדים העומדים בקריטריונים המחמירים. מציג את הטובים ביותר לפי דירוג פנימי:
+
+Selected tickers:
+- KHC
+- ASML
+- BKR
+- WMT
+- REGN

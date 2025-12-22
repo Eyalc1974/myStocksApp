@@ -1,0 +1,94 @@
+{
+  "symbol" : "MU",
+  "asOfEpochMillis" : 1766421027592,
+  "returnsByDays" : {
+    "2" : 17.9141539553033,
+    "3" : 14.369274439809052,
+    "4" : 11.966315789473692,
+    "5" : 10.276188106494166,
+    "6" : 2.886326704325635,
+    "7" : 0.8380417883281015,
+    "8" : 5.348229141906359,
+    "9" : 7.694799935201696,
+    "10" : 12.098473990388676
+  },
+  "recommendationByDays" : {
+    "2" : "BUY",
+    "3" : "BUY",
+    "4" : "BUY",
+    "5" : "BUY",
+    "6" : "BUY",
+    "7" : "BUY",
+    "8" : "BUY",
+    "9" : "BUY",
+    "10" : "BUY"
+  },
+  "scoreByDays" : {
+    "2" : 3.4,
+    "3" : 3.4,
+    "4" : 3.4,
+    "5" : 3.4,
+    "6" : 2.8431633521628177,
+    "7" : 1.8190208941640509,
+    "8" : 3.4,
+    "9" : 3.4,
+    "10" : 3.4
+  },
+  "indicatorValues" : {
+    "TEMA_10_weekly_open" : 250.9454,
+    "SAR_weekly" : 196.198,
+    "ATR_14_daily" : 15.7169,
+    "BBANDS_upper" : 293.426,
+    "BBANDS_lower" : 181.826,
+    "BBANDS_mid" : 237.626,
+    "AD_daily" : -5.144352688999E8,
+    "OBV_weekly" : 6.26579883E9
+  },
+  "indicatorNotes" : {
+    "TEMA_10_weekly_open" : "TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=265.9200, TEMA=250.9454 => BULLISH.",
+    "SAR_weekly" : "Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=265.9200, SAR=196.1980 => UPTREND.",
+    "ATR_14_daily" : "ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=15.7169 (5.91% of price).",
+    "BBANDS" : "Bollinger Bands describe a volatility envelope around a moving average (middle band). Interpretation: price near upper band suggests strength; near lower band suggests weakness; mid band is the mean. Current: close=265.9200. Close is between mid and upper band (moderate bullish bias).",
+    "AD_daily" : "Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.",
+    "OBV_weekly" : "On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: UP."
+  },
+  "fundamentals" : {
+    "Name" : "Micron Technology Inc",
+    "Sector" : "TECHNOLOGY",
+    "Industry" : "SEMICONDUCTORS",
+    "MarketCapitalization" : "299295441000",
+    "PERatio" : "25.25",
+    "PriceToBookRatio" : "5.09",
+    "DividendYield" : "0.0019"
+  },
+  "risk" : {
+    "ATR_pct" : "5.91"
+  },
+  "newsSentimentScore" : null,
+  "newsTop" : [ {
+    "title" : "Tesla and Philip Morris among market cap stock movers on Monday",
+    "url" : "https://www.investing.com/news/stock-market-news/tesla-and-philip-morris-among-market-cap-stock-movers-on-monday-93CH-4419730",
+    "summary" : "On Monday, Tesla (TSLA) and Philip Morris (PM) are among the stocks experiencing rallies, while Edgewise Therapeutics (EWTX) is seeing declines. This article highlights key stock movers across different market capitalization tiers, from mega-caps to small-caps, noting their percentage changes and relevant news influencing their movements.",
+    "sentiment" : "Bullish"
+  }, {
+    "title" : "Morgan Stanley drops tech stocks to buy list for 2026",
+    "url" : "https://www.thestreet.com/investing/stocks/morgan-stanley-drops-tech-stocks-to-buy-list-for-2026",
+    "summary" : "Morgan Stanley has updated its list of top tech stocks to buy for 2026, emphasizing a more disciplined approach to AI-driven investments due to anticipated choppier growth. The firm's selections focus on companies with strong earnings visibility, durable market advantages, and realistic valuations, with Nvidia and Broadcom remaining core AI chip plays. The report also highlights opportunities in memory (Micron), equipment (Applied Materials, Taiwan Semiconductor), and analog chips (NXP Semiconductors, Analog Devices).",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "Jefferies Upgrades KLA (KLAC) to Buy, Sees Run Just Beginning",
+    "url" : "https://www.insidermonkey.com/blog/jefferies-upgrades-kla-klac-to-buy-sees-run-just-beginning-1664076/",
+    "summary" : "Jefferies has upgraded KLA Corporation (NASDAQ:KLAC) to \"Buy\" and raised its price target to $1,500, believing the semiconductor equipment maker's growth is \"just beginning.\" The upgrade is driven by expanding AI accelerator use cases, a robust outlook for leading-edge and advanced packaging demand, and KLA's strength in rising process control intensity. Jefferies also cited KLA's relatively de-risked China revenue exposure as a positive factor.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "Douglas Lane & Associates LLC Trims Stock Holdings in GE Vernova Inc. $GEV",
+    "url" : "https://www.marketbeat.com/instant-alerts/filing-douglas-lane-associates-llc-trims-stock-holdings-in-ge-vernova-inc-gev-2025-12-22/",
+    "summary" : "Douglas Lane & Associates LLC recently reduced its stake in GE Vernova Inc. (NYSE:GEV) by 26.8% in the third quarter, now owning 10,193 shares valued at $6,268,000. Despite this reduction, other institutional investors like Norges Bank and Arrowstreet Capital Limited Partnership significantly increased their holdings. GE Vernova's stock has seen a 2.9% rise, trades at $658.03, and received several analyst upgrades, though some express neutral to negative sentiment regarding its valuation and recent performance.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "“We’re Gonna See Seagate (STX) Go Up,” Says Jim Cramer",
+    "url" : "https://www.insidermonkey.com/blog/were-gonna-see-seagate-stx-go-up-says-jim-cramer-1664069/",
+    "summary" : "Jim Cramer believes Seagate Technology Holdings plc (NASDAQ:STX) will see its stock price rise, even though he doesn't consider it a growth company despite its remarkable 243% year-to-date increase in 2025. Analysts from Morgan Stanley and Citi have recently raised price targets for the storage device maker, citing AI-driven content creation as a potential demand driver. However, the article suggests that other AI stocks might offer greater upside potential in a shorter timeframe.",
+    "sentiment" : "Somewhat-Bullish"
+  } ]
+}

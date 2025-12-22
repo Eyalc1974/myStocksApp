@@ -1,0 +1,93 @@
+{
+  "symbol" : "MNST",
+  "asOfEpochMillis" : 1766428207123,
+  "returnsByDays" : {
+    "2" : 2.589628035245862,
+    "3" : 1.2211308733740398,
+    "4" : 1.883767535070155,
+    "5" : 3.095849668784651,
+    "6" : 5.200717340322818,
+    "7" : 3.249390739236401,
+    "8" : 3.656381677314139,
+    "9" : 3.1376791993508353,
+    "10" : 3.4174125305126255
+  },
+  "recommendationByDays" : {
+    "2" : "BUY",
+    "3" : "BUY",
+    "4" : "BUY",
+    "5" : "BUY",
+    "6" : "BUY",
+    "7" : "BUY",
+    "8" : "BUY",
+    "9" : "BUY",
+    "10" : "BUY"
+  },
+  "scoreByDays" : {
+    "2" : 2.694814017622931,
+    "3" : 2.01056543668702,
+    "4" : 2.3418837675350774,
+    "5" : 2.947924834392326,
+    "6" : 3.4,
+    "7" : 3.024695369618201,
+    "8" : 3.2281908386570697,
+    "9" : 2.9688395996754178,
+    "10" : 3.108706265256313
+  },
+  "indicatorValues" : {
+    "TEMA_10_weekly_open" : 74.9296,
+    "SAR_weekly" : 70.914,
+    "ATR_14_daily" : 1.4314,
+    "BBANDS_upper" : 78.3995,
+    "BBANDS_lower" : 70.0005,
+    "BBANDS_mid" : 74.2,
+    "AD_daily" : 3.680309393598E9,
+    "OBV_weekly" : 5.828116373E9
+  },
+  "indicatorNotes" : {
+    "TEMA_10_weekly_open" : "TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=76.2600, TEMA=74.9296 => BULLISH.",
+    "SAR_weekly" : "Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=76.2600, SAR=70.9140 => UPTREND.",
+    "ATR_14_daily" : "ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=1.4314 (1.88% of price).",
+    "BBANDS" : "Bollinger Bands describe a volatility envelope around a moving average (middle band). Interpretation: price near upper band suggests strength; near lower band suggests weakness; mid band is the mean. Current: close=76.2600. Close is between mid and upper band (moderate bullish bias).",
+    "AD_daily" : "Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.",
+    "OBV_weekly" : "On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: UP."
+  },
+  "fundamentals" : {
+    "Name" : "Monster Beverage Corp",
+    "Sector" : "CONSUMER DEFENSIVE",
+    "Industry" : "BEVERAGES - NON-ALCOHOLIC",
+    "MarketCapitalization" : "74507641000",
+    "PERatio" : "43.33",
+    "PriceToBookRatio" : "9.62"
+  },
+  "risk" : {
+    "ATR_pct" : "1.88"
+  },
+  "newsSentimentScore" : null,
+  "newsTop" : [ {
+    "title" : "Monster Beverage (MNST): Taking a Fresh Look at Valuation After Rising Institutional Attention and Webinar Buzz",
+    "url" : "https://simplywall.st/stocks/us/food-beverage-tobacco/nasdaq-mnst/monster-beverage/news/monster-beverage-mnst-taking-a-fresh-look-at-valuation-after",
+    "summary" : "Institutional interest and a recent webinar are driving increased attention to Monster Beverage (MNST), sparking debate over its valuation as short interest grows. The stock is currently trading slightly above analysts' fair value estimates, with expectations of continued growth driven by cost controls and supply chain optimization. However, potential risks include a shift towards lower-margin international brands and normalizing energy drink category growth.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "Monster Beverage (MNST) Gains Favor with Morgan Stanley's Positive Outlook",
+    "url" : "https://www.gurufocus.com/news/4079438/monster-beverage-mnst-gains-favor-with-morgan-stanleys-positive-outlook",
+    "summary" : "Morgan Stanley has increased its price target for Monster Beverage (MNST) from $81 to $87 due to strong sales data, favorable pricing trends, and anticipated international growth through its partnership with Coca-Cola. Monster Beverage shares have already risen 45% year-to-date, reaching a record high, with analysts maintaining a consensus Buy rating. The company shows strong financial health but investors should note insider selling activity.",
+    "sentiment" : "Bullish"
+  }, {
+    "title" : "USA Financial Formulas Reduces Stock Holdings in Monster Beverage Corporation $MNST",
+    "url" : "https://www.marketbeat.com/instant-alerts/filing-usa-financial-formulas-reduces-stock-holdings-in-monster-beverage-corporation-mnst-2025-12-21/",
+    "summary" : "USA Financial Formulas reduced its Monster Beverage Corporation (NASDAQ:MNST) stock holdings by 39.6% in the third quarter, selling 17,574 shares and retaining 26,794 shares valued at approximately $1.804 million. Despite this reduction, major institutional investors like Vanguard, State Street, and Invesco have increased their stakes, bringing overall institutional ownership to 72.36%. Analysts maintain a \"Moderate Buy\" consensus rating with an average target price of $73.67, with some firms raising targets to $83-$85, even as significant insider selling, including a $15.2 million sale by Director Rodney C. Sacks, has occurred recently.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Oak Thistle LLC Trims Holdings in Monster Beverage Corporation $MNST",
+    "url" : "https://www.marketbeat.com/instant-alerts/filing-oak-thistle-llc-trims-holdings-in-monster-beverage-corporation-mnst-2025-12-20/",
+    "summary" : "Oak Thistle LLC significantly reduced its stake in Monster Beverage Corporation by 76.1% in the third quarter, selling over 25,000 shares. This comes amidst recent insider selling, including substantial transactions by Emelie Tirre and Director Rodney C. Sacks, despite Monster beating Q3 earnings estimates. The stock currently trades near its 12-month high and holds a \"Moderate Buy\" consensus rating from analysts.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "Monster Beverage Corp. stock outperforms competitors on strong trading day",
+    "url" : "https://www.marketwatch.com/data-news/monster-beverage-corp-stock-outperforms-competitors-on-strong-trading-day-32d4d88a-b4c763c9fe55?gaa_at=eafs&gaa_n=AWEtsqcsg9nMzEiMV-8aNJpz4ycaqJ_JYeIWbuxCTTgJtYD6p7W9F1B5vZgq&gaa_ts=6948f16a&gaa_sig=ubKlIlpxsRRETnEzlt6aNTisN6QYMCcIhtjQQk05MV3czLWy8EqYoXRZEMB9myFkfAfxbjSNtw067os8SvVlZw%3D%3D",
+    "summary" : "Monster Beverage Corp. (MNST) shares rose 1.06% to $76.26 on Friday, outperforming the broader market. This marked the stock's second consecutive day of gains, with the S&P 500 Index and Dow Jones Industrial Average also seeing increases.",
+    "sentiment" : "Bullish"
+  } ]
+}

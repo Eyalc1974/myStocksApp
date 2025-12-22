@@ -1,0 +1,40 @@
+Monitoring Snapshot
+Symbol: TXN
+As Of: 2025-12-20T09:08:05.222+02:00[Asia/Jerusalem]
+
+Signals (2-10 trading days)
+2d: BUY | return=1.03% | score=1.92
+3d: HOLD | return=-0.72% | score=1.04
+4d: HOLD | return=-0.94% | score=0.93
+5d: HOLD | return=-1.74% | score=0.53
+6d: HOLD | return=-2.96% | score=-0.08
+7d: HOLD | return=-2.96% | score=-0.08
+8d: HOLD | return=-1.80% | score=0.50
+9d: HOLD | return=-2.57% | score=0.12
+10d: HOLD | return=-3.42% | score=-0.31
+
+Indicators
+- AD_daily: 1089979696.054400 | Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: DOWN.
+- ATR_14_daily: 4.585900 | ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=4.5859 (2.60% of price).
+- BBANDS_lower: 148.076500
+- BBANDS_mid: 173.184000
+- BBANDS_upper: 198.291500
+- OBV_weekly: 224830505.000000 | On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: DOWN.
+- SAR_weekly: 158.815700 | Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=176.2900, SAR=158.8157 => UPTREND.
+- TEMA_10_weekly_open: 171.815700 | TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=176.2900, TEMA=171.8157 => BULLISH.
+
+Fundamentals (Overview)
+- DividendYield: 0.0309
+- Industry: SEMICONDUCTORS
+- MarketCapitalization: 160271778000
+- Name: Texas Instruments Incorporated
+- PERatio: 32.05
+- PriceToBookRatio: 9.63
+- Sector: TECHNOLOGY
+
+Top News
+- Former Synopsys exec alleges HR took no action, then fired her [Neutral] https://www.hcamag.com/us/specialization/employment-law/former-synopsys-exec-alleges-hr-took-no-action-then-fired-her/560823
+- Texas Instruments Stock (TXN) News Today, Dec. 19, 2025: Truist Lifts Target as Sherman Fab Ramps and Goldman Downgrade Keeps Pressure On [Neutral] https://ts2.tech/en/texas-instruments-stock-txn-news-today-dec-19-2025-truist-lifts-target-as-sherman-fab-ramps-and-goldman-downgrade-keeps-pressure-on/
+- Powering the AI Infrastructure: Texas Instruments Ramps Up Sherman Fab to Secure Global Supply Chains [Somewhat-Bullish] https://markets.financialcontent.com/wral/article/tokenring-2025-12-19-powering-the-ai-infrastructure-texas-instruments-ramps-up-sherman-fab-to-secure-global-supply-chains
+- Texas Instruments (NASDAQ:TXN) Stock Price Expected to Rise, Truist Financial Analyst Says [Somewhat-Bullish] https://www.marketbeat.com/instant-alerts/texas-instruments-nasdaqtxn-stock-price-expected-to-rise-truist-financial-analyst-says-2025-12-19/
+- [News] Analog Devices Reportedly Plans 10–30% Price Hike from Feb. 2026, Following TI’s Lead [Somewhat-Bullish] https://www.trendforce.com/news/2025/12/19/news-analog-devices-reportedly-plans-10-30-price-hike-from-feb-2026-following-tis-lead/

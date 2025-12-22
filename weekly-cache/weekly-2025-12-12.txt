@@ -1,0 +1,158 @@
+
+=== 📊 Portfolio Weekly Summary (Next Week Forecast) ===
+
+פורמט תצוגה: שורה-לפי-מניה (ללא טבלה)
+
+------------------------------------------------------------
+מניה: GOOG
+מחיר נוכחי: $313.70
+כיוון (Bias): Neutral
+תחזית לשבוע הבא (Low-High): $293.13 - $334.27
+פסק-דין סופי: STRONG BUY (Long Term Entry)
+ADX: 35.66
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: STRONG BUY (Long Term)
+מומנטום 12-1: 50.09%
+שיא ירידה (Max Drawdown): 6.95%
+
+------------------------------------------------------------
+מניה: SPY
+מחיר נוכחי: $689.17
+כיוון (Bias): Up
+תחזית לשבוע הבא (Low-High): $674.46 - $703.88
+פסק-דין סופי: NEUTRAL (No clear edge)
+ADX: 16.91
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: NEUTRAL
+מומנטום 12-1: 7.75%
+שיא ירידה (Max Drawdown): 5.07%
+
+------------------------------------------------------------
+מניה: XOM
+מחיר נוכחי: $119.54
+כיוון (Bias): Up
+תחזית לשבוע הבא (Low-High): $114.62 - $124.46
+פסק-דין סופי: STRONG BUY (Long Term Entry)
+ADX: 16.51
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: STRONG BUY (Long Term)
+מומנטום 12-1: 7.45%
+שיא ירידה (Max Drawdown): 6.25%
+
+------------------------------------------------------------
+מניה: PLTR
+מחיר נוכחי: $187.54
+כיוון (Bias): Up
+תחזית לשבוע הבא (Low-High): $172.80 - $202.28
+פסק-דין סופי: STRONG BUY (Long Term Entry)
+ADX: 16.19
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: STRONG BUY (Long Term)
+מומנטום 12-1: 19.10%
+שיא ירידה (Max Drawdown): 25.26%
+
+------------------------------------------------------------
+מניה: AMZN
+מחיר נוכחי: $230.28
+כיוון (Bias): Neutral
+תחזית לשבוע הבא (Low-High): $219.80 - $240.76
+פסק-דין סופי: STRONG BUY (Long Term Entry)
+ADX: 10.49
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: STRONG BUY (Long Term)
+מומנטום 12-1: 6.97%
+שיא ירידה (Max Drawdown): 14.51%
+
+------------------------------------------------------------
+מניה: UNH
+מחיר נוכחי: $336.73
+כיוון (Bias): Up
+תחזית לשבוע הבא (Low-High): $317.00 - $356.46
+פסק-דין סופי: STRONG BUY (Long Term Entry)
+ADX: 12.68
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: STRONG BUY (Long Term)
+מומנטום 12-1: 15.91%
+שיא ירידה (Max Drawdown): 18.71%
+
+------------------------------------------------------------
+מניה: IGV
+מחיר נוכחי: $109.78
+כיוון (Bias): Neutral
+תחזית לשבוע הבא (Low-High): $105.50 - $114.06
+פסק-דין סופי: STRONG BUY (Long Term Entry)
+ADX: 26.24
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: STRONG BUY (Long Term)
+מומנטום 12-1: -1.75%
+שיא ירידה (Max Drawdown): 14.42%
+
+------------------------------------------------------------
+מניה: MU
+מחיר נוכחי: $258.46
+כיוון (Bias): Up
+תחזית לשבוע הבא (Low-High): $230.74 - $286.18
+פסק-דין סופי: STRONG BUY (Long Term Entry)
+ADX: 17.46
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: STRONG BUY (Long Term)
+מומנטום 12-1: 122.98%
+שיא ירידה (Max Drawdown): 20.50%
+
+------------------------------------------------------------
+מניה: CSCO
+מחיר נוכחי: $79.27
+כיוון (Bias): Up
+תחזית לשבוע הבא (Low-High): $76.34 - $82.20
+פסק-דין סופי: STRONG BUY (Long Term Entry)
+ADX: 31.63
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: STRONG BUY (Long Term)
+מומנטום 12-1: 7.78%
+שיא ירידה (Max Drawdown): 7.79%
+
+------------------------------------------------------------
+מניה: INTC
+מחיר נוכחי: $39.51
+כיוון (Bias): Up
+תחזית לשבוע הבא (Low-High): $34.73 - $44.29
+פסק-דין סופי: STRONG BUY (Long Term Entry)
+ADX: 23.02
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: STRONG BUY (Long Term)
+מומנטום 12-1: 61.30%
+שיא ירידה (Max Drawdown): 19.05%
+
+------------------------------------------------------------
+מניה: RIVN
+מחיר נוכחי: $16.43
+כיוון (Bias): Neutral
+תחזית לשבוע הבא (Low-High): $14.38 - $18.48
+פסק-דין סופי: STRONG BUY (Long Term Entry)
+ADX: 27.85
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: STRONG BUY (Long Term)
+מומנטום 12-1: 24.96%
+שיא ירידה (Max Drawdown): 20.84%
+
+------------------------------------------------------------
+מניה: LRCX
+מחיר נוכחי: $168.71
+כיוון (Bias): Up
+תחזית לשבוע הבא (Low-High): $155.14 - $182.28
+פסק-דין סופי: STRONG BUY (Long Term Entry)
+ADX: 13.94
+איתות טכני: NEUTRAL
+איתות פונדמנטלי: STRONG BUY (Long Term)
+מומנטום 12-1: 66.24%
+שיא ירידה (Max Drawdown): 16.10%
+
+
+--- 📈 Portfolio Rollup ---
+Bias counts -> Up: 8, Down: 0, Neutral: 4
+Average ATR(14): 5.24
+Average Momentum 12-1: 32.40%
+Average Max Drawdown: 14.62%
+
+Done.
+

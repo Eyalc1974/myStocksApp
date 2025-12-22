@@ -1,0 +1,26 @@
+# Build output
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# OS
+.DS_Store
+
+# App caches / local data
+finder-cache/
+weekly-cache/
+analysts-cache/
+alpha-agent-cache/
+monitoring-cache/
+monitoring-stocks.txt
+monitoring-data/
+analyses/
+
+# Logs
+*.log

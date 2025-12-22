@@ -1,0 +1,35 @@
+{
+  "nyDate" : "2025-12-19",
+  "createdAtNy" : "2025-12-19T02:06:59.659279-05:00[America/New_York]",
+  "rows" : [ {
+    "ticker" : "AMZN",
+    "startOpen" : 226.76,
+    "startClose" : 226.76,
+    "eodClose" : 227.35,
+    "lastUpdatedNy" : "2025-12-19T17:31:06.332835-05:00[America/New_York]"
+  }, {
+    "ticker" : "CEG",
+    "startOpen" : 361.2,
+    "startClose" : 361.05,
+    "eodClose" : 355.4,
+    "lastUpdatedNy" : "2025-12-19T17:31:06.761698-05:00[America/New_York]"
+  }, {
+    "ticker" : "MU",
+    "startOpen" : 252.09,
+    "startClose" : 248.55,
+    "eodClose" : 265.92,
+    "lastUpdatedNy" : "2025-12-19T17:31:07.191594-05:00[America/New_York]"
+  }, {
+    "ticker" : "EBAY",
+    "startOpen" : 84.67,
+    "startClose" : 83.66,
+    "eodClose" : 84.66,
+    "lastUpdatedNy" : "2025-12-19T17:31:07.731477-05:00[America/New_York]"
+  }, {
+    "ticker" : "WDAY",
+    "startOpen" : 217.59,
+    "startClose" : 218.08,
+    "eodClose" : 218.63,
+    "lastUpdatedNy" : "2025-12-19T17:31:08.240133-05:00[America/New_York]"
+  } ]
+}

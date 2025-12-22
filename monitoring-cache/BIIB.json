@@ -1,0 +1,93 @@
+{
+  "symbol" : "BIIB",
+  "asOfEpochMillis" : 1766428213843,
+  "returnsByDays" : {
+    "2" : 1.568855316676361,
+    "3" : 1.9241982507288695,
+    "4" : -0.5348810743143266,
+    "5" : 0.40206777713958475,
+    "6" : 1.33333333333334,
+    "7" : -1.548859476203886,
+    "8" : -0.5914467697907143,
+    "9" : -3.125692751052974,
+    "10" : -3.5852178709321567
+  },
+  "recommendationByDays" : {
+    "2" : "HOLD",
+    "3" : "HOLD",
+    "4" : "HOLD",
+    "5" : "HOLD",
+    "6" : "HOLD",
+    "7" : "HOLD",
+    "8" : "HOLD",
+    "9" : "DROP",
+    "10" : "DROP"
+  },
+  "scoreByDays" : {
+    "2" : 0.5844276583381804,
+    "3" : 0.7620991253644347,
+    "4" : -0.4674405371571634,
+    "5" : 0.0010338885697923628,
+    "6" : 0.4666666666666699,
+    "7" : -0.974429738101943,
+    "8" : -0.49572338489535717,
+    "9" : -1.762846375526487,
+    "10" : -1.992608935466078
+  },
+  "indicatorValues" : {
+    "TEMA_10_weekly_open" : 181.0795,
+    "SAR_weekly" : 165.288,
+    "ATR_14_daily" : 5.383,
+    "BBANDS_upper" : 187.8405,
+    "BBANDS_lower" : 167.1955,
+    "BBANDS_mid" : 177.518,
+    "AD_daily" : 1.350563721615E8,
+    "OBV_weekly" : 9.82788884E8
+  },
+  "indicatorNotes" : {
+    "TEMA_10_weekly_open" : "TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=174.8000, TEMA=181.0795 => BEARISH.",
+    "SAR_weekly" : "Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=174.8000, SAR=165.2880 => UPTREND.",
+    "ATR_14_daily" : "ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=5.3830 (3.08% of price).",
+    "BBANDS" : "Bollinger Bands describe a volatility envelope around a moving average (middle band). Interpretation: price near upper band suggests strength; near lower band suggests weakness; mid band is the mean. Current: close=174.8000. Close is between lower and mid band (moderate bearish/mean-reversion zone).",
+    "AD_daily" : "Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: UP.",
+    "OBV_weekly" : "On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: UP."
+  },
+  "fundamentals" : {
+    "Name" : "Biogen Inc",
+    "Sector" : "HEALTHCARE",
+    "Industry" : "DRUG MANUFACTURERS - GENERAL",
+    "MarketCapitalization" : "25643557000",
+    "PERatio" : "15.92",
+    "PriceToBookRatio" : "1.408"
+  },
+  "risk" : {
+    "ATR_pct" : "3.08"
+  },
+  "newsSentimentScore" : null,
+  "newsTop" : [ {
+    "title" : "Biogen’s QALSODY shows sustained benefits for SOD1-ALS patients",
+    "url" : "https://in.investing.com/news/company-news/biogens-qalsody-shows-sustained-benefits-for-sod1als-patients-93CH-5163425",
+    "summary" : "Biogen (NASDAQ:BIIB) announced that final results from its Phase 3 VALOR study of QALSODY for SOD1 amyotrophic lateral sclerosis (ALS) show sustained benefits over 3.5 years. Early initiation of QALSODY was linked to slower decline in clinical function, breathing, strength, and a reduced risk of death or permanent ventilation, with some participants even showing improvements in muscle strength. The drug is approved in 44 countries for adults with SOD1 gene mutations and Biogen is further investigating its potential to delay ALS onset in presymptomatic individuals.",
+    "sentiment" : "Bullish"
+  }, {
+    "title" : "The Journal of the American Medical Association (JAMA) Neurology Publishes Long Term Results from the QALSODY Phase 3 VALOR Study and its Open-Label Extension in SOD1-ALS",
+    "url" : "https://investors.biogen.com/news-releases/news-release-details/journal-american-medical-association-jama-neurology-publishes",
+    "summary" : "Biogen announced that long-term results from the QALSODY Phase 3 VALOR study and its open-label extension for SOD1-ALS have been published in JAMA Neurology. The data show that early initiation of QALSODY was associated with slower decline in clinical function, breathing, strength, and reduced risk of death or permanent ventilation, with a subset of participants regaining lost function and strength over three years. These findings emphasize QALSODY's impact on the underlying biology of SOD1-ALS and highlight its potential to improve outcomes for patients.",
+    "sentiment" : "Bullish"
+  }, {
+    "title" : "Some ALS patients regained lost function in long-term QALSODY study",
+    "url" : "https://www.stocktitan.net/news/BIIB/the-journal-of-the-american-medical-association-jama-neurology-349vcao1nszs.html",
+    "summary" : "Biogen announced that JAMA Neurology published results from the 3.5-year Phase 3 VALOR and open-label extension studies for QALSODY in SOD1-ALS, showing early treatment led to slower decline in clinical function, breathing, and strength, and a reduced risk of death or permanent ventilation. A subset of patients even regained lost function, a rare occurrence in the natural history of SOD1-ALS. QALSODY is approved in 44 countries, including accelerated U.S. approval based on neurofilament light chain (NfL) reduction, with continued U.S. approval contingent on confirmatory clinical benefit.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "4 Cheap Stock Picks We Still Like for 2026",
+    "url" : "https://www.morningstar.com/stocks/4-cheap-stock-picks-we-still-like-2026-2",
+    "summary" : "Morningstar analysts David Sekera and Susan Dziubinski review their 2025 stock picks, discussing both successes and failures, while also highlighting four undervalued stocks they continue to recommend for 2026: Biogen (BIIB), Microsoft (MSFT), LPL Financial (LPLA), and Devon Energy (DVN). They emphasize Morningstar's long-term investing philosophy and provide insights into their methodologies for buying and selling stocks.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "Two XOMA preferred share classes pay cash to holders in January",
+    "url" : "https://www.stocktitan.net/news/XOMA/xoma-royalty-declares-quarterly-preferred-stock-aa7iyeky2fnc.html",
+    "summary" : "XOMA Royalty (Nasdaq: XOMA) has declared quarterly cash dividends for its two preferred share classes. Holders of the 8.625% Series A Cumulative Perpetual Preferred Stock (Nasdaq: XOMAP) will receive $0.53906 per share, while holders of depositary shares for the 8.375% Series B Cumulative Perpetual Preferred Stock (Nasdaq: XOMAO) will receive $0.52344 per depositary share. Both dividends are payable on or about January 15, 2026, to shareholders of record as of January 2, 2026.",
+    "sentiment" : "Somewhat-Bullish"
+  } ]
+}

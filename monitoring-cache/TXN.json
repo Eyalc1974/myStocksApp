@@ -1,0 +1,94 @@
+{
+  "symbol" : "TXN",
+  "asOfEpochMillis" : 1766214485222,
+  "returnsByDays" : {
+    "2" : 1.0315777408447377,
+    "3" : -0.7152511826988118,
+    "4" : -0.9439793223577045,
+    "5" : -1.744510088061529,
+    "6" : -2.961413552044914,
+    "7" : -2.961413552044914,
+    "8" : -1.7992424242424345,
+    "9" : -2.5699126782358825,
+    "10" : -3.4239070888572374
+  },
+  "recommendationByDays" : {
+    "2" : "BUY",
+    "3" : "HOLD",
+    "4" : "HOLD",
+    "5" : "HOLD",
+    "6" : "HOLD",
+    "7" : "HOLD",
+    "8" : "HOLD",
+    "9" : "HOLD",
+    "10" : "HOLD"
+  },
+  "scoreByDays" : {
+    "2" : 1.915788870422369,
+    "3" : 1.0423744086505942,
+    "4" : 0.9280103388211478,
+    "5" : 0.5277449559692355,
+    "6" : -0.08070677602245702,
+    "7" : -0.08070677602245702,
+    "8" : 0.5003787878787828,
+    "9" : 0.11504366088205875,
+    "10" : -0.31195354442861867
+  },
+  "indicatorValues" : {
+    "TEMA_10_weekly_open" : 171.8157,
+    "SAR_weekly" : 158.8157,
+    "ATR_14_daily" : 4.5859,
+    "BBANDS_upper" : 198.2915,
+    "BBANDS_lower" : 148.0765,
+    "BBANDS_mid" : 173.184,
+    "AD_daily" : 1.0899796960544E9,
+    "OBV_weekly" : 2.24830505E8
+  },
+  "indicatorNotes" : {
+    "TEMA_10_weekly_open" : "TEMA (Triple EMA) is a trend-smoothing moving average that reacts faster than a simple SMA. Interpretation: Close > TEMA suggests upward bias; Close < TEMA suggests downward bias. Current: close=176.2900, TEMA=171.8157 => BULLISH.",
+    "SAR_weekly" : "Parabolic SAR is a trend-following stop-and-reverse indicator (often used to trail stops). Interpretation: SAR below price supports an uptrend; SAR above price supports a downtrend. Current: close=176.2900, SAR=158.8157 => UPTREND.",
+    "ATR_14_daily" : "ATR (Average True Range) measures volatility, not direction. Higher ATR means wider typical daily swings. A common risk heuristic: stops/position sizing often reference ~1–3x ATR. Current: ATR=4.5859 (2.60% of price).",
+    "BBANDS" : "Bollinger Bands describe a volatility envelope around a moving average (middle band). Interpretation: price near upper band suggests strength; near lower band suggests weakness; mid band is the mean. Current: close=176.2900. Close is between mid and upper band (moderate bullish bias).",
+    "AD_daily" : "Chaikin Accumulation/Distribution (A/D) estimates whether volume is flowing into (accumulation) or out of (distribution) the stock. Look for confirmation: rising A/D alongside rising price is constructive; falling A/D can warn of weakening demand. Recent direction: DOWN.",
+    "OBV_weekly" : "On-Balance Volume (OBV) is a cumulative volume indicator. If OBV trends up, it suggests buying pressure; if it trends down, selling pressure. Useful as confirmation/divergence vs price trend. Recent direction: DOWN."
+  },
+  "fundamentals" : {
+    "Name" : "Texas Instruments Incorporated",
+    "Sector" : "TECHNOLOGY",
+    "Industry" : "SEMICONDUCTORS",
+    "MarketCapitalization" : "160271778000",
+    "PERatio" : "32.05",
+    "PriceToBookRatio" : "9.63",
+    "DividendYield" : "0.0309"
+  },
+  "risk" : {
+    "ATR_pct" : "2.60"
+  },
+  "newsSentimentScore" : null,
+  "newsTop" : [ {
+    "title" : "Former Synopsys exec alleges HR took no action, then fired her",
+    "url" : "https://www.hcamag.com/us/specialization/employment-law/former-synopsys-exec-alleges-hr-took-no-action-then-fired-her/560823",
+    "summary" : "A former Synopsys sales executive, Shruti Mangalmurti, has filed a lawsuit alleging sex and race discrimination, harassment, and retaliation by the company. She claims that despite exceeding sales quotas, she experienced a hostile work environment, particularly from her manager and a sales director, and that HR failed to act on her complaints. Mangalmurti asserts she was fired shortly after taking protected bereavement leave, with her termination disguised as poor communication.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Texas Instruments Stock (TXN) News Today, Dec. 19, 2025: Truist Lifts Target as Sherman Fab Ramps and Goldman Downgrade Keeps Pressure On",
+    "url" : "https://ts2.tech/en/texas-instruments-stock-txn-news-today-dec-19-2025-truist-lifts-target-as-sherman-fab-ramps-and-goldman-downgrade-keeps-pressure-on/",
+    "summary" : "Texas Instruments (TXN) is experiencing a tug-of-war between positive long-term manufacturing news and near-term concerns. Truist Securities raised its price target to $195, citing the ramp-up of the new Sherman, Texas 300mm fab, while Goldman Sachs downgraded the stock to Sell with a $156 target due to worries about margins and inventory impacting its recovery in the semiconductor upcycle. Investors are balancing the strategic capacity expansion against potential short-term profitability valleys and are also monitoring legal risks and a leadership transition.",
+    "sentiment" : "Neutral"
+  }, {
+    "title" : "Powering the AI Infrastructure: Texas Instruments Ramps Up Sherman Fab to Secure Global Supply Chains",
+    "url" : "https://markets.financialcontent.com/wral/article/tokenring-2025-12-19-powering-the-ai-infrastructure-texas-instruments-ramps-up-sherman-fab-to-secure-global-supply-chains",
+    "summary" : "Texas Instruments has commenced production at its first 300mm semiconductor wafer fabrication plant in Sherman, Texas, bolstering the global AI hardware landscape. This $40 billion long-term commitment aims to secure the U.S. semiconductor supply chain by producing foundational analog and embedded processing chips vital for AI data centers and edge AI applications. The move provides TI with a significant competitive advantage through cost leadership and supply chain stability, impacting major tech companies and strengthening U.S. technological sovereignty.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "Texas Instruments (NASDAQ:TXN) Stock Price Expected to Rise, Truist Financial Analyst Says",
+    "url" : "https://www.marketbeat.com/instant-alerts/texas-instruments-nasdaqtxn-stock-price-expected-to-rise-truist-financial-analyst-says-2025-12-19/",
+    "summary" : "Truist Financial has raised its price target for Texas Instruments (NASDAQ:TXN) to $195 from $175, maintaining a \"hold\" rating and suggesting a 10.68% upside. The semiconductor company's Q3 earnings met expectations with $1.48 EPS and $4.74 billion in revenue, leading to Q4 guidance of $1.130–$1.390 EPS. Despite some insider selling, institutional investors hold a significant 84.99% of TXN stock.",
+    "sentiment" : "Somewhat-Bullish"
+  }, {
+    "title" : "[News] Analog Devices Reportedly Plans 10–30% Price Hike from Feb. 2026, Following TI’s Lead",
+    "url" : "https://www.trendforce.com/news/2025/12/19/news-analog-devices-reportedly-plans-10-30-price-hike-from-feb-2026-following-tis-lead/",
+    "summary" : "Analog Devices (ADI), the world's second-largest analog chipmaker, plans a 10–30% price increase starting February 1, 2026, responding to inflationary pressures. This follows Texas Instruments' previous significant price hikes and reflects a rebound in the analog chip market. The price adjustments will impact various industries, including automotive, industrial, and consumer electronics, potentially driving up costs across the supply chain.",
+    "sentiment" : "Somewhat-Bullish"
+  } ]
+}
