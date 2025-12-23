@@ -12,6 +12,12 @@ ollama pull llama3.2
 # 3️⃣ Run it interactively
 ollama run llama3.2
 
+Set on IJ the following environement parameters : 
+ALPHAVANTAGE_API_KEY = ....
+FINNHUB_API_KEY
+MONITORING_DATA_DIR
+
+
 https://finnhub.io/dashboard
 # set alphavantage token  
 its already defined on webserver run configuration as local var
