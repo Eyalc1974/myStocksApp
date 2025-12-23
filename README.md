@@ -13,7 +13,7 @@ ollama pull llama3.2
 ollama run llama3.2
 
 https://finnhub.io/dashboard
-# my creds , token for analysts recommendaions , tkn 
+# set alphavantage token  
 its already defined on webserver run configuration as local var
 this is the default
   "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=%s&apikey=%s",
