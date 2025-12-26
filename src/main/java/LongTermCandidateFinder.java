@@ -35,6 +35,16 @@ public class LongTermCandidateFinder {
     );
     private static final List<String> ALL_NASDAQ_TICKERS = NASDAQ_100_TICKERS;
 
+    public static List<String> getUniverseTickers() {
+        LinkedHashSet<String> uniq = new LinkedHashSet<>();
+        for (String t : ALL_NASDAQ_TICKERS) {
+            if (t == null) continue;
+            String v = t.trim().toUpperCase();
+            if (!v.isBlank()) uniq.add(v);
+        }
+        return new ArrayList<>(uniq);
+    }
+
     // Throttling and batch size controls to respect Alpha Vantage free-tier limits
     private static boolean ENABLE_THROTTLE = true;
     private static long THROTTLE_MS = 12_500; // ~5 req/min

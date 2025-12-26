@@ -33,6 +33,10 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.UUID;
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -53,6 +57,17 @@ public class WebServer {
     private static final String ALPHA_AGENT_BENCH_NASDAQ100 = "QQQ";
     private static final String ALPHA_AGENT_BENCH_SP500 = "SPY";
 
+    private static final int ALPHA_AGENT_FULL_ANALYZE_LIMIT = 30;
+    private static final int ALPHA_AGENT_FINAL_PICK_MIN = 5;
+    private static final int ALPHA_AGENT_FINAL_PICK_MAX = 5;
+
+    private static final ExecutorService alphaAgentAnalysisExec = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r);
+        t.setDaemon(true);
+        t.setName("alpha-agent-analysis");
+        return t;
+    });
+
     private static final Object alphaAgentLock = new Object();
 
     private static final class DailyTrackingRow {
@@ -63,6 +78,282 @@ public class WebServer {
         public String lastUpdatedNy;
         public DailyTrackingRow() {}
         public DailyTrackingRow(String ticker) { this.ticker = ticker; }
+    }
+
+    private static String bestEffortReadDailyJsonNoFetch(String symbol) {
+        try {
+            if (symbol == null || symbol.isBlank()) return null;
+            String sym = symbol.trim().toUpperCase();
+            Path p = Paths.get("finder-cache").resolve("daily-" + sym + ".json");
+            if (!Files.exists(p)) return null;
+            String s = Files.readString(p, StandardCharsets.UTF_8);
+            return (s == null || s.isBlank()) ? null : s;
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    private static List<String> chooseUniverseSample(List<String> universe, int sampleSize) {
+        if (universe == null) return new ArrayList<>();
+        List<String> base = new ArrayList<>();
+        for (String t : universe) {
+            if (t == null) continue;
+            String v = t.trim().toUpperCase();
+            if (!v.isBlank()) base.add(v);
+        }
+        long seed = 0;
+        try {
+            seed = java.time.LocalDate.now(NY).toEpochDay();
+        } catch (Exception ignore) {}
+        Collections.shuffle(base, new Random(seed));
+        if (sampleSize <= 0 || base.size() <= sampleSize) return base;
+        return new ArrayList<>(base.subList(0, sampleSize));
+    }
+
+    private static List<String> chooseUniverseSample(List<String> universe, int sampleSize, String salt) {
+        if (universe == null) return new ArrayList<>();
+        List<String> base = new ArrayList<>();
+        for (String t : universe) {
+            if (t == null) continue;
+            String v = t.trim().toUpperCase();
+            if (!v.isBlank()) base.add(v);
+        }
+        long seed = 0;
+        try {
+            seed = java.time.LocalDate.now(NY).toEpochDay();
+        } catch (Exception ignore) {}
+        if (salt != null && !salt.isBlank()) {
+            seed = seed ^ (long) salt.hashCode();
+        }
+        Collections.shuffle(base, new Random(seed));
+        if (sampleSize <= 0 || base.size() <= sampleSize) return base;
+        return new ArrayList<>(base.subList(0, sampleSize));
+    }
+
+    private static List<String> prefilterAlphaAgentCandidatesFromUniverse(int fullAnalyzeLimit) {
+        int lim = fullAnalyzeLimit > 0 ? fullAnalyzeLimit : ALPHA_AGENT_FULL_ANALYZE_LIMIT;
+
+        List<String> universe = LongTermCandidateFinder.getUniverseTickers();
+        // Scan up to ~200 (universe size), but we only need the best ~50 to fully analyze.
+        // First pass uses cached daily JSON only (fast). If insufficient, fetch daily for more.
+
+        List<AlphaAgentScored> scored = new ArrayList<>();
+        List<String> missing = new ArrayList<>();
+
+        for (String t : universe) {
+            String json = bestEffortReadDailyJsonNoFetch(t);
+            if (json == null) {
+                missing.add(t);
+                continue;
+            }
+            Double sc = scoreAlphaAgentSymbolFromDailyJson(json);
+            if (sc == null || Double.isNaN(sc)) continue;
+            scored.add(new AlphaAgentScored(t, sc));
+        }
+
+        // If we don't have enough cached data, fetch daily JSON for a limited number of missing tickers.
+        if (scored.size() < lim) {
+            int need = lim - scored.size();
+            int fetchCap = Math.min(need + 10, 60);
+            List<String> toFetch = chooseUniverseSample(missing, fetchCap);
+            for (int i = 0; i < toFetch.size(); i++) {
+                String t = toFetch.get(i);
+                try {
+                    // This will fetch + write finder-cache/daily-{sym}.json if cache is missing/old.
+                    DataFetcher.setTicker(t);
+                    String json = DataFetcher.fetchStockData();
+                    try {
+                        Path cacheFile = Paths.get("finder-cache").resolve("daily-" + t + ".json");
+                        Files.createDirectories(cacheFile.getParent());
+                        Files.writeString(cacheFile, json == null ? "" : json, StandardCharsets.UTF_8);
+                    } catch (Exception ignore) {}
+
+                    Double sc = scoreAlphaAgentSymbolFromDailyJson(json);
+                    if (sc == null || Double.isNaN(sc)) continue;
+                    scored.add(new AlphaAgentScored(t, sc));
+                } catch (Exception ignore) {
+                }
+
+                // Basic throttle to avoid hammering API
+                if (i < toFetch.size() - 1) {
+                    try { Thread.sleep(900); } catch (Exception ignore) {}
+                }
+            }
+        }
+
+        scored.sort((a, b) -> {
+            int c = Double.compare(b.score, a.score);
+            if (c != 0) return c;
+            return a.ticker.compareTo(b.ticker);
+        });
+        List<String> out = new ArrayList<>();
+        int max = Math.min(lim, scored.size());
+        for (int i = 0; i < max; i++) out.add(scored.get(i).ticker);
+        return out;
+    }
+
+    private static int alphaAgentCompositeScore(StockAnalysisResult r) {
+        if (r == null) return Integer.MIN_VALUE;
+        int pos = 0;
+        int neg = 0;
+
+        String tech = r.technicalSignal == null ? "" : r.technicalSignal.toUpperCase();
+        String fund = r.fundamentalSignal == null ? "" : r.fundamentalSignal.toUpperCase();
+        String verdict = r.finalVerdict == null ? "" : r.finalVerdict.toUpperCase();
+
+        if (tech.contains("BUY")) pos++;
+        if (tech.contains("SELL") || tech.contains("SHORT") || tech.contains("AVOID")) neg++;
+
+        if (fund.contains("STRONG BUY")) pos += 2;
+        if (fund.contains("OVERVALUED") || fund.contains("DISTRESS")) neg += 2;
+
+        if (verdict.contains("STRONG BUY")) pos += 2;
+        else if (verdict.contains("HOLD")) pos += 1;
+        if (verdict.contains("AVOID") || verdict.contains("SELL") || verdict.contains("DISTRESS")) neg += 2;
+
+        // prefer calmer trends (lower ADX) for entry
+        if (Double.isFinite(r.adxStrength)) {
+            if (r.adxStrength < 20.0) pos += 1;
+            else if (r.adxStrength > 35.0) neg += 1;
+        }
+
+        return (pos * 10) - (neg * 10);
+    }
+
+    private static List<String> pickTopAlphaAgentTickersFromAnalyzed(List<StockAnalysisResult> analyzed) {
+        List<StockAnalysisResult> list = analyzed == null ? new ArrayList<>() : new ArrayList<>(analyzed);
+        list.removeIf(x -> x == null || x.ticker == null || x.ticker.isBlank());
+        list.sort((a, b) -> {
+            int sa = alphaAgentCompositeScore(a);
+            int sb = alphaAgentCompositeScore(b);
+            int c = Integer.compare(sb, sa);
+            if (c != 0) return c;
+            return a.ticker.compareToIgnoreCase(b.ticker);
+        });
+        int n = ALPHA_AGENT_FINAL_PICK_MAX;
+        if (list.size() < n) n = list.size();
+        if (n < ALPHA_AGENT_FINAL_PICK_MIN) n = list.size();
+        List<String> out = new ArrayList<>();
+        for (int i = 0; i < n; i++) out.add(list.get(i).ticker.trim().toUpperCase());
+        return out;
+    }
+
+    private static AlphaAgentPortfolio bestEffortStartAlphaAgentPortfolioAsync(int trackingDays) {
+        return bestEffortStartAlphaAgentPortfolioAsync(trackingDays, null, true);
+    }
+
+    private static AlphaAgentPortfolio bestEffortStartAlphaAgentPortfolioAsync(int trackingDays, String portfolioId, boolean createNewSlot) {
+        int days = trackingDays > 0 ? trackingDays : ALPHA_AGENT_DEFAULT_TRACKING_DAYS;
+        if (days < 2) days = 2;
+        if (days > 60) days = 60;
+
+        AlphaAgentPortfolio pf = new AlphaAgentPortfolio();
+        String startNyDate = nyToday();
+        pf.createdAtNy = ZonedDateTime.now(NY).toString();
+        pf.startNyDate = startNyDate;
+        pf.trackingDays = days;
+        pf.positions = new ArrayList<>();
+        pf.benchNasdaq100 = buildAlphaAgentPosition(ALPHA_AGENT_BENCH_NASDAQ100, startNyDate, startNyDate);
+        pf.benchSp500 = buildAlphaAgentPosition(ALPHA_AGENT_BENCH_SP500, startNyDate, startNyDate);
+        pf.lastError = "AlphaAgent: selecting 30 random tickers...";
+
+        final String targetId;
+        synchronized (alphaAgentLock) {
+            if (createNewSlot) {
+                String id = bestEffortCreateNewAlphaAgentPortfolioSlot(pf);
+                targetId = id;
+            } else {
+                String id = portfolioId;
+                if (id == null || id.isBlank()) id = bestEffortGetActiveAlphaAgentPortfolioId();
+                if (id == null || id.isBlank()) {
+                    String created = bestEffortCreateNewAlphaAgentPortfolioSlot(pf);
+                    targetId = created;
+                } else {
+                    bestEffortPersistAlphaAgentPortfolioById(id, pf);
+                    targetId = id;
+                }
+            }
+        }
+
+        if (targetId == null || targetId.isBlank()) {
+            pf.lastError = "AlphaAgent: cannot create new list (max 3). Drop a list first.";
+            synchronized (alphaAgentLock) {
+                String id = bestEffortGetActiveAlphaAgentPortfolioId();
+                bestEffortPersistAlphaAgentPortfolioById(id, pf);
+            }
+            return pf;
+        }
+
+        final int finalDays = days;
+        alphaAgentAnalysisExec.submit(() -> {
+            try {
+                // Step 1: random sample from NASDAQ universe (about ~200)
+                List<String> candidates = chooseUniverseSample(LongTermCandidateFinder.getUniverseTickers(), ALPHA_AGENT_FULL_ANALYZE_LIMIT, targetId);
+                synchronized (alphaAgentLock) {
+                    AlphaAgentPortfolio cur = bestEffortLoadAlphaAgentPortfolioById(targetId);
+                    if (cur != null) {
+                        cur.lastError = "AlphaAgent: full analysis starting (0/" + candidates.size() + ")...";
+                        bestEffortPersistAlphaAgentPortfolioById(targetId, cur);
+                    }
+                }
+
+                // Step 2: full analysis for top ~50
+                List<StockAnalysisResult> analyzed = new ArrayList<>();
+                for (int i = 0; i < candidates.size(); i++) {
+                    String t = candidates.get(i);
+                    try {
+                        StockAnalysisResult r = StockScannerRunner.analyzeSingleStock(t);
+                        analyzed.add(r);
+                    } catch (Exception ignore) {
+                    }
+
+                    synchronized (alphaAgentLock) {
+                        AlphaAgentPortfolio cur = bestEffortLoadAlphaAgentPortfolioById(targetId);
+                        if (cur != null) {
+                            cur.lastError = "AlphaAgent: full analysis running (" + (i + 1) + "/" + candidates.size() + ")...";
+                            bestEffortPersistAlphaAgentPortfolioById(targetId, cur);
+                        }
+                    }
+
+                    // Throttle (full analysis is API heavy)
+                    if (i < candidates.size() - 1) {
+                        try { Thread.sleep(12_500); } catch (Exception ignore) {}
+                    }
+                }
+
+                // Step 3: rank and pick final tickers
+                List<String> finalTickers = pickTopAlphaAgentTickersFromAnalyzed(analyzed);
+
+                AlphaAgentPortfolio out = new AlphaAgentPortfolio();
+                out.createdAtNy = ZonedDateTime.now(NY).toString();
+                out.startNyDate = nyToday();
+                out.trackingDays = finalDays;
+                out.positions = new ArrayList<>();
+                for (String t : finalTickers) {
+                    AlphaAgentPosition pos = buildAlphaAgentPosition(t, out.startNyDate, out.startNyDate);
+                    if (pos != null) out.positions.add(pos);
+                }
+                out.benchNasdaq100 = buildAlphaAgentPosition(ALPHA_AGENT_BENCH_NASDAQ100, out.startNyDate, out.startNyDate);
+                out.benchSp500 = buildAlphaAgentPosition(ALPHA_AGENT_BENCH_SP500, out.startNyDate, out.startNyDate);
+                out.lastError = "";
+
+                synchronized (alphaAgentLock) {
+                    bestEffortPersistAlphaAgentPortfolioById(targetId, out);
+                    bestEffortSetActiveAlphaAgentPortfolioId(targetId);
+                }
+                bestEffortUpdateAlphaAgentPortfolioNow();
+            } catch (Exception e) {
+                synchronized (alphaAgentLock) {
+                    AlphaAgentPortfolio cur = bestEffortLoadAlphaAgentPortfolioById(targetId);
+                    if (cur != null) {
+                        cur.lastError = "AlphaAgent error: " + e.getMessage();
+                        bestEffortPersistAlphaAgentPortfolioById(targetId, cur);
+                    }
+                }
+            }
+        });
+
+        return pf;
     }
 
     private static final class DailyTrackingSnapshot {
@@ -90,6 +381,15 @@ public class WebServer {
         public String lastError;
     }
 
+    private static final class AlphaAgentScored {
+        final String ticker;
+        final double score;
+        AlphaAgentScored(String ticker, double score) {
+            this.ticker = ticker;
+            this.score = score;
+        }
+    }
+
     private static Path trackingDir() {
         return Paths.get("finder-cache", "daily-top-tracking");
     }
@@ -106,29 +406,177 @@ public class WebServer {
         return Paths.get("finder-cache", "alpha-agent");
     }
 
-    private static Path alphaAgentPortfolioFile() {
+    private static Path alphaAgentStoreFile() {
+        return alphaAgentDir().resolve("store.json");
+    }
+
+    private static Path alphaAgentLegacyPortfolioFile() {
         return alphaAgentDir().resolve("portfolio.json");
     }
 
-    private static AlphaAgentPortfolio bestEffortLoadAlphaAgentPortfolio() {
+    private static final class AlphaAgentStore {
+        public String activeId;
+        public LinkedHashMap<String, AlphaAgentPortfolio> portfolios;
+        public AlphaAgentStore() {}
+    }
+
+    private static AlphaAgentStore bestEffortLoadAlphaAgentStore() {
         try {
-            Path p = alphaAgentPortfolioFile();
-            if (!Files.exists(p)) return null;
-            return JSON.readValue(p.toFile(), AlphaAgentPortfolio.class);
+            Files.createDirectories(alphaAgentDir());
+
+            Path storeFile = alphaAgentStoreFile();
+            AlphaAgentStore store = null;
+            if (Files.exists(storeFile)) {
+                try {
+                    store = JSON.readValue(storeFile.toFile(), AlphaAgentStore.class);
+                } catch (Exception ignore) {
+                    store = null;
+                }
+            }
+
+            if (store == null) {
+                store = new AlphaAgentStore();
+                store.portfolios = new LinkedHashMap<>();
+            }
+            if (store.portfolios == null) store.portfolios = new LinkedHashMap<>();
+
+            if (store.portfolios.isEmpty()) {
+                try {
+                    Path legacy = alphaAgentLegacyPortfolioFile();
+                    if (Files.exists(legacy)) {
+                        AlphaAgentPortfolio pf = JSON.readValue(legacy.toFile(), AlphaAgentPortfolio.class);
+                        if (pf != null) {
+                            String id = UUID.randomUUID().toString();
+                            store.portfolios.put(id, pf);
+                            store.activeId = id;
+                            bestEffortPersistAlphaAgentStore(store);
+                        }
+                    }
+                } catch (Exception ignore) {
+                }
+            }
+
+            if (store.activeId == null || store.activeId.isBlank() || !store.portfolios.containsKey(store.activeId)) {
+                if (!store.portfolios.isEmpty()) {
+                    store.activeId = store.portfolios.keySet().iterator().next();
+                    bestEffortPersistAlphaAgentStore(store);
+                }
+            }
+
+            return store;
+        } catch (Exception ignore) {
+            AlphaAgentStore s = new AlphaAgentStore();
+            s.portfolios = new LinkedHashMap<>();
+            return s;
+        }
+    }
+
+    private static void bestEffortPersistAlphaAgentStore(AlphaAgentStore store) {
+        if (store == null) return;
+        try {
+            Files.createDirectories(alphaAgentDir());
+            Path p = alphaAgentStoreFile();
+            Path tmp = alphaAgentDir().resolve("store.json.tmp");
+            JSON.writerWithDefaultPrettyPrinter().writeValue(tmp.toFile(), store);
+            Files.move(tmp, p, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+        } catch (Exception ignore) {
+        }
+    }
+
+    private static AlphaAgentPortfolio bestEffortLoadAlphaAgentPortfolioById(String id) {
+        try {
+            AlphaAgentStore store = bestEffortLoadAlphaAgentStore();
+            if (store == null || store.portfolios == null || store.portfolios.isEmpty()) return null;
+            if (id != null && !id.isBlank()) {
+                AlphaAgentPortfolio pf = store.portfolios.get(id);
+                if (pf != null) return pf;
+            }
+            if (store.activeId != null && !store.activeId.isBlank()) return store.portfolios.get(store.activeId);
+            return store.portfolios.values().iterator().next();
         } catch (Exception ignore) {
             return null;
         }
     }
 
-    private static void bestEffortPersistAlphaAgentPortfolio(AlphaAgentPortfolio pf) {
+    private static AlphaAgentPortfolio bestEffortLoadAlphaAgentPortfolio() {
+        return bestEffortLoadAlphaAgentPortfolioById(null);
+    }
+
+    private static String bestEffortGetActiveAlphaAgentPortfolioId() {
+        try {
+            AlphaAgentStore store = bestEffortLoadAlphaAgentStore();
+            return store == null ? null : store.activeId;
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    private static void bestEffortSetActiveAlphaAgentPortfolioId(String id) {
+        if (id == null || id.isBlank()) return;
+        try {
+            AlphaAgentStore store = bestEffortLoadAlphaAgentStore();
+            if (store == null || store.portfolios == null || !store.portfolios.containsKey(id)) return;
+            store.activeId = id;
+            bestEffortPersistAlphaAgentStore(store);
+        } catch (Exception ignore) {
+        }
+    }
+
+    private static String bestEffortCreateNewAlphaAgentPortfolioSlot(AlphaAgentPortfolio initialPf) {
+        try {
+            AlphaAgentStore store = bestEffortLoadAlphaAgentStore();
+            if (store == null) store = new AlphaAgentStore();
+            if (store.portfolios == null) store.portfolios = new LinkedHashMap<>();
+            if (store.portfolios.size() >= 3) return null;
+            String id = UUID.randomUUID().toString();
+            store.portfolios.put(id, initialPf);
+            store.activeId = id;
+            bestEffortPersistAlphaAgentStore(store);
+            return id;
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    private static void bestEffortPersistAlphaAgentPortfolioById(String id, AlphaAgentPortfolio pf) {
         if (pf == null) return;
         try {
-            Files.createDirectories(alphaAgentDir());
-            Path p = alphaAgentPortfolioFile();
-            Path tmp = alphaAgentDir().resolve("portfolio.json.tmp");
-            JSON.writerWithDefaultPrettyPrinter().writeValue(tmp.toFile(), pf);
-            Files.move(tmp, p, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            AlphaAgentStore store = bestEffortLoadAlphaAgentStore();
+            if (store == null) return;
+            if (store.portfolios == null) store.portfolios = new LinkedHashMap<>();
+
+            String key = id;
+            if (key == null || key.isBlank()) key = store.activeId;
+            if (key == null || key.isBlank()) {
+                if (store.portfolios.size() >= 3) return;
+                key = UUID.randomUUID().toString();
+            }
+
+            store.portfolios.put(key, pf);
+            store.activeId = key;
+            bestEffortPersistAlphaAgentStore(store);
         } catch (Exception ignore) {
+        }
+    }
+
+    private static void bestEffortPersistAlphaAgentPortfolio(AlphaAgentPortfolio pf) {
+        bestEffortPersistAlphaAgentPortfolioById(null, pf);
+    }
+
+    private static boolean bestEffortDropAlphaAgentPortfolioById(String id) {
+        if (id == null || id.isBlank()) return false;
+        try {
+            AlphaAgentStore store = bestEffortLoadAlphaAgentStore();
+            if (store == null || store.portfolios == null || store.portfolios.isEmpty()) return false;
+            if (!store.portfolios.containsKey(id)) return false;
+            store.portfolios.remove(id);
+            if (store.activeId != null && store.activeId.equals(id)) {
+                store.activeId = store.portfolios.isEmpty() ? null : store.portfolios.keySet().iterator().next();
+            }
+            bestEffortPersistAlphaAgentStore(store);
+            return true;
+        } catch (Exception ignore) {
+            return false;
         }
     }
 
@@ -168,6 +616,9 @@ public class WebServer {
                         pf.benchNasdaq100.startPrice = bestEffortCloseOnOrBefore(closeByDate, pf.benchNasdaq100.startNyDate);
                     }
                     pf.benchNasdaq100.lastPrice = bestEffortCloseOnOrBefore(closeByDate, lastNyDate);
+                    if (pf.benchNasdaq100.startPrice == null) {
+                        pf.benchNasdaq100.startPrice = bestEffortCloseOnOrBefore(closeByDate, lastNyDate);
+                    }
                 }
                 if (pf.benchSp500 != null && pf.benchSp500.ticker != null) {
                     pf.benchSp500.lastNyDate = lastNyDate;
@@ -176,6 +627,9 @@ public class WebServer {
                         pf.benchSp500.startPrice = bestEffortCloseOnOrBefore(closeByDate, pf.benchSp500.startNyDate);
                     }
                     pf.benchSp500.lastPrice = bestEffortCloseOnOrBefore(closeByDate, lastNyDate);
+                    if (pf.benchSp500.startPrice == null) {
+                        pf.benchSp500.startPrice = bestEffortCloseOnOrBefore(closeByDate, lastNyDate);
+                    }
                 }
                 pf.lastError = null;
             } catch (Exception e) {
@@ -183,6 +637,121 @@ public class WebServer {
             }
             bestEffortPersistAlphaAgentPortfolio(pf);
         }
+    }
+
+    private static void bestEffortForceRefreshAlphaAgentPricesAsync(String portfolioId) {
+        final String pid = portfolioId;
+        alphaAgentAnalysisExec.submit(() -> {
+            try {
+                AlphaAgentPortfolio pf;
+                synchronized (alphaAgentLock) {
+                    pf = (pid != null && !pid.isBlank()) ? bestEffortLoadAlphaAgentPortfolioById(pid) : bestEffortLoadAlphaAgentPortfolio();
+                    if (pf == null) return;
+                    pf.lastError = "AlphaAgent: refreshing prices...";
+                    bestEffortPersistAlphaAgentPortfolioById(pid, pf);
+                }
+
+                String lastNyDate = nyToday();
+                Map<String, Double> livePriceByTicker = new HashMap<>();
+                MonitoringAlphaVantageClient av = null;
+                try {
+                    av = MonitoringAlphaVantageClient.fromEnv();
+                } catch (Exception ignore) {}
+
+                List<String> toUpdate = new ArrayList<>();
+                if (pf.positions != null) {
+                    for (AlphaAgentPosition p : pf.positions) {
+                        if (p == null || p.ticker == null || p.ticker.isBlank()) continue;
+                        toUpdate.add(p.ticker.trim().toUpperCase());
+                    }
+                }
+                if (pf.benchNasdaq100 != null && pf.benchNasdaq100.ticker != null && !pf.benchNasdaq100.ticker.isBlank()) {
+                    toUpdate.add(pf.benchNasdaq100.ticker.trim().toUpperCase());
+                }
+                if (pf.benchSp500 != null && pf.benchSp500.ticker != null && !pf.benchSp500.ticker.isBlank()) {
+                    toUpdate.add(pf.benchSp500.ticker.trim().toUpperCase());
+                }
+
+                for (int i = 0; i < toUpdate.size(); i++) {
+                    String t = toUpdate.get(i);
+                    try {
+                        if (av != null) {
+                            try {
+                                JsonNode q = av.globalQuote(t);
+                                Double price = extractGlobalQuotePrice(q);
+                                if (price != null && Double.isFinite(price)) {
+                                    livePriceByTicker.put(t, price);
+                                }
+                            } catch (Exception ignore) {}
+                        }
+                    } catch (Exception ignore) {}
+
+                    synchronized (alphaAgentLock) {
+                        AlphaAgentPortfolio cur = (pid != null && !pid.isBlank()) ? bestEffortLoadAlphaAgentPortfolioById(pid) : bestEffortLoadAlphaAgentPortfolio();
+                        if (cur != null) {
+                            cur.lastError = "AlphaAgent: refreshing prices (" + (i + 1) + "/" + toUpdate.size() + ")...";
+                            bestEffortPersistAlphaAgentPortfolioById(pid, cur);
+                        }
+                    }
+
+                    if (i < toUpdate.size() - 1) {
+                        // GLOBAL_QUOTE is rate-limited. Throttle to improve chances of getting live prices.
+                        try { Thread.sleep(12_500); } catch (Exception ignore) {}
+                    }
+                }
+
+                synchronized (alphaAgentLock) {
+                    AlphaAgentPortfolio cur = (pid != null && !pid.isBlank()) ? bestEffortLoadAlphaAgentPortfolioById(pid) : bestEffortLoadAlphaAgentPortfolio();
+                    if (cur == null) return;
+                    try {
+                        if (cur.positions != null) {
+                            for (AlphaAgentPosition pos : cur.positions) {
+                                if (pos == null || pos.ticker == null || pos.ticker.isBlank()) continue;
+                                pos.lastNyDate = lastNyDate;
+                                String t = pos.ticker.trim().toUpperCase();
+                                Map<String, Double> closeByDate = loadDailyCloseByDateCached(t);
+                                if (pos.startPrice == null && pos.startNyDate != null) {
+                                    pos.startPrice = bestEffortCloseOnOrBefore(closeByDate, pos.startNyDate);
+                                }
+                                Double live = livePriceByTicker.get(t);
+                                pos.lastPrice = (live != null) ? live : bestEffortCloseOnOrBefore(closeByDate, lastNyDate);
+                            }
+                        }
+                        if (cur.benchNasdaq100 != null && cur.benchNasdaq100.ticker != null) {
+                            cur.benchNasdaq100.lastNyDate = lastNyDate;
+                            String t = cur.benchNasdaq100.ticker.trim().toUpperCase();
+                            Map<String, Double> closeByDate = loadDailyCloseByDateCached(t);
+                            if (cur.benchNasdaq100.startPrice == null && cur.benchNasdaq100.startNyDate != null) {
+                                cur.benchNasdaq100.startPrice = bestEffortCloseOnOrBefore(closeByDate, cur.benchNasdaq100.startNyDate);
+                            }
+                            Double live = livePriceByTicker.get(t);
+                            cur.benchNasdaq100.lastPrice = (live != null) ? live : bestEffortCloseOnOrBefore(closeByDate, lastNyDate);
+                            if (cur.benchNasdaq100.startPrice == null) {
+                                cur.benchNasdaq100.startPrice = bestEffortCloseOnOrBefore(closeByDate, lastNyDate);
+                            }
+                        }
+                        if (cur.benchSp500 != null && cur.benchSp500.ticker != null) {
+                            cur.benchSp500.lastNyDate = lastNyDate;
+                            String t = cur.benchSp500.ticker.trim().toUpperCase();
+                            Map<String, Double> closeByDate = loadDailyCloseByDateCached(t);
+                            if (cur.benchSp500.startPrice == null && cur.benchSp500.startNyDate != null) {
+                                cur.benchSp500.startPrice = bestEffortCloseOnOrBefore(closeByDate, cur.benchSp500.startNyDate);
+                            }
+                            Double live = livePriceByTicker.get(t);
+                            cur.benchSp500.lastPrice = (live != null) ? live : bestEffortCloseOnOrBefore(closeByDate, lastNyDate);
+                            if (cur.benchSp500.startPrice == null) {
+                                cur.benchSp500.startPrice = bestEffortCloseOnOrBefore(closeByDate, lastNyDate);
+                            }
+                        }
+                        cur.lastError = "";
+                    } catch (Exception e) {
+                        cur.lastError = e.getMessage();
+                    }
+                    bestEffortPersistAlphaAgentPortfolioById(pid, cur);
+                }
+            } catch (Exception ignore) {
+            }
+        });
     }
 
     private static String nyToday() {
@@ -357,6 +926,14 @@ public class WebServer {
         return out;
     }
 
+    private static String urlEncode(String s) {
+        try {
+            return java.net.URLEncoder.encode(s == null ? "" : s, StandardCharsets.UTF_8);
+        } catch (Exception ignore) {
+            return "";
+        }
+    }
+
     private static String intradayIntervalForCurrentEntitlement() {
         String ent = System.getenv("ALPHAVANTAGE_ENTITLEMENT");
         if (ent == null || ent.isBlank()) {
@@ -475,7 +1052,7 @@ public class WebServer {
                 "<a href=\"/favorites\">Favorites</a> · "+
                 "<a href=\"/portfolio-manage\">Manage Portfolio</a> · "+
                 "<a href=\"/alpha-agent\">AlphaAgent AI</a> · "+
-                "<a href=\"/monitoring\">Monitoring Stocks</a> · "+
+                "<a href=\"/monitoring\">Monitoring Stocks - History</a> · "+
                 "<a href=\"/intraday-alerts\">Intraday Alerts</a> · "+
                 "<a href=\"/analysts\">Analysts</a> · "+
                 "<a href=\"/finder\">FINDER</a>"+
@@ -1135,6 +1712,148 @@ public class WebServer {
         return ((end - start) / start) * 100.0;
     }
 
+    private static List<String> listCachedDailySymbols() {
+        try {
+            Path dir = Paths.get("finder-cache");
+            if (!Files.exists(dir) || !Files.isDirectory(dir)) return new ArrayList<>();
+            List<String> out = new ArrayList<>();
+            try (java.util.stream.Stream<Path> st = Files.list(dir)) {
+                st.forEach(p -> {
+                    try {
+                        String fn = p.getFileName() == null ? "" : p.getFileName().toString();
+                        if (!fn.startsWith("daily-") || !fn.endsWith(".json")) return;
+                        String sym = fn.substring("daily-".length(), fn.length() - ".json".length()).trim().toUpperCase();
+                        if (!sym.isBlank() && sym.matches("[A-Z0-9.:-]{1,10}")) out.add(sym);
+                    } catch (Exception ignore) {}
+                });
+            }
+            java.util.LinkedHashSet<String> dedup = new java.util.LinkedHashSet<>(out);
+            List<String> result = new ArrayList<>(dedup);
+            result.sort(String::compareTo);
+            return result;
+        } catch (Exception ignore) {
+            return new ArrayList<>();
+        }
+    }
+
+    private static List<Double> ohlcToSeries(Map<String, double[]> ohlcByDate, int idx) {
+        try {
+            if (ohlcByDate == null || ohlcByDate.isEmpty()) return new ArrayList<>();
+            List<String> dates = new ArrayList<>(ohlcByDate.keySet());
+            dates.sort(String::compareTo);
+            List<Double> out = new ArrayList<>(dates.size());
+            for (String d : dates) {
+                double[] o = ohlcByDate.get(d);
+                if (o == null || o.length <= idx) continue;
+                double v = o[idx];
+                if (Double.isNaN(v)) continue;
+                out.add(v);
+            }
+            return out;
+        } catch (Exception ignore) {
+            return new ArrayList<>();
+        }
+    }
+
+    private static Double scoreAlphaAgentSymbolFromDailyJson(String json) {
+        try {
+            if (json == null || json.isBlank()) return null;
+            Map<String, double[]> ohlc = PriceJsonParser.extractDailyOhlcByDate(json);
+            if (ohlc == null || ohlc.isEmpty()) return null;
+
+            List<Double> closes = ohlcToSeries(ohlc, 3);
+            List<Double> highs = ohlcToSeries(ohlc, 1);
+            List<Double> lows = ohlcToSeries(ohlc, 2);
+            if (closes.size() < 60 || highs.size() < 60 || lows.size() < 60) return null;
+
+            double lastClose = closes.get(closes.size() - 1);
+
+            double score = 0.0;
+
+            try {
+                List<Double> sma20 = TechnicalAnalysisModel.calculateSMA(closes, 20);
+                Double lastSma = sma20 == null || sma20.isEmpty() ? null : sma20.get(sma20.size() - 1);
+                if (lastSma != null && !Double.isNaN(lastSma) && lastClose > lastSma) score += 1.0;
+                else score -= 0.5;
+            } catch (Exception ignore) {}
+
+            try {
+                List<Double> rsi = RSI.calculateRSI(closes, 14);
+                Double lastRsi = rsi == null || rsi.isEmpty() ? null : rsi.get(rsi.size() - 1);
+                if (lastRsi != null && !Double.isNaN(lastRsi)) {
+                    if (lastRsi < 30.0) score += 1.0;
+                    else if (lastRsi < 45.0) score += 0.6;
+                    else if (lastRsi > 70.0) score -= 0.8;
+                }
+            } catch (Exception ignore) {}
+
+            try {
+                List<Double[]> macd = MACD.calculateMACD(closes);
+                if (macd != null && !macd.isEmpty()) {
+                    Double[] last = macd.get(macd.size() - 1);
+                    if (last != null && last.length >= 2 && last[0] != null && last[1] != null) {
+                        double m = last[0];
+                        double s = last[1];
+                        if (m > s) score += 0.8;
+                        else score -= 0.4;
+                    }
+                }
+            } catch (Exception ignore) {}
+
+            try {
+                List<Double[]> adx = ADX.calculateADX(highs, lows, closes, 14);
+                if (adx != null && !adx.isEmpty()) {
+                    Double[] last = adx.get(adx.size() - 1);
+                    if (last != null && last.length >= 3) {
+                        Double a = last[0];
+                        Double p = last[1];
+                        Double n = last[2];
+                        if (p != null && n != null && !Double.isNaN(p) && !Double.isNaN(n)) {
+                            if (p > n) score += 0.6;
+                            else score -= 0.6;
+                        }
+                        if (a != null && !Double.isNaN(a)) {
+                            if (a < 20.0) score += 0.3;
+                            else if (a > 40.0) score -= 0.4;
+                        }
+                    }
+                }
+            } catch (Exception ignore) {}
+
+            return score;
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    private static List<String> selectAlphaAgentTickersDeterministic(int maxTickers) {
+        int n = maxTickers <= 0 ? ALPHA_AGENT_MAX_TICKERS : maxTickers;
+        List<String> syms = listCachedDailySymbols();
+        if (syms.isEmpty()) return new ArrayList<>();
+        List<String> scored = new ArrayList<>();
+        Map<String, Double> scoreBySym = new HashMap<>();
+        for (String s : syms) {
+            try {
+                Path p = Paths.get("finder-cache").resolve("daily-" + s + ".json");
+                if (!Files.exists(p)) continue;
+                String json = Files.readString(p, StandardCharsets.UTF_8);
+                Double sc = scoreAlphaAgentSymbolFromDailyJson(json);
+                if (sc == null || Double.isNaN(sc)) continue;
+                scoreBySym.put(s, sc);
+                scored.add(s);
+            } catch (Exception ignore) {}
+        }
+        scored.sort((a, b) -> {
+            double sa = scoreBySym.getOrDefault(a, Double.NEGATIVE_INFINITY);
+            double sb = scoreBySym.getOrDefault(b, Double.NEGATIVE_INFINITY);
+            int c = Double.compare(sb, sa);
+            if (c != 0) return c;
+            return a.compareTo(b);
+        });
+        if (scored.size() > n) scored = scored.subList(0, n);
+        return new ArrayList<>(scored);
+    }
+
     private static AlphaAgentPosition buildAlphaAgentPosition(String ticker, String startNyDate, String lastNyDate) {
         if (ticker == null || ticker.isBlank()) return null;
         String t = ticker.trim().toUpperCase();
@@ -1152,50 +1871,7 @@ public class WebServer {
     }
 
     private static AlphaAgentPortfolio bestEffortStartAlphaAgentPortfolio(int trackingDays) {
-        int days = trackingDays > 0 ? trackingDays : ALPHA_AGENT_DEFAULT_TRACKING_DAYS;
-        if (days < 2) days = 2;
-        if (days > 60) days = 60;
-
-        AlphaAgentPortfolio pf = new AlphaAgentPortfolio();
-        String startNyDate = nyToday();
-        pf.createdAtNy = ZonedDateTime.now(NY).toString();
-        pf.startNyDate = startNyDate;
-        pf.trackingDays = days;
-        pf.positions = new ArrayList<>();
-        pf.lastError = null;
-
-        try {
-            LongTermCandidateFinder.configureThrottle(true, 2_500);
-            LongTermCandidateFinder.setRandomPoolSize(25);
-            LongTermCandidateFinder.setMaxTickers(25);
-            try { StockScannerRunner.setPrintGrahamDetails(false); } catch (Exception ignore) {}
-
-            List<StockAnalysisResult> candidates = LongTermCandidateFinder.findBestLongTermBuys(ALPHA_AGENT_MAX_TICKERS, true);
-            List<String> tickers = new ArrayList<>();
-            if (candidates != null) {
-                for (StockAnalysisResult r : candidates) {
-                    if (r == null || r.ticker == null || r.ticker.isBlank()) continue;
-                    String t = r.ticker.trim().toUpperCase();
-                    if (!t.matches("[A-Z0-9.:-]{1,10}")) continue;
-                    if (!tickers.contains(t)) tickers.add(t);
-                    if (tickers.size() >= ALPHA_AGENT_MAX_TICKERS) break;
-                }
-            }
-
-            for (String t : tickers) {
-                AlphaAgentPosition pos = buildAlphaAgentPosition(t, startNyDate, startNyDate);
-                if (pos != null) pf.positions.add(pos);
-            }
-            pf.benchNasdaq100 = buildAlphaAgentPosition(ALPHA_AGENT_BENCH_NASDAQ100, startNyDate, startNyDate);
-            pf.benchSp500 = buildAlphaAgentPosition(ALPHA_AGENT_BENCH_SP500, startNyDate, startNyDate);
-        } catch (Exception e) {
-            pf.lastError = e.getMessage();
-        }
-
-        synchronized (alphaAgentLock) {
-            bestEffortPersistAlphaAgentPortfolio(pf);
-        }
-        return pf;
+        return bestEffortStartAlphaAgentPortfolioAsync(trackingDays);
     }
 
     private static void respondSvg(HttpExchange ex, String svg, int code) throws IOException {
@@ -1631,6 +2307,21 @@ public class WebServer {
             }
         });
 
+        server.createContext("/alpha-agent/refresh", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                String pid = form.getOrDefault("pid", "");
+                synchronized (alphaAgentLock) {
+                    bestEffortForceRefreshAlphaAgentPricesAsync(pid);
+                }
+                ex.getResponseHeaders().add("Location", "/alpha-agent?status=refreshing" + (pid == null || pid.isBlank() ? "" : ("&pid=" + urlEncode(pid))));
+                ex.sendResponseHeaders(303, -1);
+                ex.close();
+            }
+        });
+
         server.createContext("/nasdaq-daily-top-tracking-remove", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
@@ -1773,6 +2464,37 @@ public class WebServer {
                 sb.append("</tbody></table></div></div>");
 
                 respondHtml(ex, htmlPage(sb.toString()), 200);
+            }
+        });
+
+        server.createContext("/alpha-agent/select", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                String pid = form.getOrDefault("pid", "");
+                synchronized (alphaAgentLock) {
+                    if (pid != null && !pid.isBlank()) bestEffortSetActiveAlphaAgentPortfolioId(pid);
+                }
+                ex.getResponseHeaders().add("Location", "/alpha-agent?status=selected&pid=" + urlEncode(pid));
+                ex.sendResponseHeaders(303, -1);
+                ex.close();
+            }
+        });
+
+        server.createContext("/alpha-agent/drop", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                String pid = form.getOrDefault("pid", "");
+                boolean ok;
+                synchronized (alphaAgentLock) {
+                    ok = bestEffortDropAlphaAgentPortfolioById(pid);
+                }
+                ex.getResponseHeaders().add("Location", "/alpha-agent?status=" + (ok ? "dropped" : "drop_failed"));
+                ex.sendResponseHeaders(303, -1);
+                ex.close();
             }
         });
 
@@ -2249,18 +2971,63 @@ public class WebServer {
                 String status = qp.getOrDefault("status", "");
                 String days = qp.getOrDefault("days", String.valueOf(ALPHA_AGENT_DEFAULT_TRACKING_DAYS));
 
+                String pid = qp.getOrDefault("pid", "");
+
                 AlphaAgentPortfolio pf;
-                synchronized (alphaAgentLock) { pf = bestEffortLoadAlphaAgentPortfolio(); }
+                AlphaAgentStore store;
+                String activeId;
+                synchronized (alphaAgentLock) {
+                    store = bestEffortLoadAlphaAgentStore();
+                    if (pid != null && !pid.isBlank()) bestEffortSetActiveAlphaAgentPortfolioId(pid);
+                    activeId = bestEffortGetActiveAlphaAgentPortfolioId();
+                    pf = (pid != null && !pid.isBlank()) ? bestEffortLoadAlphaAgentPortfolioById(pid) : bestEffortLoadAlphaAgentPortfolio();
+                }
+
+                String effectivePid = (pid != null && !pid.isBlank()) ? pid : (activeId == null ? "" : activeId);
 
                 StringBuilder sb = new StringBuilder();
                 sb.append("<div class='card'><div class='title'>AlphaAgent AI</div>");
                 sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>Real-time means scheduled refresh (~3x/day NY). Portfolio is fixed for the evaluation period (no rebalancing).</div>");
                 if (!status.isEmpty()) sb.append("<div style='margin-bottom:10px;color:#93c5fd;'>Status: ").append(escapeHtml(status)).append("</div>");
-                if (pf != null && pf.lastError != null && !pf.lastError.isBlank()) sb.append("<div style='margin-bottom:10px;color:#fca5a5'>Last error: ").append(escapeHtml(pf.lastError)).append("</div>");
-                sb.append("<form method='post' action='/alpha-agent/start' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0'>");
+                sb.append("<div id='aa-last-error' style='margin-bottom:10px;color:#fca5a5'></div>");
+
+                int listCount = store == null || store.portfolios == null ? 0 : store.portfolios.size();
+                sb.append("<div style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0'>");
+                sb.append("<form method='post' action='/alpha-agent/select' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0'>");
+                sb.append("<label style='color:#9ca3af'>List</label>");
+                sb.append("<select name='pid'>");
+                if (store != null && store.portfolios != null && !store.portfolios.isEmpty()) {
+                    int i = 1;
+                    for (Map.Entry<String, AlphaAgentPortfolio> e : store.portfolios.entrySet()) {
+                        String id = e.getKey();
+                        boolean sel = id != null && id.equals(effectivePid);
+                        sb.append("<option value='").append(escapeHtml(id)).append("'").append(sel ? " selected" : "").append(">List ").append(i).append("</option>");
+                        i++;
+                    }
+                }
+                sb.append("</select>");
+                sb.append("<button type='submit'>Switch</button>");
+                sb.append("</form>");
+
+                sb.append("<form method='post' action='/alpha-agent/drop' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0'>");
+                sb.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
+                sb.append("<button type='submit'>Drop List</button>");
+                sb.append("</form>");
+                sb.append("</div>");
+
+                sb.append("<form method='post' action='/alpha-agent/start' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px'>");
+                sb.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
+                sb.append("<input type='hidden' name='createNew' value='1'/>");
                 sb.append("<input type='number' name='evaluationPeriodDays' min='2' max='60' value='").append(escapeHtml(days)).append("' />");
-                sb.append("<button type='submit'>Start AlphaAgent Analysis</button>");
+                sb.append("<button type='submit'>Start New AlphaAgent List</button>");
+                sb.append("<div style='color:#9ca3af'>Saved lists: ").append(listCount).append("/3</div>");
                 sb.append("</form></div>");
+
+                sb.append("<form method='post' action='/alpha-agent/refresh' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px'>");
+                sb.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
+                sb.append("<button type='submit'>Refresh Prices Now</button>");
+                sb.append("<div style='color:#9ca3af'>Fetch latest quote for this list and update % Net P/L (falls back to last close if rate-limited)</div>");
+                sb.append("</form>");
 
                 sb.append("<div class='card'><div class='title'>AlphaAgent Stock Table</div><div style='overflow:auto'><table style='width:100%;border-collapse:collapse'>");
                 sb.append("<thead><tr><th style='text-align:left;padding:8px 10px;border-bottom:1px solid #1f2a44'>Symbol</th><th style='text-align:left;padding:8px 10px;border-bottom:1px solid #1f2a44'>Entry Date</th><th style='text-align:right;padding:8px 10px;border-bottom:1px solid #1f2a44'>Entry</th><th style='text-align:right;padding:8px 10px;border-bottom:1px solid #1f2a44'>Current</th><th style='text-align:right;padding:8px 10px;border-bottom:1px solid #1f2a44'>% Net P/L</th></tr></thead>");
@@ -2275,8 +3042,12 @@ public class WebServer {
                 sb.append("<script>(function(){"+
                         "function fmt(x){if(x===null||x===undefined||isNaN(x))return 'N/A';return (x>=0?'+':'')+x.toFixed(2)+'%';}"+
                         "function money(x){if(x===null||x===undefined||isNaN(x))return 'N/A';return '$'+x.toFixed(2);}"+
+                        "var pid='" + escapeHtml(effectivePid) + "';"+
                         "async function load(){try{"+
-                        "var s=await fetch('/alpha-agent/stocks');var stocks=await s.json();"+
+                        "var st=await fetch('/alpha-agent/status?pid='+encodeURIComponent(pid));var stj=await st.json();"+
+                        "var le=document.getElementById('aa-last-error');"+
+                        "if(stj&&stj.lastError){le.textContent='Last error: '+stj.lastError;}else{le.textContent='';}"+
+                        "var s=await fetch('/alpha-agent/stocks?pid='+encodeURIComponent(pid));var stocks=await s.json();"+
                         "var tb=document.getElementById('aa-stocks');"+
                         "if(!stocks||!stocks.length){tb.innerHTML=`<tr><td colspan='5' style='padding:10px;color:#9ca3af'>No active portfolio. Click Start.</td></tr>`;}"+
                         "else{var rows='';for(var i=0;i<stocks.length;i++){var r=stocks[i];var p=r.netProfitPct;var c=(p===null||p===undefined||isNaN(p))?'#9ca3af':(p>=0?'#22c55e':'#fca5a5');"+
@@ -2285,7 +3056,7 @@ public class WebServer {
                         "`<td style='padding:8px 10px;border-bottom:1px solid #111827;text-align:right'>${money(r.entryPrice)}</td>`+"+
                         "`<td style='padding:8px 10px;border-bottom:1px solid #111827;text-align:right'>${money(r.currentPrice)}</td>`+"+
                         "`<td style='padding:8px 10px;border-bottom:1px solid #111827;text-align:right;color:${c};font-weight:700'>${fmt(p)}</td></tr>`;}tb.innerHTML=rows;}"+
-                        "var ix=await fetch('/alpha-agent/index-performance');var idx=await ix.json();"+
+                        "var ix=await fetch('/alpha-agent/index-performance?pid='+encodeURIComponent(pid));var idx=await ix.json();"+
                         "var itb=document.getElementById('aa-index');"+
                         "if(!idx||!idx.length){itb.innerHTML=`<tr><td colspan='4' style='padding:10px;color:#9ca3af'>N/A</td></tr>`;}"+
                         "else{var rows2='';for(var j=0;j<idx.length;j++){var r2=idx[j];var p2=r2.netProfitPct;var c2=(p2===null||p2===undefined||isNaN(p2))?'#9ca3af':(p2>=0?'#22c55e':'#fca5a5');"+
@@ -2293,7 +3064,7 @@ public class WebServer {
                         "`<td style='padding:8px 10px;border-bottom:1px solid #111827;text-align:right'>${money(r2.entryValue)}</td>`+"+
                         "`<td style='padding:8px 10px;border-bottom:1px solid #111827;text-align:right'>${money(r2.currentValue)}</td>`+"+
                         "`<td style='padding:8px 10px;border-bottom:1px solid #111827;text-align:right;color:${c2};font-weight:700'>${fmt(p2)}</td></tr>`;}itb.innerHTML=rows2;}"+
-                        "var rr=await fetch('/alpha-agent/race-result');var race=await rr.json();"+
+                        "var rr=await fetch('/alpha-agent/race-result?pid='+encodeURIComponent(pid));var race=await rr.json();"+
                         "var el=document.getElementById('aa-race');"+
                         "if(race&&race.message){el.innerHTML=`<div style='font-weight:700;color:#e5e7eb'>${race.message}</div>`+"+
                         "`<div style='margin-top:6px'>AlphaAgent Avg: <span style='color:#e5e7eb'>${fmt(race.alphaAgentAvgPct)}</span></div>`+"+
@@ -2312,25 +3083,52 @@ public class WebServer {
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
                 String body = readBody(ex);
                 Map<String,String> form = parseForm(body);
+                String pid = form.getOrDefault("pid", "");
+                boolean createNew = true;
+                try {
+                    String cn = form.getOrDefault("createNew", "1");
+                    createNew = cn == null || cn.isBlank() || !cn.trim().equals("0");
+                } catch (Exception ignore) {}
                 int days = ALPHA_AGENT_DEFAULT_TRACKING_DAYS;
                 try {
                     String v = form.getOrDefault("evaluationPeriodDays", "");
                     if (v != null && !v.isBlank()) days = Integer.parseInt(v.trim());
                 } catch (Exception ignore) {
                 }
-                bestEffortStartAlphaAgentPortfolio(days);
+                AlphaAgentPortfolio created;
+                synchronized (alphaAgentLock) {
+                    created = bestEffortStartAlphaAgentPortfolioAsync(days, pid, createNew);
+                }
                 bestEffortUpdateAlphaAgentPortfolioNow();
-                ex.getResponseHeaders().add("Location", "/alpha-agent?status=started&days=" + days);
+                String status = (created != null && created.lastError != null && created.lastError.contains("max 3")) ? "limit3" : "started";
+                String active = bestEffortGetActiveAlphaAgentPortfolioId();
+                ex.getResponseHeaders().add("Location", "/alpha-agent?status=" + status + "&days=" + days + (active == null ? "" : ("&pid=" + urlEncode(active))));
                 ex.sendResponseHeaders(303, -1);
                 ex.close();
+            }
+        });
+
+        server.createContext("/alpha-agent/status", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                String pid = qp.getOrDefault("pid", "");
+                AlphaAgentPortfolio pf;
+                synchronized (alphaAgentLock) { pf = (pid != null && !pid.isBlank()) ? bestEffortLoadAlphaAgentPortfolioById(pid) : bestEffortLoadAlphaAgentPortfolio(); }
+                Map<String,Object> out = new HashMap<>();
+                out.put("pid", pid);
+                out.put("lastError", pf == null ? null : pf.lastError);
+                respondJson(ex, out, 200);
             }
         });
 
         server.createContext("/alpha-agent/stocks", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                String pid = qp.getOrDefault("pid", "");
                 AlphaAgentPortfolio pf;
-                synchronized (alphaAgentLock) { pf = bestEffortLoadAlphaAgentPortfolio(); }
+                synchronized (alphaAgentLock) { pf = (pid != null && !pid.isBlank()) ? bestEffortLoadAlphaAgentPortfolioById(pid) : bestEffortLoadAlphaAgentPortfolio(); }
                 List<Map<String,Object>> out = new ArrayList<>();
                 if (pf != null && pf.positions != null) {
                     for (AlphaAgentPosition p : pf.positions) {
@@ -2353,8 +3151,10 @@ public class WebServer {
         server.createContext("/alpha-agent/index-performance", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                String pid = qp.getOrDefault("pid", "");
                 AlphaAgentPortfolio pf;
-                synchronized (alphaAgentLock) { pf = bestEffortLoadAlphaAgentPortfolio(); }
+                synchronized (alphaAgentLock) { pf = (pid != null && !pid.isBlank()) ? bestEffortLoadAlphaAgentPortfolioById(pid) : bestEffortLoadAlphaAgentPortfolio(); }
                 List<Map<String,Object>> out = new ArrayList<>();
                 if (pf != null) {
                     if (pf.benchNasdaq100 != null) {
@@ -2385,11 +3185,14 @@ public class WebServer {
         server.createContext("/alpha-agent/race-result", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                String pid = qp.getOrDefault("pid", "");
                 AlphaAgentPortfolio pf;
-                synchronized (alphaAgentLock) { pf = bestEffortLoadAlphaAgentPortfolio(); }
+                synchronized (alphaAgentLock) { pf = (pid != null && !pid.isBlank()) ? bestEffortLoadAlphaAgentPortfolioById(pid) : bestEffortLoadAlphaAgentPortfolio(); }
                 Map<String,Object> out = new HashMap<>();
                 if (pf == null || pf.positions == null || pf.positions.isEmpty()) {
                     out.put("message", "No active AlphaAgent portfolio. Click Start.");
+                    respondJson(ex, out, 200);
                     out.put("alphaAgentAvgPct", null);
                     out.put("nasdaq100Pct", null);
                     out.put("sp500Pct", null);
