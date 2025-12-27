@@ -3905,6 +3905,7 @@ public class WebServer {
                 boolean showChart = false;
                 String overviewCard = "";
                 String riskModelsCard = "";
+                String modelSummaryCard = "";
                 if (symbol.isEmpty()) {
                     result = "No symbol provided";
                 } else {
@@ -3954,6 +3955,24 @@ public class WebServer {
 
                         try {
                             StockAnalysisResult r = StockScannerRunner.analyzeSingleStock(symbol);
+
+                            String priceTxt = (r == null || !Double.isFinite(r.price)) ? "N/A" : String.format("$%.2f", r.price);
+                            String dcfTxt = (r == null || !Double.isFinite(r.dcfFairValue) || r.dcfFairValue <= 0) ? "N/A" : String.format("$%.2f", r.dcfFairValue);
+                            String adxTxt = (r == null || !Double.isFinite(r.adxStrength)) ? "N/A" : String.format("%.2f", r.adxStrength);
+                            String techTxt = (r == null || r.technicalSignal == null || r.technicalSignal.isBlank()) ? "N/A" : r.technicalSignal;
+                            String fundTxt = (r == null || r.fundamentalSignal == null || r.fundamentalSignal.isBlank()) ? "N/A" : r.fundamentalSignal;
+                            String verdictTxt = (r == null || r.finalVerdict == null || r.finalVerdict.isBlank()) ? "N/A" : r.finalVerdict;
+
+                            modelSummaryCard = "<div class='card'><div class='title'>Model Summary</div>" +
+                                    "<div style='display:flex;flex-direction:column;gap:8px'>" +
+                                    "<div><b>Price</b>: <span style='color:#e5e7eb'>" + escapeHtml(priceTxt) + "</span></div>" +
+                                    "<div><b>DCF Fair Value</b>" + modelBadge("FUNDAMENTAL") + ": <span style='color:#e5e7eb'>" + escapeHtml(dcfTxt) + "</span></div>" +
+                                    "<div><b>ADX</b>" + modelBadge("TECHNICAL") + ": <span style='color:#e5e7eb'>" + escapeHtml(adxTxt) + "</span></div>" +
+                                    "<div><b>Technical Signal</b>" + modelBadge("TECHNICAL") + ": <span style='color:#e5e7eb'>" + escapeHtml(techTxt) + "</span></div>" +
+                                    "<div><b>Fundamental Signal</b>" + modelBadge("FUNDAMENTAL") + ": <span style='color:#e5e7eb'>" + escapeHtml(fundTxt) + "</span></div>" +
+                                    "<div><b>Final Verdict</b>: <span style='color:#e5e7eb'>" + escapeHtml(verdictTxt) + "</span></div>" +
+                                    "</div></div>";
+
                             String beneishTxt;
                             if (r != null && r.beneishMScore != null && Double.isFinite(r.beneishMScore)) {
                                 beneishTxt = String.format("%.2f", r.beneishMScore) +
@@ -4028,7 +4047,7 @@ public class WebServer {
                     }
                 } catch (Exception ignore) {}
 
-                String html = htmlPage(favCard + overviewCard + riskModelsCard + "<div class='card'><div class='title'>Models used</div>" + modelsUsedNamesOnlyHtml() + "</div>" + "<div class=\"card\"><div class=\"title\">Output</div><pre>" +
+                String html = htmlPage(favCard + overviewCard + modelSummaryCard + riskModelsCard + "<div class='card'><div class='title'>Models used</div>" + modelsUsedNamesOnlyHtml() + "</div>" + "<div class=\"card\"><div class=\"title\">Output</div><pre>" +
                         escapeHtml(result) + "</pre></div>" + aiCard + charts
                         + "<script>(function(){try{var AC=window.AudioContext||window.webkitAudioContext;var ctx=new AC();function beep(f,d,t){var o=ctx.createOscillator();var g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(0.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.12,ctx.currentTime+0.02);o.start(t);g.gain.exponentialRampToValueAtTime(0.0001,t+d-0.05);o.stop(t+d);}var now=ctx.currentTime+0.05;beep(880,0.35,now);beep(1320,0.35,now+0.4);}catch(e){}})();</script>");
                 respondHtml(ex, html, 200);
