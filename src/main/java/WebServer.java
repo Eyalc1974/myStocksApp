@@ -43,6 +43,8 @@ import java.util.concurrent.TimeUnit;
 
 public class WebServer {
 
+    private static final int ALPHA_AGENT_MAX_LISTS = 4;
+
     private static final ZoneId NY = ZoneId.of("America/New_York");
 
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -217,6 +219,14 @@ public class WebServer {
             else if (r.adxStrength > 35.0) neg += 1;
         }
 
+        if (r.beneishManipulator != null && r.beneishManipulator) {
+            neg += 2;
+        }
+
+        if (r.sloanLowQuality != null && r.sloanLowQuality) {
+            neg += 1;
+        }
+
         return (pos * 10) - (neg * 10);
     }
 
@@ -276,7 +286,7 @@ public class WebServer {
         }
 
         if (targetId == null || targetId.isBlank()) {
-            pf.lastError = "AlphaAgent: cannot create new list (max 3). Drop a list first.";
+            pf.lastError = "AlphaAgent: cannot create new list (max " + ALPHA_AGENT_MAX_LISTS + "). Drop a list first.";
             synchronized (alphaAgentLock) {
                 String id = bestEffortGetActiveAlphaAgentPortfolioId();
                 bestEffortPersistAlphaAgentPortfolioById(id, pf);
@@ -379,6 +389,7 @@ public class WebServer {
         public AlphaAgentPosition benchNasdaq100;
         public AlphaAgentPosition benchSp500;
         public String lastError;
+        public boolean userManaged;
     }
 
     private static final class AlphaAgentScored {
@@ -527,7 +538,7 @@ public class WebServer {
             AlphaAgentStore store = bestEffortLoadAlphaAgentStore();
             if (store == null) store = new AlphaAgentStore();
             if (store.portfolios == null) store.portfolios = new LinkedHashMap<>();
-            if (store.portfolios.size() >= 3) return null;
+            if (store.portfolios.size() >= ALPHA_AGENT_MAX_LISTS) return null;
             String id = UUID.randomUUID().toString();
             store.portfolios.put(id, initialPf);
             store.activeId = id;
@@ -548,7 +559,7 @@ public class WebServer {
             String key = id;
             if (key == null || key.isBlank()) key = store.activeId;
             if (key == null || key.isBlank()) {
-                if (store.portfolios.size() >= 3) return;
+                if (store.portfolios.size() >= ALPHA_AGENT_MAX_LISTS) return;
                 key = UUID.randomUUID().toString();
             }
 
@@ -647,12 +658,13 @@ public class WebServer {
                 synchronized (alphaAgentLock) {
                     pf = (pid != null && !pid.isBlank()) ? bestEffortLoadAlphaAgentPortfolioById(pid) : bestEffortLoadAlphaAgentPortfolio();
                     if (pf == null) return;
-                    pf.lastError = "AlphaAgent: refreshing prices...";
+                    pf.lastError = "AlphaAgent: refreshing live quotes...";
                     bestEffortPersistAlphaAgentPortfolioById(pid, pf);
                 }
 
                 String lastNyDate = nyToday();
                 Map<String, Double> livePriceByTicker = new HashMap<>();
+                List<String> liveOk = new ArrayList<>();
                 MonitoringAlphaVantageClient av = null;
                 try {
                     av = MonitoringAlphaVantageClient.fromEnv();
@@ -681,6 +693,7 @@ public class WebServer {
                                 Double price = extractGlobalQuotePrice(q);
                                 if (price != null && Double.isFinite(price)) {
                                     livePriceByTicker.put(t, price);
+                                    liveOk.add(t);
                                 }
                             } catch (Exception ignore) {}
                         }
@@ -689,7 +702,7 @@ public class WebServer {
                     synchronized (alphaAgentLock) {
                         AlphaAgentPortfolio cur = (pid != null && !pid.isBlank()) ? bestEffortLoadAlphaAgentPortfolioById(pid) : bestEffortLoadAlphaAgentPortfolio();
                         if (cur != null) {
-                            cur.lastError = "AlphaAgent: refreshing prices (" + (i + 1) + "/" + toUpdate.size() + ")...";
+                            cur.lastError = "AlphaAgent: refreshing live quotes (" + (i + 1) + "/" + toUpdate.size() + ")...";
                             bestEffortPersistAlphaAgentPortfolioById(pid, cur);
                         }
                     }
@@ -743,7 +756,26 @@ public class WebServer {
                                 cur.benchSp500.startPrice = bestEffortCloseOnOrBefore(closeByDate, lastNyDate);
                             }
                         }
-                        cur.lastError = "";
+                        if (toUpdate.isEmpty()) {
+                            cur.lastError = "";
+                        } else if (liveOk.size() >= toUpdate.size()) {
+                            cur.lastError = "";
+                        } else {
+                            List<String> missing = new ArrayList<>();
+                            for (String t : toUpdate) {
+                                if (t == null) continue;
+                                if (!livePriceByTicker.containsKey(t)) missing.add(t);
+                            }
+                            String msg = "AlphaAgent: live quotes ok " + liveOk.size() + "/" + toUpdate.size() + ". Falling back to last close for: ";
+                            int cap = Math.min(4, missing.size());
+                            for (int i = 0; i < cap; i++) {
+                                if (i > 0) msg += ", ";
+                                msg += missing.get(i);
+                            }
+                            if (missing.size() > cap) msg += " ...";
+                            msg += " (rate limit / API key / unsupported quote)";
+                            cur.lastError = msg;
+                        }
                     } catch (Exception e) {
                         cur.lastError = e.getMessage();
                     }
@@ -983,6 +1015,44 @@ public class WebServer {
         }
     }
 
+    private static Double bestEffortFetchLiveOrLastClosePrice(String ticker, MonitoringAlphaVantageClient av) {
+        String t = ticker == null ? null : ticker.trim().toUpperCase();
+        if (t == null || t.isBlank()) return null;
+        try {
+            if (av != null) {
+                try {
+                    JsonNode q = av.globalQuote(t);
+                    Double price = extractGlobalQuotePrice(q);
+                    if (price != null && Double.isFinite(price)) return price;
+                } catch (Exception ignore) {}
+            }
+        } catch (Exception ignore) {}
+        try {
+            Map<String, Double> closeByDate = loadDailyCloseByDateCached(t);
+            return bestEffortCloseOnOrBefore(closeByDate, nyToday());
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    private static AlphaAgentPortfolio buildEmptyUserManagedAlphaAgentPortfolio(int trackingDays) {
+        int days = trackingDays > 0 ? trackingDays : ALPHA_AGENT_DEFAULT_TRACKING_DAYS;
+        if (days < 2) days = 2;
+        if (days > 60) days = 60;
+        String startNyDate = nyToday();
+
+        AlphaAgentPortfolio pf = new AlphaAgentPortfolio();
+        pf.userManaged = true;
+        pf.createdAtNy = ZonedDateTime.now(NY).toString();
+        pf.startNyDate = startNyDate;
+        pf.trackingDays = days;
+        pf.positions = new ArrayList<>();
+        pf.benchNasdaq100 = buildAlphaAgentPosition(ALPHA_AGENT_BENCH_NASDAQ100, startNyDate, startNyDate);
+        pf.benchSp500 = buildAlphaAgentPosition(ALPHA_AGENT_BENCH_SP500, startNyDate, startNyDate);
+        pf.lastError = "";
+        return pf;
+    }
+
     private static final Object intradayLock = new Object();
     private static final IntradayAlertState intradayState = new IntradayAlertState();
     private static ScheduledExecutorService intradayExec;
@@ -1074,6 +1144,14 @@ public class WebServer {
         else if ("SENTIMENT".equals(t)) cls = "sent";
         else cls = "";
         return "<span class=\"model-badge " + cls + "\">" + escapeHtml(t) + "</span>";
+    }
+
+    private static String modelsUsedNamesOnlyHtml() {
+        return "<div style='color:#9ca3af;margin-top:10px;'>" +
+                "Models used: " +
+                "Piotroski F-Score, Altman Z-Score, Beneish M-Score, Sloan Ratio, Quality &amp; Profitability, Growth, Valuation Mix, " +
+                "SMA, RSI, MACD, Stochastic Oscillator, Bollinger Bands, ADX, ATR, CMF, Pivot Points, Fibonacci Retracement, DCF, PEG" +
+                "</div>";
     }
 
     // Best-effort summarization via AI backends (prefer free local):
@@ -2280,7 +2358,9 @@ public class WebServer {
                         "<form method='post' action='/run-main'>"+
                         "<input type='text' name='symbol' placeholder='e.g. CRM' required /> "+
                         "<button type='submit'>Run</button>"+
-                        "</form></div>";
+                        "</form>" +
+                        modelsUsedNamesOnlyHtml() +
+                        "</div>";
                 respondHtml(ex, htmlPage(content), 200);
             }
         });
@@ -2498,6 +2578,99 @@ public class WebServer {
             }
         });
 
+        server.createContext("/alpha-agent/custom-create", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                int days = ALPHA_AGENT_DEFAULT_TRACKING_DAYS;
+                try {
+                    String v = form.getOrDefault("evaluationPeriodDays", "");
+                    if (v != null && !v.isBlank()) days = Integer.parseInt(v.trim());
+                } catch (Exception ignore) {}
+
+                AlphaAgentPortfolio pf = buildEmptyUserManagedAlphaAgentPortfolio(days);
+                String id;
+                synchronized (alphaAgentLock) {
+                    id = bestEffortCreateNewAlphaAgentPortfolioSlot(pf);
+                }
+                String status = (id == null || id.isBlank()) ? "limit" : "custom_created";
+                ex.getResponseHeaders().add("Location", "/alpha-agent?status=" + status + (id == null ? "" : ("&pid=" + urlEncode(id))));
+                ex.sendResponseHeaders(303, -1);
+                ex.close();
+            }
+        });
+
+        server.createContext("/alpha-agent/custom-save", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                String pid = form.getOrDefault("pid", "");
+                String tickersText = form.getOrDefault("tickers", "");
+
+                List<String> tickers = new ArrayList<>();
+                if (tickersText != null && !tickersText.isBlank()) {
+                    String[] parts = tickersText.split("[^A-Za-z0-9.]+");
+                    for (String p : parts) {
+                        if (p == null) continue;
+                        String t = p.trim().toUpperCase();
+                        if (t.isBlank()) continue;
+                        if (!tickers.contains(t)) tickers.add(t);
+                    }
+                }
+                if (tickers.size() > 20) tickers = new ArrayList<>(tickers.subList(0, 20));
+
+                MonitoringAlphaVantageClient av = null;
+                try { av = MonitoringAlphaVantageClient.fromEnv(); } catch (Exception ignore) {}
+
+                String startNyDate = nyToday();
+                AlphaAgentPortfolio updated = null;
+                synchronized (alphaAgentLock) {
+                    AlphaAgentPortfolio cur = bestEffortLoadAlphaAgentPortfolioById(pid);
+                    if (cur != null) {
+                        cur.userManaged = true;
+                        cur.startNyDate = startNyDate;
+                        cur.createdAtNy = ZonedDateTime.now(NY).toString();
+                        cur.positions = new ArrayList<>();
+                        for (String t : tickers) {
+                            AlphaAgentPosition pos = buildAlphaAgentPosition(t, startNyDate, startNyDate);
+                            if (pos == null) continue;
+                            Double entry = bestEffortFetchLiveOrLastClosePrice(t, av);
+                            pos.startPrice = entry;
+                            pos.lastPrice = entry;
+                            pos.startNyDate = startNyDate;
+                            pos.lastNyDate = startNyDate;
+                            cur.positions.add(pos);
+                        }
+                        if (cur.benchNasdaq100 != null && cur.benchNasdaq100.ticker != null) {
+                            Double p = bestEffortFetchLiveOrLastClosePrice(cur.benchNasdaq100.ticker, av);
+                            cur.benchNasdaq100.startNyDate = startNyDate;
+                            cur.benchNasdaq100.lastNyDate = startNyDate;
+                            cur.benchNasdaq100.startPrice = p;
+                            cur.benchNasdaq100.lastPrice = p;
+                        }
+                        if (cur.benchSp500 != null && cur.benchSp500.ticker != null) {
+                            Double p = bestEffortFetchLiveOrLastClosePrice(cur.benchSp500.ticker, av);
+                            cur.benchSp500.startNyDate = startNyDate;
+                            cur.benchSp500.lastNyDate = startNyDate;
+                            cur.benchSp500.startPrice = p;
+                            cur.benchSp500.lastPrice = p;
+                        }
+                        cur.lastError = "";
+                        bestEffortPersistAlphaAgentPortfolioById(pid, cur);
+                        bestEffortSetActiveAlphaAgentPortfolioId(pid);
+                        updated = cur;
+                    }
+                }
+
+                String status = (updated == null) ? "custom_failed" : "custom_saved";
+                ex.getResponseHeaders().add("Location", "/alpha-agent?status=" + status + (pid == null || pid.isBlank() ? "" : ("&pid=" + urlEncode(pid))));
+                ex.sendResponseHeaders(303, -1);
+                ex.close();
+            }
+        });
+
         server.createContext("/nasdaq-daily-top-last-trend", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, htmlPage(""), 200); return; }
@@ -2601,6 +2774,7 @@ public class WebServer {
                         "<button type='submit'>Nasdaq stock Finder (Find randomly 5 stocks from Nasdaq100)</button>"+
                         "</form>"+
                         "<div style='margin-top:8px'><a href='/finder-last'>Open Last Finder Results</a></div>"+
+                        modelsUsedNamesOnlyHtml() +
                         "</div>"+
                         "<div class='card'><div class='title'>Daily Nasdaq Top " + DAILY_TOP_PICK_COUNT + " (GREEN)</div>"+
                         "<form method='post' action='/nasdaq-daily-top'>"+
@@ -2622,6 +2796,7 @@ public class WebServer {
                 List<String> items = PortfolioWeeklySummary.getPortfolio();
                 StringBuilder sb = new StringBuilder();
                 sb.append("<div class='card'><div class='title'>Portfolio Actions</div>");
+                sb.append(modelsUsedNamesOnlyHtml());
                 sb.append("<div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap;'>");
                 sb.append("<form method='post' action='/portfolio-weekly' style='margin:0'><button type='submit'>My Portfolio - Weekly</button></form>");
                 sb.append("<form method='post' action='/portfolio-weekly' style='margin:0'><input type='hidden' name='force' value='1'/><button type='submit'>My Portfolio - Weekly (Force Refresh)</button></form>");
@@ -2765,6 +2940,7 @@ public class WebServer {
                 StringBuilder sb = new StringBuilder();
                 sb.append("<div class='card'><div class='title'>Monitoring Stocks</div>");
                 sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>Pick stocks to monitor. Each run saves a snapshot and shows signals for the next 2–10 <b>trading</b> days: <b>return</b>=estimated % move, <b>actual</b>=realized % move once enough days passed, <b>score</b>=signal strength.</div>");
+                sb.append(modelsUsedNamesOnlyHtml());
 
                 // Data directory (important when running from different working directories)
                 try {
@@ -2988,46 +3164,81 @@ public class WebServer {
                 StringBuilder sb = new StringBuilder();
                 sb.append("<div class='card'><div class='title'>AlphaAgent AI</div>");
                 sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>Real-time means scheduled refresh (~3x/day NY). Portfolio is fixed for the evaluation period (no rebalancing).</div>");
+                sb.append(modelsUsedNamesOnlyHtml());
                 if (!status.isEmpty()) sb.append("<div style='margin-bottom:10px;color:#93c5fd;'>Status: ").append(escapeHtml(status)).append("</div>");
                 sb.append("<div id='aa-last-error' style='margin-bottom:10px;color:#fca5a5'></div>");
 
                 int listCount = store == null || store.portfolios == null ? 0 : store.portfolios.size();
-                sb.append("<div style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0'>");
-                sb.append("<form method='post' action='/alpha-agent/select' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0'>");
-                sb.append("<label style='color:#9ca3af'>List</label>");
-                sb.append("<select name='pid'>");
+                StringBuilder controls = new StringBuilder();
+                controls.append("<div class='card'><div class='title'>AlphaAgent Lists</div>");
+                controls.append("<div style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0'>");
+                controls.append("<form method='post' action='/alpha-agent/select' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0'>");
+                controls.append("<label style='color:#9ca3af'>List</label>");
+                controls.append("<select name='pid'>");
                 if (store != null && store.portfolios != null && !store.portfolios.isEmpty()) {
                     int i = 1;
                     for (Map.Entry<String, AlphaAgentPortfolio> e : store.portfolios.entrySet()) {
                         String id = e.getKey();
                         boolean sel = id != null && id.equals(effectivePid);
-                        sb.append("<option value='").append(escapeHtml(id)).append("'").append(sel ? " selected" : "").append(">List ").append(i).append("</option>");
+                        AlphaAgentPortfolio p = e.getValue();
+                        boolean custom = p != null && p.userManaged;
+                        String label = custom ? ("Custom") : ("List " + i);
+                        controls.append("<option value='").append(escapeHtml(id)).append("'").append(sel ? " selected" : "").append(">").append(escapeHtml(label)).append("</option>");
                         i++;
                     }
                 }
-                sb.append("</select>");
-                sb.append("<button type='submit'>Switch</button>");
-                sb.append("</form>");
+                controls.append("</select>");
+                controls.append("<button type='submit'>Switch</button>");
+                controls.append("</form>");
 
-                sb.append("<form method='post' action='/alpha-agent/drop' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0'>");
-                sb.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
-                sb.append("<button type='submit'>Drop List</button>");
-                sb.append("</form>");
-                sb.append("</div>");
+                controls.append("<form method='post' action='/alpha-agent/drop' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0'>");
+                controls.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
+                controls.append("<button type='submit'>Drop List</button>");
+                controls.append("</form>");
+                controls.append("</div>");
 
-                sb.append("<form method='post' action='/alpha-agent/start' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px'>");
-                sb.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
-                sb.append("<input type='hidden' name='createNew' value='1'/>");
-                sb.append("<input type='number' name='evaluationPeriodDays' min='2' max='60' value='").append(escapeHtml(days)).append("' />");
-                sb.append("<button type='submit'>Start New AlphaAgent List</button>");
-                sb.append("<div style='color:#9ca3af'>Saved lists: ").append(listCount).append("/3</div>");
-                sb.append("</form></div>");
+                controls.append("<form method='post' action='/alpha-agent/start' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px'>");
+                controls.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
+                controls.append("<input type='hidden' name='createNew' value='1'/>");
+                controls.append("<input type='number' name='evaluationPeriodDays' min='2' max='60' value='").append(escapeHtml(days)).append("' />");
+                controls.append("<button type='submit'>Start New AlphaAgent List</button>");
+                controls.append("<div style='color:#9ca3af'>Saved lists: ").append(listCount).append("/").append(ALPHA_AGENT_MAX_LISTS).append("</div>");
+                controls.append("</form>");
 
-                sb.append("<form method='post' action='/alpha-agent/refresh' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px'>");
-                sb.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
-                sb.append("<button type='submit'>Refresh Prices Now</button>");
-                sb.append("<div style='color:#9ca3af'>Fetch latest quote for this list and update % Net P/L (falls back to last close if rate-limited)</div>");
-                sb.append("</form>");
+                boolean isCustom = pf != null && pf.userManaged;
+                if (!isCustom) {
+                    controls.append("<form method='post' action='/alpha-agent/custom-create' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px'>");
+                    controls.append("<input type='number' name='evaluationPeriodDays' min='2' max='60' value='").append(escapeHtml(days)).append("' />");
+                    controls.append("<button type='submit'>Create Custom List</button>");
+                    controls.append("<div style='color:#9ca3af'>Create an empty list you can fill with tickers</div>");
+                    controls.append("</form>");
+                }
+
+                if (isCustom) {
+                    controls.append("<form method='post' action='/alpha-agent/custom-save' style='display:flex;flex-direction:column;gap:10px;margin-top:10px'>");
+                    controls.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
+                    controls.append("<div style='color:#9ca3af'>Custom tickers (comma / space / newline separated)</div>");
+                    controls.append("<textarea name='tickers' rows='3' style='width:100%;max-width:900px'>");
+                    if (pf != null && pf.positions != null && !pf.positions.isEmpty()) {
+                        StringBuilder t = new StringBuilder();
+                        for (AlphaAgentPosition p : pf.positions) {
+                            if (p == null || p.ticker == null || p.ticker.isBlank()) continue;
+                            if (t.length() > 0) t.append(", ");
+                            t.append(p.ticker.trim().toUpperCase());
+                        }
+                        controls.append(escapeHtml(t.toString()));
+                    }
+                    controls.append("</textarea>");
+                    controls.append("<button type='submit'>Save Custom Tickers (Set Entry Date + Entry Price)</button>");
+                    controls.append("</form>");
+                }
+
+                controls.append("<form method='post' action='/alpha-agent/refresh' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px'>");
+                controls.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
+                controls.append("<button type='submit'>Refresh Prices Now</button>");
+                controls.append("<div style='color:#9ca3af'>Fetch latest quote for this list and update % Net P/L (falls back to last close if rate-limited)</div>");
+                controls.append("</form>");
+                controls.append("</div>");
 
                 sb.append("<div class='card'><div class='title'>AlphaAgent Stock Table</div><div style='overflow:auto'><table style='width:100%;border-collapse:collapse'>");
                 sb.append("<thead><tr><th style='text-align:left;padding:8px 10px;border-bottom:1px solid #1f2a44'>Symbol</th><th style='text-align:left;padding:8px 10px;border-bottom:1px solid #1f2a44'>Entry Date</th><th style='text-align:right;padding:8px 10px;border-bottom:1px solid #1f2a44'>Entry</th><th style='text-align:right;padding:8px 10px;border-bottom:1px solid #1f2a44'>Current</th><th style='text-align:right;padding:8px 10px;border-bottom:1px solid #1f2a44'>% Net P/L</th></tr></thead>");
@@ -3038,6 +3249,8 @@ public class WebServer {
                 sb.append("<tbody id='aa-index'><tr><td colspan='4' style='padding:10px;color:#9ca3af'>Loading...</td></tr></tbody></table></div></div>");
 
                 sb.append("<div class='card'><div class='title'>Race Result Summary</div><div id='aa-race' style='color:#9ca3af'>Loading...</div></div>");
+
+                sb.append(controls);
 
                 sb.append("<script>(function(){"+
                         "function fmt(x){if(x===null||x===undefined||isNaN(x))return 'N/A';return (x>=0?'+':'')+x.toFixed(2)+'%';}"+
@@ -3100,7 +3313,7 @@ public class WebServer {
                     created = bestEffortStartAlphaAgentPortfolioAsync(days, pid, createNew);
                 }
                 bestEffortUpdateAlphaAgentPortfolioNow();
-                String status = (created != null && created.lastError != null && created.lastError.contains("max 3")) ? "limit3" : "started";
+                String status = (created != null && created.lastError != null && created.lastError.contains("max ")) ? "limit" : "started";
                 String active = bestEffortGetActiveAlphaAgentPortfolioId();
                 ex.getResponseHeaders().add("Location", "/alpha-agent?status=" + status + "&days=" + days + (active == null ? "" : ("&pid=" + urlEncode(active))));
                 ex.sendResponseHeaders(303, -1);
@@ -3448,6 +3661,8 @@ public class WebServer {
                         "<ul>" +
                         "<li><b>Piotroski F-Score</b>" + FUND + " — 9 בדיקות בינאריות של רווחיות/מינוף/יעילות לדירוג מניות ערך.</li>" +
                         "<li><b>Altman Z-Score</b>" + RISK + " — מדד סיכון פשיטת-רגל המבוסס על יחסים מאזניים.</li>" +
+                        "<li><b>Beneish M-Score</b>" + RISK + " — מודל סטטיסטי לזיהוי סבירות למניפולציה חשבונאית (earnings manipulation) על בסיס דוחות שנתיים. סף נפוץ: M-Score > -1.78 = חשד גבוה. באפליקציה: אם יש חשד, המניה מקבלת ענישה בניקוד ובמצבים מסוימים יורדת ל-AVOID.</li>" +
+                        "<li><b>Sloan Ratio</b>" + RISK + " — מדד איכות רווחים (Accruals): מודד פער בין רווח נקי לבין תזרים מזומנים (FCF/Operating Cash Flow) ביחס לסך הנכסים. ערך מוחלט גבוה (למשל |ratio| > 0.25) עשוי להעיד על איכות רווחים נמוכה. באפליקציה: משמש כגורם סיכון שיכול להוריד את ה-Final Verdict ל-AVOID.</li>" +
                         "<li><b>Quality & Profitability</b>" + FUND + " — ROIC, ROE, שיעור רווח גולמי, FCF Margin, EBIT Margin ומגמות (YoY/TTM).</li>" +
                         "<li><b>Growth</b>" + FUND + " — קצב צמיחת הכנסות/EPS (CAGR ל-3/5 שנים), יציבות הצמיחה (סטיית תקן).</li>" +
                         "<li><b>Valuation Mix</b>" + FUND + " — P/B (מכפיל הון), EV/EBITDA, EV/Sales, PEG עם בדיקות סבירות לצמיחה.</li>" +
@@ -3689,6 +3904,7 @@ public class WebServer {
                 String result;
                 boolean showChart = false;
                 String overviewCard = "";
+                String riskModelsCard = "";
                 if (symbol.isEmpty()) {
                     result = "No symbol provided";
                 } else {
@@ -3735,6 +3951,34 @@ public class WebServer {
                                 overviewCard = ov.toString();
                             }
                         } catch (Exception ignore) { }
+
+                        try {
+                            StockAnalysisResult r = StockScannerRunner.analyzeSingleStock(symbol);
+                            String beneishTxt;
+                            if (r != null && r.beneishMScore != null && Double.isFinite(r.beneishMScore)) {
+                                beneishTxt = String.format("%.2f", r.beneishMScore) +
+                                        (r.beneishManipulator != null && r.beneishManipulator ? " (MANIPULATOR)" : " (SAFE)");
+                            } else {
+                                beneishTxt = "N/A";
+                            }
+
+                            String sloanTxt;
+                            if (r != null && r.sloanRatio != null && Double.isFinite(r.sloanRatio)) {
+                                sloanTxt = String.format("%+.2f%%", (r.sloanRatio * 100.0)) +
+                                        (r.sloanLowQuality != null && r.sloanLowQuality ? " (LOW QUALITY)" : "");
+                            } else {
+                                sloanTxt = "N/A";
+                            }
+
+                            riskModelsCard = "<div class='card'><div class='title'>Risk Models</div>" +
+                                    "<div style='color:#9ca3af;margin-bottom:8px;'>Beneish / Sloan require annual financial statements (Alpha Vantage). If rate-limited or missing, values may show N/A.</div>" +
+                                    "<div style='display:flex;flex-direction:column;gap:8px'>" +
+                                    "<div><b>Beneish M-Score</b>" + modelBadge("RISK") + ": <span style='color:#e5e7eb'>" + escapeHtml(beneishTxt) + "</span></div>" +
+                                    "<div><b>Sloan Ratio</b>" + modelBadge("RISK") + ": <span style='color:#e5e7eb'>" + escapeHtml(sloanTxt) + "</span></div>" +
+                                    "</div></div>";
+                        } catch (Exception ignore) {
+                        }
+
                         // Run the full analysis flow (which already handles data sufficiency and Finnhub fallback)
                         result = runAndCapture(() -> Main.main(new String[]{}));
                         showChart = true;
@@ -3784,7 +4028,7 @@ public class WebServer {
                     }
                 } catch (Exception ignore) {}
 
-                String html = htmlPage(favCard + overviewCard + "<div class=\"card\"><div class=\"title\">Output</div><pre>" +
+                String html = htmlPage(favCard + overviewCard + riskModelsCard + "<div class='card'><div class='title'>Models used</div>" + modelsUsedNamesOnlyHtml() + "</div>" + "<div class=\"card\"><div class=\"title\">Output</div><pre>" +
                         escapeHtml(result) + "</pre></div>" + aiCard + charts
                         + "<script>(function(){try{var AC=window.AudioContext||window.webkitAudioContext;var ctx=new AC();function beep(f,d,t){var o=ctx.createOscillator();var g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(0.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.12,ctx.currentTime+0.02);o.start(t);g.gain.exponentialRampToValueAtTime(0.0001,t+d-0.05);o.stop(t+d);}var now=ctx.currentTime+0.05;beep(880,0.35,now);beep(1320,0.35,now+0.4);}catch(e){}})();</script>");
                 respondHtml(ex, html, 200);

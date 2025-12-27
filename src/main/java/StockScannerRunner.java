@@ -67,7 +67,130 @@ public class StockScannerRunner {
         Double ebit;
         Double totalRevenue;
         Double netIncome;
+
+        // Beneish (2-year annual inputs)
+        Double beneishSales0;
+        Double beneishSales1;
+        Double beneishGrossProfit0;
+        Double beneishGrossProfit1;
+        Double beneishReceivables0;
+        Double beneishReceivables1;
+        Double beneishCurrentAssets0;
+        Double beneishCurrentAssets1;
+        Double beneishPpe0;
+        Double beneishPpe1;
+        Double beneishCashEq0;
+        Double beneishCashEq1;
+        Double beneishSga0;
+        Double beneishSga1;
+        Double beneishDep0;
+        Double beneishDep1;
+        Double beneishTotalAssets0;
+        Double beneishTotalAssets1;
+        Double beneishTotalLiabilities0;
+        Double beneishTotalLiabilities1;
+        Double beneishNetIncome0;
+        Double beneishNetIncome1;
+        Double beneishCfo0;
         String note;
+    }
+
+    private static Double firstNonNull(Double... values) {
+        if (values == null) return null;
+        for (Double v : values) {
+            if (v != null && Double.isFinite(v)) return v;
+        }
+        return null;
+    }
+
+    private static Double safeDiv(Double a, Double b) {
+        if (a == null || b == null) return null;
+        if (!Double.isFinite(a) || !Double.isFinite(b)) return null;
+        if (b == 0.0) return null;
+        return a / b;
+    }
+
+    private static Double safeOneMinus(Double x) {
+        if (x == null) return null;
+        if (!Double.isFinite(x)) return null;
+        return 1.0 - x;
+    }
+
+    private static Double computeBeneishMScoreFromFundamentals(FundamentalSnapshot fs) {
+        if (fs == null) return null;
+
+        Double sales0 = fs.beneishSales0;
+        Double sales1 = fs.beneishSales1;
+        Double recv0 = fs.beneishReceivables0;
+        Double recv1 = fs.beneishReceivables1;
+        Double gp0 = fs.beneishGrossProfit0;
+        Double gp1 = fs.beneishGrossProfit1;
+        Double ca0 = fs.beneishCurrentAssets0;
+        Double ca1 = fs.beneishCurrentAssets1;
+        Double ppe0 = fs.beneishPpe0;
+        Double ppe1 = fs.beneishPpe1;
+        Double ce0 = fs.beneishCashEq0;
+        Double ce1 = fs.beneishCashEq1;
+        Double sga0 = fs.beneishSga0;
+        Double sga1 = fs.beneishSga1;
+        Double dep0 = fs.beneishDep0;
+        Double dep1 = fs.beneishDep1;
+        Double ta0 = fs.beneishTotalAssets0;
+        Double ta1 = fs.beneishTotalAssets1;
+        Double tl0 = fs.beneishTotalLiabilities0;
+        Double tl1 = fs.beneishTotalLiabilities1;
+        Double ni0 = fs.beneishNetIncome0;
+        Double cfo0 = fs.beneishCfo0;
+
+        // Require minimum set of 2-year data
+        if (sales0 == null || sales1 == null || sales0 == 0.0 || sales1 == 0.0) return null;
+        if (recv0 == null || recv1 == null) return null;
+        if (gp0 == null || gp1 == null) return null;
+        if (ta0 == null || ta1 == null || ta0 == 0.0 || ta1 == 0.0) return null;
+        if (tl0 == null || tl1 == null) return null;
+        if (ni0 == null || cfo0 == null) return null;
+        if (ca0 == null || ca1 == null) return null;
+        if (ppe0 == null || ppe1 == null) return null;
+        if (sga0 == null || sga1 == null) return null;
+        if (dep0 == null || dep1 == null) return null;
+
+        // DSRI
+        Double dsri = safeDiv(safeDiv(recv0, sales0), safeDiv(recv1, sales1));
+
+        // GMI: (GrossMargin_{t-1}/Sales_{t-1}) / (GrossMargin_t/Sales_t)
+        Double gm0 = safeDiv(gp0, sales0);
+        Double gm1 = safeDiv(gp1, sales1);
+        Double gmi = safeDiv(gm1, gm0);
+
+        // AQI
+        Double sec0 = ce0 == null ? 0.0 : ce0;
+        Double sec1 = ce1 == null ? 0.0 : ce1;
+        Double aqiNum0 = safeOneMinus(safeDiv((ca0 + ppe0 + sec0), ta0));
+        Double aqiNum1 = safeOneMinus(safeDiv((ca1 + ppe1 + sec1), ta1));
+        Double aqi = safeDiv(aqiNum0, aqiNum1);
+
+        // SGI
+        Double sgi = safeDiv(sales0, sales1);
+
+        // DEPI
+        Double depRate0 = safeDiv(dep0, (dep0 + ppe0));
+        Double depRate1 = safeDiv(dep1, (dep1 + ppe1));
+        Double depi = safeDiv(depRate1, depRate0);
+
+        // SGAI
+        Double sgai = safeDiv(safeDiv(sga0, sales0), safeDiv(sga1, sales1));
+
+        // LVGI
+        Double lvgi = safeDiv(safeDiv(tl0, ta0), safeDiv(tl1, ta1));
+
+        // TATA
+        Double tata = safeDiv((ni0 - cfo0), ta0);
+
+        if (dsri == null || gmi == null || aqi == null || sgi == null || depi == null || sgai == null || lvgi == null || tata == null) return null;
+        if (!Double.isFinite(dsri) || !Double.isFinite(gmi) || !Double.isFinite(aqi) || !Double.isFinite(sgi)
+                || !Double.isFinite(depi) || !Double.isFinite(sgai) || !Double.isFinite(lvgi) || !Double.isFinite(tata)) return null;
+
+        return BeneishMScore.calculateMScore(dsri, gmi, aqi, sgi, depi, sgai, lvgi, tata);
     }
 
     private static FundamentalSnapshot fetchFundamentals(String ticker) {
@@ -167,12 +290,38 @@ public class StockScannerRunner {
                 JsonNode arr = root.path("annualReports");
                 if (arr != null && arr.isArray() && arr.size() > 0) {
                     JsonNode y0 = arr.get(0);
+                    JsonNode y1 = (arr.size() > 1) ? arr.get(1) : null;
+
                     fs.totalAssets = parseDouble(y0, "totalAssets");
                     fs.totalShareholderEquity = parseDouble(y0, "totalShareholderEquity");
                     fs.totalCurrentAssets = parseDouble(y0, "totalCurrentAssets");
                     fs.totalCurrentLiabilities = parseDouble(y0, "totalCurrentLiabilities");
                     fs.retainedEarnings = parseDouble(y0, "retainedEarnings");
                     fs.totalLiabilities = parseDouble(y0, "totalLiabilities");
+
+                    fs.beneishTotalAssets0 = fs.totalAssets;
+                    fs.beneishTotalLiabilities0 = fs.totalLiabilities;
+                    fs.beneishCurrentAssets0 = fs.totalCurrentAssets;
+                    fs.beneishReceivables0 = parseDouble(y0, "currentNetReceivables");
+                    fs.beneishPpe0 = parseDouble(y0, "propertyPlantEquipment");
+                    fs.beneishCashEq0 = firstNonNull(
+                            parseDouble(y0, "cashAndCashEquivalentsAtCarryingValue"),
+                            parseDouble(y0, "cashAndShortTermInvestments"),
+                            parseDouble(y0, "cashAndCashEquivalents")
+                    );
+
+                    if (y1 != null) {
+                        fs.beneishTotalAssets1 = parseDouble(y1, "totalAssets");
+                        fs.beneishTotalLiabilities1 = parseDouble(y1, "totalLiabilities");
+                        fs.beneishCurrentAssets1 = parseDouble(y1, "totalCurrentAssets");
+                        fs.beneishReceivables1 = parseDouble(y1, "currentNetReceivables");
+                        fs.beneishPpe1 = parseDouble(y1, "propertyPlantEquipment");
+                        fs.beneishCashEq1 = firstNonNull(
+                                parseDouble(y1, "cashAndCashEquivalentsAtCarryingValue"),
+                                parseDouble(y1, "cashAndShortTermInvestments"),
+                                parseDouble(y1, "cashAndCashEquivalents")
+                        );
+                    }
                 }
             }
         } catch (Exception ignore) {}
@@ -189,9 +338,54 @@ public class StockScannerRunner {
                 JsonNode arr = root.path("annualReports");
                 if (arr != null && arr.isArray() && arr.size() > 0) {
                     JsonNode y0 = arr.get(0);
+                    JsonNode y1 = (arr.size() > 1) ? arr.get(1) : null;
+
                     fs.ebit = parseDouble(y0, "ebit");
                     fs.totalRevenue = parseDouble(y0, "totalRevenue");
                     fs.netIncome = parseDouble(y0, "netIncome");
+
+                    fs.beneishSales0 = fs.totalRevenue;
+                    fs.beneishGrossProfit0 = parseDouble(y0, "grossProfit");
+                    fs.beneishSga0 = firstNonNull(
+                            parseDouble(y0, "sellingGeneralAndAdministrative"),
+                            parseDouble(y0, "sellingGeneralAdministrative")
+                    );
+                    fs.beneishDep0 = firstNonNull(
+                            parseDouble(y0, "depreciationAndAmortization"),
+                            parseDouble(y0, "depreciationDepletionAndAmortization")
+                    );
+                    fs.beneishNetIncome0 = fs.netIncome;
+
+                    if (y1 != null) {
+                        fs.beneishSales1 = parseDouble(y1, "totalRevenue");
+                        fs.beneishGrossProfit1 = parseDouble(y1, "grossProfit");
+                        fs.beneishSga1 = firstNonNull(
+                                parseDouble(y1, "sellingGeneralAndAdministrative"),
+                                parseDouble(y1, "sellingGeneralAdministrative")
+                        );
+                        fs.beneishDep1 = firstNonNull(
+                                parseDouble(y1, "depreciationAndAmortization"),
+                                parseDouble(y1, "depreciationDepletionAndAmortization")
+                        );
+                        fs.beneishNetIncome1 = parseDouble(y1, "netIncome");
+                    }
+                }
+            }
+        } catch (Exception ignore) {}
+
+        try {
+            String cfJson = DataFetcher.fetchCashFlow(ticker);
+            if (cfJson != null && !cfJson.isBlank()) {
+                String svc = PriceJsonParser.extractServiceMessage(cfJson);
+                if (svc != null && !svc.isBlank()) {
+                    fs.note = (fs.note == null || fs.note.isBlank()) ? svc : (fs.note + "; " + svc);
+                    return fs;
+                }
+                JsonNode root = JSON.readTree(cfJson);
+                JsonNode arr = root.path("annualReports");
+                if (arr != null && arr.isArray() && arr.size() > 0) {
+                    JsonNode y0 = arr.get(0);
+                    fs.beneishCfo0 = parseDouble(y0, "operatingCashflow");
                 }
             }
         } catch (Exception ignore) {}
@@ -367,6 +561,35 @@ public class StockScannerRunner {
         // 5. יצירת אובייקט תוצאה
         StockAnalysisResult result = new StockAnalysisResult(ticker, currentPrice, Double.isNaN(fairPricePerShare) ? 0.0 : fairPricePerShare, latestADX);
 
+        try {
+            Double mScore = computeBeneishMScoreFromFundamentals(fs);
+            if (mScore != null && Double.isFinite(mScore)) {
+                result.beneishMScore = mScore;
+                result.beneishVerdict = BeneishMScore.getVerdict(mScore);
+                result.beneishManipulator = mScore > -1.78;
+            }
+        } catch (Exception ignore) {
+        }
+
+        try {
+            double netIncome = (fs != null && fs.netIncome != null) ? fs.netIncome : Double.NaN;
+            double cashFlow = Double.NaN;
+            if (fs != null) {
+                if (fs.fcf != null) cashFlow = fs.fcf;
+                else if (fs.beneishCfo0 != null) cashFlow = fs.beneishCfo0;
+            }
+            double totalAssets = (fs != null && fs.totalAssets != null) ? fs.totalAssets : Double.NaN;
+            if (!Double.isNaN(netIncome) && !Double.isNaN(cashFlow) && !Double.isNaN(totalAssets) && totalAssets > 0) {
+                double sloan = SloanAnalysis.calculateSloanRatio(netIncome, cashFlow, totalAssets);
+                if (Double.isFinite(sloan)) {
+                    result.sloanRatio = sloan;
+                    result.sloanVerdict = SloanAnalysis.getVerdict(sloan);
+                    result.sloanLowQuality = Math.abs(sloan) > 0.25;
+                }
+            }
+        } catch (Exception ignore) {
+        }
+
         // 6. לוגיקת החלטה ראשית לטווח הקצר (שורט / קנייה / מכירה)
         // ** שורט (מגמת ירידה חזקה): ** ADX חזק, ירידה ב-MACD, ומגמה יורדת (-DI > +DI)
         if (latestADX > 25 && latestMinusDI > latestPlusDI && latestMACD < latestSignalLine && currentPrice < latestSMA) {
@@ -439,6 +662,20 @@ public class StockScannerRunner {
             }
         }
 
+        // Risk gate: Beneish M-Score indicates possible manipulation
+        if (result.beneishManipulator != null && result.beneishManipulator) {
+            if (result.finalVerdict.contains("BUY") || result.finalVerdict.contains("HOLD")) {
+                result.finalVerdict = "AVOID (Beneish M-Score)";
+            }
+        }
+
+        // Risk gate: Sloan Ratio indicates low earnings quality (accruals)
+        if (result.sloanLowQuality != null && result.sloanLowQuality) {
+            if (result.finalVerdict.contains("BUY") || result.finalVerdict.contains("HOLD")) {
+                result.finalVerdict = "AVOID (Sloan Ratio)";
+            }
+        }
+
         // ... (הקוד ממשיך ל-return result) ...
 
         return result;
@@ -502,8 +739,6 @@ public class StockScannerRunner {
                     result.adxStrength
             );
         }
-
-
         // ... (אתה יכול לשמור על קטעי הפילטרים הקודמים) ...
     }
 }

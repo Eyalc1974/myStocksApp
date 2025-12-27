@@ -11,6 +11,14 @@ public class StockAnalysisResult {
     // בתוך StockAnalysisResult.java
     public String finalVerdict = "NEUTRAL"; // שדה חדש
 
+    public Double beneishMScore;
+    public String beneishVerdict;
+    public Boolean beneishManipulator;
+
+    public Double sloanRatio;
+    public String sloanVerdict;
+    public Boolean sloanLowQuality;
+
 
     public StockAnalysisResult(String ticker, double price, double dcfFairValue, double adxStrength) {
         this.ticker = ticker;
