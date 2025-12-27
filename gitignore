@@ -8,6 +8,19 @@ target/
 *.iws
 *.ipr
 out/
+# Maven / IntelliJ build output
+target/
+*.class
+
+# App runtime caches / generated data (your project uses these)
+finder-cache/
+analysts-cache/
+monitoring-cache/
+*.json
+
+# Optional: IDE files
+.idea/
+*.iml
 
 # OS
 .DS_Store
