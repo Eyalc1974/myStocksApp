@@ -1149,7 +1149,7 @@ public class WebServer {
     private static String modelsUsedNamesOnlyHtml() {
         return "<div style='color:#9ca3af;margin-top:10px;'>" +
                 "Models used: " +
-                "Piotroski F-Score, Altman Z-Score, Beneish M-Score, Sloan Ratio, Quality &amp; Profitability, Growth, Valuation Mix, " +
+                "Piotroski F-Score, Altman Z-Score, Beneish M-Score, Sloan Ratio, Cash Conversion Cycle (CCC), Value Creation (ROIC vs WACC), Quality &amp; Profitability, Growth, Valuation Mix, " +
                 "SMA, RSI, MACD, Stochastic Oscillator, Bollinger Bands, ADX, ATR, CMF, Pivot Points, Fibonacci Retracement, DCF, PEG" +
                 "</div>";
     }
@@ -3663,6 +3663,8 @@ public class WebServer {
                         "<li><b>Altman Z-Score</b>" + RISK + " — מדד סיכון פשיטת-רגל המבוסס על יחסים מאזניים.</li>" +
                         "<li><b>Beneish M-Score</b>" + RISK + " — מודל סטטיסטי לזיהוי סבירות למניפולציה חשבונאית (earnings manipulation) על בסיס דוחות שנתיים. סף נפוץ: M-Score > -1.78 = חשד גבוה. באפליקציה: אם יש חשד, המניה מקבלת ענישה בניקוד ובמצבים מסוימים יורדת ל-AVOID.</li>" +
                         "<li><b>Sloan Ratio</b>" + RISK + " — מדד איכות רווחים (Accruals): מודד פער בין רווח נקי לבין תזרים מזומנים (FCF/Operating Cash Flow) ביחס לסך הנכסים. ערך מוחלט גבוה (למשל |ratio| > 0.25) עשוי להעיד על איכות רווחים נמוכה. באפליקציה: משמש כגורם סיכון שיכול להוריד את ה-Final Verdict ל-AVOID.</li>" +
+                        "<li><b>Cash Conversion Cycle (CCC)</b>" + FUND + " — מדד יעילות הון חוזר: DIO (ימי מלאי) + DSO (ימי לקוחות) - DPO (ימי ספקים). CCC נמוך/שלילי יכול להצביע על מודל עסקי יעיל ותזרים חזק.</li>" +
+                        "<li><b>Value Creation (ROIC vs WACC)</b>" + FUND + " — מודל יצירת ערך כלכלי: אם ROIC (תשואה על הון מושקע) גבוה מ-WACC (עלות הון משוקללת), החברה מייצרת ערך (Economic Spread חיובי). באפליקציה: זהו חיזוק פונדמנטלי קטן כאשר ROIC משמעותית מעל WACC.</li>" +
                         "<li><b>Quality & Profitability</b>" + FUND + " — ROIC, ROE, שיעור רווח גולמי, FCF Margin, EBIT Margin ומגמות (YoY/TTM).</li>" +
                         "<li><b>Growth</b>" + FUND + " — קצב צמיחת הכנסות/EPS (CAGR ל-3/5 שנים), יציבות הצמיחה (סטיית תקן).</li>" +
                         "<li><b>Valuation Mix</b>" + FUND + " — P/B (מכפיל הון), EV/EBITDA, EV/Sales, PEG עם בדיקות סבירות לצמיחה.</li>" +
@@ -3962,11 +3964,17 @@ public class WebServer {
                             String techTxt = (r == null || r.technicalSignal == null || r.technicalSignal.isBlank()) ? "N/A" : r.technicalSignal;
                             String fundTxt = (r == null || r.fundamentalSignal == null || r.fundamentalSignal.isBlank()) ? "N/A" : r.fundamentalSignal;
                             String verdictTxt = (r == null || r.finalVerdict == null || r.finalVerdict.isBlank()) ? "N/A" : r.finalVerdict;
+                            String cccTxt = (r == null || r.cccDays == null || !Double.isFinite(r.cccDays)) ? "N/A" : String.format("%.1f days", r.cccDays);
+                            String roicTxt = (r == null || r.roic == null || !Double.isFinite(r.roic)) ? "N/A" : String.format("%.2f%%", (r.roic * 100.0));
+                            String waccTxt = (r == null || r.wacc == null || !Double.isFinite(r.wacc)) ? "N/A" : String.format("%.2f%%", (r.wacc * 100.0));
+                            String spreadTxt = (r == null || r.economicSpread == null || !Double.isFinite(r.economicSpread)) ? "N/A" : String.format("%+.2f%%", (r.economicSpread * 100.0));
 
                             modelSummaryCard = "<div class='card'><div class='title'>Model Summary</div>" +
                                     "<div style='display:flex;flex-direction:column;gap:8px'>" +
                                     "<div><b>Price</b>: <span style='color:#e5e7eb'>" + escapeHtml(priceTxt) + "</span></div>" +
                                     "<div><b>DCF Fair Value</b>" + modelBadge("FUNDAMENTAL") + ": <span style='color:#e5e7eb'>" + escapeHtml(dcfTxt) + "</span></div>" +
+                                    "<div><b>Cash Conversion Cycle (CCC)</b>" + modelBadge("FUNDAMENTAL") + ": <span style='color:#e5e7eb'>" + escapeHtml(cccTxt) + "</span></div>" +
+                                    "<div><b>ROIC vs WACC</b>" + modelBadge("FUNDAMENTAL") + ": <span style='color:#e5e7eb'>ROIC " + escapeHtml(roicTxt) + " | WACC " + escapeHtml(waccTxt) + " | Spread " + escapeHtml(spreadTxt) + "</span></div>" +
                                     "<div><b>ADX</b>" + modelBadge("TECHNICAL") + ": <span style='color:#e5e7eb'>" + escapeHtml(adxTxt) + "</span></div>" +
                                     "<div><b>Technical Signal</b>" + modelBadge("TECHNICAL") + ": <span style='color:#e5e7eb'>" + escapeHtml(techTxt) + "</span></div>" +
                                     "<div><b>Fundamental Signal</b>" + modelBadge("FUNDAMENTAL") + ": <span style='color:#e5e7eb'>" + escapeHtml(fundTxt) + "</span></div>" +
