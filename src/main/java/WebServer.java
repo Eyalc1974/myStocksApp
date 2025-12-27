@@ -1057,9 +1057,24 @@ public class WebServer {
     private static final IntradayAlertState intradayState = new IntradayAlertState();
     private static ScheduledExecutorService intradayExec;
 
+    private static final int DAILY_GREEN_MAX_ROWS = 300;
+    private static final ExecutorService dailyGreenExec = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r);
+        t.setDaemon(true);
+        t.setName("daily-green-recos-worker");
+        return t;
+    });
+
     private static final Object dailyGreenLock = new Object();
     private static final Path dailyGreenPath = Paths.get("finder-cache", "daily-green-recos.json");
     private static final DailyGreenRecommendations dailyGreenState = new DailyGreenRecommendations();
+
+    private static void logDailyGreen(String msg) {
+        try {
+            System.out.println("[daily-green] " + msg);
+        } catch (Exception ignore) {
+        }
+    }
 
     private static final class DailyGreenTicker {
         public String ticker;
@@ -2798,6 +2813,17 @@ public class WebServer {
             }
         });
 
+        server.createContext("/daily-green-run", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
+
+                boolean started = startDailyGreenRecommendationsRunAsync();
+                ex.getResponseHeaders().add("Location", "/favorites?dailyGreen=" + (started ? "started" : "already_running"));
+                ex.sendResponseHeaders(303, -1);
+                ex.close();
+            }
+        });
+
         server.createContext("/alpha-agent/select", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
@@ -4013,6 +4039,11 @@ public class WebServer {
                         sb.append("<span style='color:#93c5fd;font-weight:700'>IDLE</span>");
                     }
                     sb.append("</div>");
+                    sb.append("<div style='margin-top:10px;'>");
+                    sb.append("<form method='post' action='/daily-green-run' style='display:inline'>");
+                    sb.append("<button type='submit'>Run now</button>");
+                    sb.append("</form>");
+                    sb.append("</div>");
                     if (snap.lastStartedNy != null) sb.append("<div style='color:#9ca3af'>Last start (NY): ").append(escapeHtml(snap.lastStartedNy)).append("</div>");
                     if (snap.lastFinishedNy != null) sb.append("<div style='color:#9ca3af'>Last end (NY): ").append(escapeHtml(snap.lastFinishedNy)).append("</div>");
                     if (snap.processed != null) sb.append("<div style='color:#9ca3af'>Processed: ").append(snap.processed).append("</div>");
@@ -4971,6 +5002,104 @@ public class WebServer {
         return ar.finalScore >= 60;
     }
 
+    private static boolean startDailyGreenRecommendationsRunAsync() {
+        synchronized (dailyGreenLock) {
+            if (dailyGreenState.running) return false;
+            dailyGreenState.running = true;
+            dailyGreenState.currentTicker = null;
+            dailyGreenState.processed = 0;
+            dailyGreenState.greenCount = 0;
+            dailyGreenState.lastError = null;
+            dailyGreenState.lastStartedNy = ZonedDateTime.now(NY).toString();
+            dailyGreenState.lastFinishedNy = null;
+            dailyGreenState.green = new ArrayList<>();
+        }
+        persistDailyGreenStateBestEffort();
+
+        logDailyGreen("started (thread will run in background)");
+
+        dailyGreenExec.submit(() -> {
+            try {
+                try { StockScannerRunner.setPrintGrahamDetails(false); } catch (Exception ignore) {}
+                List<String> universe = LongTermCandidateFinder.getUniverseTickers();
+                int processed = 0;
+                int green = 0;
+
+                for (String sym : universe) {
+                    if (sym == null || sym.isBlank()) continue;
+                    String x = sym.trim().toUpperCase();
+
+                    synchronized (dailyGreenLock) {
+                        dailyGreenState.currentTicker = x;
+                        dailyGreenState.processed = processed;
+                        dailyGreenState.greenCount = green;
+                    }
+                    persistDailyGreenStateBestEffort();
+
+                    StockAnalysisResult r;
+                    try {
+                        r = StockScannerRunner.analyzeSingleStock(x);
+                    } catch (Exception e) {
+                        r = null;
+                    }
+
+                    FinalScoringEngine.AnalysisResult ar = scoreForDashboard(r);
+                    processed++;
+
+                    if (isGreenBuy(ar)) {
+                        DailyGreenTicker row = new DailyGreenTicker();
+                        row.ticker = x;
+                        row.finalScore = ar.finalScore;
+                        row.recommendation = ar.recommendation;
+                        row.lastUpdatedNy = ZonedDateTime.now(NY).toString();
+                        synchronized (dailyGreenLock) {
+                            dailyGreenState.green.add(row);
+                            if (dailyGreenState.green.size() > DAILY_GREEN_MAX_ROWS) {
+                                int overflow = dailyGreenState.green.size() - DAILY_GREEN_MAX_ROWS;
+                                if (overflow > 0) {
+                                    dailyGreenState.green.subList(0, overflow).clear();
+                                }
+                            }
+                        }
+                        green++;
+                    }
+
+                    synchronized (dailyGreenLock) {
+                        dailyGreenState.processed = processed;
+                        dailyGreenState.greenCount = green;
+                    }
+                    persistDailyGreenStateBestEffort();
+
+                    try { Thread.sleep(15_000); } catch (InterruptedException ignored) {}
+                }
+            } catch (Exception e) {
+                synchronized (dailyGreenLock) {
+                    dailyGreenState.lastError = e.getMessage();
+                }
+                logDailyGreen("error: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+            } finally {
+                synchronized (dailyGreenLock) {
+                    dailyGreenState.running = false;
+                    dailyGreenState.currentTicker = null;
+                    dailyGreenState.lastFinishedNy = ZonedDateTime.now(NY).toString();
+                }
+                persistDailyGreenStateBestEffort();
+
+                try {
+                    Integer p;
+                    Integer g;
+                    synchronized (dailyGreenLock) {
+                        p = dailyGreenState.processed;
+                        g = dailyGreenState.greenCount;
+                    }
+                    logDailyGreen("finished (processed=" + p + ", green=" + g + ")");
+                } catch (Exception ignore) {}
+            }
+        });
+
+        return true;
+    }
+
     private static void startDailyGreenRecommendationsScheduler() {
         ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r);
@@ -4983,81 +5112,7 @@ public class WebServer {
         long periodMs = TimeUnit.DAYS.toMillis(1);
 
         exec.scheduleAtFixedRate(() -> {
-            // Avoid overlapping runs
-            synchronized (dailyGreenLock) {
-                if (dailyGreenState.running) return;
-                dailyGreenState.running = true;
-                dailyGreenState.currentTicker = null;
-                dailyGreenState.processed = 0;
-                dailyGreenState.greenCount = 0;
-                dailyGreenState.lastError = null;
-                dailyGreenState.lastStartedNy = ZonedDateTime.now(NY).toString();
-                dailyGreenState.lastFinishedNy = null;
-                dailyGreenState.green = new ArrayList<>();
-            }
-            persistDailyGreenStateBestEffort();
-
-            try {
-                // Keep background output compact
-                try { StockScannerRunner.setPrintGrahamDetails(false); } catch (Exception ignore) {}
-                List<String> universe = LongTermCandidateFinder.getUniverseTickers();
-                int processed = 0;
-                int green = 0;
-
-                for (String sym : universe) {
-                    if (sym == null || sym.isBlank()) continue;
-                    String t = sym.trim().toUpperCase();
-
-                    synchronized (dailyGreenLock) {
-                        dailyGreenState.currentTicker = t;
-                        dailyGreenState.processed = processed;
-                        dailyGreenState.greenCount = green;
-                    }
-                    persistDailyGreenStateBestEffort();
-
-                    StockAnalysisResult r;
-                    try {
-                        r = StockScannerRunner.analyzeSingleStock(t);
-                    } catch (Exception e) {
-                        r = null;
-                    }
-
-                    FinalScoringEngine.AnalysisResult ar = scoreForDashboard(r);
-                    processed++;
-
-                    if (isGreenBuy(ar)) {
-                        DailyGreenTicker row = new DailyGreenTicker();
-                        row.ticker = t;
-                        row.finalScore = ar.finalScore;
-                        row.recommendation = ar.recommendation;
-                        row.lastUpdatedNy = ZonedDateTime.now(NY).toString();
-                        synchronized (dailyGreenLock) {
-                            dailyGreenState.green.add(row);
-                        }
-                        green++;
-                    }
-
-                    synchronized (dailyGreenLock) {
-                        dailyGreenState.processed = processed;
-                        dailyGreenState.greenCount = green;
-                    }
-                    persistDailyGreenStateBestEffort();
-
-                    // Best-effort throttle to reduce rate-limit impact
-                    try { Thread.sleep(15_000); } catch (InterruptedException ignored) {}
-                }
-            } catch (Exception e) {
-                synchronized (dailyGreenLock) {
-                    dailyGreenState.lastError = e.getMessage();
-                }
-            } finally {
-                synchronized (dailyGreenLock) {
-                    dailyGreenState.running = false;
-                    dailyGreenState.currentTicker = null;
-                    dailyGreenState.lastFinishedNy = ZonedDateTime.now(NY).toString();
-                }
-                persistDailyGreenStateBestEffort();
-            }
+            startDailyGreenRecommendationsRunAsync();
         }, initialDelayMs, periodMs, TimeUnit.MILLISECONDS);
     }
 
