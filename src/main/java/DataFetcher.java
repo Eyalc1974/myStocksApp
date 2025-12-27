@@ -180,11 +180,10 @@ public class DataFetcher {
                 // התגובה היא מחרוזת JSON שצריך לנתח
                 return response.body();
             } else {
-                return "Error: HTTP Status Code " + response.statusCode();
+                return null;
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            return "Error during request: " + e.getMessage();
+            return null;
         }
     }
 
@@ -326,11 +325,10 @@ public class DataFetcher {
             if (response.statusCode() == 200) {
                 return response.body();
             } else {
-                return "Error: HTTP Status Code " + response.statusCode();
+                return null;
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            return "Error during request: " + e.getMessage();
+            return null;
         }
     }
 
