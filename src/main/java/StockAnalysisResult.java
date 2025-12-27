@@ -19,6 +19,21 @@ public class StockAnalysisResult {
     public String sloanVerdict;
     public Boolean sloanLowQuality;
 
+    public Double cccDays;
+    public String cccVerdict;
+
+    public Double roic;
+    public Double wacc;
+    public Double economicSpread;
+    public String valueCreationVerdict;
+    public Boolean strongValueCreator;
+
+    public Double altmanZ;
+    public Double pegRatio;
+    public Double latestRsi;
+
+    public Integer piotroskiFScore;
+
 
     public StockAnalysisResult(String ticker, double price, double dcfFairValue, double adxStrength) {
         this.ticker = ticker;

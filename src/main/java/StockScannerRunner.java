@@ -68,6 +68,18 @@ public class StockScannerRunner {
         Double totalRevenue;
         Double netIncome;
 
+        // Working capital efficiency (CCC) inputs (annual)
+        Double cccInventory0;
+        Double cccInventory1;
+        Double cccReceivables0;
+        Double cccReceivables1;
+        Double cccPayables0;
+        Double cccPayables1;
+        Double cccRevenue0;
+        Double cccRevenue1;
+        Double cccCogs0;
+        Double cccCogs1;
+
         // Beneish (2-year annual inputs)
         Double beneishSales0;
         Double beneishSales1;
@@ -92,7 +104,13 @@ public class StockScannerRunner {
         Double beneishNetIncome0;
         Double beneishNetIncome1;
         Double beneishCfo0;
+        Double beneishCfo1;
         String note;
+
+        // Piotroski (2-year annual inputs)
+        Long piotroskiShares0;
+        Long piotroskiShares1;
+        Double piotroskiTotalCurrentLiabilities1;
     }
 
     private static Double firstNonNull(Double... values) {
@@ -299,6 +317,10 @@ public class StockScannerRunner {
                     fs.retainedEarnings = parseDouble(y0, "retainedEarnings");
                     fs.totalLiabilities = parseDouble(y0, "totalLiabilities");
 
+                    Long sh0 = parseLong(y0, "commonStockSharesOutstanding");
+                    if (sh0 == null) sh0 = parseLong(y0, "commonStockSharesIssued");
+                    if (sh0 != null && sh0 > 0) fs.piotroskiShares0 = sh0;
+
                     fs.beneishTotalAssets0 = fs.totalAssets;
                     fs.beneishTotalLiabilities0 = fs.totalLiabilities;
                     fs.beneishCurrentAssets0 = fs.totalCurrentAssets;
@@ -310,10 +332,15 @@ public class StockScannerRunner {
                             parseDouble(y0, "cashAndCashEquivalents")
                     );
 
+                    fs.cccInventory0 = firstNonNull(parseDouble(y0, "inventory"), parseDouble(y0, "totalInventory"));
+                    fs.cccReceivables0 = firstNonNull(parseDouble(y0, "currentNetReceivables"), parseDouble(y0, "netReceivables"));
+                    fs.cccPayables0 = firstNonNull(parseDouble(y0, "currentAccountsPayable"), parseDouble(y0, "accountsPayable"));
+
                     if (y1 != null) {
                         fs.beneishTotalAssets1 = parseDouble(y1, "totalAssets");
                         fs.beneishTotalLiabilities1 = parseDouble(y1, "totalLiabilities");
                         fs.beneishCurrentAssets1 = parseDouble(y1, "totalCurrentAssets");
+                        fs.piotroskiTotalCurrentLiabilities1 = parseDouble(y1, "totalCurrentLiabilities");
                         fs.beneishReceivables1 = parseDouble(y1, "currentNetReceivables");
                         fs.beneishPpe1 = parseDouble(y1, "propertyPlantEquipment");
                         fs.beneishCashEq1 = firstNonNull(
@@ -321,6 +348,14 @@ public class StockScannerRunner {
                                 parseDouble(y1, "cashAndShortTermInvestments"),
                                 parseDouble(y1, "cashAndCashEquivalents")
                         );
+
+                        fs.cccInventory1 = firstNonNull(parseDouble(y1, "inventory"), parseDouble(y1, "totalInventory"));
+                        fs.cccReceivables1 = firstNonNull(parseDouble(y1, "currentNetReceivables"), parseDouble(y1, "netReceivables"));
+                        fs.cccPayables1 = firstNonNull(parseDouble(y1, "currentAccountsPayable"), parseDouble(y1, "accountsPayable"));
+
+                        Long sh1 = parseLong(y1, "commonStockSharesOutstanding");
+                        if (sh1 == null) sh1 = parseLong(y1, "commonStockSharesIssued");
+                        if (sh1 != null && sh1 > 0) fs.piotroskiShares1 = sh1;
                     }
                 }
             }
@@ -346,6 +381,13 @@ public class StockScannerRunner {
 
                     fs.beneishSales0 = fs.totalRevenue;
                     fs.beneishGrossProfit0 = parseDouble(y0, "grossProfit");
+
+                    fs.cccRevenue0 = fs.totalRevenue;
+                    fs.cccCogs0 = firstNonNull(
+                            parseDouble(y0, "costOfRevenue"),
+                            parseDouble(y0, "costofGoodsAndServicesSold"),
+                            (fs.totalRevenue != null && fs.beneishGrossProfit0 != null) ? (fs.totalRevenue - fs.beneishGrossProfit0) : null
+                    );
                     fs.beneishSga0 = firstNonNull(
                             parseDouble(y0, "sellingGeneralAndAdministrative"),
                             parseDouble(y0, "sellingGeneralAdministrative")
@@ -359,6 +401,13 @@ public class StockScannerRunner {
                     if (y1 != null) {
                         fs.beneishSales1 = parseDouble(y1, "totalRevenue");
                         fs.beneishGrossProfit1 = parseDouble(y1, "grossProfit");
+
+                        fs.cccRevenue1 = fs.beneishSales1;
+                        fs.cccCogs1 = firstNonNull(
+                                parseDouble(y1, "costOfRevenue"),
+                                parseDouble(y1, "costofGoodsAndServicesSold"),
+                                (fs.beneishSales1 != null && fs.beneishGrossProfit1 != null) ? (fs.beneishSales1 - fs.beneishGrossProfit1) : null
+                        );
                         fs.beneishSga1 = firstNonNull(
                                 parseDouble(y1, "sellingGeneralAndAdministrative"),
                                 parseDouble(y1, "sellingGeneralAdministrative")
@@ -386,6 +435,10 @@ public class StockScannerRunner {
                 if (arr != null && arr.isArray() && arr.size() > 0) {
                     JsonNode y0 = arr.get(0);
                     fs.beneishCfo0 = parseDouble(y0, "operatingCashflow");
+                    JsonNode y1 = (arr.size() > 1) ? arr.get(1) : null;
+                    if (y1 != null) {
+                        fs.beneishCfo1 = parseDouble(y1, "operatingCashflow");
+                    }
                 }
             }
         } catch (Exception ignore) {}
@@ -561,6 +614,11 @@ public class StockScannerRunner {
         // 5. יצירת אובייקט תוצאה
         StockAnalysisResult result = new StockAnalysisResult(ticker, currentPrice, Double.isNaN(fairPricePerShare) ? 0.0 : fairPricePerShare, latestADX);
 
+        // expose key raw metrics for downstream scoring/UI
+        result.altmanZ = Double.isNaN(altmanZ) ? null : altmanZ;
+        result.pegRatio = Double.isNaN(pegRatio) ? null : pegRatio;
+        result.latestRsi = (latestRSI == null || !Double.isFinite(latestRSI)) ? null : latestRSI;
+
         try {
             Double mScore = computeBeneishMScoreFromFundamentals(fs);
             if (mScore != null && Double.isFinite(mScore)) {
@@ -585,6 +643,113 @@ public class StockScannerRunner {
                     result.sloanRatio = sloan;
                     result.sloanVerdict = SloanAnalysis.getVerdict(sloan);
                     result.sloanLowQuality = Math.abs(sloan) > 0.25;
+                }
+            }
+        } catch (Exception ignore) {
+        }
+
+        try {
+            if (fs != null
+                    && fs.beneishNetIncome0 != null && fs.beneishNetIncome1 != null
+                    && fs.beneishTotalAssets0 != null && fs.beneishTotalAssets1 != null
+                    && fs.beneishCfo0 != null && fs.beneishCfo1 != null
+                    && fs.beneishTotalLiabilities0 != null && fs.beneishTotalLiabilities1 != null
+                    && fs.totalCurrentAssets != null && fs.totalCurrentLiabilities != null
+                    && fs.beneishCurrentAssets1 != null && fs.piotroskiTotalCurrentLiabilities1 != null) {
+
+                double roa0 = fs.beneishNetIncome0 / fs.beneishTotalAssets0;
+                double roa1 = fs.beneishNetIncome1 / fs.beneishTotalAssets1;
+
+                double debtAssets0 = fs.beneishTotalLiabilities0 / fs.beneishTotalAssets0;
+                double debtAssets1 = fs.beneishTotalLiabilities1 / fs.beneishTotalAssets1;
+
+                double currentRatio0 = fs.totalCurrentAssets / fs.totalCurrentLiabilities;
+                double currentRatio1 = fs.beneishCurrentAssets1 / fs.piotroskiTotalCurrentLiabilities1;
+
+                long shares0;
+                long shares1;
+                if (fs.piotroskiShares0 != null && fs.piotroskiShares0 > 0) shares0 = fs.piotroskiShares0;
+                else if (fs.sharesOutstanding != null && fs.sharesOutstanding > 0) shares0 = fs.sharesOutstanding.longValue();
+                else shares0 = 0L;
+
+                if (fs.piotroskiShares1 != null && fs.piotroskiShares1 > 0) shares1 = fs.piotroskiShares1;
+                else shares1 = shares0;
+
+                if (shares0 > 0 && Double.isFinite(roa0) && Double.isFinite(roa1)
+                        && Double.isFinite(debtAssets0) && Double.isFinite(debtAssets1)
+                        && Double.isFinite(currentRatio0) && Double.isFinite(currentRatio1)) {
+
+                    int f = PiotroskiFScore.calculateFScore(
+                            fs.beneishNetIncome0, roa0, fs.beneishCfo0, roa1, fs.beneishNetIncome1,
+                            debtAssets0, debtAssets1, currentRatio0, currentRatio1,
+                            shares0, shares1
+                    );
+                    result.piotroskiFScore = f;
+                }
+            }
+        } catch (Exception ignore) {
+        }
+
+        try {
+            if (fs != null
+                    && fs.cccRevenue0 != null && fs.cccRevenue0 != 0
+                    && fs.cccRevenue1 != null && fs.cccRevenue1 != 0
+                    && fs.cccCogs0 != null && fs.cccCogs0 != 0
+                    && fs.cccCogs1 != null && fs.cccCogs1 != 0
+                    && fs.cccInventory0 != null && fs.cccInventory1 != null
+                    && fs.cccReceivables0 != null && fs.cccReceivables1 != null
+                    && fs.cccPayables0 != null && fs.cccPayables1 != null) {
+
+                double avgInv = (fs.cccInventory0 + fs.cccInventory1) / 2.0;
+                double avgAr = (fs.cccReceivables0 + fs.cccReceivables1) / 2.0;
+                double avgAp = (fs.cccPayables0 + fs.cccPayables1) / 2.0;
+
+                double dio = (avgInv / fs.cccCogs0) * 365.0;
+                double dso = (avgAr / fs.cccRevenue0) * 365.0;
+                double dpo = (avgAp / fs.cccCogs0) * 365.0;
+
+                if (Double.isFinite(dio) && Double.isFinite(dso) && Double.isFinite(dpo)) {
+                    double ccc = WorkingCapitalEfficiency.calculateCCC(dio, dso, dpo);
+                    if (Double.isFinite(ccc)) {
+                        result.cccDays = ccc;
+                        result.cccVerdict = WorkingCapitalEfficiency.getVerdict(ccc);
+                    }
+                }
+            }
+        } catch (Exception ignore) {
+        }
+
+        try {
+            // --- Value creation: ROIC vs WACC (Economic Spread) ---
+            if (fs != null && fs.ebit != null && Double.isFinite(fs.ebit)) {
+                // Best-effort NOPAT (NOPAT = EBIT * (1 - tax))
+                double assumedTaxRate = 0.21;
+                double nopat = fs.ebit * (1.0 - assumedTaxRate);
+
+                // Best-effort invested capital
+                Double investedCapital = null;
+                if (fs.totalDebt != null && fs.totalShareholderEquity != null) {
+                    double cash = (fs.cash != null && Double.isFinite(fs.cash)) ? fs.cash : 0.0;
+                    investedCapital = fs.totalDebt + fs.totalShareholderEquity - cash;
+                }
+                if ((investedCapital == null || !Double.isFinite(investedCapital) || investedCapital <= 0)
+                        && fs.totalAssets != null && fs.totalCurrentLiabilities != null) {
+                    investedCapital = fs.totalAssets - fs.totalCurrentLiabilities;
+                }
+
+                if (investedCapital != null && Double.isFinite(investedCapital) && investedCapital > 0) {
+                    double roic = nopat / investedCapital;
+
+                    // Best-effort WACC heuristic (real WACC requires market inputs)
+                    double wacc = 0.09;
+
+                    if (Double.isFinite(roic) && Double.isFinite(wacc) && wacc > 0) {
+                        result.roic = roic;
+                        result.wacc = wacc;
+                        result.economicSpread = ValueCreationAnalysis.calculateEconomicSpread(roic, wacc);
+                        result.valueCreationVerdict = ValueCreationAnalysis.getVerdict(roic, wacc);
+                        result.strongValueCreator = roic > (wacc * 2.0);
+                    }
                 }
             }
         } catch (Exception ignore) {
@@ -622,6 +787,18 @@ public class StockScannerRunner {
             fundamentalScore += 3; // ערך גבוה מאוד
         } else if (result.fundamentalSignal.contains("OVERVALUED")) {
             fundamentalScore -= 3;
+        }
+
+        // Working capital efficiency (CCC) influence (small weight)
+        if (result.cccDays != null && Double.isFinite(result.cccDays)) {
+            if (result.cccDays < 0) fundamentalScore += 1;
+            else if (result.cccDays > 90) fundamentalScore -= 1;
+        }
+
+        // Value creation (ROIC vs WACC) influence (small weight)
+        if (result.roic != null && result.wacc != null && Double.isFinite(result.roic) && Double.isFinite(result.wacc) && result.wacc > 0) {
+            if (result.roic > (result.wacc * 2.0)) fundamentalScore += 1;
+            else if (result.roic < result.wacc) fundamentalScore -= 1;
         }
 
         // Graham Number influence (small weight): undervalued adds, overpriced subtracts

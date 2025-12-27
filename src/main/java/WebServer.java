@@ -1116,16 +1116,17 @@ public class WebServer {
                 "</div>" +
                 "<div class=\"container\">" +
                 "<h1>AlphaPoint AI</h1>" +
-                "<div style=\"margin-bottom:16px;\">"+
-                "<a href=\"/\">Home</a> · "+
-                "<a href=\"/about\">About</a> · "+
-                "<a href=\"/favorites\">Favorites</a> · "+
-                "<a href=\"/portfolio-manage\">Manage Portfolio</a> · "+
-                "<a href=\"/alpha-agent\">AlphaAgent AI</a> · "+
-                "<a href=\"/monitoring\">Monitoring Stocks - History</a> · "+
-                "<a href=\"/intraday-alerts\">Intraday Alerts</a> · "+
-                "<a href=\"/analysts\">Analysts</a> · "+
-                "<a href=\"/finder\">FINDER</a>"+
+                "<div style=\"margin-bottom:16px;\">" +
+                "<a href=\"/\">Home</a> · " +
+                "<a href=\"/dashboard\">Dashboard</a> · " +
+                "<a href=\"/about\">About</a> · " +
+                "<a href=\"/favorites\">Favorites</a> · " +
+                "<a href=\"/portfolio-manage\">Manage Portfolio</a> · " +
+                "<a href=\"/alpha-agent\">AlphaAgent AI</a> · " +
+                "<a href=\"/monitoring\">Monitoring Stocks - History</a> · " +
+                "<a href=\"/intraday-alerts\">Intraday Alerts</a> · " +
+                "<a href=\"/analysts\">Analysts</a> · " +
+                "<a href=\"/finder\">FINDER</a>" +
                 "</div>" +
                 (body == null ? "" : body) +
                 "</div>" +
@@ -2362,6 +2363,234 @@ public class WebServer {
                         modelsUsedNamesOnlyHtml() +
                         "</div>";
                 respondHtml(ex, htmlPage(content), 200);
+            }
+        });
+
+        server.createContext("/dashboard", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, htmlPage(""), 200); return; }
+
+                String content = "<!DOCTYPE html>" +
+                        "<html lang=\"he\" dir=\"rtl\">" +
+                        "<head>" +
+                        "<meta charset=\"UTF-8\">" +
+                        "<title>Stock Analysis Dashboard</title>" +
+                        "<link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css\" rel=\"stylesheet\">" +
+                        "<style>" +
+                        ".sidebar { height: 100vh; background: #212529; color: white; padding-top: 20px; }" +
+                        ".nav-link { color: #adb5bd; }" +
+                        ".nav-link.active { color: white; background: #0d6efd; }" +
+                        ".score-badge { font-size: 2rem; padding: 10px 20px; border-radius: 50%; display:inline-block; min-width:90px; }" +
+                        "</style>" +
+                        "</head>" +
+                        "<body>" +
+                        "<div class=\"container-fluid\">" +
+                        "  <div class=\"row\">" +
+                        "    <nav class=\"col-md-2 d-none d-md-block sidebar\">" +
+                        "      <h4 class=\"text-center\">StockSystem</h4>" +
+                        "      <ul class=\"nav flex-column mt-4\">" +
+                        "        <li class=\"nav-item\"><a class=\"nav-link active\" href=\"/dashboard\">📊 לוח בקרה ראשי</a></li>" +
+                        "        <li class=\"nav-item\"><a class=\"nav-link\" href=\"/\">🔍 סורק מניות</a></li>" +
+                        "        <li class=\"nav-item\"><a class=\"nav-link\" href=\"/about\">ℹ️ About</a></li>" +
+                        "      </ul>" +
+                        "    </nav>" +
+                        "    <main class=\"col-md-10 ms-sm-auto px-md-4\">" +
+                        "      <div class=\"d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom\">" +
+                        "        <h1 class=\"h2\">ניתוח מנייה: <span id=\"tickerTitle\">AAPL</span></h1>" +
+                        "        <form class=\"d-flex\" onsubmit=\"event.preventDefault(); fetchAnalysis(document.getElementById('tickerInput').value);\">" +
+                        "          <input id=\"tickerInput\" class=\"form-control me-2\" placeholder=\"Ticker (e.g. AAPL)\" value=\"AAPL\"/>" +
+                        "          <button class=\"btn btn-primary\" type=\"submit\">Analyze</button>" +
+                        "        </form>" +
+                        "      </div>" +
+                        "      <div class=\"row text-center mb-4\">" +
+                        "        <div class=\"col-md-4\">" +
+                        "          <div class=\"card p-4 shadow\">" +
+                        "            <h3>ציון סופי</h3>" +
+                        "            <div id=\"finalScore\" class=\"score-badge bg-secondary mx-auto mt-2\">--</div>" +
+                        "            <h4 id=\"recommendation\" class=\"mt-3\">--</h4>" +
+                        "            <form method=\"post\" action=\"/run-main\" target=\"_blank\" class=\"mt-3\" onsubmit=\"document.getElementById('fullReportSymbol').value=document.getElementById('tickerInput').value;\">" +
+                        "              <input type=\"hidden\" id=\"fullReportSymbol\" name=\"symbol\" value=\"AAPL\"/>" +
+                        "              <button type=\"submit\" class=\"btn btn-outline-primary btn-sm\">Open full report</button>" +
+                        "            </form>" +
+                        "          </div>" +
+                        "        </div>" +
+                        "      </div>" +
+                        "      <div class=\"card shadow mb-4\">" +
+                        "        <div class=\"card-header bg-dark text-white\">📋 Details</div>" +
+                        "        <div class=\"card-body\">" +
+                        "          <div class=\"table-responsive\">" +
+                        "            <table class=\"table table-sm table-striped align-middle\">" +
+                        "              <thead><tr><th>Metric</th><th>Value</th><th>Explanation</th></tr></thead>" +
+                        "              <tbody>" +
+                        "                <tr><th scope=\"row\">Price</th><td id=\"d_price\">--</td><td>Current market price used as baseline for valuation margins.</td></tr>" +
+                        "                <tr><th scope=\"row\">DCF fair value</th><td id=\"d_dcf\">--</td><td>Discounted Cash Flow (DCF) intrinsic value estimate.</td></tr>" +
+                        "                <tr><th scope=\"row\">DCF margin</th><td id=\"d_dcfMargin\">--</td><td>(DCF - Price) / Price. Positive implies undervaluation / margin of safety.</td></tr>" +
+                        "                <tr><th scope=\"row\">Technical signal</th><td id=\"d_techSignal\">--</td><td>Technical model summary (trend/momentum signals like RSI/ADX-based logic).</td></tr>" +
+                        "                <tr><th scope=\"row\">Fundamental signal</th><td id=\"d_fundSignal\">--</td><td>Fundamental model summary (valuation + quality screens).</td></tr>" +
+                        "                <tr><th scope=\"row\">Final verdict</th><td id=\"d_finalVerdict\">--</td><td>Overall verdict from the full analyzer (risk + fundamental + technical gates).</td></tr>" +
+                        "                <tr><th scope=\"row\">RSI</th><td id=\"d_rsi\">--</td><td>Relative Strength Index. Healthy momentum typically ~40-65 (avoids overbought).</td></tr>" +
+                        "                <tr><th scope=\"row\">Altman Z</th><td id=\"d_altman\">--</td><td>Altman Z-Score: bankruptcy/distress risk (lower is worse).</td></tr>" +
+                        "                <tr><th scope=\"row\">Beneish M</th><td id=\"d_beneish\">--</td><td>Beneish M-Score: earnings manipulation risk (above -1.78 is a red flag).</td></tr>" +
+                        "                <tr><th scope=\"row\">Sloan ratio</th><td id=\"d_sloan\">--</td><td>Earnings quality (accruals). High absolute values can indicate low quality earnings.</td></tr>" +
+                        "                <tr><th scope=\"row\">Piotroski F-Score</th><td id=\"d_piotroski\">--</td><td>0-9 financial strength score (profitability, leverage/liquidity, efficiency).</td></tr>" +
+                        "                <tr><th scope=\"row\">PEG</th><td id=\"d_peg\">--</td><td>PEG ratio: valuation vs growth (lower is typically better; ~&lt;1.2 preferred).</td></tr>" +
+                        "                <tr><th scope=\"row\">CCC (days)</th><td id=\"d_ccc\">--</td><td>Cash Conversion Cycle: working capital efficiency (lower/negative is better).</td></tr>" +
+                        "                <tr><th scope=\"row\">ROIC-WACC spread</th><td id=\"d_spread\">--</td><td>Value creation metric: ROIC minus WACC (positive indicates economic profit).</td></tr>" +
+                        "              </tbody>" +
+                        "            </table>" +
+                        "          </div>" +
+                        "        </div>" +
+                        "      </div>" +
+                        "      <div class=\"card shadow mb-4\">" +
+                        "        <div class=\"card-header bg-primary text-white\">💡 תובנות מפתח מהמנוע</div>" +
+                        "        <div class=\"card-body\">" +
+                        "          <ul id=\"insightsList\"><li>המתן לטעינת נתונים...</li></ul>" +
+                        "        </div>" +
+                        "      </div>" +
+                        "    </main>" +
+                        "  </div>" +
+                        "</div>" +
+                        "<script>" +
+                        "async function fetchAnalysis(ticker) {" +
+                        "  try {" +
+                        "    ticker = (ticker || '').trim().toUpperCase();" +
+                        "    if (!ticker) return;" +
+                        "    const response = await fetch('/api/analyze/' + encodeURIComponent(ticker));" +
+                        "    const result = await response.json();" +
+                        "    document.getElementById('tickerTitle').innerText = ticker;" +
+                        "    document.getElementById('finalScore').innerText = result.finalScore;" +
+                        "    document.getElementById('recommendation').innerText = result.recommendation;" +
+                        "    document.getElementById('fullReportSymbol').value = ticker;" +
+                        "    const badge = document.getElementById('finalScore');" +
+                        "    if (result.finalScore >= 75) badge.className = 'score-badge bg-success mx-auto mt-2';" +
+                        "    else if (result.finalScore >= 50) badge.className = 'score-badge bg-warning mx-auto mt-2';" +
+                        "    else badge.className = 'score-badge bg-danger mx-auto mt-2';" +
+                        "    const d = result.details || {};" +
+                        "    function fmt(x){ if (x===null||x===undefined||Number.isNaN(x)) return 'N/A'; return x; }" +
+                        "    function fmt2(x){ if (x===null||x===undefined||Number.isNaN(x)) return 'N/A'; return Number(x).toFixed(2); }" +
+                        "    function fmtPct(x){ if (x===null||x===undefined||Number.isNaN(x)) return 'N/A'; return (Number(x)*100).toFixed(1) + '%'; }" +
+                        "    document.getElementById('d_price').innerText = fmt2(d.price);" +
+                        "    document.getElementById('d_dcf').innerText = fmt2(d.dcfFairValue);" +
+                        "    document.getElementById('d_dcfMargin').innerText = fmtPct(d.dcfMargin);" +
+                        "    document.getElementById('d_techSignal').innerText = fmt(d.technicalSignal);" +
+                        "    document.getElementById('d_fundSignal').innerText = fmt(d.fundamentalSignal);" +
+                        "    document.getElementById('d_finalVerdict').innerText = fmt(d.finalVerdict);" +
+                        "    document.getElementById('d_rsi').innerText = fmt2(d.rsi);" +
+                        "    document.getElementById('d_altman').innerText = fmt2(d.altmanZ);" +
+                        "    document.getElementById('d_beneish').innerText = fmt2(d.beneishMScore);" +
+                        "    document.getElementById('d_sloan').innerText = fmt2(d.sloanRatio);" +
+                        "    document.getElementById('d_piotroski').innerText = fmt(d.piotroskiFScore);" +
+                        "    document.getElementById('d_peg').innerText = fmt2(d.pegRatio);" +
+                        "    document.getElementById('d_ccc').innerText = fmt2(d.cccDays);" +
+                        "    document.getElementById('d_spread').innerText = fmt2(d.economicSpread);" +
+                        "    const list = document.getElementById('insightsList');" +
+                        "    list.innerHTML = '';" +
+                        "    (result.keyInsights || []).forEach(insight => {" +
+                        "      const li = document.createElement('li');" +
+                        "      li.innerText = insight;" +
+                        "      list.appendChild(li);" +
+                        "    });" +
+                        "    if ((result.keyInsights || []).length === 0) {" +
+                        "      const li = document.createElement('li');" +
+                        "      li.innerText = 'No insights.';" +
+                        "      list.appendChild(li);" +
+                        "    }" +
+                        "  } catch (err) {" +
+                        "    console.error('Error fetching analysis:', err);" +
+                        "  }" +
+                        "}" +
+                        "fetchAnalysis('AAPL');" +
+                        "</script>" +
+                        "</body>" +
+                        "</html>";
+
+                respondHtml(ex, content, 200);
+            }
+        });
+
+        server.createContext("/api/analyze", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+
+                try {
+                    String path = ex.getRequestURI() == null ? null : ex.getRequestURI().getPath();
+                    String[] parts = (path == null) ? new String[0] : path.split("/");
+                    String sym = (parts.length >= 4) ? parts[3] : "";
+                    sym = sym == null ? "" : sym.trim().toUpperCase();
+                    if (sym.isBlank()) { respondJson(ex, Map.of("error", "Missing ticker. Use /api/analyze/{ticker}"), 400); return; }
+
+                    StockAnalysisResult r = StockScannerRunner.analyzeSingleStock(sym);
+                    if (r == null) { respondJson(ex, Map.of("error", "No analysis result"), 500); return; }
+
+                    double z = (r.altmanZ != null && Double.isFinite(r.altmanZ)) ? r.altmanZ : Double.NaN;
+                    double m = (r.beneishMScore != null && Double.isFinite(r.beneishMScore)) ? r.beneishMScore : Double.NaN;
+                    double sloan = (r.sloanRatio != null && Double.isFinite(r.sloanRatio)) ? r.sloanRatio : 0.0;
+
+                    double fScore = (r.piotroskiFScore == null) ? Double.NaN : r.piotroskiFScore.doubleValue();
+
+                    double peg = (r.pegRatio != null && Double.isFinite(r.pegRatio)) ? r.pegRatio : Double.NaN;
+                    double dcfMargin = Double.NaN;
+                    if (Double.isFinite(r.price) && r.price > 0 && Double.isFinite(r.dcfFairValue) && r.dcfFairValue > 0) {
+                        dcfMargin = (r.dcfFairValue - r.price) / r.price;
+                    }
+
+                    boolean technicalBullish = r.technicalSignal != null && r.technicalSignal.toUpperCase().contains("BUY") && !r.technicalSignal.toUpperCase().contains("SELL");
+                    double rsi = (r.latestRsi != null && Double.isFinite(r.latestRsi)) ? r.latestRsi : 50.0;
+
+                    double ccc = (r.cccDays != null && Double.isFinite(r.cccDays)) ? r.cccDays : Double.NaN;
+                    double spread = (r.economicSpread != null && Double.isFinite(r.economicSpread)) ? r.economicSpread : 0.0;
+
+                    // If risk metrics missing, avoid triggering veto by using safe defaults
+                    double mForEngine = Double.isFinite(m) ? m : -999.0;
+                    double zForEngine = Double.isFinite(z) ? z : 99.0;
+                    double pegForEngine = Double.isFinite(peg) ? peg : 99.0;
+                    double dcfForEngine = Double.isFinite(dcfMargin) ? dcfMargin : 0.0;
+                    double cccForEngine = Double.isFinite(ccc) ? ccc : 999.0;
+
+                    FinalScoringEngine.AnalysisResult ar = FinalScoringEngine.computeFinalScore(
+                            zForEngine, mForEngine, sloan,
+                            fScore, pegForEngine, dcfForEngine,
+                            technicalBullish, rsi,
+                            cccForEngine, spread
+                    );
+
+                    if (!Double.isFinite(m) || !Double.isFinite(z)) {
+                        ar.keyInsights.add("Note: Some risk fundamentals (Altman Z / Beneish) are missing or rate-limited; score may be less reliable.");
+                    }
+                    if (!Double.isFinite(peg) || !Double.isFinite(dcfMargin)) {
+                        ar.keyInsights.add("Note: Some valuation inputs (PEG / DCF margin) are missing; score may be less reliable.");
+                    }
+                    if (!Double.isFinite(fScore)) {
+                        ar.keyInsights.add("Note: Piotroski F-Score is missing (needs annual statements / shares data); currently treated as 0.");
+                    }
+
+                    Map<String, Object> details = new LinkedHashMap<>();
+                    details.put("ticker", sym);
+                    details.put("price", Double.isFinite(r.price) ? r.price : null);
+                    details.put("dcfFairValue", Double.isFinite(r.dcfFairValue) ? r.dcfFairValue : null);
+                    details.put("dcfMargin", Double.isFinite(dcfMargin) ? dcfMargin : null);
+                    details.put("technicalSignal", r.technicalSignal);
+                    details.put("fundamentalSignal", r.fundamentalSignal);
+                    details.put("finalVerdict", r.finalVerdict);
+                    details.put("rsi", (r.latestRsi != null && Double.isFinite(r.latestRsi)) ? r.latestRsi : null);
+                    details.put("altmanZ", Double.isFinite(z) ? z : null);
+                    details.put("beneishMScore", Double.isFinite(m) ? m : null);
+                    details.put("sloanRatio", (r.sloanRatio != null && Double.isFinite(r.sloanRatio)) ? r.sloanRatio : null);
+                    details.put("piotroskiFScore", r.piotroskiFScore);
+                    details.put("pegRatio", (r.pegRatio != null && Double.isFinite(r.pegRatio)) ? r.pegRatio : null);
+                    details.put("cccDays", (r.cccDays != null && Double.isFinite(r.cccDays)) ? r.cccDays : null);
+                    details.put("economicSpread", (r.economicSpread != null && Double.isFinite(r.economicSpread)) ? r.economicSpread : null);
+
+                    Map<String, Object> out = new LinkedHashMap<>();
+                    out.put("finalScore", ar.finalScore);
+                    out.put("recommendation", ar.recommendation);
+                    out.put("keyInsights", ar.keyInsights);
+                    out.put("details", details);
+
+                    respondJson(ex, out, 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage()), 500);
+                }
             }
         });
 
