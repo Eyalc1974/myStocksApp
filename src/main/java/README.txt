@@ -34,3 +34,10 @@ IMPORTANT - PLEASE DO NOT SKIP: If you would like to access realtime US market d
 
 
 You now have access to premium support at support@alphavantage.co. Please keep your API key at a safe physical or digital place. If you suspect that your API key has been "compromised" at any point, please let us know and we will take actions accordingly.
+terminal command line : mvn package
+                        java -cp target/trading-model-1.0-SNAPSHOT.jar:target/dependency/* WebServer
+                        run on same terminal the following parameters:
+export WEB_PORT=8080
+export OPENAI_API_KEY=sk-xxx
+export FINNHUB_API_KEY=xxx
+mvn exec:java -Dexec.mainClass="WebServer"
