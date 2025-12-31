@@ -1,6 +1,5 @@
 
 public class ValueCreationAnalysis {
-
     /**
      * מחשב את ה-Economic Spread.
      * @param roic תשואה על הון מושקע (למשל 0.15 עבור 15%).

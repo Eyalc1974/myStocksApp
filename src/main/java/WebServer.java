@@ -1148,7 +1148,7 @@ public class WebServer {
                 "  <div class=\"loading-card\">" +
                 "    <span class=\"loading-emoji\">⏳</span>" +
                 "    <div>LOADING ...</div>" +
-                "    <div style=\"margin-top:4px;color:#9ca3af;\">מבצע חישוב, ייתכן שיימשך עד דקה ⏳</div>" +
+                "    <div style=\"margin-top:4px;color:#9ca3af;\">Processing request...</div>" +
                 "</div>" +
                 "</div>" +
                 "<div class=\"container\">" +
@@ -1167,7 +1167,7 @@ public class WebServer {
                 "</div>" +
                 (body == null ? "" : body) +
                 "</div>" +
-                "<script>(function(){function show(){var el=document.getElementById('loading');if(el){el.style.display='flex';}};var forms=document.querySelectorAll('form');forms.forEach(function(f){f.addEventListener('submit',function(){show();});});})();</script>" +
+                "<script>(function(){function show(){var el=document.getElementById('loading');if(el){el.style.display='flex';}};var forms=document.querySelectorAll('form');forms.forEach(function(f){f.addEventListener('submit',function(){try{var t=(f.getAttribute('target')||'').toLowerCase();if(t==='_blank') return;}catch(e){} show();});});})();</script>" +
                 "</body></html>";
         return base;
     }
@@ -4074,7 +4074,7 @@ public class WebServer {
                             sb.append("<td style='padding:8px;border-bottom:1px solid #0f172a;'>").append(t.recommendation == null ? "" : escapeHtml(t.recommendation)).append("</td>");
                             sb.append("<td style='padding:8px;border-bottom:1px solid #0f172a;color:#9ca3af;'>").append(t.lastUpdatedNy == null ? "" : escapeHtml(t.lastUpdatedNy)).append("</td>");
                             sb.append("<td style='padding:8px;border-bottom:1px solid #0f172a;'>");
-                            sb.append("<form method='post' action='/run-main' style='display:inline'>")
+                            sb.append("<form method='post' action='/run-main' target='_blank' style='display:inline'>")
                                     .append("<input type='hidden' name='symbol' value='").append(esc).append("'/>")
                                     .append("<button type='submit'>Analyze</button></form>");
                             sb.append("</td>");
@@ -4098,7 +4098,7 @@ public class WebServer {
                             sb.append("<div style='display:flex;align-items:center;gap:10px'>")
                                     .append("<span style='background:#0b1220;border:1px solid #1f2a44;border-radius:999px;padding:6px 10px;'>★ ")
                                     .append(esc).append("</span>")
-                                    .append("<form method='post' action='/run-main' style='display:inline'>")
+                                    .append("<form method='post' action='/run-main' target='_blank' style='display:inline'>")
                                     .append("<input type='hidden' name='symbol' value='"+esc+"'/>")
                                     .append("<button type='submit'>Analyze</button></form>")
                                     .append("<form method='post' action='/favorite-remove' style='display:inline'>")
