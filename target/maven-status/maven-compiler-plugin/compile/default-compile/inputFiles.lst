@@ -1,7 +1,9 @@
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/ADLine.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/ADX.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/ATR.java
+/Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/ActivePositionsStore.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/AltmanZScore.java
+/Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/BeneishMScore.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/BollingerBands.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/CCI.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/CMF.java
@@ -11,8 +13,10 @@
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/EVSales.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/EventAnalysis.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/FibonacciRetracement.java
+/Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/FinalScoringEngine.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/FundamentalAnalysis.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/GrahamNumber.java
+/Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/GrahamValuation.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/LongTermCandidateFinder.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/MACD.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/MFI.java
@@ -29,9 +33,13 @@
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/PriceJsonParser.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/RSI.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/SentimentModel.java
+/Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/SloanAnalysis.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/Stochastic.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/StockAnalysisResult.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/StockScannerRunner.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/TechnicalAnalysisModel.java
+/Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/TrailingStopLoss.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/ValuationEngine.java
+/Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/ValueCreationAnalysis.java
 /Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/WebServer.java
+/Users/eyal.cohen/IdeaProjects/MyStocksApp-dev/src/main/java/WorkingCapitalEfficiency.java

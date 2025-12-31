@@ -755,6 +755,25 @@ public class StockScannerRunner {
         } catch (Exception ignore) {
         }
 
+        // Graham Valuation (extended intrinsic value model)
+        try {
+            if (fs != null && fs.epsTtm != null && fs.epsTtm > 0) {
+                double growthPct = (fs.growthRate != null && fs.growthRate > 0) ? fs.growthRate * 100.0 : 5.0;
+                growthPct = Math.max(0, Math.min(growthPct, 25)); // cap at 25%
+                
+                double gn = GrahamValuation.calculateGrahamNumber(fs.epsTtm, fs.bookValuePerShare != null ? fs.bookValuePerShare : 0);
+                double iv = GrahamValuation.calculateIntrinsicValue(fs.epsTtm, growthPct);
+                
+                if (gn > 0 || iv > 0) {
+                    result.grahamNumber = gn > 0 ? gn : null;
+                    result.grahamIntrinsicValue = iv > 0 ? iv : null;
+                    result.grahamMarginOfSafety = iv > 0 ? GrahamValuation.calculateMarginOfSafety(iv, currentPrice) : null;
+                    result.grahamValuationVerdict = GrahamValuation.getExtendedVerdict(currentPrice, gn, iv);
+                }
+            }
+        } catch (Exception ignore) {
+        }
+
         // 6. לוגיקת החלטה ראשית לטווח הקצר (שורט / קנייה / מכירה)
         // ** שורט (מגמת ירידה חזקה): ** ADX חזק, ירידה ב-MACD, ומגמה יורדת (-DI > +DI)
         if (latestADX > 25 && latestMinusDI > latestPlusDI && latestMACD < latestSignalLine && currentPrice < latestSMA) {

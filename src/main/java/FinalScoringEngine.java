@@ -14,7 +14,8 @@ public class FinalScoringEngine {
             double zScore, double mScore, double sloanRatio, // Risk
             double fScore, double peg, double dcfMargin,    // Fundamental
             boolean technicalBullish, double rsi,           // Technical
-            double ccc, double roicWaccSpread               // Efficiency
+            double ccc, double roicWaccSpread,              // Efficiency
+            double grahamMarginOfSafety                     // Graham Valuation
     ) {
         AnalysisResult result = new AnalysisResult();
         double score = 0;
@@ -41,7 +42,13 @@ public class FinalScoringEngine {
         if (roicWaccSpread > 0.05) score += 10;
         if (ccc < 40) score += 10; // יעילות הון חוזר
 
-        result.finalScore = (int) score;
+        // --- שלב 5: Graham Valuation (bonus up to 10 נקודות) ---
+        if (Double.isFinite(grahamMarginOfSafety)) {
+            if (grahamMarginOfSafety >= 0.33) score += 10; // מרווח ביטחון גרהם 33%+
+            else if (grahamMarginOfSafety >= 0.15) score += 5; // מרווח ביטחון סביר
+        }
+
+        result.finalScore = (int) Math.min(score, 100);
 
         // --- קביעת המלצה סופית ---
         if (score >= 80) result.recommendation = "🚀 STRONG BUY";
@@ -52,7 +59,23 @@ public class FinalScoringEngine {
         // הוספת תובנות
         if (roicWaccSpread > 0.1) result.keyInsights.add("תובנה: החברה היא 'מכונת יצירת ערך' (ROIC גבוה מאוד).");
         if (sloanRatio > 0.2) result.keyInsights.add("אזהרה: איכות הרווחים נמוכה (Accruals גבוהים).");
+        if (Double.isFinite(grahamMarginOfSafety) && grahamMarginOfSafety >= 0.33) {
+            result.keyInsights.add("תובנה: מרווח ביטחון גרהם גבוה (33%+) - מניה זולה לפי הערכת ערך קלאסית.");
+        } else if (Double.isFinite(grahamMarginOfSafety) && grahamMarginOfSafety < 0) {
+            result.keyInsights.add("אזהרה: המניה מעל השווי הפנימי לפי גרהם - עלולה להיות יקרה.");
+        }
 
         return result;
+    }
+
+    // Backward compatibility overload (without Graham parameter)
+    public static AnalysisResult computeFinalScore(
+            double zScore, double mScore, double sloanRatio,
+            double fScore, double peg, double dcfMargin,
+            boolean technicalBullish, double rsi,
+            double ccc, double roicWaccSpread
+    ) {
+        return computeFinalScore(zScore, mScore, sloanRatio, fScore, peg, dcfMargin,
+                technicalBullish, rsi, ccc, roicWaccSpread, Double.NaN);
     }
 }

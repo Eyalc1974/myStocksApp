@@ -1162,6 +1162,7 @@ public class WebServer {
                 "<a href=\"/alpha-agent\">AlphaAgent AI</a> · " +
                 "<a href=\"/monitoring\">Monitoring Stocks - History</a> · " +
                 "<a href=\"/intraday-alerts\">Intraday Alerts</a> · " +
+                "<a href=\"/active-positions\">Active Positions</a> · " +
                 "<a href=\"/analysts\">Analysts</a> · " +
                 "<a href=\"/finder\">FINDER</a>" +
                 "</div>" +
@@ -2473,6 +2474,8 @@ public class WebServer {
                         "                <tr><th scope=\"row\">PEG</th><td id=\"d_peg\">--</td><td>PEG ratio: valuation vs growth (lower is typically better; ~&lt;1.2 preferred).</td></tr>" +
                         "                <tr><th scope=\"row\">CCC (days)</th><td id=\"d_ccc\">--</td><td>Cash Conversion Cycle: working capital efficiency (lower/negative is better).</td></tr>" +
                         "                <tr><th scope=\"row\">ROIC-WACC spread</th><td id=\"d_spread\">--</td><td>Value creation metric: ROIC minus WACC (positive indicates economic profit).</td></tr>" +
+                        "                <tr><th scope=\"row\">Graham Number</th><td id=\"d_grahamNum\">--</td><td>Conservative ceiling price: √(22.5 × EPS × BVPS). Price below = undervalued.</td></tr>" +
+                        "                <tr><th scope=\"row\">Graham IV</th><td id=\"d_grahamIV\">--</td><td>Graham intrinsic value: EPS × (8.5 + 2g) × 4.4/Y. Margin of Safety 33%+ preferred.</td></tr>" +
                         "              </tbody>" +
                         "            </table>" +
                         "          </div>" +
@@ -2520,6 +2523,8 @@ public class WebServer {
                         "    document.getElementById('d_peg').innerText = fmt2(d.pegRatio);" +
                         "    document.getElementById('d_ccc').innerText = fmt2(d.cccDays);" +
                         "    document.getElementById('d_spread').innerText = fmt2(d.economicSpread);" +
+                        "    document.getElementById('d_grahamNum').innerText = fmt2(d.grahamNumber);" +
+                        "    document.getElementById('d_grahamIV').innerText = fmt2(d.grahamIntrinsicValue);" +
                         "    const list = document.getElementById('insightsList');" +
                         "    list.innerHTML = '';" +
                         "    (result.keyInsights || []).forEach(insight => {" +
@@ -2576,6 +2581,7 @@ public class WebServer {
 
                     double ccc = (r.cccDays != null && Double.isFinite(r.cccDays)) ? r.cccDays : Double.NaN;
                     double spread = (r.economicSpread != null && Double.isFinite(r.economicSpread)) ? r.economicSpread : 0.0;
+                    double grahamMoS = (r.grahamMarginOfSafety != null && Double.isFinite(r.grahamMarginOfSafety)) ? r.grahamMarginOfSafety : Double.NaN;
 
                     // If risk metrics missing, avoid triggering veto by using safe defaults
                     double mForEngine = Double.isFinite(m) ? m : -999.0;
@@ -2588,7 +2594,7 @@ public class WebServer {
                             zForEngine, mForEngine, sloan,
                             fScore, pegForEngine, dcfForEngine,
                             technicalBullish, rsi,
-                            cccForEngine, spread
+                            cccForEngine, spread, grahamMoS
                     );
 
                     if (!Double.isFinite(m) || !Double.isFinite(z)) {
@@ -2617,6 +2623,9 @@ public class WebServer {
                     details.put("pegRatio", (r.pegRatio != null && Double.isFinite(r.pegRatio)) ? r.pegRatio : null);
                     details.put("cccDays", (r.cccDays != null && Double.isFinite(r.cccDays)) ? r.cccDays : null);
                     details.put("economicSpread", (r.economicSpread != null && Double.isFinite(r.economicSpread)) ? r.economicSpread : null);
+                    details.put("grahamNumber", (r.grahamNumber != null && Double.isFinite(r.grahamNumber)) ? r.grahamNumber : null);
+                    details.put("grahamIntrinsicValue", (r.grahamIntrinsicValue != null && Double.isFinite(r.grahamIntrinsicValue)) ? r.grahamIntrinsicValue : null);
+                    details.put("grahamMarginOfSafety", (r.grahamMarginOfSafety != null && Double.isFinite(r.grahamMarginOfSafety)) ? r.grahamMarginOfSafety : null);
 
                     Map<String, Object> out = new LinkedHashMap<>();
                     out.put("finalScore", ar.finalScore);
@@ -3064,6 +3073,9 @@ public class WebServer {
             }
         });
 
+        // ---------------- Active Positions (Trailing Stop-Loss) ----------------
+        final ActivePositionsStore activePositionsStore = ActivePositionsStore.defaultStore();
+
         // Manage portfolio page (view / add / remove)
         server.createContext("/portfolio-manage", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
@@ -3095,6 +3107,51 @@ public class WebServer {
                         "<button type='submit'>Remove</button></form>");
                 sb.append("<div style='color:#9ca3af;margin-top:8px;'>Note: Changes reset today's cache for the weekly report.</div>");
                 sb.append("</div>");
+
+                // Active Positions with Trailing Stop-Loss
+                sb.append("<div class='card' dir='rtl' style='text-align:right;'>");
+                sb.append("<div class='title'>📊 פוזיציות פתוחות (Trailing Stop-Loss)</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>סטופ-לוס דינמי המבוסס על ATR. <a href='/active-positions'>ניהול מלא →</a></div>");
+
+                List<ActivePositionsStore.PositionView> positions = activePositionsStore.getPositionViews();
+                if (positions.isEmpty()) {
+                    sb.append("<div style='color:#9ca3af;padding:12px;'>אין פוזיציות פתוחות. <a href='/active-positions'>הוסף פוזיציה</a></div>");
+                } else {
+                    sb.append("<div style='overflow-x:auto;'><table style='width:100%;border-collapse:collapse;font-size:13px;direction:ltr;text-align:left;'>");
+                    sb.append("<thead><tr style='background:#0b1220;'>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>Symbol</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>Entry</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>Current</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>Stop</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>Buffer</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>P&L</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>Signal</th>");
+                    sb.append("</tr></thead><tbody>");
+
+                    for (ActivePositionsStore.PositionView pv : positions) {
+                        String pnlColor = pv.pnlPct >= 0 ? "#22c55e" : "#ef4444";
+                        String signalColor = pv.shouldSell ? "#ef4444" : "#22c55e";
+                        String signalText = pv.shouldSell ? "🔴 SELL!" : "🟢 HOLD";
+
+                        sb.append("<tr>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;font-weight:bold;'>").append(escapeHtml(pv.symbol)).append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;'>$").append(String.format("%.2f", pv.entryPrice)).append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;'>$").append(String.format("%.2f", pv.currentPrice)).append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;color:#fbbf24;'>$").append(String.format("%.2f", pv.currentStop)).append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;'>").append(String.format("%.1f%%", pv.profitBufferPct)).append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;color:").append(pnlColor).append(";font-weight:bold;'>").append(String.format("%+.1f%%", pv.pnlPct)).append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;color:").append(signalColor).append(";font-weight:bold;'>").append(signalText).append("</td>");
+                        sb.append("</tr>");
+                    }
+                    sb.append("</tbody></table></div>");
+                    sb.append("<div style='margin-top:10px;'>");
+                    sb.append("<form method='post' action='/active-positions-refresh' style='display:inline;'>");
+                    sb.append("<button type='submit'>🔄 רענן מחירים</button>");
+                    sb.append("</form>");
+                    sb.append("</div>");
+                }
+                sb.append("</div>");
+
                 respondHtml(ex, htmlPage(sb.toString()), 200);
             }
         });
@@ -3453,15 +3510,22 @@ public class WebServer {
                 controls.append("<label style='color:#9ca3af'>List</label>");
                 controls.append("<select name='pid'>");
                 if (store != null && store.portfolios != null && !store.portfolios.isEmpty()) {
-                    int i = 1;
+                    int autoIdx = 1;
+                    int customIdx = 1;
                     for (Map.Entry<String, AlphaAgentPortfolio> e : store.portfolios.entrySet()) {
                         String id = e.getKey();
                         boolean sel = id != null && id.equals(effectivePid);
                         AlphaAgentPortfolio p = e.getValue();
                         boolean custom = p != null && p.userManaged;
-                        String label = custom ? ("Custom") : ("List " + i);
+                        String label;
+                        if (custom) {
+                            label = "Custom " + customIdx;
+                            customIdx++;
+                        } else {
+                            label = "List " + autoIdx;
+                            autoIdx++;
+                        }
                         controls.append("<option value='").append(escapeHtml(id)).append("'").append(sel ? " selected" : "").append(">").append(escapeHtml(label)).append("</option>");
-                        i++;
                     }
                 }
                 controls.append("</select>");
@@ -3483,18 +3547,21 @@ public class WebServer {
                 controls.append("</form>");
 
                 boolean isCustom = pf != null && pf.userManaged;
-                if (!isCustom) {
+                
+                // Always show "Create Custom List" if we haven't hit the limit
+                if (listCount < ALPHA_AGENT_MAX_LISTS) {
                     controls.append("<form method='post' action='/alpha-agent/custom-create' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px'>");
                     controls.append("<input type='number' name='evaluationPeriodDays' min='2' max='60' value='").append(escapeHtml(days)).append("' />");
-                    controls.append("<button type='submit'>Create Custom List</button>");
-                    controls.append("<div style='color:#9ca3af'>Create an empty list you can fill with tickers</div>");
+                    controls.append("<button type='submit'>Create New Custom List</button>");
+                    controls.append("<div style='color:#9ca3af'>Creates a new empty list (won't affect existing lists)</div>");
                     controls.append("</form>");
                 }
 
+                // Show ticker editor only for the current custom list
                 if (isCustom) {
                     controls.append("<form method='post' action='/alpha-agent/custom-save' style='display:flex;flex-direction:column;gap:10px;margin-top:10px'>");
                     controls.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
-                    controls.append("<div style='color:#9ca3af'>Custom tickers (comma / space / newline separated)</div>");
+                    controls.append("<div style='color:#9ca3af'>Edit tickers for current list (comma / space / newline separated)</div>");
                     controls.append("<textarea name='tickers' rows='3' style='width:100%;max-width:900px'>");
                     if (pf != null && pf.positions != null && !pf.positions.isEmpty()) {
                         StringBuilder t = new StringBuilder();
@@ -3722,6 +3789,160 @@ public class WebServer {
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
                 try { monitoringScheduler.triggerNowAsync(); } catch (Exception ignore) {}
                 ex.getResponseHeaders().add("Location", "/monitoring?status=refresh_started");
+                ex.sendResponseHeaders(303, -1);
+                ex.close();
+            }
+        });
+
+        // ---------------- Active Positions (Trailing Stop-Loss) Page ----------------
+        server.createContext("/active-positions", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, htmlPage(""), 200); return; }
+                Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                String status = qp.getOrDefault("status", "");
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("<div class='card' dir='rtl' style='text-align:right;'>");
+                sb.append("<div class='title'>📊 פוזיציות פתוחות (Trailing Stop-Loss)</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>");
+                sb.append("מערכת ניהול סטופ-לוס דינמי המבוססת על ATR (תנודתיות). ");
+                sb.append("הסטופ עולה אוטומטית עם המניה, אך לעולם לא יורד - מבטיח שמירה על רווחים!</div>");
+
+                if (!status.isEmpty()) {
+                    String msg = status.equals("added") ? "✅ פוזיציה נוספה בהצלחה" :
+                                 status.equals("removed") ? "✅ פוזיציה הוסרה" :
+                                 status.equals("updated") ? "✅ מחירים עודכנו" :
+                                 status.equals("invalid") ? "❌ נתונים לא תקינים" :
+                                 status.equals("exists") ? "⚠️ פוזיציה כבר קיימת" : "";
+                    if (!msg.isEmpty()) {
+                        sb.append("<div style='background:#1e3a5f;border:1px solid #3b82f6;border-radius:8px;padding:10px;margin-bottom:12px;'>").append(escapeHtml(msg)).append("</div>");
+                    }
+                }
+
+                sb.append("<div style='margin-bottom:16px;'>");
+                sb.append("<form method='post' action='/active-positions-add' style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;'>");
+                sb.append("<input type='text' name='symbol' placeholder='סימול (AAPL)' required style='width:100px;' />");
+                sb.append("<input type='text' name='entryPrice' placeholder='מחיר כניסה' required style='width:120px;' />");
+                sb.append("<input type='text' name='atrMultiplier' placeholder='מכפיל ATR (2.0)' style='width:120px;' />");
+                sb.append("<button type='submit'>➕ הוסף פוזיציה</button>");
+                sb.append("</form>");
+                sb.append("</div>");
+
+                sb.append("<div style='margin-bottom:16px;'>");
+                sb.append("<form method='post' action='/active-positions-refresh' style='display:inline;'>");
+                sb.append("<button type='submit'>🔄 רענן מחירים</button>");
+                sb.append("</form>");
+                sb.append("</div>");
+
+                List<ActivePositionsStore.PositionView> positions = activePositionsStore.getPositionViews();
+
+                if (positions.isEmpty()) {
+                    sb.append("<div style='color:#9ca3af;padding:20px;text-align:center;'>אין פוזיציות פתוחות. הוסף פוזיציה חדשה למעלה.</div>");
+                } else {
+                    sb.append("<div style='overflow-x:auto;'><table style='width:100%;border-collapse:collapse;font-size:13px;direction:ltr;text-align:left;'>");
+                    sb.append("<thead><tr style='background:#0b1220;'>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>Symbol</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>Entry Price</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>Current Price</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>Current Stop</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>Profit Buffer</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>P&L %</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>ATR</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>Volatility</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>Signal</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>Action</th>");
+                    sb.append("</tr></thead><tbody>");
+
+                    for (ActivePositionsStore.PositionView pv : positions) {
+                        String pnlColor = pv.pnlPct >= 0 ? "#22c55e" : "#ef4444";
+                        String signalColor = pv.shouldSell ? "#ef4444" : "#22c55e";
+                        String signalText = pv.shouldSell ? "🔴 SELL NOW!" : "🟢 HOLD";
+                        String bufferColor = pv.profitBufferPct < 2 ? "#fbbf24" : (pv.profitBufferPct < 5 ? "#93c5fd" : "#22c55e");
+
+                        sb.append("<tr>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:8px;font-weight:bold;'>").append(escapeHtml(pv.symbol)).append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:8px;'>$").append(String.format("%.2f", pv.entryPrice)).append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:8px;font-weight:bold;'>$").append(String.format("%.2f", pv.currentPrice)).append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:8px;color:#fbbf24;'>$").append(String.format("%.2f", pv.currentStop)).append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:8px;color:").append(bufferColor).append(";'>$").append(String.format("%.2f", pv.profitBuffer)).append(" (").append(String.format("%.1f%%", pv.profitBufferPct)).append(")</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:8px;color:").append(pnlColor).append(";font-weight:bold;'>").append(String.format("%+.2f%%", pv.pnlPct)).append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:8px;'>$").append(String.format("%.2f", pv.atr)).append(" (x").append(String.format("%.1f", pv.atrMultiplier)).append(")</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:8px;'>").append(escapeHtml(pv.volatilityLevel)).append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:8px;color:").append(signalColor).append(";font-weight:bold;'>").append(signalText).append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:8px;'>");
+                        sb.append("<form method='post' action='/active-positions-remove' style='margin:0;'>");
+                        sb.append("<input type='hidden' name='symbol' value='").append(escapeHtml(pv.symbol)).append("' />");
+                        sb.append("<button type='submit' style='background:#7f1d1d;border-color:#991b1b;font-size:12px;padding:4px 8px;'>🗑️</button>");
+                        sb.append("</form></td>");
+                        sb.append("</tr>");
+                    }
+                    sb.append("</tbody></table></div>");
+                }
+
+                sb.append("</div>");
+
+                sb.append("<div class='card' dir='rtl' style='text-align:right;'>");
+                sb.append("<div class='title'>📚 הסבר על המערכת</div>");
+                sb.append("<ul style='color:#cbd5e1;line-height:1.8;'>");
+                sb.append("<li><b>Entry Price</b>: המחיר בו קנית את המניה.</li>");
+                sb.append("<li><b>Current Price</b>: המחיר הנוכחי של המניה.</li>");
+                sb.append("<li><b>Current Stop</b>: מחיר הסטופ-לוס הנוכחי. אם המחיר יורד מתחתיו - מומלץ למכור!</li>");
+                sb.append("<li><b>Profit Buffer</b>: כמה המניה יכולה לרדת לפני שפוגעים בסטופ.</li>");
+                sb.append("<li><b>ATR</b>: Average True Range - מדד תנודתיות. מכפיל גבוה יותר = סטופ רחב יותר.</li>");
+                sb.append("<li><b>Signal</b>: 🟢 HOLD = המשך להחזיק | 🔴 SELL NOW = המחיר ירד מתחת לסטופ!</li>");
+                sb.append("</ul>");
+                sb.append("<div style='color:#fbbf24;margin-top:12px;'>💡 <b>טיפ:</b> למניות תנודתיות (כמו NVDA) השתמש במכפיל ATR גבוה יותר (2.5-3.0). למניות יציבות (כמו PEP) השתמש במכפיל נמוך יותר (1.5-2.0).</div>");
+                sb.append("</div>");
+
+                respondHtml(ex, htmlPage(sb.toString()), 200);
+            }
+        });
+
+        server.createContext("/active-positions-add", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                String symbol = form.getOrDefault("symbol", "").trim().toUpperCase();
+                String entryPriceStr = form.getOrDefault("entryPrice", "");
+                String atrMultStr = form.getOrDefault("atrMultiplier", "2.0");
+
+                double entryPrice = 0;
+                double atrMult = 2.0;
+                try { entryPrice = Double.parseDouble(entryPriceStr.trim()); } catch (Exception ignore) {}
+                try { atrMult = Double.parseDouble(atrMultStr.trim()); } catch (Exception ignore) { atrMult = 2.0; }
+
+                String status;
+                if (symbol.isEmpty() || entryPrice <= 0) {
+                    status = "invalid";
+                } else {
+                    boolean ok = activePositionsStore.addPosition(symbol, entryPrice, atrMult);
+                    status = ok ? "added" : "exists";
+                }
+                ex.getResponseHeaders().add("Location", "/active-positions?status=" + status);
+                ex.sendResponseHeaders(303, -1);
+                ex.close();
+            }
+        });
+
+        server.createContext("/active-positions-remove", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                String symbol = form.getOrDefault("symbol", "").trim().toUpperCase();
+                activePositionsStore.removePosition(symbol);
+                ex.getResponseHeaders().add("Location", "/active-positions?status=removed");
+                ex.sendResponseHeaders(303, -1);
+                ex.close();
+            }
+        });
+
+        server.createContext("/active-positions-refresh", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
+                activePositionsStore.updateAllPositions();
+                ex.getResponseHeaders().add("Location", "/active-positions?status=updated");
                 ex.sendResponseHeaders(303, -1);
                 ex.close();
             }
@@ -3959,6 +4180,7 @@ public class WebServer {
                         "<li><b><span class=\"about-ltr\">Fibonacci Retracement</span></b>" + TECH + " — רמות 38.2%/50%/61.8% לאיתור אזורי כניסה לאחר תיקון. <span class=\"about-ltr\"><a href=\"https://www.investopedia.com/terms/f/fibonacciretracement.asp\" target=\"_blank\" rel=\"noreferrer\">Investopedia</a></span></li>" +
                         "<li><b><span class=\"about-ltr\">DCF (Discounted Cash Flow)</span></b>" + FUND + " — שווי פנימי מבוסס תחזית תזרימי מזומנים. <span class=\"about-ltr\"><a href=\"https://www.investopedia.com/terms/d/dcf.asp\" target=\"_blank\" rel=\"noreferrer\">Investopedia</a></span></li>" +
                         "<li><b><span class=\"about-ltr\">PEG Ratio</span></b>" + FUND + " — יחס <span class=\"about-ltr\">P/E</span> לצמיחה; ~1 הוגן, &lt;1 זול, &gt;2 יקר. <span class=\"about-ltr\"><a href=\"https://www.investopedia.com/terms/p/pegratio.asp\" target=\"_blank\" rel=\"noreferrer\">Investopedia</a></span></li>" +
+                        "<li><b><span class=\"about-ltr\">Graham Valuation</span></b>" + FUND + " — מודל הערכת שווי לפי בנג'מין גרהם. כולל: (1) <span class=\"about-ltr\">Graham Number</span> — תקרת מחיר שמרנית: √(22.5 × EPS × BVPS), (2) נוסחת השווי הפנימי: V = EPS × (8.5 + 2g) × 4.4/Y כאשר g=צמיחה ו-Y=תשואת אג\"ח. מרווח ביטחון (<span class=\"about-ltr\">Margin of Safety</span>) של 33%+ מומלץ. <span class=\"about-ltr\"><a href=\"https://www.investopedia.com/terms/g/graham-number.asp\" target=\"_blank\" rel=\"noreferrer\">Investopedia</a></span></li>" +
                         "</ul>" +
                         "<p style=\"color:#9ca3af\">המודלים מוצגים לצורכי לימוד בלבד ואינם מהווים ייעוץ השקעות.</p>" +
                         "</div>";
@@ -4977,6 +5199,7 @@ public class WebServer {
 
         double ccc = (r.cccDays != null && Double.isFinite(r.cccDays)) ? r.cccDays : Double.NaN;
         double spread = (r.economicSpread != null && Double.isFinite(r.economicSpread)) ? r.economicSpread : 0.0;
+        double grahamMoS = (r.grahamMarginOfSafety != null && Double.isFinite(r.grahamMarginOfSafety)) ? r.grahamMarginOfSafety : Double.NaN;
 
         // If risk metrics missing, avoid triggering veto by using safe defaults
         double mForEngine = Double.isFinite(m) ? m : -999.0;
@@ -4990,7 +5213,7 @@ public class WebServer {
                 zForEngine, mForEngine, sloan,
                 fForEngine, pegForEngine, dcfForEngine,
                 technicalBullish, rsi,
-                cccForEngine, spread
+                cccForEngine, spread, grahamMoS
         );
     }
 

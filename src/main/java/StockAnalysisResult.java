@@ -34,6 +34,10 @@ public class StockAnalysisResult {
 
     public Integer piotroskiFScore;
 
+    public Double grahamNumber;
+    public Double grahamIntrinsicValue;
+    public Double grahamMarginOfSafety;
+    public String grahamValuationVerdict;
 
     public StockAnalysisResult(String ticker, double price, double dcfFairValue, double adxStrength) {
         this.ticker = ticker;
