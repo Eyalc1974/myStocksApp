@@ -43,7 +43,7 @@ import java.util.concurrent.TimeUnit;
 
 public class WebServer {
 
-    private static final int ALPHA_AGENT_MAX_LISTS = 4;
+    private static final int ALPHA_AGENT_MAX_LISTS = 10;
 
     private static final ZoneId NY = ZoneId.of("America/New_York");
 
@@ -2408,89 +2408,67 @@ public class WebServer {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, htmlPage(""), 200); return; }
 
-                String content = "<!DOCTYPE html>" +
-                        "<html lang=\"he\" dir=\"rtl\">" +
-                        "<head>" +
-                        "<meta charset=\"UTF-8\">" +
-                        "<title>Stock Analysis Dashboard</title>" +
-                        "<link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css\" rel=\"stylesheet\">" +
-                        "<style>" +
-                        ".sidebar { height: 100vh; background: #212529; color: white; padding-top: 20px; }" +
-                        ".nav-link { color: #adb5bd; }" +
-                        ".nav-link.active { color: white; background: #0d6efd; }" +
-                        ".score-badge { font-size: 2rem; padding: 10px 20px; border-radius: 50%; display:inline-block; min-width:90px; }" +
-                        "</style>" +
-                        "</head>" +
-                        "<body>" +
-                        "<div class=\"container-fluid\">" +
-                        "  <div class=\"row\">" +
-                        "    <nav class=\"col-md-2 d-none d-md-block sidebar\">" +
-                        "      <h4 class=\"text-center\">StockSystem</h4>" +
-                        "      <ul class=\"nav flex-column mt-4\">" +
-                        "        <li class=\"nav-item\"><a class=\"nav-link active\" href=\"/dashboard\">📊 לוח בקרה ראשי</a></li>" +
-                        "        <li class=\"nav-item\"><a class=\"nav-link\" href=\"/\">🔍 סורק מניות</a></li>" +
-                        "        <li class=\"nav-item\"><a class=\"nav-link\" href=\"/about\">ℹ️ About</a></li>" +
-                        "      </ul>" +
-                        "    </nav>" +
-                        "    <main class=\"col-md-10 ms-sm-auto px-md-4\">" +
-                        "      <div class=\"d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom\">" +
-                        "        <h1 class=\"h2\">ניתוח מנייה: <span id=\"tickerTitle\">AAPL</span></h1>" +
-                        "        <form class=\"d-flex\" onsubmit=\"event.preventDefault(); fetchAnalysis(document.getElementById('tickerInput').value);\">" +
-                        "          <input id=\"tickerInput\" class=\"form-control me-2\" placeholder=\"Ticker (e.g. AAPL)\" value=\"AAPL\"/>" +
-                        "          <button class=\"btn btn-primary\" type=\"submit\">Analyze</button>" +
-                        "        </form>" +
-                        "      </div>" +
-                        "      <div class=\"row text-center mb-4\">" +
-                        "        <div class=\"col-md-4\">" +
-                        "          <div class=\"card p-4 shadow\">" +
-                        "            <h3>ציון סופי</h3>" +
-                        "            <div id=\"finalScore\" class=\"score-badge bg-secondary mx-auto mt-2\">--</div>" +
-                        "            <h4 id=\"recommendation\" class=\"mt-3\">--</h4>" +
-                        "            <form method=\"post\" action=\"/run-main\" target=\"_blank\" class=\"mt-3\" onsubmit=\"document.getElementById('fullReportSymbol').value=document.getElementById('tickerInput').value;\">" +
-                        "              <input type=\"hidden\" id=\"fullReportSymbol\" name=\"symbol\" value=\"AAPL\"/>" +
-                        "              <button type=\"submit\" class=\"btn btn-outline-primary btn-sm\">Open full report</button>" +
-                        "            </form>" +
-                        "          </div>" +
-                        "        </div>" +
-                        "      </div>" +
-                        "      <div class=\"card shadow mb-4\">" +
-                        "        <div class=\"card-header bg-dark text-white\">📋 Details</div>" +
-                        "        <div class=\"card-body\">" +
-                        "          <div class=\"table-responsive\">" +
-                        "            <table class=\"table table-sm table-striped align-middle\">" +
-                        "              <thead><tr><th>Metric</th><th>Value</th><th>Explanation</th></tr></thead>" +
-                        "              <tbody>" +
-                        "                <tr><th scope=\"row\">Price</th><td id=\"d_price\">--</td><td>Current market price used as baseline for valuation margins.</td></tr>" +
-                        "                <tr><th scope=\"row\">DCF fair value</th><td id=\"d_dcf\">--</td><td>Discounted Cash Flow (DCF) intrinsic value estimate.</td></tr>" +
-                        "                <tr><th scope=\"row\">DCF margin</th><td id=\"d_dcfMargin\">--</td><td>(DCF - Price) / Price. Positive implies undervaluation / margin of safety.</td></tr>" +
-                        "                <tr><th scope=\"row\">Technical signal</th><td id=\"d_techSignal\">--</td><td>Technical model summary (trend/momentum signals like RSI/ADX-based logic).</td></tr>" +
-                        "                <tr><th scope=\"row\">Fundamental signal</th><td id=\"d_fundSignal\">--</td><td>Fundamental model summary (valuation + quality screens).</td></tr>" +
-                        "                <tr><th scope=\"row\">Final verdict</th><td id=\"d_finalVerdict\">--</td><td>Overall verdict from the full analyzer (risk + fundamental + technical gates).</td></tr>" +
-                        "                <tr><th scope=\"row\">RSI</th><td id=\"d_rsi\">--</td><td>Relative Strength Index. Healthy momentum typically ~40-65 (avoids overbought).</td></tr>" +
-                        "                <tr><th scope=\"row\">Altman Z</th><td id=\"d_altman\">--</td><td>Altman Z-Score: bankruptcy/distress risk (lower is worse).</td></tr>" +
-                        "                <tr><th scope=\"row\">Beneish M</th><td id=\"d_beneish\">--</td><td>Beneish M-Score: earnings manipulation risk (above -1.78 is a red flag).</td></tr>" +
-                        "                <tr><th scope=\"row\">Sloan ratio</th><td id=\"d_sloan\">--</td><td>Earnings quality (accruals). High absolute values can indicate low quality earnings.</td></tr>" +
-                        "                <tr><th scope=\"row\">Piotroski F-Score</th><td id=\"d_piotroski\">--</td><td>0-9 financial strength score (profitability, leverage/liquidity, efficiency).</td></tr>" +
-                        "                <tr><th scope=\"row\">PEG</th><td id=\"d_peg\">--</td><td>PEG ratio: valuation vs growth (lower is typically better; ~&lt;1.2 preferred).</td></tr>" +
-                        "                <tr><th scope=\"row\">CCC (days)</th><td id=\"d_ccc\">--</td><td>Cash Conversion Cycle: working capital efficiency (lower/negative is better).</td></tr>" +
-                        "                <tr><th scope=\"row\">ROIC-WACC spread</th><td id=\"d_spread\">--</td><td>Value creation metric: ROIC minus WACC (positive indicates economic profit).</td></tr>" +
-                        "                <tr><th scope=\"row\">Graham Number</th><td id=\"d_grahamNum\">--</td><td>Conservative ceiling price: √(22.5 × EPS × BVPS). Price below = undervalued.</td></tr>" +
-                        "                <tr><th scope=\"row\">Graham IV</th><td id=\"d_grahamIV\">--</td><td>Graham intrinsic value: EPS × (8.5 + 2g) × 4.4/Y. Margin of Safety 33%+ preferred.</td></tr>" +
-                        "              </tbody>" +
-                        "            </table>" +
-                        "          </div>" +
-                        "        </div>" +
-                        "      </div>" +
-                        "      <div class=\"card shadow mb-4\">" +
-                        "        <div class=\"card-header bg-primary text-white\">💡 תובנות מפתח מהמנוע</div>" +
-                        "        <div class=\"card-body\">" +
-                        "          <ul id=\"insightsList\"><li>המתן לטעינת נתונים...</li></ul>" +
-                        "        </div>" +
-                        "      </div>" +
-                        "    </main>" +
-                        "  </div>" +
-                        "</div>" +
-                        "<script>" +
+                StringBuilder sb = new StringBuilder();
+                sb.append("<div class='card'><div class='title'>📊 Dashboard - Quick Analysis</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>Enter a ticker to get instant scoring and analysis</div>");
+                sb.append("<div style='display:flex;gap:8px;margin-bottom:16px;'>");
+                sb.append("<input id='tickerInput' type='text' placeholder='Ticker (e.g. AAPL)' value='AAPL' style='width:150px;' onkeypress=\"if(event.key==='Enter'){fetchAnalysis(this.value);}\"/>");
+                sb.append("<button type='button' onclick='fetchAnalysis(document.getElementById(\"tickerInput\").value);'>Analyze</button>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                sb.append("<div class='card'>");
+                sb.append("<div class='title'>ניתוח מנייה: <span id='tickerTitle' style='color:#93c5fd;'>AAPL</span></div>");
+                sb.append("<div style='display:flex;flex-wrap:wrap;gap:20px;margin-bottom:16px;'>");
+                sb.append("<div style='text-align:center;'>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:6px;'>ציון סופי</div>");
+                sb.append("<div id='finalScore' style='font-size:2.5rem;font-weight:bold;background:#0b1220;border:2px solid #1f2a44;border-radius:50%;width:90px;height:90px;display:flex;align-items:center;justify-content:center;margin:0 auto;'>--</div>");
+                sb.append("<div id='recommendation' style='margin-top:8px;font-weight:600;color:#e5e7eb;'>--</div>");
+                sb.append("</div>");
+                sb.append("<div style='flex:1;min-width:200px;'>");
+                sb.append("<form method='post' action='/run-main' target='_blank' onsubmit=\"document.getElementById('fullReportSymbol').value=document.getElementById('tickerInput').value;\" style='margin-bottom:10px;'>");
+                sb.append("<input type='hidden' id='fullReportSymbol' name='symbol' value='AAPL'/>");
+                sb.append("<button type='submit'>Open Full Report</button>");
+                sb.append("</form>");
+                sb.append("</div>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                sb.append("<div class='card'>");
+                sb.append("<div class='title'>📋 Details</div>");
+                sb.append("<div style='overflow-x:auto;'>");
+                sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
+                sb.append("<thead><tr style='background:#0b1220;'>");
+                sb.append("<th style='border:1px solid #1f2a44;padding:8px;text-align:left;'>Metric</th>");
+                sb.append("<th style='border:1px solid #1f2a44;padding:8px;text-align:left;'>Value</th>");
+                sb.append("<th style='border:1px solid #1f2a44;padding:8px;text-align:left;'>Explanation</th>");
+                sb.append("</tr></thead><tbody>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>Price</td><td id='d_price' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>Current market price</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>DCF fair value</td><td id='d_dcf' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>Discounted Cash Flow intrinsic value</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>DCF margin</td><td id='d_dcfMargin' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>Positive = undervalued</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>Technical signal</td><td id='d_techSignal' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>RSI/ADX-based signals</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>Fundamental signal</td><td id='d_fundSignal' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>Valuation + quality</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>Final verdict</td><td id='d_finalVerdict' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>Overall recommendation</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>RSI</td><td id='d_rsi' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>40-65 is healthy</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>Altman Z</td><td id='d_altman' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>Bankruptcy risk (lower is worse)</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>Beneish M</td><td id='d_beneish' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>&gt;-1.78 is red flag</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>Sloan ratio</td><td id='d_sloan' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>Earnings quality</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>Piotroski F</td><td id='d_piotroski' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>0-9 strength score</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>PEG</td><td id='d_peg' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>&lt;1.2 preferred</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>CCC (days)</td><td id='d_ccc' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>Lower/negative is better</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>ROIC-WACC</td><td id='d_spread' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>Positive = economic profit</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>Graham Number</td><td id='d_grahamNum' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>Price below = undervalued</td></tr>");
+                sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>Graham IV</td><td id='d_grahamIV' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>MoS 33%+ preferred</td></tr>");
+                sb.append("</tbody></table>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                sb.append("<div class='card'>");
+                sb.append("<div class='title'>💡 תובנות מפתח</div>");
+                sb.append("<ul id='insightsList' style='color:#cbd5e1;line-height:1.8;'><li>המתן לטעינת נתונים...</li></ul>");
+                sb.append("</div>");
+
+                sb.append("<script>" +
                         "async function fetchAnalysis(ticker) {" +
                         "  try {" +
                         "    ticker = (ticker || '').trim().toUpperCase();" +
@@ -2502,9 +2480,8 @@ public class WebServer {
                         "    document.getElementById('recommendation').innerText = result.recommendation;" +
                         "    document.getElementById('fullReportSymbol').value = ticker;" +
                         "    const badge = document.getElementById('finalScore');" +
-                        "    if (result.finalScore >= 75) badge.className = 'score-badge bg-success mx-auto mt-2';" +
-                        "    else if (result.finalScore >= 50) badge.className = 'score-badge bg-warning mx-auto mt-2';" +
-                        "    else badge.className = 'score-badge bg-danger mx-auto mt-2';" +
+                        "    badge.style.borderColor = result.finalScore >= 75 ? '#22c55e' : (result.finalScore >= 50 ? '#fbbf24' : '#ef4444');" +
+                        "    badge.style.color = result.finalScore >= 75 ? '#22c55e' : (result.finalScore >= 50 ? '#fbbf24' : '#ef4444');" +
                         "    const d = result.details || {};" +
                         "    function fmt(x){ if (x===null||x===undefined||Number.isNaN(x)) return 'N/A'; return x; }" +
                         "    function fmt2(x){ if (x===null||x===undefined||Number.isNaN(x)) return 'N/A'; return Number(x).toFixed(2); }" +
@@ -2542,11 +2519,9 @@ public class WebServer {
                         "  }" +
                         "}" +
                         "fetchAnalysis('AAPL');" +
-                        "</script>" +
-                        "</body>" +
-                        "</html>";
+                        "</script>");
 
-                respondHtml(ex, content, 200);
+                respondHtml(ex, htmlPage(sb.toString()), 200);
             }
         });
 
@@ -3076,6 +3051,16 @@ public class WebServer {
         // ---------------- Active Positions (Trailing Stop-Loss) ----------------
         final ActivePositionsStore activePositionsStore = ActivePositionsStore.defaultStore();
 
+        // ---------------- Monitoring Stocks (separate module) ----------------
+        final MonitoringStore monitoringStore = MonitoringStore.defaultStore();
+        final MonitoringAlphaVantageClient monitoringClient = MonitoringAlphaVantageClient.fromEnv();
+        final MonitoringAnalyzer monitoringAnalyzer = new MonitoringAnalyzer(monitoringClient);
+        final MonitoringScheduler monitoringScheduler = new MonitoringScheduler(monitoringStore, monitoringAnalyzer);
+        // Run Mon–Fri on New York time at: 09:30, 11:30, 13:30, 15:30 ET
+        try {
+            monitoringScheduler.startNyseWeekdayEvery2Hours();
+        } catch (Exception ignore) {}
+
         // Manage portfolio page (view / add / remove)
         server.createContext("/portfolio-manage", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
@@ -3108,47 +3093,68 @@ public class WebServer {
                 sb.append("<div style='color:#9ca3af;margin-top:8px;'>Note: Changes reset today's cache for the weekly report.</div>");
                 sb.append("</div>");
 
-                // Active Positions with Trailing Stop-Loss
-                sb.append("<div class='card' dir='rtl' style='text-align:right;'>");
-                sb.append("<div class='title'>📊 פוזיציות פתוחות (Trailing Stop-Loss)</div>");
-                sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>סטופ-לוס דינמי המבוסס על ATR. <a href='/active-positions'>ניהול מלא →</a></div>");
+                // Monitoring History section for portfolio tickers
+                sb.append("<div class='card'><div class='title'>📈 Monitoring History (Portfolio)</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>Signals for 2-10 trading days. BUY=positive, DROP=negative, HOLD=neutral. <a href='/monitoring'>Full Monitoring →</a></div>");
 
-                List<ActivePositionsStore.PositionView> positions = activePositionsStore.getPositionViews();
-                if (positions.isEmpty()) {
-                    sb.append("<div style='color:#9ca3af;padding:12px;'>אין פוזיציות פתוחות. <a href='/active-positions'>הוסף פוזיציה</a></div>");
-                } else {
-                    sb.append("<div style='overflow-x:auto;'><table style='width:100%;border-collapse:collapse;font-size:13px;direction:ltr;text-align:left;'>");
-                    sb.append("<thead><tr style='background:#0b1220;'>");
-                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>Symbol</th>");
-                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>Entry</th>");
-                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>Current</th>");
-                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>Stop</th>");
-                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>Buffer</th>");
-                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>P&L</th>");
-                    sb.append("<th style='border:1px solid #1f2a44;padding:6px;'>Signal</th>");
-                    sb.append("</tr></thead><tbody>");
+                for (int i=0; i<items.size(); i++) {
+                    String t = items.get(i);
+                    String esc = escapeHtml(t);
+                    String safeId = t == null ? "" : t.trim().toUpperCase().replaceAll("[^A-Z0-9_-]", "_");
 
-                    for (ActivePositionsStore.PositionView pv : positions) {
-                        String pnlColor = pv.pnlPct >= 0 ? "#22c55e" : "#ef4444";
-                        String signalColor = pv.shouldSell ? "#ef4444" : "#22c55e";
-                        String signalText = pv.shouldSell ? "🔴 SELL!" : "🟢 HOLD";
+                    MonitoringSnapshot snap = monitoringStore.loadSnapshot(t);
+                    Map<String, Double> closeByDate = Map.of();
+                    java.time.LocalDate snapDateNy = null;
+                    try {
+                        if (snap != null) {
+                            snapDateNy = java.time.Instant.ofEpochMilli(snap.asOfEpochMillis()).atZone(NY).toLocalDate();
+                        }
+                        closeByDate = loadDailyCloseByDateCached(t);
+                    } catch (Exception ignore) {}
 
-                        sb.append("<tr>");
-                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;font-weight:bold;'>").append(escapeHtml(pv.symbol)).append("</td>");
-                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;'>$").append(String.format("%.2f", pv.entryPrice)).append("</td>");
-                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;'>$").append(String.format("%.2f", pv.currentPrice)).append("</td>");
-                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;color:#fbbf24;'>$").append(String.format("%.2f", pv.currentStop)).append("</td>");
-                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;'>").append(String.format("%.1f%%", pv.profitBufferPct)).append("</td>");
-                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;color:").append(pnlColor).append(";font-weight:bold;'>").append(String.format("%+.1f%%", pv.pnlPct)).append("</td>");
-                        sb.append("<td style='border:1px solid #1f2a44;padding:6px;color:").append(signalColor).append(";font-weight:bold;'>").append(signalText).append("</td>");
-                        sb.append("</tr>");
+                    String hidden = (i >= 3) ? " style='display:none;' class='extra-port-monitor'" : "";
+                    sb.append("<div"+hidden+" style='border-top:1px solid rgba(148,163,184,0.25);padding-top:10px;margin-top:10px;'>");
+                    sb.append("<div style='display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px;'>");
+                    sb.append("<span style='background:#0b1220;border:1px solid #1f2a44;border-radius:999px;padding:4px 8px;'><b>").append(esc).append("</b></span>");
+                    if (snap != null) {
+                        try {
+                            java.time.Instant upd = monitoringStore.snapshotUpdatedAt(t);
+                            if (upd != null) {
+                                sb.append("<span style='color:#9ca3af;font-size:11px;'>").append(escapeHtml(upd.toString().substring(0,10))).append("</span>");
+                            }
+                        } catch (Exception ignore) {}
                     }
-                    sb.append("</tbody></table></div>");
-                    sb.append("<div style='margin-top:10px;'>");
-                    sb.append("<form method='post' action='/active-positions-refresh' style='display:inline;'>");
-                    sb.append("<button type='submit'>🔄 רענן מחירים</button>");
-                    sb.append("</form>");
                     sb.append("</div>");
+
+                    if (snap == null) {
+                        sb.append("<div style='color:#fbbf24;font-size:12px;'>No snapshot. <a href='/monitoring'>Add to Monitoring</a></div>");
+                    } else {
+                        sb.append("<div style='display:flex;flex-wrap:wrap;gap:6px;'>");
+                        for (String k : new String[]{"2","3","5","7","10"}) {
+                            String rec = snap.recommendationByDays() == null ? null : snap.recommendationByDays().get(k);
+                            Double ret = snap.returnsByDays() == null ? null : snap.returnsByDays().get(k);
+                            String recText = rec == null ? "N/A" : rec;
+                            String pillColor = recText.equals("BUY") ? "#22c55e" : (recText.equals("DROP") ? "#fca5a5" : "#93c5fd");
+
+                            Double actual = null;
+                            try { actual = realizedReturnPct(closeByDate, snapDateNy, Integer.parseInt(k)); } catch (Exception ignore) {}
+                            String actualText = actual == null ? "" : String.format(" →%+.1f%%", actual);
+                            String actualColor = (actual == null) ? "#9ca3af" : (actual >= 0.0 ? "#22c55e" : "#fca5a5");
+
+                            sb.append("<span style='background:#0b1220;border:1px solid #1f2a44;border-radius:999px;padding:3px 6px;font-size:11px;'>")
+                                    .append("<span style='color:#9ca3af;'>").append(k).append("d</span> ")
+                                    .append("<span style='color:").append(pillColor).append(";font-weight:700;'>").append(recText).append("</span>")
+                                    .append("<span style='color:").append(actualColor).append(";'>").append(actualText).append("</span>")
+                                    .append("</span>");
+                        }
+                        sb.append("</div>");
+                    }
+                    sb.append("</div>");
+                }
+
+                if (items.size() > 3) {
+                    sb.append("<button id='toggle-port-monitors' style='margin-top:8px;font-size:12px;'>Show all ("+items.size()+")</button>");
+                    sb.append("<script>(function(){var btn=document.getElementById('toggle-port-monitors');if(!btn)return;var expanded=false;btn.addEventListener('click',function(){expanded=!expanded;var extras=document.querySelectorAll('.extra-port-monitor');for(var i=0;i<extras.length;i++){extras[i].style.display=expanded?'':'none';}btn.textContent=expanded?'Show less':'Show all ("+items.size()+")';});})();</script>");
                 }
                 sb.append("</div>");
 
@@ -3252,16 +3258,6 @@ public class WebServer {
                 ex.close();
             }
         });
-
-        // ---------------- Monitoring Stocks (separate module) ----------------
-        final MonitoringStore monitoringStore = MonitoringStore.defaultStore();
-        final MonitoringAlphaVantageClient monitoringClient = MonitoringAlphaVantageClient.fromEnv();
-        final MonitoringAnalyzer monitoringAnalyzer = new MonitoringAnalyzer(monitoringClient);
-        final MonitoringScheduler monitoringScheduler = new MonitoringScheduler(monitoringStore, monitoringAnalyzer);
-        // Run Mon–Fri on New York time at: 09:30, 11:30, 13:30, 15:30 ET
-        try {
-            monitoringScheduler.startNyseWeekdayEvery2Hours();
-        } catch (Exception ignore) {}
 
         // Monitoring Stocks page (view / add / remove / refresh)
         server.createContext("/monitoring", new HttpHandler() {
@@ -3500,7 +3496,11 @@ public class WebServer {
                 sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>Real-time means scheduled refresh (~3x/day NY). Portfolio is fixed for the evaluation period (no rebalancing).</div>");
                 sb.append(modelsUsedNamesOnlyHtml());
                 if (!status.isEmpty()) sb.append("<div style='margin-bottom:10px;color:#93c5fd;'>Status: ").append(escapeHtml(status)).append("</div>");
-                sb.append("<div id='aa-last-error' style='margin-bottom:10px;color:#fca5a5'></div>");
+                sb.append("<div id='aa-status' style='margin-bottom:10px;padding:12px;border-radius:8px;background:#0b1220;border:1px solid #1f2a44;display:none;'>");
+                sb.append("<div style='display:flex;align-items:center;gap:8px;'>");
+                sb.append("<span id='aa-status-icon'>⏳</span>");
+                sb.append("<span id='aa-status-text' style='color:#fbbf24;font-weight:600;'></span>");
+                sb.append("</div></div>");
 
                 int listCount = store == null || store.portfolios == null ? 0 : store.portfolios.size();
                 StringBuilder controls = new StringBuilder();
@@ -3602,8 +3602,17 @@ public class WebServer {
                         "var pid='" + escapeHtml(effectivePid) + "';"+
                         "async function load(){try{"+
                         "var st=await fetch('/alpha-agent/status?pid='+encodeURIComponent(pid));var stj=await st.json();"+
-                        "var le=document.getElementById('aa-last-error');"+
-                        "if(stj&&stj.lastError){le.textContent='Last error: '+stj.lastError;}else{le.textContent='';}"+
+                        "var statusBox=document.getElementById('aa-status');"+
+                        "var statusIcon=document.getElementById('aa-status-icon');"+
+                        "var statusText=document.getElementById('aa-status-text');"+
+                        "if(stj&&stj.lastError&&stj.lastError.length>0){"+
+                        "  statusBox.style.display='block';"+
+                        "  var isRunning=stj.lastError.indexOf('running')>=0||stj.lastError.indexOf('selecting')>=0||stj.lastError.indexOf('starting')>=0;"+
+                        "  var isError=stj.lastError.toLowerCase().indexOf('error')>=0;"+
+                        "  statusIcon.textContent=isError?'❌':(isRunning?'⏳':'✅');"+
+                        "  statusText.style.color=isError?'#fca5a5':(isRunning?'#fbbf24':'#22c55e');"+
+                        "  statusText.textContent=stj.lastError;"+
+                        "}else{statusBox.style.display='none';}"+
                         "var s=await fetch('/alpha-agent/stocks?pid='+encodeURIComponent(pid));var stocks=await s.json();"+
                         "var tb=document.getElementById('aa-stocks');"+
                         "if(!stocks||!stocks.length){tb.innerHTML=`<tr><td colspan='5' style='padding:10px;color:#9ca3af'>No active portfolio. Click Start.</td></tr>`;}"+
@@ -4646,6 +4655,16 @@ public class WebServer {
                             "</div>";
                 }
 
+                // Analysts cards (both Finnhub and Alpha Vantage proxy)
+                String analystsCard = "";
+                if (!symbol.isEmpty()) {
+                    String analystA = buildAnalystCard(symbol);
+                    String analystB = buildAnalystProxyAlphaVantageCard(symbol);
+                    analystsCard = "<div class='card'><div class='title'>📊 Analysts Consensus</div>" +
+                            "<div style='color:#9ca3af;margin-bottom:10px;'>Two analyst data sources for comprehensive view</div></div>" +
+                            analystA + analystB;
+                }
+
                 // Persist last single-symbol analysis to disk (analyses/{symbol}.txt)
                 try {
                     if (!symbol.isEmpty()) {
@@ -4655,7 +4674,7 @@ public class WebServer {
                     }
                 } catch (Exception ignore) {}
 
-                String html = htmlPage(favCard + overviewCard + modelSummaryCard + riskModelsCard + "<div class='card'><div class='title'>Models used</div>" + modelsUsedNamesOnlyHtml() + "</div>" + "<div class=\"card\"><div class=\"title\">Output</div><pre>" +
+                String html = htmlPage(favCard + overviewCard + modelSummaryCard + riskModelsCard + analystsCard + "<div class='card'><div class='title'>Models used</div>" + modelsUsedNamesOnlyHtml() + "</div>" + "<div class=\"card\"><div class=\"title\">Output</div><pre>" +
                         escapeHtml(result) + "</pre></div>" + aiCard + charts
                         + "<script>(function(){try{var AC=window.AudioContext||window.webkitAudioContext;var ctx=new AC();function beep(f,d,t){var o=ctx.createOscillator();var g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(0.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.12,ctx.currentTime+0.02);o.start(t);g.gain.exponentialRampToValueAtTime(0.0001,t+d-0.05);o.stop(t+d);}var now=ctx.currentTime+0.05;beep(880,0.35,now);beep(1320,0.35,now+0.4);}catch(e){}})();</script>");
                 respondHtml(ex, html, 200);
@@ -5148,6 +5167,133 @@ public class WebServer {
                     }
                     gallery.append("</div>");
                 }
+
+                // Analysts section for each portfolio ticker
+                StringBuilder analystsSection = new StringBuilder();
+                if (weeklyTickers != null && !weeklyTickers.isEmpty()) {
+                    analystsSection.append("<div class=\"card\"><div class=\"title\">📊 Analysts Consensus (Portfolio)</div>");
+                    analystsSection.append("<div style='color:#9ca3af;margin-bottom:10px;'>Two analyst data sources per ticker: Finnhub consensus + Alpha Vantage proxy</div>");
+                    analystsSection.append("<div id='analysts-gallery'>");
+                    for (int i=0;i<weeklyTickers.size();i++) {
+                        String t = weeklyTickers.get(i);
+                        String hidden = (i >= 3) ? " style='display:none;' class='extra-analyst'" : "";
+                        analystsSection.append("<div"+hidden+" style='margin-bottom:16px;border-bottom:1px solid #1f2a44;padding-bottom:16px;'>");
+                        analystsSection.append("<div style='color:#93c5fd;font-weight:bold;margin-bottom:8px;font-size:16px;'>").append(escapeHtml(t)).append("</div>");
+                        try {
+                            analystsSection.append(buildAnalystCard(t));
+                            analystsSection.append(buildAnalystProxyAlphaVantageCard(t));
+                        } catch (Exception ignore) {
+                            analystsSection.append("<div style='color:#9ca3af'>Error loading analyst data</div>");
+                        }
+                        analystsSection.append("</div>");
+                    }
+                    analystsSection.append("</div>");
+                    if (weeklyTickers.size() > 3) {
+                        analystsSection.append("<button id='toggle-analysts' style='margin-top:8px;'>Show all analysts ("+weeklyTickers.size()+")</button>");
+                        analystsSection.append("<script>(function(){var btn=document.getElementById('toggle-analysts');if(!btn)return;var expanded=false;btn.addEventListener('click',function(){expanded=!expanded;var extras=document.querySelectorAll('.extra-analyst');for(var i=0;i<extras.length;i++){extras[i].style.display=expanded?'':'none';}btn.textContent=expanded?'Show less analysts':'Show all analysts ("+weeklyTickers.size()+")';});})();</script>");
+                    }
+                    analystsSection.append("</div>");
+                }
+
+                // Monitoring History section for portfolio tickers
+                StringBuilder monitoringSection = new StringBuilder();
+                if (weeklyTickers != null && !weeklyTickers.isEmpty()) {
+                    monitoringSection.append("<div class=\"card\"><div class=\"title\">📈 Monitoring History (Portfolio)</div>");
+                    monitoringSection.append("<div style='color:#9ca3af;margin-bottom:10px;'>Signals for 2-10 trading days: <b>return</b>=estimated % move, <b>actual</b>=realized % move, <b>score</b>=signal strength. BUY=positive bias, DROP=negative bias, HOLD=neutral.</div>");
+
+                    for (int i=0; i<weeklyTickers.size(); i++) {
+                        String t = weeklyTickers.get(i);
+                        String esc = escapeHtml(t);
+                        String safeId = t == null ? "" : t.trim().toUpperCase().replaceAll("[^A-Z0-9_-]", "_");
+
+                        MonitoringSnapshot snap = monitoringStore.loadSnapshot(t);
+                        Map<String, Double> closeByDate = Map.of();
+                        java.time.LocalDate snapDateNy = null;
+                        try {
+                            if (snap != null) {
+                                snapDateNy = java.time.Instant.ofEpochMilli(snap.asOfEpochMillis()).atZone(NY).toLocalDate();
+                            }
+                            closeByDate = loadDailyCloseByDateCached(t);
+                        } catch (Exception ignore) {}
+
+                        String hidden = (i >= 3) ? " style='display:none;' class='extra-monitor'" : "";
+                        monitoringSection.append("<div"+hidden+" style='border-top:1px solid rgba(148,163,184,0.25);padding-top:12px;margin-top:12px;'>");
+                        monitoringSection.append("<div style='display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:8px;'>")
+                                .append("<span style='background:#0b1220;border:1px solid #1f2a44;border-radius:999px;padding:6px 10px;'><b>")
+                                .append(esc).append("</b></span>");
+
+                        if (snap != null) {
+                            try {
+                                java.time.Instant upd = monitoringStore.snapshotUpdatedAt(t);
+                                if (upd != null) {
+                                    monitoringSection.append("<span style='color:#9ca3af'>saved: ").append(escapeHtml(upd.toString())).append("</span>");
+                                }
+                            } catch (Exception ignore) {}
+                        }
+                        monitoringSection.append("</div>");
+
+                        if (snap == null) {
+                            monitoringSection.append("<div style='color:#fbbf24;margin-bottom:8px;'>No snapshot yet. Add to Monitoring Stocks and refresh to generate signals.</div>");
+                        } else {
+                            monitoringSection.append("<div style='display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;'>");
+                            for (String k : new String[]{"2","3","4","5","6","7","8","9","10"}) {
+                                String rec = snap.recommendationByDays() == null ? null : snap.recommendationByDays().get(k);
+                                Double ret = snap.returnsByDays() == null ? null : snap.returnsByDays().get(k);
+                                Double sc = snap.scoreByDays() == null ? null : snap.scoreByDays().get(k);
+                                String recText = rec == null ? "N/A" : rec;
+                                String pillColor = recText.equals("BUY") ? "#22c55e" : (recText.equals("DROP") ? "#fca5a5" : "#93c5fd");
+
+                                Double actual = null;
+                                try { actual = realizedReturnPct(closeByDate, snapDateNy, Integer.parseInt(k)); } catch (Exception ignore) {}
+                                if (actual == null && ret != null) actual = ret;
+                                String actualText = actual == null ? "N/A" : String.format("%+.2f%%", actual);
+                                String actualColor = (actual == null) ? "#9ca3af" : (actual >= 0.0 ? "#22c55e" : "#fca5a5");
+                                String pill = "<span style='background:#0b1220;border:1px solid #1f2a44;border-radius:999px;padding:4px 8px;font-size:12px;'>"+
+                                        "<span style='color:#9ca3af;'>"+escapeHtml(k)+"d</span> " +
+                                        "<span style='color:"+pillColor+";font-weight:700;'>"+escapeHtml(recText)+"</span>" +
+                                        "<span style='color:#9ca3af;'> "+String.format("%.1f%%", ret==null?0:ret)+"</span>" +
+                                        "<span style='color:"+actualColor+";'> → "+escapeHtml(actualText)+"</span>" +
+                                        "</span>";
+                                monitoringSection.append(pill);
+                            }
+                            monitoringSection.append("</div>");
+
+                            // Collapsible details
+                            String detailsId = "port-snap-" + safeId;
+                            monitoringSection.append("<button type='button' class='toggle-port-details' data-target='").append(detailsId).append("' style='font-size:12px;padding:4px 8px;'>+ Details</button>");
+                            monitoringSection.append("<div id='").append(detailsId).append("' style='display:none;margin-top:10px'>");
+
+                            if (snap.indicatorValues() != null && !snap.indicatorValues().isEmpty()) {
+                                monitoringSection.append("<div style='margin-bottom:8px;'><b>Indicators:</b> ");
+                                for (Map.Entry<String, Double> e : snap.indicatorValues().entrySet()) {
+                                    String kk = escapeHtml(e.getKey());
+                                    String vv = e.getValue() == null ? "" : String.format("%.2f", e.getValue());
+                                    monitoringSection.append("<span style='margin-right:10px;'>").append(kk).append(": ").append(vv).append("</span>");
+                                }
+                                monitoringSection.append("</div>");
+                            }
+
+                            if (snap.fundamentals() != null && !snap.fundamentals().isEmpty()) {
+                                monitoringSection.append("<div style='margin-bottom:8px;'><b>Fundamentals:</b> ");
+                                for (Map.Entry<String, String> e : snap.fundamentals().entrySet()) {
+                                    monitoringSection.append("<span style='margin-right:10px;'>").append(escapeHtml(e.getKey())).append(": ").append(escapeHtml(e.getValue())).append("</span>");
+                                }
+                                monitoringSection.append("</div>");
+                            }
+
+                            monitoringSection.append("</div>");
+                        }
+                        monitoringSection.append("</div>");
+                    }
+
+                    if (weeklyTickers.size() > 3) {
+                        monitoringSection.append("<button id='toggle-monitors' style='margin-top:8px;'>Show all monitoring ("+weeklyTickers.size()+")</button>");
+                        monitoringSection.append("<script>(function(){var btn=document.getElementById('toggle-monitors');if(!btn)return;var expanded=false;btn.addEventListener('click',function(){expanded=!expanded;var extras=document.querySelectorAll('.extra-monitor');for(var i=0;i<extras.length;i++){extras[i].style.display=expanded?'':'none';}btn.textContent=expanded?'Show less monitoring':'Show all monitoring ("+weeklyTickers.size()+")';});})();</script>");
+                    }
+                    monitoringSection.append("<script>(function(){var btns=document.querySelectorAll('.toggle-port-details');for(var i=0;i<btns.length;i++){btns[i].addEventListener('click',function(){var id=this.getAttribute('data-target');var el=document.getElementById(id);if(!el)return;var open=(el.style.display!=='none');el.style.display=open?'none':'';this.textContent=(open?'+ Details':'- Details');});}})();</script>");
+                    monitoringSection.append("</div>");
+                }
+
                 String forceBtn = "<div class='card' style='padding:12px 16px;'>"+
                         "<div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap;'>"+
                         "<form method='post' action='/portfolio-weekly' style='margin:0'>"+
@@ -5157,7 +5303,7 @@ public class WebServer {
                         "</div></div>";
 
                 String html = htmlPage(forceBtn + "<div class=\"card\"><div class=\"title\">My Portfolio - Weekly</div><pre>" +
-                        escapeHtml(result) + "</pre></div>" + gallery.toString()
+                        escapeHtml(result) + "</pre></div>" + gallery.toString() + analystsSection.toString() + monitoringSection.toString()
                         + "<script>(function(){try{var AC=window.AudioContext||window.webkitAudioContext;var ctx=new AC();function beep(f,d,t){var o=ctx.createOscillator();var g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(0.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.12,ctx.currentTime+0.02);o.start(t);g.gain.exponentialRampToValueAtTime(0.0001,t+d-0.05);o.stop(t+d);}var now=ctx.currentTime+0.05;beep(880,0.35,now);beep(1320,0.35,now+0.4);}catch(e){}})();</script>");
                 respondHtml(ex, html, 200);
             }
