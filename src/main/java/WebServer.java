@@ -390,6 +390,7 @@ public class WebServer {
         public AlphaAgentPosition benchSp500;
         public String lastError;
         public boolean userManaged;
+        public String lastUpdatedNy;
     }
 
     private static final class AlphaAgentScored {
@@ -643,6 +644,7 @@ public class WebServer {
                     }
                 }
                 pf.lastError = null;
+                pf.lastUpdatedNy = ZonedDateTime.now(NY).toString();
             } catch (Exception e) {
                 pf.lastError = e.getMessage();
             }
@@ -779,6 +781,7 @@ public class WebServer {
                     } catch (Exception e) {
                         cur.lastError = e.getMessage();
                     }
+                    cur.lastUpdatedNy = ZonedDateTime.now(NY).toString();
                     bestEffortPersistAlphaAgentPortfolioById(pid, cur);
                 }
             } catch (Exception ignore) {
@@ -3501,6 +3504,7 @@ public class WebServer {
                 sb.append("<span id='aa-status-icon'>⏳</span>");
                 sb.append("<span id='aa-status-text' style='color:#fbbf24;font-weight:600;'></span>");
                 sb.append("</div></div>");
+                sb.append("<div id='aa-timestamps' style='margin-bottom:10px;color:#9ca3af;font-size:13px;'></div>");
 
                 int listCount = store == null || store.portfolios == null ? 0 : store.portfolios.size();
                 StringBuilder controls = new StringBuilder();
@@ -3613,6 +3617,11 @@ public class WebServer {
                         "  statusText.style.color=isError?'#fca5a5':(isRunning?'#fbbf24':'#22c55e');"+
                         "  statusText.textContent=stj.lastError;"+
                         "}else{statusBox.style.display='none';}"+
+                        "var tsEl=document.getElementById('aa-timestamps');"+
+                        "var tsParts=[];"+
+                        "if(stj&&stj.lastUpdatedNy){tsParts.push('🕐 Last updated: '+new Date(stj.lastUpdatedNy).toLocaleString());}"+
+                        "if(stj&&stj.createdAtNy){tsParts.push('📅 Created: '+new Date(stj.createdAtNy).toLocaleString());}"+
+                        "tsEl.innerHTML=tsParts.join(' | ');"+
                         "var s=await fetch('/alpha-agent/stocks?pid='+encodeURIComponent(pid));var stocks=await s.json();"+
                         "var tb=document.getElementById('aa-stocks');"+
                         "if(!stocks||!stocks.length){tb.innerHTML=`<tr><td colspan='5' style='padding:10px;color:#9ca3af'>No active portfolio. Click Start.</td></tr>`;}"+
@@ -3684,6 +3693,8 @@ public class WebServer {
                 Map<String,Object> out = new HashMap<>();
                 out.put("pid", pid);
                 out.put("lastError", pf == null ? null : pf.lastError);
+                out.put("lastUpdatedNy", pf == null ? null : pf.lastUpdatedNy);
+                out.put("createdAtNy", pf == null ? null : pf.createdAtNy);
                 respondJson(ex, out, 200);
             }
         });
@@ -3830,12 +3841,37 @@ public class WebServer {
 
                 sb.append("<div style='margin-bottom:16px;'>");
                 sb.append("<form method='post' action='/active-positions-add' style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;'>");
-                sb.append("<input type='text' name='symbol' placeholder='סימול (AAPL)' required style='width:100px;' />");
+                sb.append("<input type='text' name='symbol' id='symbolInput' placeholder='סימול (AAPL)' required style='width:100px;' />");
+                sb.append("<button type='button' id='fetchAtrBtn' onclick='fetchAtr()' style='background:#1e3a5f;border-color:#3b82f6;'>🔍 בדוק ATR</button>");
                 sb.append("<input type='text' name='entryPrice' placeholder='מחיר כניסה' required style='width:120px;' />");
-                sb.append("<input type='text' name='atrMultiplier' placeholder='מכפיל ATR (2.0)' style='width:120px;' />");
+                sb.append("<input type='text' name='atrMultiplier' id='atrMultiplierInput' placeholder='מכפיל ATR (2.0)' style='width:120px;' />");
                 sb.append("<button type='submit'>➕ הוסף פוזיציה</button>");
                 sb.append("</form>");
+                sb.append("<div id='atrInfoBox' style='margin-top:10px;padding:10px;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;display:none;'></div>");
                 sb.append("</div>");
+                sb.append("<script>");
+                sb.append("function fetchAtr() {");
+                sb.append("  var symbol = document.getElementById('symbolInput').value.trim().toUpperCase();");
+                sb.append("  if (!symbol) { alert('הזן סימול מניה'); return; }");
+                sb.append("  var btn = document.getElementById('fetchAtrBtn');");
+                sb.append("  var box = document.getElementById('atrInfoBox');");
+                sb.append("  btn.disabled = true; btn.textContent = '⏳ טוען...';");
+                sb.append("  fetch('/api/fetch-atr?symbol=' + encodeURIComponent(symbol))");
+                sb.append("    .then(function(r) { return r.json(); })");
+                sb.append("    .then(function(data) {");
+                sb.append("      btn.disabled = false; btn.textContent = '🔍 בדוק ATR';");
+                sb.append("      if (data.error) { box.innerHTML = '<span style=\"color:#fca5a5;\">❌ ' + data.error + '</span>'; box.style.display = 'block'; return; }");
+                sb.append("      var volColor = data.atrPercent < 1 ? '#22c55e' : (data.atrPercent < 2.5 ? '#fbbf24' : (data.atrPercent < 5 ? '#f97316' : '#ef4444'));");
+                sb.append("      box.innerHTML = '<div style=\"color:#93c5fd;font-weight:bold;margin-bottom:6px;\">📊 ' + data.symbol + '</div>' +");
+                sb.append("        '<div>מחיר נוכחי: <b>$' + data.currentPrice.toFixed(2) + '</b></div>' +");
+                sb.append("        '<div>ATR (14 ימים): <b style=\"color:#fbbf24;\">$' + data.atr.toFixed(2) + '</b> (' + data.atrPercent.toFixed(1) + '% מהמחיר)</div>' +");
+                sb.append("        '<div>תנודתיות: <span style=\"color:' + volColor + ';font-weight:bold;\">' + data.volatility + '</span></div>' +");
+                sb.append("        '<div style=\"margin-top:6px;color:#22c55e;\">💡 מכפיל ATR מומלץ: <b>' + data.suggestedMultiplier + '</b></div>';");
+                sb.append("      box.style.display = 'block';");
+                sb.append("    })");
+                sb.append("    .catch(function(e) { btn.disabled = false; btn.textContent = '🔍 בדוק ATR'; box.innerHTML = '<span style=\"color:#fca5a5;\">❌ שגיאה בטעינת נתונים</span>'; box.style.display = 'block'; });");
+                sb.append("}");
+                sb.append("</script>");
 
                 sb.append("<div style='margin-bottom:16px;'>");
                 sb.append("<form method='post' action='/active-positions-refresh' style='display:inline;'>");
@@ -3953,6 +3989,52 @@ public class WebServer {
                 activePositionsStore.updateAllPositions();
                 ex.getResponseHeaders().add("Location", "/active-positions?status=updated");
                 ex.sendResponseHeaders(303, -1);
+                ex.close();
+            }
+        });
+
+        server.createContext("/api/fetch-atr", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) {
+                    ex.getResponseHeaders().add("Content-Type", "application/json");
+                    byte[] resp = "{\"error\":\"Method not allowed\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                    ex.sendResponseHeaders(405, resp.length);
+                    ex.getResponseBody().write(resp);
+                    ex.close();
+                    return;
+                }
+                Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                String symbol = qp.getOrDefault("symbol", "").trim().toUpperCase();
+                
+                ex.getResponseHeaders().add("Content-Type", "application/json");
+                
+                if (symbol.isEmpty()) {
+                    byte[] resp = "{\"error\":\"Missing symbol parameter\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                    ex.sendResponseHeaders(400, resp.length);
+                    ex.getResponseBody().write(resp);
+                    ex.close();
+                    return;
+                }
+                
+                try {
+                    double atr = activePositionsStore.fetchCurrentAtr(symbol);
+                    double currentPrice = activePositionsStore.fetchCurrentPrice(symbol);
+                    double atrPercent = (currentPrice > 0 && atr > 0) ? (atr / currentPrice) * 100 : 0;
+                    String volatility = atrPercent < 1.0 ? "נמוכה" : (atrPercent < 2.5 ? "בינונית" : (atrPercent < 5.0 ? "גבוהה" : "קיצונית"));
+                    String suggestedMultiplier = atrPercent < 1.0 ? "1.5-2.0" : (atrPercent < 2.5 ? "2.0-2.5" : (atrPercent < 5.0 ? "2.5-3.0" : "3.0-3.5"));
+                    
+                    String json = String.format(
+                        "{\"symbol\":\"%s\",\"atr\":%.4f,\"currentPrice\":%.2f,\"atrPercent\":%.2f,\"volatility\":\"%s\",\"suggestedMultiplier\":\"%s\"}",
+                        symbol, atr, currentPrice, atrPercent, volatility, suggestedMultiplier
+                    );
+                    byte[] resp = json.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                    ex.sendResponseHeaders(200, resp.length);
+                    ex.getResponseBody().write(resp);
+                } catch (Exception e) {
+                    byte[] resp = "{\"error\":\"Failed to fetch ATR\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                    ex.sendResponseHeaders(500, resp.length);
+                    ex.getResponseBody().write(resp);
+                }
                 ex.close();
             }
         });
