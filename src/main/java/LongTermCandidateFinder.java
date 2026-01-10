@@ -40,8 +40,44 @@ public class LongTermCandidateFinder {
             "XPO", "GXO", "HUBG", "MAT", "HAS", "NTDOY", "SEGA", "EA", "TTWO", "RBLX",
             "MTCH", "BMBL", "GRPN", "YELP", "IAC", "ANGI", "Z", "ZG", "RDFN", "OPEN",
             "PATH", "AAOI", "CIEN", "LITE", "VIAV", "EXTR", "FFIV", "JNPR", "ANET", "ARISTA",
-            "DELL", "HPQ", "STX", "WDC", "PSTG", "NTAP", "LNVGY", "TER", "ONT", "COHR"
-    );
+            "DELL", "HPQ", "STX", "WDC", "PSTG", "NTAP", "LNVGY", "TER", "ONT", "COHR",
+            "JPM", "GS", "V", "BRK-B", "XOM", "CVX", "NEE", "LLY", "UNH", "PFE", "PG", "KO",
+            "EL", "CAT", "BA", "GE", "SPY", "IWM", "GLD", "TLT","TSM", "NVO", "ASML", "SHOP", "UBER", "ABNB", "CRWD",
+            "PLTR", "SNOW", "FSLR", "ENPH", "RIVN", "NIO", "BABA", "PDD", "CP", "DE", "FCX", "NEM", "BITO",
+            "LVMUY", "NKE", "SBUX", "RTX", "LMT", "GD", "UPS", "FDX", "T", "VZ", "DIS", "NFLX", "SPOT", "SQ",
+            "MSTR", "MARA", "CL", "KMB", "TGT", "DE", "CAT", "BA", "RTX", "LMT", "GD", "DIS", "SPOT", "SQ", "PYPL",
+            "T", "VZ", "UPS", "FDX", "NKE", "PYPL", "MSTR", "MARA", "CL", "KMB", "TGT",
+            "AAON","A","AA","AAL","AAMC","AAT","ABB","ABC","ABG","ABM",
+            "ABR","ABT","ACET","ACI","ACM","ACN","ACT","ACY","ADAP","ADI",
+            "ADM","ADP","ADS","ADSK","ADT","ADTN","ADUS","AE","AEE","AEIS",
+            "AEL","AEO","AES","AET","AFG","AFL","AGCO","AGM","AGN","AGO",
+            "AHT","AI","AIG","AIV","AIZ","AJG","AJRD","AKAM","AKR","AL",
+            "ALB","ALC","ALCO","ALE","ALEX","ALG","ALK","ALL","ALLE","ALLG",
+            "ALLEGI","ALLY","ALNY","ALP","ALSN","ALV","AMCR","AMD","AME","AMG",
+            "AMN","AMP","AMR","AMRX","AMT","AMX","AN","ANCX","ANDV","ANET",
+            "ANF","ANGI","ANH","ANIK","ANSS","ANTM","AON","AOS","AP","APA",
+            "APD","APH","APLE","APO","APTV","ARE","ARG","ARI","ARLO","ARMK",
+            "AROC","ARW","ASBC","ASH","ASIX","ASP","ASR","ASUR","ATEC","ATGE",
+            "ATKR","ATO","ATR","ATRI","ATRO","ATTU","ATUS","AU","AUB","AUO",
+            "AUS","AVA","AVAV","AVB","AVD","AVGO","AVLR","AVNS","AVT","AVY",
+            "AWI","AWK","AXL","AXP","AXR","AXTA","AZO","AZZ","AACG","AADI","AAN","AAPL","AAT","AAU","ABCB","ABCL","ABEO","ABG",
+            "ABIL","ABMD","ABR","ABSI","ABT","ABTX","ACAD","ACER","ACI","ACIW",
+            "ACLS","ACM","ACN","ACOR","ACRX","ACST","ACT","ACTG","ACU","ACVA",
+            "ACXP","ADAP","ADES","ADIL","ADM","ADMA","ADNT","ADP","ADPT","ADRE",
+            "ADRO","ADS","ADSEY","ADSW","ADUS","ADVM","ADX","AE","AEE","AEF",
+            "AEGN","AEHR","AEL","AEO","AEP","AERI","AES","AESE","AEY","AFBI",
+            "AFFC","AFG","AFI","AFIN","AFL","AFMD","AFRM","AFSI","AGBA","AGCB",
+            "AGCO","AGEN","AGFS","AGI","AGIO","AGM","AGM.A","AGNC","AGO","AGR",
+            "AGRI","AGRO","AGS","AGTC","AGTI","AGX","AHC","AHH","AHH.A","AHPI",
+            "AHT","AI","AIII","AIKI","AIM","AIN","AINC","AIQ","AIR","AIRC",
+            "AIRG","AIRS","AIT","AIU","AIV","AIZ","AJG","AJRD","AJX","AKAM",
+            "AKRO","AKT","AKTS","AL","ALAC","ALB","ALBO","ALC","ALCO","ALEC",
+            "ALG","ALGN","ALGT","ALHC","ALIT","ALK","ALL","ALLE","ALLY","ALNA",
+            "ALOT","ALPA","ALP","ALRM","ALSN","ALT","ALTI","ALTO","ALTR","ALV",
+            "ALVO","AMBC","AMCX","AMD","AME","AMED","AMG","AMH","AMK","AMKR",
+            "AMN","AMR","AMRC","AMRH","AMRWW","AMRX","AMSC","AMSF","AMSWA","AMT"
+
+            );
     private static final List<String> ALL_NASDAQ_TICKERS = NASDAQ_100_TICKERS;
 
     public static List<String> getUniverseTickers() {
@@ -168,6 +204,9 @@ public class LongTermCandidateFinder {
                 // קריטריון מומנטום: מחפש מניות שנותנות אות קנייה (היפוך/חוזק) או ניטרלי (מנוחה)
                 .filter(r -> r.technicalSignal.contains("BUY") || r.technicalSignal.contains("NEUTRAL"))
 
+                // קריטריון Market Regime: עוברת פילטר שוק (לא שוק דובי עם מניה חלשה)
+                .filter(r -> r.passesMarketFilter == null || r.passesMarketFilter)
+
                 .collect(Collectors.toList());
 
         if (allAnalyzedResults.isEmpty()) {
@@ -197,13 +236,25 @@ public class LongTermCandidateFinder {
             return top;
         }
 
-        // 3. דירוג (Ranking) - נדרג לפי פוטנציאל כניסה (נמוך ב-ADX, או קרוב ל-DIP)
+        // 3. דירוג (Ranking) - נדרג לפי Market Regime + פוטנציאל כניסה
         Collections.sort(longCandidates, (a, b) -> {
-            // דירוג עדיפות 1: נמוך ב-ADX (מנוחה, כדי לקנות לפני הזינוק)
+            // דירוג עדיפות 1: Relative Strength גבוה יותר (מנצחת את השוק)
+            Double rsA = a.relativeStrength3M != null ? a.relativeStrength3M : 1.0;
+            Double rsB = b.relativeStrength3M != null ? b.relativeStrength3M : 1.0;
+            int rsComparison = Double.compare(rsB, rsA); // יורד - גבוה יותר עדיף
+            if (rsComparison != 0) return rsComparison;
+
+            // דירוג עדיפות 2: Market Regime Bonus גבוה יותר
+            Integer bonusA = a.marketRegimeBonus != null ? a.marketRegimeBonus : 0;
+            Integer bonusB = b.marketRegimeBonus != null ? b.marketRegimeBonus : 0;
+            int bonusComparison = Integer.compare(bonusB, bonusA); // יורד - גבוה יותר עדיף
+            if (bonusComparison != 0) return bonusComparison;
+
+            // דירוג עדיפות 3: נמוך ב-ADX (מנוחה, כדי לקנות לפני הזינוק)
             int adxComparison = Double.compare(a.adxStrength, b.adxStrength);
             if (adxComparison != 0) return adxComparison;
 
-            // דירוג עדיפות 2: קרוב יותר לשווי הוגן (יותר בטוח)
+            // דירוג עדיפות 4: קרוב יותר לשווי הוגן (יותר בטוח)
             return Double.compare(a.dcfFairValue, b.dcfFairValue);
         });
 
@@ -239,6 +290,13 @@ public class LongTermCandidateFinder {
         if (ts.contains("STRONG SELL") || ts.contains("SELL")) s -= 2;
 
         if (r.dcfFairValue > 0 && r.price > 0 && r.price < r.dcfFairValue) s += 1;
+
+        // Market Regime bonus - מניות שמנצחות את השוק מקבלות עדיפות
+        if (r.relativeStrength3M != null && r.relativeStrength3M > 1.0) s += 2;
+        if (r.relativeStrength3M != null && r.relativeStrength3M > 1.15) s += 2; // בונוס נוסף למובילות
+        if (r.highGrowth != null && r.highGrowth) s += 2; // בונוס צמיחה
+        if (r.passesMarketFilter != null && !r.passesMarketFilter) s -= 3; // קנס למי שלא עוברת פילטר
+
         return s;
     }
 
