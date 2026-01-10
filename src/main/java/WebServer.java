@@ -3814,6 +3814,28 @@ public class WebServer {
             }
         });
 
+        server.createContext("/sync-green-to-monitoring", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
+                int added = 0;
+                try {
+                    List<DailyGreenTicker> greenList;
+                    synchronized (dailyGreenLock) {
+                        greenList = dailyGreenState.green == null ? Collections.emptyList() : new ArrayList<>(dailyGreenState.green);
+                    }
+                    for (DailyGreenTicker t : greenList) {
+                        if (t != null && t.ticker != null && !t.ticker.isBlank()) {
+                            if (monitoringStore.addTicker(t.ticker)) added++;
+                        }
+                    }
+                    if (added > 0) monitoringScheduler.triggerNowAsync();
+                } catch (Exception ignore) {}
+                ex.getResponseHeaders().add("Location", "/favorites?syncStatus=added_" + added);
+                ex.sendResponseHeaders(303, -1);
+                ex.close();
+            }
+        });
+
         // ---------------- Active Positions (Trailing Stop-Loss) Page ----------------
         server.createContext("/active-positions", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
@@ -3900,8 +3922,19 @@ public class WebServer {
 
                     for (ActivePositionsStore.PositionView pv : positions) {
                         String pnlColor = pv.pnlPct >= 0 ? "#22c55e" : "#ef4444";
-                        String signalColor = pv.shouldSell ? "#ef4444" : "#22c55e";
-                        String signalText = pv.shouldSell ? "🔴 SELL NOW!" : "🟢 HOLD";
+                        String signalColor;
+                        String signalText;
+                        if (pv.currentPrice <= 0) {
+                            // Price fetch failed - don't show false sell signal
+                            signalColor = "#fbbf24"; // yellow/warning
+                            signalText = "⚠️ מחיר לא זמין";
+                        } else if (pv.shouldSell) {
+                            signalColor = "#ef4444";
+                            signalText = "🔴 SELL NOW!";
+                        } else {
+                            signalColor = "#22c55e";
+                            signalText = "🟢 HOLD";
+                        }
                         String bufferColor = pv.profitBufferPct < 2 ? "#fbbf24" : (pv.profitBufferPct < 5 ? "#93c5fd" : "#22c55e");
 
                         sb.append("<tr>");
@@ -4322,8 +4355,18 @@ public class WebServer {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) {
                     respondHtml(ex, htmlPage(""), 200); return;
                 }
+                Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                String syncStatus = qp.getOrDefault("syncStatus", "");
+
                 StringBuilder sb = new StringBuilder();
                 sb.append("<div class='card'><div class='title'>Favorites</div>");
+
+                if (syncStatus.startsWith("added_")) {
+                    String count = syncStatus.substring(6);
+                    sb.append("<div style='background:#0b1220;border:1px solid #22c55e;border-radius:8px;padding:10px;margin-bottom:12px;color:#22c55e;'>")
+                            .append("✅ Added ").append(escapeHtml(count)).append(" stock(s) to Monitoring. <a href='/monitoring' style='color:#93c5fd;'>View Monitoring →</a>")
+                            .append("</div>");
+                }
 
                 // Daily GREEN recommendations table
                 try {
@@ -4352,9 +4395,12 @@ public class WebServer {
                         sb.append("<span style='color:#93c5fd;font-weight:700'>IDLE</span>");
                     }
                     sb.append("</div>");
-                    sb.append("<div style='margin-top:10px;'>");
+                    sb.append("<div style='margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;'>");
                     sb.append("<form method='post' action='/daily-green-run' style='display:inline'>");
                     sb.append("<button type='submit'>Run now</button>");
+                    sb.append("</form>");
+                    sb.append("<form method='post' action='/sync-green-to-monitoring' style='display:inline'>");
+                    sb.append("<button type='submit' style='background:#1f2a44;'>📈 Add all GREEN to Monitoring</button>");
                     sb.append("</form>");
                     sb.append("</div>");
                     if (snap.lastStartedNy != null) sb.append("<div style='color:#9ca3af'>Last start (NY): ").append(escapeHtml(snap.lastStartedNy)).append("</div>");
@@ -4366,11 +4412,39 @@ public class WebServer {
                     }
                     sb.append("</div>");
 
+                    // Score explanation toggle
+                    sb.append("<div id='scoreExplanation' style='display:block;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;margin-bottom:14px;color:#e5e7eb;font-size:13px;'>");
+                    sb.append("<div style='font-weight:600;margin-bottom:8px;color:#93c5fd;'>📊 How is the Score Calculated? (0-100) <span style='color:#9ca3af;font-weight:400;'>| איך הציון מחושב?</span></div>");
+                    sb.append("<div style='margin-bottom:8px;color:#fca5a5;'><b>🛑 VETO (Automatic 0):</b> M-Score &gt; -1.78 or Z-Score &lt; 1.1 → High fraud/bankruptcy risk <span style='color:#9ca3af;'>| סיכון גבוה להונאה או פשיטת רגל</span></div>");
+                    sb.append("<div style='margin-bottom:6px;'><b>Fundamental (up to 50 pts):</b> <span style='color:#9ca3af;'>| ניתוח פונדמנטלי</span></div>");
+                    sb.append("<ul style='margin:0 0 8px 20px;padding:0;'>");
+                    sb.append("<li>F-Score ≥ 7 → +15 pts <span style='color:#9ca3af;'>| בריאות פיננסית חזקה</span></li>");
+                    sb.append("<li>PEG &lt; 1.2 → +15 pts <span style='color:#9ca3af;'>| מחיר הוגן ביחס לצמיחה</span></li>");
+                    sb.append("<li>DCF Margin &gt; 20% → +20 pts (or &gt; 0% → +10 pts) <span style='color:#9ca3af;'>| מרווח ביטחון לפי תזרים מזומנים</span></li>");
+                    sb.append("</ul>");
+                    sb.append("<div style='margin-bottom:6px;'><b>Technical (up to 30 pts):</b> <span style='color:#9ca3af;'>| ניתוח טכני</span></div>");
+                    sb.append("<ul style='margin:0 0 8px 20px;padding:0;'>");
+                    sb.append("<li>Technical Bullish → +15 pts <span style='color:#9ca3af;'>| מגמה עולה</span></li>");
+                    sb.append("<li>RSI 40-65 (healthy momentum) → +15 pts <span style='color:#9ca3af;'>| מומנטום בריא, לא קנייתיתר</span></li>");
+                    sb.append("</ul>");
+                    sb.append("<div style='margin-bottom:6px;'><b>Efficiency (up to 20 pts):</b> <span style='color:#9ca3af;'>| יעילות תפעולית</span></div>");
+                    sb.append("<ul style='margin:0 0 8px 20px;padding:0;'>");
+                    sb.append("<li>ROIC-WACC Spread &gt; 5% → +10 pts <span style='color:#9ca3af;'>| החברה מייצרת ערך מעל עלות ההון</span></li>");
+                    sb.append("<li>CCC &lt; 40 days → +10 pts <span style='color:#9ca3af;'>| מחזור מזומנים מהיר</span></li>");
+                    sb.append("</ul>");
+                    sb.append("<div style='margin-bottom:6px;'><b>Graham Valuation (bonus up to 10 pts):</b> <span style='color:#9ca3af;'>| הערכת שווי לפי גראהם</span></div>");
+                    sb.append("<ul style='margin:0 0 8px 20px;padding:0;'>");
+                    sb.append("<li>Margin of Safety ≥ 33% → +10 pts <span style='color:#9ca3af;'>| מרווח ביטחון גבוה</span></li>");
+                    sb.append("<li>Margin of Safety ≥ 15% → +5 pts <span style='color:#9ca3af;'>| מרווח ביטחון סביר</span></li>");
+                    sb.append("</ul>");
+                    sb.append("<div style='margin-bottom:6px;'><b>Recommendation:</b> ≥80 = 🚀 STRONG BUY | ≥60 = 🟢 BUY | ≥40 = 🟡 HOLD | &lt;40 = 🔴 SELL/AVOID <span style='color:#9ca3af;'>| קנייה חזקה / קנייה / החזק / מכור</span></div>");
+                    sb.append("</div>");
+
                     sb.append("<div style='overflow-x:auto;margin-bottom:14px;'>");
                     sb.append("<table style='width:100%;border-collapse:collapse;'>");
                     sb.append("<thead><tr>");
                     sb.append("<th style='text-align:left;padding:8px;border-bottom:1px solid #1f2a44;'>Ticker</th>");
-                    sb.append("<th style='text-align:left;padding:8px;border-bottom:1px solid #1f2a44;'>Score</th>");
+                    sb.append("<th style='text-align:left;padding:8px;border-bottom:1px solid #1f2a44;'>Score <span onclick=\"document.getElementById('scoreExplanation').style.display=document.getElementById('scoreExplanation').style.display==='none'?'block':'none';\" style='cursor:pointer;background:#1f2a44;border-radius:50%;padding:2px 7px;font-size:12px;margin-left:4px;color:#93c5fd;'>+</span></th>");
                     sb.append("<th style='text-align:left;padding:8px;border-bottom:1px solid #1f2a44;'>Recommendation</th>");
                     sb.append("<th style='text-align:left;padding:8px;border-bottom:1px solid #1f2a44;'>Updated (NY)</th>");
                     sb.append("<th style='text-align:left;padding:8px;border-bottom:1px solid #1f2a44;'>Action</th>");
@@ -4389,7 +4463,8 @@ public class WebServer {
                             sb.append("<td style='padding:8px;border-bottom:1px solid #0f172a;'>");
                             sb.append("<form method='post' action='/run-main' target='_blank' style='display:inline'>")
                                     .append("<input type='hidden' name='symbol' value='").append(esc).append("'/>")
-                                    .append("<button type='submit'>Analyze</button></form>");
+                                    .append("<button type='submit'>Analyze</button></form> ");
+                            sb.append("<a href='/monitoring#snap-details-").append(esc).append("' target='_blank' style='display:inline-block;padding:6px 12px;background:#1f2a44;border-radius:6px;color:#93c5fd;text-decoration:none;font-size:13px;'>📈 History</a>");
                             sb.append("</td>");
                             sb.append("</tr>");
                         }

@@ -774,6 +774,25 @@ public class StockScannerRunner {
         } catch (Exception ignore) {
         }
 
+        // --- Market Regime Filter (מסנן שוק לניצחון על S&P 500) ---
+        try {
+            Double revenueGrowthRate = fs != null ? fs.growthRate : null;
+            MarketRegimeFilter.MarketRegimeResult marketRegime = 
+                    MarketRegimeFilter.analyze(historicalPrices, revenueGrowthRate);
+            
+            if (marketRegime != null) {
+                result.marketBullish = marketRegime.marketBullish;
+                result.relativeStrength3M = marketRegime.relativeStrength3M;
+                result.outperformsSpy = marketRegime.outperformsSpy;
+                result.revenueGrowthRate = marketRegime.revenueGrowthRate;
+                result.highGrowth = marketRegime.highGrowth;
+                result.marketRegimeBonus = marketRegime.totalBonus;
+                result.passesMarketFilter = marketRegime.passesFilter;
+                result.marketRegimeVerdict = MarketRegimeFilter.getOverallVerdict(marketRegime);
+            }
+        } catch (Exception ignore) {
+        }
+
         // 6. לוגיקת החלטה ראשית לטווח הקצר (שורט / קנייה / מכירה)
         // ** שורט (מגמת ירידה חזקה): ** ADX חזק, ירידה ב-MACD, ומגמה יורדת (-DI > +DI)
         if (latestADX > 25 && latestMinusDI > latestPlusDI && latestMACD < latestSignalLine && currentPrice < latestSMA) {
@@ -806,6 +825,12 @@ public class StockScannerRunner {
             fundamentalScore += 3; // ערך גבוה מאוד
         } else if (result.fundamentalSignal.contains("OVERVALUED")) {
             fundamentalScore -= 3;
+        }
+
+        // 8.1.5 Market Regime Bonus - בונוס/קנס על סמך מסנן השוק
+        if (result.marketRegimeBonus != null) {
+            // נורמליזציה: marketRegimeBonus נע בין -20 ל-+35, נמיר לטווח -2 עד +3
+            fundamentalScore += Math.max(-2, Math.min(3, result.marketRegimeBonus / 10));
         }
 
         // Working capital efficiency (CCC) influence (small weight)
@@ -872,7 +897,20 @@ public class StockScannerRunner {
             }
         }
 
-        // ... (הקוד ממשיך ל-return result) ...
+        // Market Regime gate: if stock fails market filter (bearish market + weak stock)
+        if (result.passesMarketFilter != null && !result.passesMarketFilter) {
+            if (result.finalVerdict.contains("BUY")) {
+                result.finalVerdict = "HOLD/WAIT (Market Regime)";
+            }
+        }
+
+        // Enhance verdict with market leadership info
+        if (result.outperformsSpy != null && result.outperformsSpy && 
+            result.relativeStrength3M != null && result.relativeStrength3M > 1.15) {
+            if (result.finalVerdict.contains("STRONG BUY")) {
+                result.finalVerdict = "🚀 STRONG BUY (Market Leader)";
+            }
+        }
 
         return result;
     }

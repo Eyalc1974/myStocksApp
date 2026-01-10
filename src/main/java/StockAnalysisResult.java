@@ -39,6 +39,16 @@ public class StockAnalysisResult {
     public Double grahamMarginOfSafety;
     public String grahamValuationVerdict;
 
+    // Market Regime Filter fields
+    public Boolean marketBullish;              // האם השוק בולי (SPY > SMA200)
+    public Double relativeStrength3M;          // חוזק יחסי 3 חודשים מול SPY
+    public Boolean outperformsSpy;             // האם מנצחת את SPY
+    public Double revenueGrowthRate;           // שיעור צמיחת הכנסות
+    public Boolean highGrowth;                 // צמיחה מעל 20%
+    public Integer marketRegimeBonus;          // בונוס מפילטר השוק
+    public Boolean passesMarketFilter;         // האם עוברת פילטר שוק
+    public String marketRegimeVerdict;         // תיאור מצב השוק
+
     public StockAnalysisResult(String ticker, double price, double dcfFairValue, double adxStrength) {
         this.ticker = ticker;
         this.price = price;

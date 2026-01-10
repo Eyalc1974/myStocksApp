@@ -15,7 +15,9 @@ public class FinalScoringEngine {
             double fScore, double peg, double dcfMargin,    // Fundamental
             boolean technicalBullish, double rsi,           // Technical
             double ccc, double roicWaccSpread,              // Efficiency
-            double grahamMarginOfSafety                     // Graham Valuation
+            double grahamMarginOfSafety,                    // Graham Valuation
+            int marketRegimeBonus, boolean marketBullish,   // Market Regime Filter
+            double relativeStrength, double revenueGrowth   // RS & Growth
     ) {
         AnalysisResult result = new AnalysisResult();
         double score = 0;
@@ -48,7 +50,30 @@ public class FinalScoringEngine {
             else if (grahamMarginOfSafety >= 0.15) score += 5; // מרווח ביטחון סביר
         }
 
-        result.finalScore = (int) Math.min(score, 100);
+        // --- שלב 6: Market Regime Filter (מסנן שוק לניצחון על S&P 500) ---
+        // בונוס/קנס על סמך מצב השוק הכללי
+        score += marketRegimeBonus;
+
+        // אם השוק דובי (SPY < SMA200) - הנחת ציון
+        if (!marketBullish) {
+            result.keyInsights.add("אזהרה: שוק דובי - SPY מתחת ל-SMA200");
+        }
+
+        // Relative Strength vs S&P 500 (3 חודשים)
+        if (Double.isFinite(relativeStrength)) {
+            if (relativeStrength > 1.15) {
+                result.keyInsights.add("תובנה: מניה מובילה - מנצחת את S&P 500 ביותר מ-15%");
+            } else if (relativeStrength < 0.85) {
+                result.keyInsights.add("אזהרה: מניה נגררת - נחותה מ-S&P 500 ביותר מ-15%");
+            }
+        }
+
+        // בונוס צמיחה (Revenue Growth > 20%)
+        if (Double.isFinite(revenueGrowth) && revenueGrowth > 0.20) {
+            result.keyInsights.add("תובנה: צמיחת הכנסות גבוהה (" + String.format("%.0f%%", revenueGrowth * 100) + ") - מניית צמיחה");
+        }
+
+        result.finalScore = (int) Math.min(Math.max(score, 0), 100);
 
         // --- קביעת המלצה סופית ---
         if (score >= 80) result.recommendation = "🚀 STRONG BUY";
@@ -68,6 +93,19 @@ public class FinalScoringEngine {
         return result;
     }
 
+    // Backward compatibility overload (without Market Regime parameters)
+    public static AnalysisResult computeFinalScore(
+            double zScore, double mScore, double sloanRatio,
+            double fScore, double peg, double dcfMargin,
+            boolean technicalBullish, double rsi,
+            double ccc, double roicWaccSpread,
+            double grahamMarginOfSafety
+    ) {
+        return computeFinalScore(zScore, mScore, sloanRatio, fScore, peg, dcfMargin,
+                technicalBullish, rsi, ccc, roicWaccSpread, grahamMarginOfSafety,
+                0, true, Double.NaN, Double.NaN);
+    }
+
     // Backward compatibility overload (without Graham parameter)
     public static AnalysisResult computeFinalScore(
             double zScore, double mScore, double sloanRatio,
@@ -76,6 +114,7 @@ public class FinalScoringEngine {
             double ccc, double roicWaccSpread
     ) {
         return computeFinalScore(zScore, mScore, sloanRatio, fScore, peg, dcfMargin,
-                technicalBullish, rsi, ccc, roicWaccSpread, Double.NaN);
+                technicalBullish, rsi, ccc, roicWaccSpread, Double.NaN,
+                0, true, Double.NaN, Double.NaN);
     }
 }
