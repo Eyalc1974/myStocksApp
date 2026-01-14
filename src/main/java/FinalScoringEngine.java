@@ -1,6 +1,7 @@
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class FinalScoringEngine {
 
@@ -8,6 +9,7 @@ public class FinalScoringEngine {
         public int finalScore; // 0-100
         public String recommendation; // BUY, HOLD, SELL, AVOID
         public List<String> keyInsights = new ArrayList<>();
+        public String scoringMode; // Current scoring mode used
     }
 
     public static AnalysisResult computeFinalScore(
@@ -22,44 +24,85 @@ public class FinalScoringEngine {
         AnalysisResult result = new AnalysisResult();
         double score = 0;
 
+        // Load current scoring configuration
+        ScoringConfig.ModeConfig config = ScoringConfig.getActiveModeConfig();
+        result.scoringMode = ScoringConfig.getActiveMode();
+        Map<String, ScoringConfig.IndicatorConfig> indicators = config.indicators;
+
         // --- שלב 1: VETO (בדיקת חסימה) ---
-        if (mScore > -1.78 || zScore < 1.1) {
+        if (config.vetoEnabled && (mScore > -1.78 || zScore < 1.1)) {
             result.finalScore = 0;
             result.recommendation = "🛑 AVOID (High Fraud/Bankruptcy Risk)";
             result.keyInsights.add("חסימה: חשד למניפולציה חשבונאית או סיכון פשיטת רגל מיידי.");
             return result;
         }
 
-        // --- שלב 2: שקלול פונדמנטלי (50 נקודות) ---
-        if (fScore >= 7) score += 15;
-        if (peg < 1.2) score += 15;
-        if (dcfMargin > 0.20) score += 20; // מרווח ביטחון מעל 20%
-        else if (dcfMargin > 0) score += 10;
+        // --- שלב 2: שקלול פונדמנטלי ---
+        ScoringConfig.IndicatorConfig fScoreInd = indicators.get("fScore");
+        if (fScoreInd != null && fScoreInd.enabled && fScore >= fScoreInd.threshold) {
+            score += fScoreInd.points;
+        }
 
-        // --- שלב 3: שקלול טכני (30 נקודות) ---
-        if (technicalBullish) score += 15;
-        if (rsi > 40 && rsi < 65) score += 15; // מומנטום בריא (לא קניית יתר)
+        ScoringConfig.IndicatorConfig pegInd = indicators.get("peg");
+        if (pegInd != null && pegInd.enabled && peg < pegInd.threshold && peg > 0) {
+            score += pegInd.points;
+        }
 
-        // --- שלב 4: יעילות וצמיחה (20 נקודות) ---
-        if (roicWaccSpread > 0.05) score += 10;
-        if (ccc < 40) score += 10; // יעילות הון חוזר
+        ScoringConfig.IndicatorConfig dcfInd = indicators.get("dcfMargin");
+        if (dcfInd != null && dcfInd.enabled) {
+            if (dcfMargin > dcfInd.thresholdHigh) {
+                score += dcfInd.points;
+            } else if (dcfMargin > dcfInd.thresholdLow) {
+                score += dcfInd.points / 2;
+            }
+        }
 
-        // --- שלב 5: Graham Valuation (bonus up to 10 נקודות) ---
-        if (Double.isFinite(grahamMarginOfSafety)) {
-            if (grahamMarginOfSafety >= 0.33) score += 10; // מרווח ביטחון גרהם 33%+
-            else if (grahamMarginOfSafety >= 0.15) score += 5; // מרווח ביטחון סביר
+        // --- שלב 3: שקלול טכני ---
+        ScoringConfig.IndicatorConfig bullishInd = indicators.get("technicalBullish");
+        if (bullishInd != null && bullishInd.enabled && technicalBullish) {
+            score += bullishInd.points;
+        }
+
+        ScoringConfig.IndicatorConfig rsiInd = indicators.get("rsiHealthy");
+        if (rsiInd != null && rsiInd.enabled && rsi > rsiInd.min && rsi < rsiInd.max) {
+            score += rsiInd.points;
+        }
+
+        // RSI Oversold bonus (for swing/momentum trading)
+        ScoringConfig.IndicatorConfig rsiOversoldInd = indicators.get("rsiOversold");
+        if (rsiOversoldInd != null && rsiOversoldInd.enabled && rsi < rsiOversoldInd.threshold) {
+            score += rsiOversoldInd.points;
+            result.keyInsights.add("תובנה: RSI ב-Oversold (" + String.format("%.1f", rsi) + ") - הזדמנות קנייה טכנית");
+        }
+
+        // --- שלב 4: יעילות וצמיחה ---
+        ScoringConfig.IndicatorConfig roicInd = indicators.get("roicWacc");
+        if (roicInd != null && roicInd.enabled && roicWaccSpread > roicInd.threshold) {
+            score += roicInd.points;
+        }
+
+        ScoringConfig.IndicatorConfig cccInd = indicators.get("ccc");
+        if (cccInd != null && cccInd.enabled && ccc < cccInd.threshold && ccc > 0) {
+            score += cccInd.points;
+        }
+
+        // --- שלב 5: Graham Valuation (bonus) ---
+        ScoringConfig.IndicatorConfig grahamInd = indicators.get("grahamMoS");
+        if (grahamInd != null && grahamInd.enabled && Double.isFinite(grahamMarginOfSafety)) {
+            if (grahamMarginOfSafety >= grahamInd.thresholdHigh) {
+                score += grahamInd.pointsHigh;
+            } else if (grahamMarginOfSafety >= grahamInd.thresholdLow) {
+                score += grahamInd.pointsLow;
+            }
         }
 
         // --- שלב 6: Market Regime Filter (מסנן שוק לניצחון על S&P 500) ---
-        // בונוס/קנס על סמך מצב השוק הכללי
         score += marketRegimeBonus;
 
-        // אם השוק דובי (SPY < SMA200) - הנחת ציון
         if (!marketBullish) {
             result.keyInsights.add("אזהרה: שוק דובי - SPY מתחת ל-SMA200");
         }
 
-        // Relative Strength vs S&P 500 (3 חודשים)
         if (Double.isFinite(relativeStrength)) {
             if (relativeStrength > 1.15) {
                 result.keyInsights.add("תובנה: מניה מובילה - מנצחת את S&P 500 ביותר מ-15%");
@@ -68,17 +111,20 @@ public class FinalScoringEngine {
             }
         }
 
-        // בונוס צמיחה (Revenue Growth > 20%)
         if (Double.isFinite(revenueGrowth) && revenueGrowth > 0.20) {
             result.keyInsights.add("תובנה: צמיחת הכנסות גבוהה (" + String.format("%.0f%%", revenueGrowth * 100) + ") - מניית צמיחה");
         }
 
         result.finalScore = (int) Math.min(Math.max(score, 0), 100);
 
-        // --- קביעת המלצה סופית ---
-        if (score >= 80) result.recommendation = "🚀 STRONG BUY";
-        else if (score >= 60) result.recommendation = "🟢 BUY";
-        else if (score >= 40) result.recommendation = "🟡 HOLD";
+        // --- קביעת המלצה סופית (using configurable thresholds) ---
+        int strongBuyTh = config.strongBuyThreshold > 0 ? config.strongBuyThreshold : 80;
+        int buyTh = config.buyThreshold > 0 ? config.buyThreshold : 60;
+        int holdTh = config.holdThreshold > 0 ? config.holdThreshold : 40;
+        
+        if (score >= strongBuyTh) result.recommendation = "🚀 STRONG BUY";
+        else if (score >= buyTh) result.recommendation = "🟢 BUY";
+        else if (score >= holdTh) result.recommendation = "🟡 HOLD";
         else result.recommendation = "🔴 SELL / AVOID";
 
         // הוספת תובנות

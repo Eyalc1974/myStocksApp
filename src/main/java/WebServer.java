@@ -974,6 +974,7 @@ public class WebServer {
         if (ent == null || ent.isBlank()) {
             ent = System.getenv("ALPHA_VANTAGE_ENTITLEMENT");
         }
+        // delayed = 15-min delayed data (5min bars); realtime/blank = real-time (1min bars)
         if (ent != null && ent.equalsIgnoreCase("delayed")) {
             return "5min";
         }
@@ -1167,7 +1168,8 @@ public class WebServer {
                 "<a href=\"/intraday-alerts\">Intraday Alerts</a> · " +
                 "<a href=\"/active-positions\">Active Positions</a> · " +
                 "<a href=\"/analysts\">Analysts</a> · " +
-                "<a href=\"/finder\">FINDER</a>" +
+                "<a href=\"/finder\">FINDER</a> · " +
+                "<a href=\"/settings\">⚙️ Settings</a>" +
                 "</div>" +
                 (body == null ? "" : body) +
                 "</div>" +
@@ -3179,11 +3181,13 @@ public class WebServer {
                     if (sym != null && !sym.isBlank()) {
                         MonitoringAlphaVantageClient av = MonitoringAlphaVantageClient.fromEnv();
                         JsonNode q = av.globalQuote(sym);
+                        System.out.println("[intraday-quote] GLOBAL_QUOTE raw response: " + q);
                         Double price = extractGlobalQuotePrice(q);
                         synchronized (intradayLock) {
                             intradayState.lastQuotePrice = price;
                             if (price == null) {
-                                intradayState.lastQuoteError = "No price in GLOBAL_QUOTE response (rate limit or symbol unsupported)";
+                                String raw = q != null ? q.toString() : "null";
+                                intradayState.lastQuoteError = "No price in GLOBAL_QUOTE response. Raw: " + (raw.length() > 300 ? raw.substring(0, 300) : raw);
                             } else {
                                 ok = true;
                             }
@@ -4245,6 +4249,9 @@ public class WebServer {
                             }
                         } catch (Exception e) {
                             st.lastError = e.getMessage();
+                            st.lastPrice = null;
+                            st.lastVolume = null;
+                            st.lastBarTs = null;
                         }
                     }, 0, 1, TimeUnit.MINUTES);
                 }
@@ -4412,31 +4419,83 @@ public class WebServer {
                     }
                     sb.append("</div>");
 
-                    // Score explanation toggle
+                    // Score explanation toggle - dynamic based on current scoring mode
+                    ScoringConfig.ModeConfig scoreCfg = ScoringConfig.getActiveModeConfig();
+                    String scoreMode = ScoringConfig.getActiveMode();
+                    String scoreModeName = scoreCfg.name != null ? scoreCfg.name : scoreMode;
+                    String scoreModeHe = scoreCfg.nameHe != null ? scoreCfg.nameHe : "";
+
                     sb.append("<div id='scoreExplanation' style='display:block;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;margin-bottom:14px;color:#e5e7eb;font-size:13px;'>");
-                    sb.append("<div style='font-weight:600;margin-bottom:8px;color:#93c5fd;'>📊 How is the Score Calculated? (0-100) <span style='color:#9ca3af;font-weight:400;'>| איך הציון מחושב?</span></div>");
-                    sb.append("<div style='margin-bottom:8px;color:#fca5a5;'><b>🛑 VETO (Automatic 0):</b> M-Score &gt; -1.78 or Z-Score &lt; 1.1 → High fraud/bankruptcy risk <span style='color:#9ca3af;'>| סיכון גבוה להונאה או פשיטת רגל</span></div>");
-                    sb.append("<div style='margin-bottom:6px;'><b>Fundamental (up to 50 pts):</b> <span style='color:#9ca3af;'>| ניתוח פונדמנטלי</span></div>");
+                    sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;'>");
+                    sb.append("<div style='font-weight:600;color:#93c5fd;'>📊 How is the Score Calculated? (0-100) <span style='color:#9ca3af;font-weight:400;'>| איך הציון מחושב?</span></div>");
+                    sb.append("<a href='/settings' style='background:#1f2a44;padding:4px 10px;border-radius:6px;color:#93c5fd;text-decoration:none;font-size:12px;'>⚙️ Settings</a>");
+                    sb.append("</div>");
+                    sb.append("<div style='background:#1f2a44;padding:8px 12px;border-radius:6px;margin-bottom:10px;'>");
+                    sb.append("<span style='color:#22c55e;font-weight:600;'>Current Mode: ").append(escapeHtml(scoreModeName)).append("</span>");
+                    if (!scoreModeHe.isEmpty()) sb.append(" <span style='color:#9ca3af;'>| ").append(escapeHtml(scoreModeHe)).append("</span>");
+                    sb.append("</div>");
+
+                    if (scoreCfg.vetoEnabled) {
+                        sb.append("<div style='margin-bottom:8px;color:#fca5a5;'><b>🛑 VETO (Automatic 0):</b> M-Score &gt; -1.78 or Z-Score &lt; 1.1 → High fraud/bankruptcy risk <span style='color:#9ca3af;'>| סיכון גבוה להונאה או פשיטת רגל</span></div>");
+                    } else {
+                        sb.append("<div style='margin-bottom:8px;color:#9ca3af;'><s>🛑 VETO Disabled</s> <span>| VETO מבוטל במצב זה</span></div>");
+                    }
+
+                    sb.append("<div style='margin-bottom:6px;'><b>Fundamental (").append(scoreCfg.fundamentalWeight).append("%):</b> <span style='color:#9ca3af;'>| ניתוח פונדמנטלי</span></div>");
                     sb.append("<ul style='margin:0 0 8px 20px;padding:0;'>");
-                    sb.append("<li>F-Score ≥ 7 → +15 pts <span style='color:#9ca3af;'>| בריאות פיננסית חזקה</span></li>");
-                    sb.append("<li>PEG &lt; 1.2 → +15 pts <span style='color:#9ca3af;'>| מחיר הוגן ביחס לצמיחה</span></li>");
-                    sb.append("<li>DCF Margin &gt; 20% → +20 pts (or &gt; 0% → +10 pts) <span style='color:#9ca3af;'>| מרווח ביטחון לפי תזרים מזומנים</span></li>");
+                    ScoringConfig.IndicatorConfig fScoreInd = scoreCfg.indicators != null ? scoreCfg.indicators.get("fScore") : null;
+                    if (fScoreInd != null && fScoreInd.enabled) {
+                        sb.append("<li>F-Score ≥ ").append((int)fScoreInd.threshold).append(" → +").append(fScoreInd.points).append(" pts <span style='color:#9ca3af;'>| בריאות פיננסית חזקה</span></li>");
+                    }
+                    ScoringConfig.IndicatorConfig pegInd = scoreCfg.indicators != null ? scoreCfg.indicators.get("peg") : null;
+                    if (pegInd != null && pegInd.enabled) {
+                        sb.append("<li>PEG &lt; ").append(pegInd.threshold).append(" → +").append(pegInd.points).append(" pts <span style='color:#9ca3af;'>| מחיר הוגן ביחס לצמיחה</span></li>");
+                    }
+                    ScoringConfig.IndicatorConfig dcfInd = scoreCfg.indicators != null ? scoreCfg.indicators.get("dcfMargin") : null;
+                    if (dcfInd != null && dcfInd.enabled) {
+                        sb.append("<li>DCF Margin &gt; ").append((int)(dcfInd.thresholdHigh*100)).append("% → +").append(dcfInd.points).append(" pts <span style='color:#9ca3af;'>| מרווח ביטחון לפי תזרים מזומנים</span></li>");
+                    }
                     sb.append("</ul>");
-                    sb.append("<div style='margin-bottom:6px;'><b>Technical (up to 30 pts):</b> <span style='color:#9ca3af;'>| ניתוח טכני</span></div>");
+
+                    sb.append("<div style='margin-bottom:6px;'><b>Technical (").append(scoreCfg.technicalWeight).append("%):</b> <span style='color:#9ca3af;'>| ניתוח טכני</span></div>");
                     sb.append("<ul style='margin:0 0 8px 20px;padding:0;'>");
-                    sb.append("<li>Technical Bullish → +15 pts <span style='color:#9ca3af;'>| מגמה עולה</span></li>");
-                    sb.append("<li>RSI 40-65 (healthy momentum) → +15 pts <span style='color:#9ca3af;'>| מומנטום בריא, לא קנייתיתר</span></li>");
+                    ScoringConfig.IndicatorConfig bullishInd = scoreCfg.indicators != null ? scoreCfg.indicators.get("technicalBullish") : null;
+                    if (bullishInd != null && bullishInd.enabled) {
+                        sb.append("<li>Technical Bullish → +").append(bullishInd.points).append(" pts <span style='color:#9ca3af;'>| מגמה עולה</span></li>");
+                    }
+                    ScoringConfig.IndicatorConfig rsiInd = scoreCfg.indicators != null ? scoreCfg.indicators.get("rsiHealthy") : null;
+                    if (rsiInd != null && rsiInd.enabled) {
+                        sb.append("<li>RSI ").append((int)rsiInd.min).append("-").append((int)rsiInd.max).append(" → +").append(rsiInd.points).append(" pts <span style='color:#9ca3af;'>| מומנטום בריא</span></li>");
+                    }
+                    ScoringConfig.IndicatorConfig rsiOversoldInd = scoreCfg.indicators != null ? scoreCfg.indicators.get("rsiOversold") : null;
+                    if (rsiOversoldInd != null && rsiOversoldInd.enabled) {
+                        sb.append("<li>RSI Oversold &lt; ").append((int)rsiOversoldInd.threshold).append(" → +").append(rsiOversoldInd.points).append(" pts <span style='color:#9ca3af;'>| הזדמנות קנייה טכנית</span></li>");
+                    }
                     sb.append("</ul>");
-                    sb.append("<div style='margin-bottom:6px;'><b>Efficiency (up to 20 pts):</b> <span style='color:#9ca3af;'>| יעילות תפעולית</span></div>");
+
+                    sb.append("<div style='margin-bottom:6px;'><b>Efficiency (").append(scoreCfg.efficiencyWeight).append("%):</b> <span style='color:#9ca3af;'>| יעילות תפעולית</span></div>");
                     sb.append("<ul style='margin:0 0 8px 20px;padding:0;'>");
-                    sb.append("<li>ROIC-WACC Spread &gt; 5% → +10 pts <span style='color:#9ca3af;'>| החברה מייצרת ערך מעל עלות ההון</span></li>");
-                    sb.append("<li>CCC &lt; 40 days → +10 pts <span style='color:#9ca3af;'>| מחזור מזומנים מהיר</span></li>");
+                    ScoringConfig.IndicatorConfig roicInd = scoreCfg.indicators != null ? scoreCfg.indicators.get("roicWacc") : null;
+                    if (roicInd != null && roicInd.enabled) {
+                        sb.append("<li>ROIC-WACC Spread &gt; ").append((int)(roicInd.threshold*100)).append("% → +").append(roicInd.points).append(" pts <span style='color:#9ca3af;'>| החברה מייצרת ערך מעל עלות ההון</span></li>");
+                    }
+                    ScoringConfig.IndicatorConfig cccInd = scoreCfg.indicators != null ? scoreCfg.indicators.get("ccc") : null;
+                    if (cccInd != null && cccInd.enabled) {
+                        sb.append("<li>CCC &lt; ").append((int)cccInd.threshold).append(" days → +").append(cccInd.points).append(" pts <span style='color:#9ca3af;'>| מחזור מזומנים מהיר</span></li>");
+                    }
                     sb.append("</ul>");
-                    sb.append("<div style='margin-bottom:6px;'><b>Graham Valuation (bonus up to 10 pts):</b> <span style='color:#9ca3af;'>| הערכת שווי לפי גראהם</span></div>");
-                    sb.append("<ul style='margin:0 0 8px 20px;padding:0;'>");
-                    sb.append("<li>Margin of Safety ≥ 33% → +10 pts <span style='color:#9ca3af;'>| מרווח ביטחון גבוה</span></li>");
-                    sb.append("<li>Margin of Safety ≥ 15% → +5 pts <span style='color:#9ca3af;'>| מרווח ביטחון סביר</span></li>");
-                    sb.append("</ul>");
+
+                    if (scoreCfg.grahamBonus > 0) {
+                        sb.append("<div style='margin-bottom:6px;'><b>Graham Valuation (bonus up to ").append(scoreCfg.grahamBonus).append(" pts):</b> <span style='color:#9ca3af;'>| הערכת שווי לפי גראהם</span></div>");
+                        sb.append("<ul style='margin:0 0 8px 20px;padding:0;'>");
+                        ScoringConfig.IndicatorConfig grahamInd = scoreCfg.indicators != null ? scoreCfg.indicators.get("grahamMoS") : null;
+                        if (grahamInd != null && grahamInd.enabled) {
+                            sb.append("<li>Margin of Safety ≥ ").append((int)(grahamInd.thresholdHigh*100)).append("% → +").append(grahamInd.pointsHigh).append(" pts <span style='color:#9ca3af;'>| מרווח ביטחון גבוה</span></li>");
+                            sb.append("<li>Margin of Safety ≥ ").append((int)(grahamInd.thresholdLow*100)).append("% → +").append(grahamInd.pointsLow).append(" pts <span style='color:#9ca3af;'>| מרווח ביטחון סביר</span></li>");
+                        }
+                        sb.append("</ul>");
+                    }
+
                     sb.append("<div style='margin-bottom:6px;'><b>Recommendation:</b> ≥80 = 🚀 STRONG BUY | ≥60 = 🟢 BUY | ≥40 = 🟡 HOLD | &lt;40 = 🔴 SELL/AVOID <span style='color:#9ca3af;'>| קנייה חזקה / קנייה / החזק / מכור</span></div>");
                     sb.append("</div>");
 
@@ -4532,6 +4591,146 @@ public class WebServer {
                 boolean removed = false;
                 synchronized (favLock) { removed = fav.items.remove(t); try { Files.write(favPath, (String.join("\n", fav.items)+"\n").getBytes(StandardCharsets.UTF_8)); } catch (Exception ignore) {} }
                 ex.getResponseHeaders().add("Location", "/favorites?status="+(removed?"removed":"not_found"));
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // ---------------- Settings Page (Scoring Configuration) ----------------
+        server.createContext("/settings", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) {
+                    respondHtml(ex, htmlPage(""), 200); return;
+                }
+
+                ScoringConfig.ConfigData config = ScoringConfig.load();
+                String activeMode = config.activeMode;
+                ScoringConfig.ModeConfig activeCfg = ScoringConfig.getActiveModeConfig();
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("<div class='card'><div class='title'>⚙️ Scoring Settings | הגדרות ציון</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>Configure how stocks are scored. Choose a preset or customize weights.</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>הגדר איך מניות מקבלות ציון. בחר פריסט או התאם משקלים.</div>");
+
+                // Current mode display
+                String modeName = activeCfg.name != null ? activeCfg.name : activeMode;
+                String modeNameHe = activeCfg.nameHe != null ? activeCfg.nameHe : "";
+                sb.append("<div style='background:#1f2a44;border-radius:8px;padding:12px;margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;color:#22c55e;'>Current Mode: ").append(escapeHtml(modeName));
+                if (!modeNameHe.isEmpty()) sb.append(" | ").append(escapeHtml(modeNameHe));
+                sb.append("</div>");
+                if (activeCfg.description != null) {
+                    sb.append("<div style='color:#9ca3af;font-size:13px;margin-top:4px;'>").append(escapeHtml(activeCfg.description)).append("</div>");
+                }
+                sb.append("</div>");
+
+                // Mode selection form
+                sb.append("<form method='post' action='/settings-mode' style='margin-bottom:20px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:8px;'>Select Trading Mode | בחר מצב מסחר:</div>");
+                sb.append("<div style='display:flex;flex-wrap:wrap;gap:10px;'>");
+
+                for (String modeKey : new String[]{"LONG_TERM_INVESTOR", "SWING_TRADER", "MOMENTUM", "CUSTOM"}) {
+                    ScoringConfig.ModeConfig m = config.presets.get(modeKey);
+                    if (m == null) continue;
+                    String name = m.name != null ? m.name : modeKey;
+                    String nameHe = m.nameHe != null ? m.nameHe : "";
+                    boolean selected = modeKey.equals(activeMode);
+                    String bg = selected ? "#22c55e" : "#1f2a44";
+                    String color = selected ? "#000" : "#e5e7eb";
+                    sb.append("<button type='submit' name='mode' value='").append(modeKey).append("' ");
+                    sb.append("style='padding:12px 20px;border-radius:8px;background:").append(bg).append(";color:").append(color).append(";border:none;cursor:pointer;'>");
+                    sb.append("<div style='font-weight:600;'>").append(escapeHtml(name)).append("</div>");
+                    if (!nameHe.isEmpty()) sb.append("<div style='font-size:12px;opacity:0.8;'>").append(escapeHtml(nameHe)).append("</div>");
+                    sb.append("</button>");
+                }
+                sb.append("</div></form>");
+
+                // Weight visualization
+                sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:12px;color:#93c5fd;'>Current Weights | משקלים נוכחיים:</div>");
+
+                // Weight bars
+                int fundW = activeCfg.fundamentalWeight;
+                int techW = activeCfg.technicalWeight;
+                int effW = activeCfg.efficiencyWeight;
+                int grahamW = activeCfg.grahamBonus;
+
+                sb.append("<div style='margin-bottom:8px;'>");
+                sb.append("<div style='display:flex;justify-content:space-between;margin-bottom:4px;'><span>Fundamental | פונדמנטלי</span><span>").append(fundW).append("%</span></div>");
+                sb.append("<div style='background:#1f2a44;border-radius:4px;height:20px;'><div style='background:#3b82f6;height:100%;border-radius:4px;width:").append(fundW).append("%;'></div></div>");
+                sb.append("</div>");
+
+                sb.append("<div style='margin-bottom:8px;'>");
+                sb.append("<div style='display:flex;justify-content:space-between;margin-bottom:4px;'><span>Technical | טכני</span><span>").append(techW).append("%</span></div>");
+                sb.append("<div style='background:#1f2a44;border-radius:4px;height:20px;'><div style='background:#22c55e;height:100%;border-radius:4px;width:").append(techW).append("%;'></div></div>");
+                sb.append("</div>");
+
+                sb.append("<div style='margin-bottom:8px;'>");
+                sb.append("<div style='display:flex;justify-content:space-between;margin-bottom:4px;'><span>Efficiency | יעילות</span><span>").append(effW).append("%</span></div>");
+                sb.append("<div style='background:#1f2a44;border-radius:4px;height:20px;'><div style='background:#f59e0b;height:100%;border-radius:4px;width:").append(effW).append("%;'></div></div>");
+                sb.append("</div>");
+
+                sb.append("<div style='margin-bottom:8px;'>");
+                sb.append("<div style='display:flex;justify-content:space-between;margin-bottom:4px;'><span>Graham Bonus | בונוס גראהם</span><span>").append(grahamW).append(" pts</span></div>");
+                sb.append("<div style='background:#1f2a44;border-radius:4px;height:20px;'><div style='background:#a855f7;height:100%;border-radius:4px;width:").append(Math.min(grahamW * 10, 100)).append("%;'></div></div>");
+                sb.append("</div>");
+
+                sb.append("<div style='margin-top:12px;padding:8px;background:#1f2a44;border-radius:6px;'>");
+                sb.append("<span style='color:").append(activeCfg.vetoEnabled ? "#22c55e" : "#ef4444").append(";font-weight:600;'>");
+                sb.append(activeCfg.vetoEnabled ? "✓ VETO Enabled" : "✗ VETO Disabled");
+                sb.append("</span>");
+                sb.append("<span style='color:#9ca3af;margin-left:12px;font-size:13px;'>");
+                sb.append(activeCfg.vetoEnabled ? "מניות עם סיכון הונאה/פשיטת רגל יקבלו 0" : "לא נחסמות מניות מסוכנות");
+                sb.append("</span>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                // Indicator details
+                sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:12px;color:#93c5fd;'>Active Indicators | אינדיקטורים פעילים:</div>");
+                sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
+                sb.append("<tr style='border-bottom:1px solid #1f2a44;'><th style='text-align:left;padding:6px;'>Indicator</th><th style='text-align:center;padding:6px;'>Enabled</th><th style='text-align:right;padding:6px;'>Points</th></tr>");
+
+                if (activeCfg.indicators != null) {
+                    for (java.util.Map.Entry<String, ScoringConfig.IndicatorConfig> e : activeCfg.indicators.entrySet()) {
+                        String indName = e.getKey();
+                        ScoringConfig.IndicatorConfig ind = e.getValue();
+                        String enabledIcon = ind.enabled ? "✓" : "✗";
+                        String enabledColor = ind.enabled ? "#22c55e" : "#ef4444";
+                        sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                        sb.append("<td style='padding:6px;'>").append(escapeHtml(indName)).append("</td>");
+                        sb.append("<td style='padding:6px;text-align:center;color:").append(enabledColor).append(";'>").append(enabledIcon).append("</td>");
+                        sb.append("<td style='padding:6px;text-align:right;'>").append(ind.enabled ? ind.points : "-").append("</td>");
+                        sb.append("</tr>");
+                    }
+                }
+                sb.append("</table></div>");
+
+                // Mode descriptions
+                sb.append("<div style='margin-top:20px;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:12px;color:#93c5fd;'>📖 Mode Descriptions | תיאור מצבים:</div>");
+                sb.append("<div style='margin-bottom:12px;'><b style='color:#3b82f6;'>Long-Term Investor:</b> Focus on fundamentals, value investing, Graham-style. Best for buy-and-hold (months/years).<br/><span style='color:#9ca3af;'>משקיע לטווח ארוך - דגש על פונדמנטלים, השקעת ערך בסגנון גראהם.</span></div>");
+                sb.append("<div style='margin-bottom:12px;'><b style='color:#22c55e;'>Swing Trader:</b> Technical signals with light fundamentals. Trades last 1-5 days.<br/><span style='color:#9ca3af;'>סווינג טריידר - דגש על טכניקלס, עסקאות של 1-5 ימים.</span></div>");
+                sb.append("<div style='margin-bottom:12px;'><b style='color:#f59e0b;'>Momentum:</b> Pure technical, momentum-based. For intraday to 1 day trades.<br/><span style='color:#9ca3af;'>מומנטום - טכניקלס בלבד, לעסקאות יומיות.</span></div>");
+                sb.append("<div><b style='color:#a855f7;'>Custom:</b> Define your own weights and thresholds.<br/><span style='color:#9ca3af;'>מותאם אישית - הגדר משקלים וסיפים לפי בחירתך.</span></div>");
+                sb.append("</div>");
+
+                sb.append("</div>");
+                respondHtml(ex, htmlPage(sb.toString()), 200);
+            }
+        });
+
+        server.createContext("/settings-mode", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/settings");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                String mode = form.getOrDefault("mode", "LONG_TERM_INVESTOR");
+                ScoringConfig.setActiveMode(mode);
+                ex.getResponseHeaders().add("Location", "/settings?saved=true");
                 ex.sendResponseHeaders(303, -1); ex.close();
             }
         });
@@ -5523,9 +5722,18 @@ public class WebServer {
     private static boolean isGreenBuy(FinalScoringEngine.AnalysisResult ar) {
         if (ar == null) return false;
         String rec = ar.recommendation == null ? "" : ar.recommendation.toUpperCase();
+        ScoringConfig.ModeConfig cfg = ScoringConfig.getActiveModeConfig();
+        int threshold = cfg.greenThreshold;
+        
+        // Debug logging for first few stocks
+        if (Math.random() < 0.02) { // Log ~2% of stocks for debugging
+            System.out.println("[DEBUG isGreenBuy] score=" + ar.finalScore + ", rec=" + ar.recommendation + 
+                ", threshold=" + threshold + ", buyTh=" + cfg.buyThreshold);
+        }
+        
         if (rec.contains("AVOID") || rec.contains("SELL")) return false;
         if (!rec.contains("BUY")) return false;
-        return ar.finalScore >= 60;
+        return ar.finalScore >= threshold;
     }
 
     private static boolean startDailyGreenRecommendationsRunAsync() {
@@ -5546,6 +5754,9 @@ public class WebServer {
 
         dailyGreenExec.submit(() -> {
             try {
+                // Force reload scoring config to get latest settings
+                ScoringConfig.forceReload();
+                
                 try { StockScannerRunner.setPrintGrahamDetails(false); } catch (Exception ignore) {}
                 List<String> universe = LongTermCandidateFinder.getUniverseTickers();
                 int processed = 0;

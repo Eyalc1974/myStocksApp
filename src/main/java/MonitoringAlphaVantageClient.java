@@ -50,12 +50,21 @@ public class MonitoringAlphaVantageClient {
             qs.append(encode(e.getKey())).append("=").append(encode(e.getValue()));
         }
         String url = "https://www.alphavantage.co/query?" + qs;
+        String func = p.getOrDefault("function", "?");
+        System.out.println("[AV] " + func + " -> " + url.replaceAll("apikey=[^&]+", "apikey=***"));
         HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
         HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
         if (resp.statusCode() != 200) {
             throw new RuntimeException("AlphaVantage http " + resp.statusCode());
         }
-        return om.readTree(resp.body());
+        JsonNode result = om.readTree(resp.body());
+        if (result.has("Error Message")) {
+            System.out.println("[AV] " + func + " ERROR: " + result.path("Error Message").asText());
+        }
+        if (result.has("Information")) {
+            System.out.println("[AV] " + func + " INFO: " + result.path("Information").asText());
+        }
+        return result;
     }
 
     public JsonNode newsSentiment(String symbol) throws Exception {
@@ -84,12 +93,17 @@ public class MonitoringAlphaVantageClient {
 
     public JsonNode timeSeriesIntraday(String symbol, String interval) throws Exception {
         String iv = (interval == null || interval.isBlank()) ? "5min" : interval;
-        return query(Map.of(
-                "function", "TIME_SERIES_INTRADAY",
-                "symbol", symbol.toUpperCase(),
-                "interval", iv,
-                "outputsize", "compact"
-        ));
+        Map<String, String> params = new java.util.LinkedHashMap<>();
+        params.put("function", "TIME_SERIES_INTRADAY");
+        params.put("symbol", symbol.toUpperCase());
+        params.put("interval", iv);
+        params.put("outputsize", "compact");
+        params.put("extended_hours", "true");
+        // For real-time data, explicitly add entitlement if set
+        if (entitlement != null && !entitlement.isBlank()) {
+            params.put("entitlement", entitlement);
+        }
+        return query(params);
     }
 
     public JsonNode globalQuote(String symbol) throws Exception {
