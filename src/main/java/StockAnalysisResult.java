@@ -49,6 +49,26 @@ public class StockAnalysisResult {
     public Boolean passesMarketFilter;         // האם עוברת פילטר שוק
     public String marketRegimeVerdict;         // תיאור מצב השוק
 
+    // Entry Filters fields (פילטרים קשיחים לכניסה)
+    public Boolean passesEntryFilters;         // האם עוברת את כל פילטרי הכניסה
+    public Double sma200;                      // ממוצע נע 200
+    public Double volumeRatio;                 // יחס נפח לממוצע
+    public Double suggestedStopLoss;           // סטופ-לוס מומלץ (ATR)
+    public Double suggestedTakeProfit;         // Take-Profit מומלץ (ATR)
+    public Double atrValue;                    // ערך ATR נוכחי
+    public String entryFiltersSummary;         // סיכום פילטרי כניסה
+
+    // Relative Strength fields (כוח יחסי מול SPY)
+    public Double rsRatio3M;                   // יחס RS ל-3 חודשים
+    public Double rsRatio6M;                   // יחס RS ל-6 חודשים
+    public Double stockReturn3M;               // תשואת מניה 3 חודשים
+    public Double spyReturn3M;                 // תשואת SPY 3 חודשים
+    public Integer rsPoints;                   // ניקוד RS (0-30)
+    public String rsCategory;                  // קטגוריה: LEADER/PERFORMER/LAGGARD
+    public String rsArrow;                     // חץ לתצוגה: ↑↑/→/↓
+    public String rsColor;                     // צבע לתצוגה
+    public String rsSummary;                   // סיכום RS
+
     public StockAnalysisResult(String ticker, double price, double dcfFairValue, double adxStrength) {
         this.ticker = ticker;
         this.price = price;

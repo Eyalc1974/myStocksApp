@@ -33,6 +33,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.LinkedHashMap;
 import java.util.UUID;
 import java.util.Random;
@@ -1169,7 +1170,8 @@ public class WebServer {
                 "<a href=\"/active-positions\">Active Positions</a> · " +
                 "<a href=\"/analysts\">Analysts</a> · " +
                 "<a href=\"/finder\">FINDER</a> · " +
-                "<a href=\"/settings\">⚙️ Settings</a>" +
+                "<a href=\"/settings\">⚙️ Settings</a> · " +
+                "<a href=\"/history-usage\">📊 API Usage</a>" +
                 "</div>" +
                 (body == null ? "" : body) +
                 "</div>" +
@@ -1323,6 +1325,24 @@ public class WebServer {
             Double targetClose = closeByDate.get(dates.get(targetIdx));
             if (baseClose == null || targetClose == null || baseClose == 0.0) return null;
             return (targetClose - baseClose) / baseClose * 100.0;
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    private static Double currentReturnPctBackwards(Map<String, Double> closeByDate, int tradingDaysBack) {
+        try {
+            if (closeByDate == null || closeByDate.isEmpty() || tradingDaysBack <= 0) return null;
+            List<String> dates = new ArrayList<>(closeByDate.keySet());
+            if (dates.isEmpty()) return null;
+            dates.sort(String::compareTo);
+            int latestIdx = dates.size() - 1;
+            int baseIdx = latestIdx - tradingDaysBack;
+            if (baseIdx < 0) return null;
+            Double baseClose = closeByDate.get(dates.get(baseIdx));
+            Double latestClose = closeByDate.get(dates.get(latestIdx));
+            if (baseClose == null || latestClose == null || baseClose == 0.0) return null;
+            return (latestClose - baseClose) / baseClose * 100.0;
         } catch (Exception ignore) {
             return null;
         }
@@ -2464,6 +2484,10 @@ public class WebServer {
                 sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>ROIC-WACC</td><td id='d_spread' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>Positive = economic profit</td></tr>");
                 sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>Graham Number</td><td id='d_grahamNum' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>Price below = undervalued</td></tr>");
                 sb.append("<tr><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>Graham IV</td><td id='d_grahamIV' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>MoS 33%+ preferred</td></tr>");
+                sb.append("<tr style='background:#0f172a;'><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>🎯 Market Strength</td><td id='d_rsArrow' style='border:1px solid #1f2a44;padding:6px;font-size:1.3rem;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>↑↑ Leader | → Performer | ↓ Laggard</td></tr>");
+                sb.append("<tr style='background:#0f172a;'><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>RS Ratio (3M)</td><td id='d_rsRatio' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>&gt;1.1 = מנהיג שוק, &lt;0.9 = נגרר</td></tr>");
+                sb.append("<tr style='background:#0f172a;'><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>Stock Return (3M)</td><td id='d_stockReturn' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>תשואת המניה 3 חודשים</td></tr>");
+                sb.append("<tr style='background:#0f172a;'><td style='border:1px solid #1f2a44;padding:6px;font-weight:600;'>SPY Return (3M)</td><td id='d_spyReturn' style='border:1px solid #1f2a44;padding:6px;color:#93c5fd;'>--</td><td style='border:1px solid #1f2a44;padding:6px;color:#9ca3af;'>תשואת השוק 3 חודשים</td></tr>");
                 sb.append("</tbody></table>");
                 sb.append("</div>");
                 sb.append("</div>");
@@ -2507,6 +2531,13 @@ public class WebServer {
                         "    document.getElementById('d_spread').innerText = fmt2(d.economicSpread);" +
                         "    document.getElementById('d_grahamNum').innerText = fmt2(d.grahamNumber);" +
                         "    document.getElementById('d_grahamIV').innerText = fmt2(d.grahamIntrinsicValue);" +
+                        "    const rs = d.relativeStrength || {};" +
+                        "    const rsArrowEl = document.getElementById('d_rsArrow');" +
+                        "    rsArrowEl.innerText = (rs.arrow || '--') + ' ' + (rs.category || '');" +
+                        "    rsArrowEl.style.color = rs.color || '#9ca3af';" +
+                        "    document.getElementById('d_rsRatio').innerText = fmt2(rs.rsRatio3M);" +
+                        "    document.getElementById('d_stockReturn').innerText = fmtPct(rs.stockReturn3M);" +
+                        "    document.getElementById('d_spyReturn').innerText = fmtPct(rs.spyReturn3M);" +
                         "    const list = document.getElementById('insightsList');" +
                         "    list.innerHTML = '';" +
                         "    (result.keyInsights || []).forEach(insight => {" +
@@ -2606,6 +2637,30 @@ public class WebServer {
                     details.put("grahamNumber", (r.grahamNumber != null && Double.isFinite(r.grahamNumber)) ? r.grahamNumber : null);
                     details.put("grahamIntrinsicValue", (r.grahamIntrinsicValue != null && Double.isFinite(r.grahamIntrinsicValue)) ? r.grahamIntrinsicValue : null);
                     details.put("grahamMarginOfSafety", (r.grahamMarginOfSafety != null && Double.isFinite(r.grahamMarginOfSafety)) ? r.grahamMarginOfSafety : null);
+
+                    // Entry Filters data
+                    Map<String, Object> entryFilters = new LinkedHashMap<>();
+                    entryFilters.put("passesAll", r.passesEntryFilters);
+                    entryFilters.put("sma200", (r.sma200 != null && Double.isFinite(r.sma200)) ? r.sma200 : null);
+                    entryFilters.put("volumeRatio", (r.volumeRatio != null && Double.isFinite(r.volumeRatio)) ? r.volumeRatio : null);
+                    entryFilters.put("suggestedStopLoss", (r.suggestedStopLoss != null && Double.isFinite(r.suggestedStopLoss)) ? r.suggestedStopLoss : null);
+                    entryFilters.put("suggestedTakeProfit", (r.suggestedTakeProfit != null && Double.isFinite(r.suggestedTakeProfit)) ? r.suggestedTakeProfit : null);
+                    entryFilters.put("atrValue", (r.atrValue != null && Double.isFinite(r.atrValue)) ? r.atrValue : null);
+                    entryFilters.put("summary", r.entryFiltersSummary);
+                    details.put("entryFilters", entryFilters);
+
+                    // Relative Strength data (כוח יחסי מול SPY)
+                    Map<String, Object> relativeStrength = new LinkedHashMap<>();
+                    relativeStrength.put("rsRatio3M", (r.rsRatio3M != null && Double.isFinite(r.rsRatio3M)) ? r.rsRatio3M : null);
+                    relativeStrength.put("rsRatio6M", (r.rsRatio6M != null && Double.isFinite(r.rsRatio6M)) ? r.rsRatio6M : null);
+                    relativeStrength.put("stockReturn3M", (r.stockReturn3M != null && Double.isFinite(r.stockReturn3M)) ? r.stockReturn3M : null);
+                    relativeStrength.put("spyReturn3M", (r.spyReturn3M != null && Double.isFinite(r.spyReturn3M)) ? r.spyReturn3M : null);
+                    relativeStrength.put("points", r.rsPoints);
+                    relativeStrength.put("category", r.rsCategory);
+                    relativeStrength.put("arrow", r.rsArrow);
+                    relativeStrength.put("color", r.rsColor);
+                    relativeStrength.put("summary", r.rsSummary);
+                    details.put("relativeStrength", relativeStrength);
 
                     Map<String, Object> out = new LinkedHashMap<>();
                     out.put("finalScore", ar.finalScore);
@@ -3142,14 +3197,14 @@ public class WebServer {
                             String pillColor = recText.equals("BUY") ? "#22c55e" : (recText.equals("DROP") ? "#fca5a5" : "#93c5fd");
 
                             Double actual = null;
-                            try { actual = realizedReturnPct(closeByDate, snapDateNy, Integer.parseInt(k)); } catch (Exception ignore) {}
-                            String actualText = actual == null ? "" : String.format(" →%+.1f%%", actual);
+                            try { actual = currentReturnPctBackwards(closeByDate, Integer.parseInt(k)); } catch (Exception ignore) {}
+                            String actualText = actual == null ? "N/A" : String.format("%+.1f%%", actual);
                             String actualColor = (actual == null) ? "#9ca3af" : (actual >= 0.0 ? "#22c55e" : "#fca5a5");
 
                             sb.append("<span style='background:#0b1220;border:1px solid #1f2a44;border-radius:999px;padding:3px 6px;font-size:11px;'>")
-                                    .append("<span style='color:#9ca3af;'>").append(k).append("d</span> ")
-                                    .append("<span style='color:").append(pillColor).append(";font-weight:700;'>").append(recText).append("</span>")
-                                    .append("<span style='color:").append(actualColor).append(";'>").append(actualText).append("</span>")
+                                    .append("<span style='color:#9ca3af;'>Last").append(k).append("d</span> ")
+                                    .append("<span style='color:").append(actualColor).append(";font-weight:700;'>").append(actualText).append("</span>")
+                                    .append(" <span style='color:").append(pillColor).append(";'>").append(recText).append("</span>")
                                     .append("</span>");
                         }
                         sb.append("</div>");
@@ -3348,6 +3403,9 @@ public class WebServer {
                     sb.append("<form method='post' action='/run-main' style='display:inline;margin:0'>")
                             .append("<input type='hidden' name='symbol' value='").append(esc).append("'/>")
                             .append("<button type='submit'>Full Analyze</button></form>");
+                    sb.append("<form method='post' action='/monitoring-remove' style='display:inline;margin:0;margin-left:6px;'>")
+                            .append("<input type='hidden' name='symbol' value='").append(esc).append("'/>")
+                            .append("<button type='submit' style='background:#dc2626;' onclick=\"return confirm('Delete ").append(esc).append(" from monitoring?');\">Delete</button></form>");
                     sb.append("</div>");
 
                     if (snap == null) {
@@ -3365,15 +3423,13 @@ public class WebServer {
                         String pillColor = recText.equals("BUY") ? "#22c55e" : (recText.equals("DROP") ? "#fca5a5" : "#93c5fd");
 
                         Double actual = null;
-                        try { actual = realizedReturnPct(closeByDate, snapDateNy, Integer.parseInt(k)); } catch (Exception ignore) {}
-                        if (actual == null && ret != null) actual = ret;
+                        try { actual = currentReturnPctBackwards(closeByDate, Integer.parseInt(k)); } catch (Exception ignore) {}
                         String actualText = actual == null ? "N/A" : String.format("%+.2f%%", actual);
                         String actualColor = (actual == null) ? "#9ca3af" : (actual >= 0.0 ? "#22c55e" : "#fca5a5");
                         String pill = "<span style='background:#0b1220;border:1px solid #1f2a44;border-radius:999px;padding:6px 10px;'>"+
-                                "<span style='color:#9ca3af;'>"+escapeHtml(k)+"d</span> " +
-                                "<span style='color:"+pillColor+";font-weight:700;'>"+escapeHtml(recText)+"</span>" +
-                                "<span style='color:#9ca3af;'> · return "+(ret==null?"N/A":String.format("%.2f%%", ret))+"</span>" +
-                                "<span style='color:#9ca3af;'> · actual <span style='color:"+actualColor+";font-weight:700;'>"+escapeHtml(actualText)+"</span></span>" +
+                                "<span style='color:#9ca3af;'>Last"+escapeHtml(k)+"d</span> " +
+                                "<span style='color:"+actualColor+";font-weight:700;'>"+escapeHtml(actualText)+"</span>" +
+                                " <span style='color:"+pillColor+";'>"+escapeHtml(recText)+"</span>" +
                                 "<span style='color:#9ca3af;'> · score "+(sc==null?"N/A":String.format("%.2f", sc))+"</span>" +
                                 "</span>";
                         sb.append(pill);
@@ -4705,6 +4761,59 @@ public class WebServer {
                 }
                 sb.append("</table></div>");
 
+                // Entry Filters section (NEW)
+                sb.append("<div style='margin-top:16px;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:12px;color:#f59e0b;'>🚦 Entry Filters | פילטרים לכניסה:</div>");
+                sb.append("<div style='color:#9ca3af;font-size:13px;margin-bottom:12px;'>פילטרים קשיחים שמונעים קנייה של מניות לא מתאימות</div>");
+                
+                ScoringConfig.EntryFiltersConfig ef = activeCfg.entryFilters;
+                if (ef == null) ef = new ScoringConfig.EntryFiltersConfig();
+                
+                sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
+                sb.append("<tr style='border-bottom:1px solid #1f2a44;'><th style='text-align:left;padding:6px;'>Filter | פילטר</th><th style='text-align:center;padding:6px;'>Enabled</th><th style='text-align:right;padding:6px;'>Value</th></tr>");
+                
+                // SMA200 Filter
+                String sma200Icon = ef.sma200FilterEnabled ? "✓" : "✗";
+                String sma200Color = ef.sma200FilterEnabled ? "#22c55e" : "#ef4444";
+                sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                sb.append("<td style='padding:6px;'>SMA200 (מגמה)</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:").append(sma200Color).append(";'>").append(sma200Icon).append("</td>");
+                sb.append("<td style='padding:6px;text-align:right;color:#9ca3af;'>מחיר > SMA200</td>");
+                sb.append("</tr>");
+                
+                // RSI Overbought Filter
+                String rsiIcon = ef.rsiOverboughtFilterEnabled ? "✓" : "✗";
+                String rsiColor = ef.rsiOverboughtFilterEnabled ? "#22c55e" : "#ef4444";
+                sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                sb.append("<td style='padding:6px;'>RSI Overbought (קניית יתר)</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:").append(rsiColor).append(";'>").append(rsiIcon).append("</td>");
+                sb.append("<td style='padding:6px;text-align:right;'>RSI < ").append(String.format("%.0f", ef.rsiOverboughtThreshold)).append("</td>");
+                sb.append("</tr>");
+                
+                // Volume Filter
+                String volIcon = ef.volumeFilterEnabled ? "✓" : "✗";
+                String volColor = ef.volumeFilterEnabled ? "#22c55e" : "#ef4444";
+                sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                sb.append("<td style='padding:6px;'>Volume (נפח מסחר)</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:").append(volColor).append(";'>").append(volIcon).append("</td>");
+                sb.append("<td style='padding:6px;text-align:right;'>").append(String.format("+%.0f%%", (ef.volumeMinRatioToAvg - 1) * 100)).append(" מממוצע</td>");
+                sb.append("</tr>");
+                
+                // ATR Stop-Loss
+                String atrIcon = ef.atrStopLossEnabled ? "✓" : "✗";
+                String atrColor = ef.atrStopLossEnabled ? "#22c55e" : "#ef4444";
+                sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                sb.append("<td style='padding:6px;'>ATR Stop-Loss (סטופ-לוס)</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:").append(atrColor).append(";'>").append(atrIcon).append("</td>");
+                sb.append("<td style='padding:6px;text-align:right;'>").append(String.format("%.1fx", ef.atrStopLossMultiplier)).append(" ATR</td>");
+                sb.append("</tr>");
+                
+                sb.append("</table>");
+                sb.append("<div style='margin-top:10px;padding:8px;background:#1f2a44;border-radius:6px;font-size:12px;color:#9ca3af;'>");
+                sb.append("💡 לעריכה: שנה את הקובץ <code>scoring-config.json</code> בתיקיית הפרויקט");
+                sb.append("</div>");
+                sb.append("</div>");
+
                 // Mode descriptions
                 sb.append("<div style='margin-top:20px;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;'>");
                 sb.append("<div style='font-weight:600;margin-bottom:12px;color:#93c5fd;'>📖 Mode Descriptions | תיאור מצבים:</div>");
@@ -4732,6 +4841,118 @@ public class WebServer {
                 ScoringConfig.setActiveMode(mode);
                 ex.getResponseHeaders().add("Location", "/settings?saved=true");
                 ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // ---------------- API Usage History Page ----------------
+        server.createContext("/history-usage", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) {
+                    respondHtml(ex, htmlPage(""), 200); return;
+                }
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("<div class='card'><div class='title'>📊 API Usage History | היסטוריית שימוש ב-API</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>Track Alpha Vantage API calls per day (last 30 days)</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>מעקב אחר קריאות API ליום (30 ימים אחרונים)</div>");
+
+                // Today's summary
+                int todayTotal = ApiUsageTracker.getTodayTotal();
+                Map<String, Integer> todayBreakdown = ApiUsageTracker.getTodayBreakdown();
+                int grandTotal = ApiUsageTracker.getGrandTotal();
+
+                sb.append("<div style='display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px;'>");
+                sb.append("<div style='background:#1f2a44;border-radius:8px;padding:16px;flex:1;min-width:150px;'>");
+                sb.append("<div style='font-size:32px;font-weight:700;color:#22c55e;'>").append(todayTotal).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:13px;'>Today's Calls | קריאות היום</div>");
+                sb.append("</div>");
+                sb.append("<div style='background:#1f2a44;border-radius:8px;padding:16px;flex:1;min-width:150px;'>");
+                sb.append("<div style='font-size:32px;font-weight:700;color:#3b82f6;'>").append(grandTotal).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:13px;'>Total (30 days) | סה\"כ</div>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                // Today's breakdown by API type
+                if (!todayBreakdown.isEmpty()) {
+                    sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;margin-bottom:20px;'>");
+                    sb.append("<div style='font-weight:600;margin-bottom:12px;color:#f59e0b;'>Today's Breakdown | פירוט היום:</div>");
+                    sb.append("<div style='display:flex;flex-wrap:wrap;gap:10px;'>");
+                    for (Map.Entry<String, Integer> e : todayBreakdown.entrySet()) {
+                        sb.append("<div style='background:#1f2a44;padding:8px 12px;border-radius:6px;'>");
+                        sb.append("<span style='color:#e5e7eb;'>").append(escapeHtml(e.getKey())).append("</span>");
+                        sb.append("<span style='color:#22c55e;font-weight:600;margin-left:8px;'>").append(e.getValue()).append("</span>");
+                        sb.append("</div>");
+                    }
+                    sb.append("</div></div>");
+                }
+
+                // History table
+                sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:12px;color:#93c5fd;'>📅 Daily History | היסטוריה יומית:</div>");
+
+                Map<String, Map<String, Integer>> usageData = ApiUsageTracker.getUsageData();
+                Set<String> allApiTypes = ApiUsageTracker.getAllApiTypes();
+
+                if (usageData.isEmpty()) {
+                    sb.append("<div style='color:#9ca3af;padding:20px;text-align:center;'>No API usage data recorded yet.<br/>אין נתוני שימוש עדיין.</div>");
+                } else {
+                    sb.append("<div style='overflow-x:auto;'>");
+                    sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;min-width:600px;'>");
+                    
+                    // Header row
+                    sb.append("<tr style='border-bottom:2px solid #1f2a44;background:#0f172a;'>");
+                    sb.append("<th style='text-align:left;padding:10px;position:sticky;left:0;background:#0f172a;'>Date | תאריך</th>");
+                    for (String apiType : allApiTypes) {
+                        sb.append("<th style='text-align:center;padding:10px;color:#93c5fd;'>").append(escapeHtml(apiType)).append("</th>");
+                    }
+                    sb.append("<th style='text-align:right;padding:10px;color:#22c55e;font-weight:700;'>Total | סה\"כ</th>");
+                    sb.append("</tr>");
+
+                    // Data rows
+                    int rowIdx = 0;
+                    for (Map.Entry<String, Map<String, Integer>> dayEntry : usageData.entrySet()) {
+                        String date = dayEntry.getKey();
+                        Map<String, Integer> dayCounts = dayEntry.getValue();
+                        int dayTotal = dayCounts.values().stream().mapToInt(Integer::intValue).sum();
+                        
+                        String rowBg = (rowIdx % 2 == 0) ? "#0b1220" : "#0f172a";
+                        sb.append("<tr style='border-bottom:1px solid #1f2a44;background:").append(rowBg).append(";'>");
+                        sb.append("<td style='padding:10px;font-weight:600;position:sticky;left:0;background:").append(rowBg).append(";'>").append(escapeHtml(date)).append("</td>");
+                        
+                        for (String apiType : allApiTypes) {
+                            int count = dayCounts.getOrDefault(apiType, 0);
+                            String color = count > 0 ? "#e5e7eb" : "#4b5563";
+                            sb.append("<td style='text-align:center;padding:10px;color:").append(color).append(";'>").append(count > 0 ? count : "-").append("</td>");
+                        }
+                        
+                        sb.append("<td style='text-align:right;padding:10px;font-weight:700;color:#22c55e;'>").append(dayTotal).append("</td>");
+                        sb.append("</tr>");
+                        rowIdx++;
+                    }
+                    
+                    sb.append("</table>");
+                    sb.append("</div>");
+                }
+
+                sb.append("</div>");
+
+                // API types legend
+                sb.append("<div style='margin-top:20px;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:12px;color:#93c5fd;'>📖 API Types Legend | מקרא סוגי API:</div>");
+                sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;font-size:13px;'>");
+                sb.append("<div><span style='color:#3b82f6;'>TIME_SERIES_DAILY</span> - מחירי מניות יומיים</div>");
+                sb.append("<div><span style='color:#3b82f6;'>BALANCE_SHEET</span> - מאזן חברה</div>");
+                sb.append("<div><span style='color:#3b82f6;'>INCOME_STATEMENT</span> - דוח רווח והפסד</div>");
+                sb.append("<div><span style='color:#3b82f6;'>CASH_FLOW</span> - תזרים מזומנים</div>");
+                sb.append("<div><span style='color:#3b82f6;'>EARNINGS</span> - דוחות רווחים</div>");
+                sb.append("<div><span style='color:#3b82f6;'>EARNINGS_ESTIMATES</span> - תחזיות רווחים</div>");
+                sb.append("<div><span style='color:#3b82f6;'>OVERVIEW</span> - סקירת חברה</div>");
+                sb.append("<div><span style='color:#3b82f6;'>NEWS_SENTIMENT</span> - חדשות וסנטימנט</div>");
+                sb.append("<div><span style='color:#3b82f6;'>TOP_GAINERS_LOSERS</span> - מובילים/מפסידים</div>");
+                sb.append("</div></div>");
+
+                sb.append("</div>");
+                respondHtml(ex, htmlPage(sb.toString()), 200);
             }
         });
 
@@ -5600,15 +5821,13 @@ public class WebServer {
                                 String pillColor = recText.equals("BUY") ? "#22c55e" : (recText.equals("DROP") ? "#fca5a5" : "#93c5fd");
 
                                 Double actual = null;
-                                try { actual = realizedReturnPct(closeByDate, snapDateNy, Integer.parseInt(k)); } catch (Exception ignore) {}
-                                if (actual == null && ret != null) actual = ret;
+                                try { actual = currentReturnPctBackwards(closeByDate, Integer.parseInt(k)); } catch (Exception ignore) {}
                                 String actualText = actual == null ? "N/A" : String.format("%+.2f%%", actual);
                                 String actualColor = (actual == null) ? "#9ca3af" : (actual >= 0.0 ? "#22c55e" : "#fca5a5");
                                 String pill = "<span style='background:#0b1220;border:1px solid #1f2a44;border-radius:999px;padding:4px 8px;font-size:12px;'>"+
-                                        "<span style='color:#9ca3af;'>"+escapeHtml(k)+"d</span> " +
-                                        "<span style='color:"+pillColor+";font-weight:700;'>"+escapeHtml(recText)+"</span>" +
-                                        "<span style='color:#9ca3af;'> "+String.format("%.1f%%", ret==null?0:ret)+"</span>" +
-                                        "<span style='color:"+actualColor+";'> → "+escapeHtml(actualText)+"</span>" +
+                                        "<span style='color:#9ca3af;'>Last"+escapeHtml(k)+"d</span> " +
+                                        "<span style='color:"+actualColor+";font-weight:700;'>"+escapeHtml(actualText)+"</span>" +
+                                        " <span style='color:"+pillColor+";'>"+escapeHtml(recText)+"</span>" +
                                         "</span>";
                                 monitoringSection.append(pill);
                             }

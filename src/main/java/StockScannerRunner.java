@@ -484,6 +484,7 @@ public class StockScannerRunner {
         List<Double> historicalPrices = PriceJsonParser.extractClosingPrices(jsonData);
         List<Double> highPrices = PriceJsonParser.extractHighPrices(jsonData);
         List<Double> lowPrices = PriceJsonParser.extractLowPrices(jsonData);
+        List<Long> volumes = PriceJsonParser.extractVolumeData(jsonData);
 
         if (historicalPrices.size() < 30) {
             throw new Exception("חסר נתונים לחישובים מורכבים עבור " + ticker);
@@ -902,6 +903,63 @@ public class StockScannerRunner {
             if (result.finalVerdict.contains("BUY")) {
                 result.finalVerdict = "HOLD/WAIT (Market Regime)";
             }
+        }
+
+        // Entry Filters validation (SMA200, RSI Overbought, Volume, ATR Stop-Loss)
+        try {
+            EntryFilterValidator.FilterResult filterResult = EntryFilterValidator.validate(
+                historicalPrices, highPrices, lowPrices, volumes, currentPrice
+            );
+            result.passesEntryFilters = filterResult.passesAll;
+            result.sma200 = filterResult.sma200;
+            result.volumeRatio = filterResult.volumeRatio;
+            result.suggestedStopLoss = filterResult.suggestedStopLoss;
+            result.suggestedTakeProfit = filterResult.suggestedTakeProfit;
+            result.atrValue = filterResult.atrValue;
+            result.entryFiltersSummary = filterResult.getSummary();
+            
+            // Entry Filters gate: if stock fails entry filters, modify verdict
+            if (!filterResult.passesAll && result.finalVerdict.contains("BUY")) {
+                result.finalVerdict = "⚠️ WAIT (Entry Filters: " + 
+                    String.join(", ", filterResult.failedFilters) + ")";
+            }
+        } catch (Exception ignore) {
+            result.passesEntryFilters = true; // Default to pass if error
+        }
+
+        // Relative Strength calculation (compare stock vs SPY)
+        try {
+            // Fetch SPY data for comparison
+            DataFetcher.setTicker("SPY");
+            String spyJson = DataFetcher.fetchStockData();
+            List<Double> spyPrices = PriceJsonParser.extractClosingPrices(spyJson);
+            
+            // Restore original ticker
+            DataFetcher.setTicker(ticker);
+            
+            if (spyPrices != null && spyPrices.size() >= 63) {
+                RelativeStrength.RSResult rsResult = RelativeStrength.analyze(historicalPrices, spyPrices);
+                result.rsRatio3M = rsResult.rsRatio3M;
+                result.rsRatio6M = rsResult.rsRatio6M;
+                result.stockReturn3M = rsResult.stockReturn3M;
+                result.spyReturn3M = rsResult.spyReturn3M;
+                result.rsPoints = rsResult.points;
+                result.rsCategory = rsResult.category;
+                result.rsArrow = rsResult.arrow;
+                result.rsColor = rsResult.color;
+                result.rsSummary = rsResult.getSummary();
+                
+                // RS gate: if stock is LAGGARD, add warning
+                if ("LAGGARD".equals(rsResult.category) && result.finalVerdict.contains("BUY")) {
+                    result.finalVerdict = "⚠️ " + result.finalVerdict + " (RS: Laggard)";
+                }
+                // RS boost: if stock is LEADER, enhance verdict
+                if ("LEADER".equals(rsResult.category) && result.finalVerdict.contains("STRONG BUY")) {
+                    result.finalVerdict = "🚀 " + result.finalVerdict.replace("🚀 ", "") + " (Market Leader)";
+                }
+            }
+        } catch (Exception ignore) {
+            // RS calculation failed, continue without it
         }
 
         // Enhance verdict with market leadership info
