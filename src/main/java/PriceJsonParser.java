@@ -64,6 +64,26 @@ public class PriceJsonParser {
         return prices;
     }
 
+    // Extracts dates from Alpha Vantage TIME_SERIES_DAILY JSON ordered ascending
+    public static List<String> extractDates(String json) throws Exception {
+        if (json == null || json.isEmpty()) {
+            return Collections.emptyList();
+        }
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(json);
+        JsonNode series = root.get("Time Series (Daily)");
+        if (series == null || !series.isObject()) {
+            return Collections.emptyList();
+        }
+        List<String> dates = new ArrayList<>();
+        Iterator<String> fieldNames = series.fieldNames();
+        while (fieldNames.hasNext()) {
+            dates.add(fieldNames.next());
+        }
+        Collections.sort(dates); // Sort ascending
+        return dates;
+    }
+
     public static Map<String, Double> extractCloseByDate(String json) throws Exception {
         if (json == null || json.isEmpty()) {
             return Collections.emptyMap();
@@ -189,6 +209,52 @@ public class PriceJsonParser {
                     try {
                         double high = Double.parseDouble(highNode.asText());
                         byDate.put(date, high);
+                    } catch (NumberFormatException ignore) {
+                    }
+                }
+            }
+        }
+
+        List<Double> prices = new ArrayList<>(byDate.size());
+        for (Double v : byDate.values()) {
+            prices.add(v);
+        }
+        return prices;
+    }
+
+    // Parses Alpha Vantage TIME_SERIES_DAILY JSON and returns open prices ordered by date ascending
+    public static List<Double> extractOpenPrices(String json) throws Exception {
+        if (json == null || json.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(json);
+
+        JsonNode series = root.get("Time Series (Daily)");
+        if (series == null || !series.isObject()) {
+            JsonNode alt1 = root.get("Time Series (Digital Currency Daily)");
+            JsonNode alt2 = root.get("Time Series (5min)");
+            series = series != null ? series : (alt1 != null ? alt1 : alt2);
+        }
+        if (series == null || !series.isObject()) {
+            return Collections.emptyList();
+        }
+
+        Map<String, Double> byDate = new TreeMap<>();
+        Iterator<String> dates = series.fieldNames();
+        while (dates.hasNext()) {
+            String date = dates.next();
+            JsonNode day = series.get(date);
+            if (day != null && day.isObject()) {
+                JsonNode openNode = day.get("1. open");
+                if (openNode == null) {
+                    openNode = day.get("1a. open (USD)");
+                }
+                if (openNode != null && openNode.isTextual()) {
+                    try {
+                        double open = Double.parseDouble(openNode.asText());
+                        byDate.put(date, open);
                     } catch (NumberFormatException ignore) {
                     }
                 }
@@ -411,6 +477,24 @@ public class PriceJsonParser {
                 JsonNode n = root.get(k);
                 if (n != null && n.isTextual()) {
                     return n.asText();
+                }
+            }
+        } catch (Exception ignore) {
+        }
+        return null;
+    }
+
+    // Extracts the "Last Refreshed" date from Alpha Vantage Meta Data
+    public static String extractLastRefreshedDate(String json) {
+        if (json == null || json.isEmpty()) return null;
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(json);
+            JsonNode meta = root.get("Meta Data");
+            if (meta != null && meta.isObject()) {
+                JsonNode lr = meta.get("3. Last Refreshed");
+                if (lr != null && lr.isTextual()) {
+                    return lr.asText();
                 }
             }
         } catch (Exception ignore) {

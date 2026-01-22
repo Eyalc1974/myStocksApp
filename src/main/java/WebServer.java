@@ -27,6 +27,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Comparator;
@@ -73,6 +74,33 @@ public class WebServer {
 
     private static final Object alphaAgentLock = new Object();
 
+    // Strategy Comparison state
+    private static final ExecutorService strategyCompareExec = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r);
+        t.setDaemon(true);
+        t.setName("strategy-compare");
+        return t;
+    });
+    private static final Object strategyCompareLock = new Object();
+    private static volatile boolean strategyCompareRunning = false;
+    private static volatile String strategyCompareCurrentTicker = "";
+    private static volatile int strategyCompareProgress = 0;
+    private static volatile int strategyCompareTotal = 0;
+    private static volatile List<Map<String, Object>> strategyCompareResults = new ArrayList<>();
+
+    // Popular tickers for random selection
+    private static final String[] POPULAR_TICKERS = {
+        "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "BRK.B", "JPM", "V",
+        "JNJ", "WMT", "PG", "MA", "HD", "UNH", "DIS", "PYPL", "ADBE", "NFLX",
+        "CRM", "INTC", "CSCO", "PFE", "ABT", "KO", "PEP", "TMO", "COST", "AVGO",
+        "NKE", "MRK", "ACN", "LLY", "DHR", "TXN", "UPS", "QCOM", "NEE", "MDT",
+        "AMD", "ORCL", "HON", "IBM", "SBUX", "GE", "CAT", "BA", "MMM", "AXP"
+    };
+
+    // Favorites storage (static for access from API handlers)
+    private static final Object favLockStatic = new Object();
+    private static final java.util.LinkedHashSet<String> favItemsStatic = new java.util.LinkedHashSet<>();
+
     private static final class DailyTrackingRow {
         public String ticker;
         public Double startOpen;
@@ -93,6 +121,157 @@ public class WebServer {
             return (s == null || s.isBlank()) ? null : s;
         } catch (Exception ignore) {
             return null;
+        }
+    }
+
+    /**
+     * Run strategy comparison - backtests tickers with all 3 strategies
+     * Fetches SPY data ONCE at the start, then each ticker's data
+     * @param tickerList - list of tickers to test (from favorites or random selection)
+     * @param balance - starting balance for backtest
+     */
+    private static void runStrategyComparison(List<String> tickerList, double balance) {
+        try {
+            // Use provided ticker list
+            List<String> selected = new ArrayList<>(tickerList);
+
+            List<Map<String, Object>> results = new ArrayList<>();
+
+            // Get entry filters for each mode ONCE
+            ScoringConfig.EntryFiltersConfig ltFilters = ScoringConfig.getEntryFiltersForMode("longterm");
+            ScoringConfig.EntryFiltersConfig swFilters = ScoringConfig.getEntryFiltersForMode("swing");
+            ScoringConfig.EntryFiltersConfig moFilters = ScoringConfig.getEntryFiltersForMode("momentum");
+
+            // Fetch SPY data ONCE at the start (same benchmark for all stocks)
+            synchronized (strategyCompareLock) {
+                strategyCompareCurrentTicker = "SPY (fetching benchmark...)";
+            }
+            DataFetcher.setTicker("SPY");
+            String spyJson = DataFetcher.fetchStockData();
+            if (spyJson == null) {
+                synchronized (strategyCompareLock) {
+                    strategyCompareCurrentTicker = "Error: Failed to fetch SPY data";
+                }
+                return;
+            }
+            List<Double> spyPricesOriginal = PriceJsonParser.extractClosingPrices(spyJson);
+            if (spyPricesOriginal == null || spyPricesOriginal.isEmpty()) {
+                synchronized (strategyCompareLock) {
+                    strategyCompareCurrentTicker = "Error: No SPY price data";
+                }
+                return;
+            }
+            // Reverse SPY to old-to-new order
+            Collections.reverse(spyPricesOriginal);
+            
+            // Rate limit after SPY fetch
+            Thread.sleep(13000);
+
+            for (int i = 0; i < selected.size(); i++) {
+                String ticker = selected.get(i);
+                synchronized (strategyCompareLock) {
+                    strategyCompareCurrentTicker = ticker + " (fetching data...)";
+                    strategyCompareProgress = i + 1;
+                }
+
+                try {
+                    // Fetch data for this ticker
+                    DataFetcher.setTicker(ticker);
+                    String stockJson = DataFetcher.fetchStockData();
+                    
+                    // Rate limit before next API call
+                    if (i < selected.size() - 1) {
+                        Thread.sleep(13000);
+                    }
+
+                    if (stockJson == null) {
+                        // Skip this ticker - API error or rate limited
+                        continue;
+                    }
+
+                    // Parse stock data
+                    List<Double> stockPrices = PriceJsonParser.extractClosingPrices(stockJson);
+                    List<Double> stockHighs = PriceJsonParser.extractHighPrices(stockJson);
+                    List<Double> stockLows = PriceJsonParser.extractLowPrices(stockJson);
+                    List<String> dates = PriceJsonParser.extractDates(stockJson);
+                    
+                    // Use pre-fetched SPY data (make a copy for alignment)
+                    List<Double> spyPrices = new ArrayList<>(spyPricesOriginal);
+
+                    if (stockPrices == null || stockPrices.isEmpty() || spyPrices == null || spyPrices.isEmpty()) {
+                        continue;
+                    }
+
+                    // Reverse order (old to new) - SPY already reversed
+                    Collections.reverse(stockPrices);
+                    Collections.reverse(stockHighs);
+                    Collections.reverse(stockLows);
+                    Collections.reverse(dates);
+
+                    // Align lengths
+                    int minLen = Math.min(stockPrices.size(), spyPrices.size());
+                    stockPrices = new ArrayList<>(stockPrices.subList(0, minLen));
+                    stockHighs = new ArrayList<>(stockHighs.subList(0, minLen));
+                    stockLows = new ArrayList<>(stockLows.subList(0, minLen));
+                    spyPrices = new ArrayList<>(spyPrices.subList(0, minLen));
+                    dates = new ArrayList<>(dates.subList(0, Math.min(dates.size(), minLen)));
+
+                    // Calculate RS scores once
+                    List<Double> rsScores = StrategyBacktester.calculateRSScores(stockPrices, spyPrices, 63);
+
+                    synchronized (strategyCompareLock) {
+                        strategyCompareCurrentTicker = ticker + " (running backtests...)";
+                    }
+
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("ticker", ticker);
+
+                    // Run 3 backtests with SAME data, different parameters
+                    StrategyBacktester ltBacktester = new StrategyBacktester(
+                        ltFilters.rsEntryThreshold, ltFilters.rsExitThreshold,
+                        ltFilters.riskPercentPerTrade / 100.0, ltFilters.atrStopLossMultiplier, ltFilters.atrPeriod);
+                    StrategyBacktester.BacktestResult ltResult = ltBacktester.runBacktest(
+                        ticker, stockPrices, stockHighs, stockLows, rsScores, spyPrices, dates, balance);
+                    row.put("longterm", ltResult != null ? ltResult.totalReturn : 0.0);
+                    row.put("ltTrades", ltResult != null ? ltResult.totalTrades : 0);
+
+                    StrategyBacktester swBacktester = new StrategyBacktester(
+                        swFilters.rsEntryThreshold, swFilters.rsExitThreshold,
+                        swFilters.riskPercentPerTrade / 100.0, swFilters.atrStopLossMultiplier, swFilters.atrPeriod);
+                    StrategyBacktester.BacktestResult swResult = swBacktester.runBacktest(
+                        ticker, stockPrices, stockHighs, stockLows, rsScores, spyPrices, dates, balance);
+                    row.put("swing", swResult != null ? swResult.totalReturn : 0.0);
+                    row.put("swTrades", swResult != null ? swResult.totalTrades : 0);
+
+                    StrategyBacktester moBacktester = new StrategyBacktester(
+                        moFilters.rsEntryThreshold, moFilters.rsExitThreshold,
+                        moFilters.riskPercentPerTrade / 100.0, moFilters.atrStopLossMultiplier, moFilters.atrPeriod);
+                    StrategyBacktester.BacktestResult moResult = moBacktester.runBacktest(
+                        ticker, stockPrices, stockHighs, stockLows, rsScores, spyPrices, dates, balance);
+                    row.put("momentum", moResult != null ? moResult.totalReturn : 0.0);
+                    row.put("moTrades", moResult != null ? moResult.totalTrades : 0);
+
+                    // SPY return (same for all)
+                    row.put("spy", ltResult != null ? ltResult.spyReturn : 0.0);
+
+                    results.add(row);
+                } catch (Exception e) {
+                    // Skip this ticker on error
+                }
+
+                // Update results as we go
+                synchronized (strategyCompareLock) {
+                    strategyCompareResults = new ArrayList<>(results);
+                }
+            }
+
+        } catch (Exception e) {
+            // Ignore
+        } finally {
+            synchronized (strategyCompareLock) {
+                strategyCompareRunning = false;
+                strategyCompareCurrentTicker = "";
+            }
         }
     }
 
@@ -2497,6 +2676,66 @@ public class WebServer {
                 sb.append("<ul id='insightsList' style='color:#cbd5e1;line-height:1.8;'><li>המתן לטעינת נתונים...</li></ul>");
                 sb.append("</div>");
 
+                // AI Summary Section - Plain language explanation
+                sb.append("<div class='card' style='background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);border:2px solid #3b82f6;'>");
+                sb.append("<div class='title'>🤖 סיכום בשפה פשוטה | Plain Language Summary</div>");
+                sb.append("<div id='aiSummary' style='line-height:1.9;'>");
+                sb.append("<div style='color:#9ca3af;'>טוען סיכום...</div>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                // Position Sizing Section - Risk Management
+                sb.append("<div class='card' style='border:2px solid #f59e0b;'>");
+                sb.append("<div class='title'>💰 ניהול סיכונים - כמה מניות לקנות? | Position Sizing</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>חשב כמה מניות לקנות כך שהפסד מקסימלי יהיה מוגדר מראש</div>");
+                sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;'>");
+                sb.append("<div style='flex:1;min-width:150px;'>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>גודל תיק ($)</label>");
+                sb.append("<input id='accountEquity' type='number' value='36000' min='1000' step='1000' style='width:100%;' onchange='calculatePosition()'/>");
+                sb.append("</div>");
+                sb.append("<div style='flex:1;min-width:150px;'>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>אחוז סיכון לעסקה (%)</label>");
+                sb.append("<input id='riskPercent' type='number' value='1' min='0.5' max='5' step='0.5' style='width:100%;' onchange='calculatePosition()'/>");
+                sb.append("</div>");
+                sb.append("<div style='flex:1;min-width:150px;'>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>מכפיל ATR לסטופ</label>");
+                sb.append("<input id='atrMultiplier' type='number' value='2.5' min='1.5' max='4' step='0.5' style='width:100%;' onchange='calculatePosition()'/>");
+                sb.append("</div>");
+                sb.append("<div style='flex:1;min-width:150px;'>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>יחס סיכון/תגמול</label>");
+                sb.append("<input id='riskReward' type='number' value='2' min='1' max='5' step='0.5' style='width:100%;' onchange='calculatePosition()'/>");
+                sb.append("</div>");
+                sb.append("</div>");
+                sb.append("<div id='positionResult' style='background:#0b1220;border-radius:8px;padding:16px;'>");
+                sb.append("<div style='color:#9ca3af;'>המתן לחישוב...</div>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                // Volume Flow Tracker Section
+                sb.append("<div class='card' style='border:2px solid #8b5cf6;'>");
+                sb.append("<div class='title'>📊 Volume Flow Tracker - ניתוח קונים מול מוכרים</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>מעקב אחר לחץ קנייה/מכירה על פני 7 ימים עם המלצות מחיר</div>");
+                sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;'>");
+                sb.append("<div style='flex:1;min-width:150px;'>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>סמל מניה</label>");
+                sb.append("<input id='vfTicker' type='text' placeholder='AAPL' style='width:100%;'/>");
+                sb.append("</div>");
+                sb.append("<div style='flex:1;min-width:150px;'>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>ימים לניתוח</label>");
+                sb.append("<select id='vfDays' style='width:100%;padding:8px;'>");
+                sb.append("<option value='3'>3 ימים</option>");
+                sb.append("<option value='5'>5 ימים</option>");
+                sb.append("<option value='7' selected>7 ימים (שבוע)</option>");
+                sb.append("<option value='14'>14 ימים</option>");
+                sb.append("</select>");
+                sb.append("</div>");
+                sb.append("<div style='display:flex;align-items:flex-end;'>");
+                sb.append("<button id='vfBtn' onclick='fetchVolumeFlow()' style='padding:8px 20px;background:#8b5cf6;'>🔍 נתח</button>");
+                sb.append("</div>");
+                sb.append("</div>");
+                sb.append("<div id='vfResult' style='display:none;'></div>");
+                sb.append("</div>");
+
                 sb.append("<script>" +
                         "async function fetchAnalysis(ticker) {" +
                         "  try {" +
@@ -2550,9 +2789,219 @@ public class WebServer {
                         "      li.innerText = 'No insights.';" +
                         "      list.appendChild(li);" +
                         "    }" +
+                        "    generateAISummary(ticker, result, d);" +
+                        "    const ef = d.entryFilters || {};" +
+                        "    storeForPosition(ticker, d.price, ef.atrValue);" +
                         "  } catch (err) {" +
                         "    console.error('Error fetching analysis:', err);" +
                         "  }" +
+                        "}" +
+                        "function generateAISummary(ticker, result, d) {" +
+                        "  const score = result.finalScore || 0;" +
+                        "  const rec = result.recommendation || '';" +
+                        "  const rs = d.relativeStrength || {};" +
+                        "  const dcfMargin = d.dcfMargin;" +
+                        "  const fScore = d.piotroskiFScore;" +
+                        "  const rsi = d.rsi;" +
+                        "  const altmanZ = d.altmanZ;" +
+                        "  const verdict = d.finalVerdict || '';" +
+                        "  let html = '';" +
+                        "  html += '<div style=\"margin-bottom:16px;padding:12px;background:#0b1220;border-radius:8px;border-left:4px solid '+(score>=60?'#22c55e':'#ef4444')+';\">';" +
+                        "  html += '<div style=\"font-size:18px;font-weight:700;color:'+(score>=60?'#22c55e':'#ef4444')+';margin-bottom:8px;\">📊 המלצה: ' + rec + '</div>';" +
+                        "  if (score >= 75) {" +
+                        "    html += '<div style=\"color:#e5e7eb;\">המניה מקבלת ציון גבוה (<b>' + score + '</b>) - נראית כהזדמנות טובה.</div>';" +
+                        "  } else if (score >= 60) {" +
+                        "    html += '<div style=\"color:#e5e7eb;\">המניה מקבלת ציון סביר (<b>' + score + '</b>) - יש פוטנציאל אך עם סיכונים.</div>';" +
+                        "  } else if (score >= 40) {" +
+                        "    html += '<div style=\"color:#fbbf24;\">המניה מקבלת ציון בינוני (<b>' + score + '</b>) - כדאי להמתין לתנאים טובים יותר.</div>';" +
+                        "  } else {" +
+                        "    html += '<div style=\"color:#ef4444;\">המניה מקבלת ציון נמוך (<b>' + score + '</b>) - לא מומלצת לקנייה כרגע.</div>';" +
+                        "  }" +
+                        "  html += '</div>';" +
+                        "  html += '<div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;\">';" +
+                        "  html += '<div style=\"padding:12px;background:#0b1220;border-radius:8px;\">';" +
+                        "  html += '<div style=\"color:#3b82f6;font-weight:600;margin-bottom:8px;\">🎯 למה ' + (score>=60?'כדאי':'לא כדאי') + ' לקנות?</div>';" +
+                        "  let reasons = [];" +
+                        "  if (dcfMargin !== null && dcfMargin !== undefined && !Number.isNaN(dcfMargin)) {" +
+                        "    if (dcfMargin > 0.15) reasons.push('✅ המניה נסחרת מתחת לשווי ההוגן ב-' + (dcfMargin*100).toFixed(0) + '%');" +
+                        "    else if (dcfMargin < -0.15) reasons.push('⚠️ המניה יקרה - נסחרת מעל השווי ההוגן');" +
+                        "  }" +
+                        "  if (fScore !== null && fScore !== undefined) {" +
+                        "    if (fScore >= 7) reasons.push('✅ חוזק פיננסי גבוה (F-Score: ' + fScore + '/9)');" +
+                        "    else if (fScore <= 3) reasons.push('⚠️ חוזק פיננסי נמוך (F-Score: ' + fScore + '/9)');" +
+                        "  }" +
+                        "  if (rs.category === 'LEADER') reasons.push('✅ מנהיגת שוק - מכה את ה-S&P 500');" +
+                        "  else if (rs.category === 'LAGGARD') reasons.push('⚠️ נגררת - ביצועים חלשים מהשוק');" +
+                        "  if (rsi !== null && rsi !== undefined && !Number.isNaN(rsi)) {" +
+                        "    if (rsi < 30) reasons.push('✅ RSI נמוך (' + rsi.toFixed(0) + ') - אולי oversold');" +
+                        "    else if (rsi > 70) reasons.push('⚠️ RSI גבוה (' + rsi.toFixed(0) + ') - אולי overbought');" +
+                        "  }" +
+                        "  if (reasons.length === 0) reasons.push('אין נתונים מספיקים להערכה מלאה');" +
+                        "  html += '<div style=\"color:#cbd5e1;font-size:14px;\">' + reasons.join('<br>') + '</div>';" +
+                        "  html += '</div>';" +
+                        "  html += '<div style=\"padding:12px;background:#0b1220;border-radius:8px;\">';" +
+                        "  html += '<div style=\"color:#f59e0b;font-weight:600;margin-bottom:8px;\">⏱️ לאיזה טווח זמן?</div>';" +
+                        "  html += '<div style=\"color:#cbd5e1;font-size:14px;\">';" +
+                        "  html += 'מצב הניתוח הנוכחי: <b>SWING_TRADER</b><br>';" +
+                        "  html += '• טווח מומלץ: <b>2-8 שבועות</b><br>';" +
+                        "  html += '• סגנון: מסחר לפי תנודות שוק<br>';" +
+                        "  html += '• דגש על: איתותים טכניים וכוח יחסי';" +
+                        "  html += '</div></div>';" +
+                        "  html += '<div style=\"padding:12px;background:#0b1220;border-radius:8px;\">';" +
+                        "  html += '<div style=\"color:#ef4444;font-weight:600;margin-bottom:8px;\">⚠️ סיכונים וחסרונות</div>';" +
+                        "  let risks = [];" +
+                        "  if (altmanZ !== null && altmanZ !== undefined && !Number.isNaN(altmanZ) && altmanZ < 1.8) {" +
+                        "    risks.push('🔴 סיכון פשיטת רגל גבוה (Altman Z: ' + altmanZ.toFixed(2) + ')');" +
+                        "  }" +
+                        "  if (rs.category === 'LAGGARD') risks.push('🔴 המניה מפגרת אחרי השוק');" +
+                        "  if (dcfMargin !== null && dcfMargin < -0.2) risks.push('🔴 תמחור יתר משמעותי');" +
+                        "  if (rsi !== null && rsi > 70) risks.push('🟡 RSI גבוה - אפשרי תיקון');" +
+                        "  risks.push('🟡 הניתוח מבוסס על נתונים היסטוריים בלבד');" +
+                        "  risks.push('🟡 אירועי שוק בלתי צפויים יכולים להשפיע');" +
+                        "  html += '<div style=\"color:#cbd5e1;font-size:14px;\">' + risks.join('<br>') + '</div>';" +
+                        "  html += '</div></div>';" +
+                        "  html += '<div style=\"margin-top:12px;padding:10px;background:#1e3a5f;border-radius:6px;color:#93c5fd;font-size:13px;\">';" +
+                        "  html += '💡 <b>טיפ:</b> השתמש ב-Stop Loss מוצע בטבלה למעלה כדי להגן על ההשקעה. לדו\"ח מפורט יותר לחץ \"Open Full Report\".';" +
+                        "  html += '</div>';" +
+                        "  document.getElementById('aiSummary').innerHTML = html;" +
+                        "}" +
+                        "var currentPrice = 0;" +
+                        "var currentAtr = 0;" +
+                        "var currentTicker = '';" +
+                        "function storeForPosition(ticker, price, atr) {" +
+                        "  currentTicker = ticker;" +
+                        "  currentPrice = price || 0;" +
+                        "  currentAtr = atr || 0;" +
+                        "  calculatePosition();" +
+                        "}" +
+                        "function calculatePosition() {" +
+                        "  const equity = parseFloat(document.getElementById('accountEquity').value) || 36000;" +
+                        "  const riskPct = (parseFloat(document.getElementById('riskPercent').value) || 1) / 100;" +
+                        "  const atrMult = parseFloat(document.getElementById('atrMultiplier').value) || 2.5;" +
+                        "  const rrRatio = parseFloat(document.getElementById('riskReward').value) || 2;" +
+                        "  const el = document.getElementById('positionResult');" +
+                        "  if (!currentPrice || !currentAtr || currentAtr <= 0) {" +
+                        "    el.innerHTML = '<div style=\"color:#9ca3af;\">לא זמין - חסרים נתוני מחיר או ATR</div>';" +
+                        "    return;" +
+                        "  }" +
+                        "  const amountToRisk = equity * riskPct;" +
+                        "  const stopDistance = currentAtr * atrMult;" +
+                        "  let shares = Math.floor(amountToRisk / stopDistance);" +
+                        "  const maxShares = Math.floor(equity / currentPrice);" +
+                        "  shares = Math.min(shares, maxShares);" +
+                        "  if (shares <= 0) { el.innerHTML = '<div style=\"color:#ef4444;\">גודל התיק קטן מדי לעסקה זו</div>'; return; }" +
+                        "  const totalInvest = shares * currentPrice;" +
+                        "  const portfolioPct = (totalInvest / equity) * 100;" +
+                        "  const stopLossPrice = currentPrice - stopDistance;" +
+                        "  const takeProfitPrice = currentPrice + (stopDistance * rrRatio);" +
+                        "  const maxLoss = shares * stopDistance;" +
+                        "  const potentialProfit = shares * stopDistance * rrRatio;" +
+                        "  let html = '';" +
+                        "  html += '<div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;\">';" +
+                        "  html += '<div style=\"text-align:center;padding:16px;background:#1f2a44;border-radius:8px;\">';" +
+                        "  html += '<div style=\"font-size:32px;font-weight:700;color:#22c55e;\">' + shares + '</div>';" +
+                        "  html += '<div style=\"color:#9ca3af;font-size:13px;\">מניות לקנייה</div>';" +
+                        "  html += '</div>';" +
+                        "  html += '<div style=\"text-align:center;padding:16px;background:#1f2a44;border-radius:8px;\">';" +
+                        "  html += '<div style=\"font-size:24px;font-weight:600;color:#3b82f6;\">$' + totalInvest.toLocaleString('en-US', {maximumFractionDigits:0}) + '</div>';" +
+                        "  html += '<div style=\"color:#9ca3af;font-size:13px;\">השקעה כוללת (' + portfolioPct.toFixed(1) + '% מהתיק)</div>';" +
+                        "  html += '</div>';" +
+                        "  html += '<div style=\"text-align:center;padding:16px;background:#1f2a44;border-radius:8px;\">';" +
+                        "  html += '<div style=\"font-size:24px;font-weight:600;color:#ef4444;\">-$' + maxLoss.toFixed(0) + '</div>';" +
+                        "  html += '<div style=\"color:#9ca3af;font-size:13px;\">הפסד מקסימלי (' + (riskPct*100).toFixed(1) + '% מהתיק)</div>';" +
+                        "  html += '</div>';" +
+                        "  html += '<div style=\"text-align:center;padding:16px;background:#1f2a44;border-radius:8px;\">';" +
+                        "  html += '<div style=\"font-size:24px;font-weight:600;color:#22c55e;\">+$' + potentialProfit.toFixed(0) + '</div>';" +
+                        "  html += '<div style=\"color:#9ca3af;font-size:13px;\">רווח פוטנציאלי (1:' + rrRatio + ')</div>';" +
+                        "  html += '</div>';" +
+                        "  html += '</div>';" +
+                        "  html += '<div style=\"margin-top:16px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;\">';" +
+                        "  html += '<div style=\"padding:10px 16px;background:#0f172a;border:1px solid #1f2a44;border-radius:6px;\">';" +
+                        "  html += '<span style=\"color:#9ca3af;\">מחיר כניסה:</span> <span style=\"color:#e5e7eb;font-weight:600;\">$' + currentPrice.toFixed(2) + '</span>';" +
+                        "  html += '</div>';" +
+                        "  html += '<div style=\"padding:10px 16px;background:#0f172a;border:1px solid #ef4444;border-radius:6px;\">';" +
+                        "  html += '<span style=\"color:#ef4444;\">🛑 Stop Loss:</span> <span style=\"color:#ef4444;font-weight:600;\">$' + stopLossPrice.toFixed(2) + '</span>';" +
+                        "  html += '</div>';" +
+                        "  html += '<div style=\"padding:10px 16px;background:#0f172a;border:1px solid #22c55e;border-radius:6px;\">';" +
+                        "  html += '<span style=\"color:#22c55e;\">🎯 Take Profit:</span> <span style=\"color:#22c55e;font-weight:600;\">$' + takeProfitPrice.toFixed(2) + '</span>';" +
+                        "  html += '</div>';" +
+                        "  html += '</div>';" +
+                        "  html += '<div style=\"margin-top:12px;padding:10px;background:#1e3a5f;border-radius:6px;color:#93c5fd;font-size:13px;text-align:center;\">';" +
+                        "  html += '📌 <b>' + currentTicker + '</b>: קנה ' + shares + ' מניות במחיר $' + currentPrice.toFixed(2) + ' | סטופ ב-$' + stopLossPrice.toFixed(2) + ' | יעד ב-$' + takeProfitPrice.toFixed(2);" +
+                        "  html += '</div>';" +
+                        "  el.innerHTML = html;" +
+                        "}" +
+                        "async function fetchVolumeFlow() {" +
+                        "  var ticker = (document.getElementById('vfTicker').value || '').trim().toUpperCase();" +
+                        "  var days = parseInt(document.getElementById('vfDays').value) || 7;" +
+                        "  if (!ticker) { alert('הכנס סמל מניה'); return; }" +
+                        "  var btn = document.getElementById('vfBtn');" +
+                        "  var el = document.getElementById('vfResult');" +
+                        "  btn.disabled = true; btn.textContent = '⏳ טוען...';" +
+                        "  el.style.display = 'block';" +
+                        "  el.innerHTML = '<div style=\"color:#9ca3af;text-align:center;padding:20px;\">טוען נתונים...</div>';" +
+                        "  try {" +
+                        "    var r = await fetch('/api/volume-flow?ticker=' + encodeURIComponent(ticker) + '&days=' + days);" +
+                        "    var d = await r.json();" +
+                        "    if (d.error) { el.innerHTML = '<div style=\"color:#ef4444;\">' + d.error + '</div>'; return; }" +
+                        "    var html = '';" +
+                        "    html += '<div style=\"background:#0b1220;border-radius:12px;padding:16px;margin-bottom:16px;\">';" +
+                        "    html += '<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;\">';" +
+                        "    html += '<div style=\"font-size:20px;font-weight:700;\">' + d.ticker + '</div>';" +
+                        "    html += '<div style=\"font-size:24px;font-weight:700;color:#e5e7eb;\">$' + (d.currentPrice||0).toFixed(2) + '</div>';" +
+                        "    html += '</div>';" +
+                        "    html += '<div style=\"text-align:center;padding:12px;background:linear-gradient(90deg,#22c55e ' + (d.weeklyBuyPressure||50) + '%,#ef4444 ' + (d.weeklyBuyPressure||50) + '%);border-radius:8px;margin-bottom:8px;\">';" +
+                        "    html += '<span style=\"background:#0b1220;padding:4px 12px;border-radius:4px;font-weight:600;\">קונים ' + (d.weeklyBuyPressure||0).toFixed(0) + '% | מוכרים ' + (d.weeklySellPressure||0).toFixed(0) + '%</span>';" +
+                        "    html += '</div>';" +
+                        "    html += '<div style=\"text-align:center;font-size:18px;font-weight:600;color:' + (d.weeklyTrend.includes('Accumulation')?'#22c55e':'#ef4444') + ';\">' + d.weeklyTrend + '</div>';" +
+                        "    html += '</div>';" +
+                        "    var latestDate = (d.dailyFlow && d.dailyFlow.length > 0) ? d.dailyFlow[d.dailyFlow.length-1].date : '';" +
+                        "    var dataAge = latestDate ? '(נתונים מ-' + latestDate + ')' : '';" +
+                        "    var today = new Date().toISOString().slice(0,10);" +
+                        "    var isStale = latestDate && latestDate < today.slice(0,7);" +
+                        "    html += '<div style=\"font-weight:600;margin-bottom:8px;\">📅 ניתוח יומי: <span style=\"font-size:12px;color:' + (isStale ? '#fbbf24' : '#9ca3af') + ';font-weight:400;\">' + dataAge + (isStale ? ' ⚠️ נתונים ישנים!' : '') + '</span></div>';" +
+                        "    html += '<div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:16px;\">';" +
+                        "    (d.dailyFlow||[]).forEach(function(day,i){" +
+                        "      var bgColor = day.buyPercent > 55 ? '#14532d' : (day.sellPercent > 55 ? '#7f1d1d' : '#1f2a44');" +
+                        "      var icon = day.buyPercent > 55 ? '🟢' : (day.sellPercent > 55 ? '🔴' : '🟡');" +
+                        "      var chgPct = day.priceChangePct || 0;" +
+                        "      var chgColor = chgPct >= 0 ? '#22c55e' : '#ef4444';" +
+                        "      var chgSign = chgPct >= 0 ? '+' : '';" +
+                        "      html += '<div style=\"background:'+bgColor+';padding:10px;border-radius:8px;text-align:center;\">';" +
+                        "      html += '<div style=\"font-size:11px;color:#9ca3af;\">יום ' + (i+1) + '</div>';" +
+                        "      html += '<div style=\"font-size:10px;color:#6b7280;margin-bottom:4px;\">' + (day.date||'') + '</div>';" +
+                        "      html += '<div style=\"font-size:14px;font-weight:600;color:' + chgColor + ';margin-bottom:4px;\">' + chgSign + chgPct.toFixed(2) + '%</div>';" +
+                        "      html += '<div style=\"font-size:16px;\">' + icon + '</div>';" +
+                        "      html += '<div style=\"font-size:11px;color:#22c55e;\">קנייה ' + day.buyPercent.toFixed(0) + '%</div>';" +
+                        "      html += '<div style=\"font-size:11px;color:#ef4444;\">מכירה ' + day.sellPercent.toFixed(0) + '%</div>';" +
+                        "      html += '</div>';" +
+                        "    });" +
+                        "    html += '</div>';" +
+                        "    html += '<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;\">';" +
+                        "    html += '<div style=\"background:#14532d;padding:16px;border-radius:12px;\">';" +
+                        "    html += '<div style=\"font-weight:600;color:#22c55e;margin-bottom:8px;\">🟢 אזור קנייה</div>';" +
+                        "    html += '<div style=\"font-size:20px;font-weight:700;\">$' + (d.buyZoneLow||0).toFixed(2) + ' - $' + (d.buyZoneHigh||0).toFixed(2) + '</div>';" +
+                        "    html += '<div style=\"font-size:12px;color:#9ca3af;margin-top:4px;\">תמיכה: $' + (d.supportLevel||0).toFixed(2) + '</div>';" +
+                        "    html += '</div>';" +
+                        "    html += '<div style=\"background:#7f1d1d;padding:16px;border-radius:12px;\">';" +
+                        "    html += '<div style=\"font-weight:600;color:#ef4444;margin-bottom:8px;\">🔴 אזור מכירה</div>';" +
+                        "    html += '<div style=\"font-size:20px;font-weight:700;\">$' + (d.sellZoneLow||0).toFixed(2) + ' - $' + (d.sellZoneHigh||0).toFixed(2) + '</div>';" +
+                        "    html += '<div style=\"font-size:12px;color:#9ca3af;margin-top:4px;\">התנגדות: $' + (d.resistanceLevel||0).toFixed(2) + '</div>';" +
+                        "    html += '</div>';" +
+                        "    html += '</div>';" +
+                        "    html += '<div style=\"background:#1e3a5f;padding:16px;border-radius:12px;margin-bottom:12px;\">';" +
+                        "    html += '<div style=\"font-size:18px;font-weight:700;margin-bottom:8px;\">' + (d.recommendation||'') + '</div>';" +
+                        "    html += '<div style=\"color:#ef4444;\">🛑 Stop Loss: $' + (d.stopLoss||0).toFixed(2) + '</div>';" +
+                        "    html += '</div>';" +
+                        "    if (d.insights && d.insights.length > 0) {" +
+                        "      html += '<div style=\"background:#0b1220;padding:12px;border-radius:8px;\">';" +
+                        "      html += '<div style=\"font-weight:600;margin-bottom:8px;\">💡 תובנות:</div>';" +
+                        "      d.insights.forEach(function(ins){ html += '<div style=\"color:#cbd5e1;margin-bottom:4px;\">• ' + ins + '</div>'; });" +
+                        "      html += '</div>';" +
+                        "    }" +
+                        "    el.innerHTML = html;" +
+                        "  } catch(e) { el.innerHTML = '<div style=\"color:#ef4444;\">שגיאה: ' + e.message + '</div>'; }" +
+                        "  finally { btn.disabled = false; btn.textContent = '🔍 נתח'; }" +
                         "}" +
                         "fetchAnalysis('AAPL');" +
                         "</script>");
@@ -2671,6 +3120,117 @@ public class WebServer {
                     respondJson(ex, out, 200);
                 } catch (Exception e) {
                     respondJson(ex, Map.of("error", e.getMessage()), 500);
+                }
+            }
+        });
+
+        // Volume Flow Tracker API
+        server.createContext("/api/volume-flow", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+
+                try {
+                    Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                    String ticker = qp.getOrDefault("ticker", "").trim().toUpperCase();
+                    int days = 7;
+                    try { days = Math.min(30, Math.max(1, Integer.parseInt(qp.getOrDefault("days", "7")))); } catch (Exception ignore) {}
+
+                    if (ticker.isBlank()) { respondJson(ex, Map.of("error", "Missing ticker parameter"), 400); return; }
+
+                    // Fetch stock data - ALWAYS fresh from API, never use cache
+                    DataFetcher.setTicker(ticker);
+                    String json = DataFetcher.fetchStockData();
+                    if (json == null || json.isBlank()) { 
+                        respondJson(ex, Map.of("error", "Failed to fetch data for " + ticker + " - API returned empty response"), 500); 
+                        return; 
+                    }
+
+                    // Check for API error messages (rate limit, invalid key, etc.)
+                    String apiError = PriceJsonParser.extractServiceMessage(json);
+                    if (apiError != null && !apiError.isBlank()) {
+                        respondJson(ex, Map.of("error", "Alpha Vantage API Error: " + apiError), 500);
+                        return;
+                    }
+
+                    // Validate data freshness - reject stale data
+                    String lastRefreshed = PriceJsonParser.extractLastRefreshedDate(json);
+                    if (lastRefreshed != null && !lastRefreshed.isBlank()) {
+                        try {
+                            java.time.LocalDate dataDate = java.time.LocalDate.parse(lastRefreshed.substring(0, 10));
+                            java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("America/New_York"));
+                            long daysDiff = java.time.temporal.ChronoUnit.DAYS.between(dataDate, today);
+                            // Allow up to 4 days old (weekend + 1 buffer)
+                            if (daysDiff > 4) {
+                                respondJson(ex, Map.of("error", "Data is stale (from " + lastRefreshed + ") - " + daysDiff + " days old. Please check your Alpha Vantage API key or try again later."), 500);
+                                return;
+                            }
+                        } catch (Exception dateErr) {
+                            // If date parsing fails, continue but log
+                            System.err.println("Warning: Could not parse last refreshed date: " + lastRefreshed);
+                        }
+                    }
+
+                    // Parse price data
+                    List<Double> closes = PriceJsonParser.extractClosingPrices(json);
+                    List<Double> highs = PriceJsonParser.extractHighPrices(json);
+                    List<Double> lows = PriceJsonParser.extractLowPrices(json);
+                    List<Double> opens = PriceJsonParser.extractOpenPrices(json);
+                    List<Long> volumes = PriceJsonParser.extractVolumeData(json);
+                    List<String> dates = PriceJsonParser.extractDates(json);
+
+                    if (closes == null || closes.isEmpty()) { 
+                        respondJson(ex, Map.of("error", "No price data in API response - check if ticker '" + ticker + "' is valid"), 500); 
+                        return; 
+                    }
+
+                    // Reverse to chronological order (oldest first)
+                    java.util.Collections.reverse(closes);
+                    java.util.Collections.reverse(highs);
+                    java.util.Collections.reverse(lows);
+                    java.util.Collections.reverse(opens);
+                    java.util.Collections.reverse(volumes);
+                    java.util.Collections.reverse(dates);
+
+                    // Run Volume Flow analysis
+                    VolumeFlowTracker.FlowAnalysis analysis = VolumeFlowTracker.analyze(ticker, closes, highs, lows, opens, volumes, dates, days);
+
+                    // Build response
+                    Map<String, Object> out = new LinkedHashMap<>();
+                    out.put("ticker", analysis.ticker);
+                    out.put("currentPrice", analysis.currentPrice);
+                    out.put("weeklyBuyPressure", analysis.weeklyBuyPressure);
+                    out.put("weeklySellPressure", analysis.weeklySellPressure);
+                    out.put("weeklyTrend", analysis.weeklyTrend);
+                    out.put("buyZoneLow", analysis.buyZoneLow);
+                    out.put("buyZoneHigh", analysis.buyZoneHigh);
+                    out.put("sellZoneLow", analysis.sellZoneLow);
+                    out.put("sellZoneHigh", analysis.sellZoneHigh);
+                    out.put("stopLoss", analysis.stopLoss);
+                    out.put("supportLevel", analysis.supportLevel);
+                    out.put("resistanceLevel", analysis.resistanceLevel);
+                    out.put("recommendation", analysis.recommendation);
+                    out.put("insights", analysis.insights);
+
+                    // Daily flow data
+                    List<Map<String, Object>> dailyFlowList = new ArrayList<>();
+                    for (VolumeFlowTracker.DayFlow day : analysis.dailyFlow) {
+                        Map<String, Object> dayMap = new LinkedHashMap<>();
+                        dayMap.put("date", day.date);
+                        dayMap.put("buyPercent", day.buyPercent);
+                        dayMap.put("sellPercent", day.sellPercent);
+                        dayMap.put("signal", day.signal);
+                        dayMap.put("open", day.open);
+                        dayMap.put("close", day.close);
+                        dayMap.put("priceChange", day.priceChange);
+                        dayMap.put("priceChangePct", day.priceChangePct);
+                        dayMap.put("volume", day.volume);
+                        dailyFlowList.add(dayMap);
+                    }
+                    out.put("dailyFlow", dailyFlowList);
+
+                    respondJson(ex, out, 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage() != null ? e.getMessage() : "Unknown error"), 500);
                 }
             }
         });
@@ -3658,6 +4218,42 @@ public class WebServer {
 
                 sb.append("<div class='card'><div class='title'>Race Result Summary</div><div id='aa-race' style='color:#9ca3af'>Loading...</div></div>");
 
+                // Strategy Backtester Section
+                sb.append("<div class='card' style='border:2px solid #f59e0b;'>");
+                sb.append("<div class='title'>📊 Strategy Backtester - בדיקת אסטרטגיה על נתוני עבר</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>הרץ סימולציה של הכללים שלנו (RS, Position Sizing, Trailing Stop) על נתונים היסטוריים והשווה ל-S&P 500</div>");
+                sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;align-items:flex-end;'>");
+                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>סימול מניה</label>");
+                sb.append("<input id='btTicker' type='text' placeholder='AAPL' style='width:120px;'/></div>");
+                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>הון התחלתי ($)</label>");
+                sb.append("<input id='btBalance' type='number' value='36000' min='1000' step='1000' style='width:120px;'/></div>");
+                sb.append("<button onclick='runBacktest()' id='btBtn'>🚀 הרץ Backtest</button>");
+                sb.append("</div>");
+                sb.append("<div id='btResult' style='display:none;'></div>");
+                sb.append("<div id='btChart' style='height:300px;background:#0b1220;border-radius:8px;margin-top:12px;display:none;'></div>");
+                sb.append("<div id='btTrades' style='display:none;margin-top:12px;'></div>");
+                sb.append("</div>");
+
+                // Strategy Comparison Section - בחינת אסטרטגיות
+                sb.append("<div class='card' style='border:2px solid #8b5cf6;'>");
+                sb.append("<div class='title'>🔬 Strategy Comparison - השוואת אסטרטגיות</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>בוחר מניות ומריץ backtest על 100 הימים האחרונים עם כל האסטרטגיות. רץ ברקע - לא חוסם את הדפדפן.</div>");
+                sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;align-items:flex-end;'>");
+                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>מקור מניות</label>");
+                sb.append("<select id='scSource' style='padding:6px 10px;'>");
+                sb.append("<option value='random'>🎲 רנדומלי (מניות פופולריות)</option>");
+                sb.append("<option value='favorites'>⭐ מועדפים</option>");
+                sb.append("</select></div>");
+                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>מספר מניות לבדיקה</label>");
+                sb.append("<input id='scCount' type='number' value='5' min='1' max='20' style='width:80px;'/></div>");
+                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>הון התחלתי ($)</label>");
+                sb.append("<input id='scBalance' type='number' value='36000' min='1000' step='1000' style='width:120px;'/></div>");
+                sb.append("<button onclick='runStrategyCompare()' id='scBtn'>🚀 הרץ השוואה</button>");
+                sb.append("<span id='scStatus' style='color:#9ca3af;font-size:13px;'></span>");
+                sb.append("</div>");
+                sb.append("<div id='scResult' style='display:none;'></div>");
+                sb.append("</div>");
+
                 sb.append(controls);
 
                 sb.append("<script>(function(){"+
@@ -3707,7 +4303,193 @@ public class WebServer {
                         "`<div>S&P 500 (SPY): <span style='color:#e5e7eb'>${fmt(race.sp500Pct)}</span></div>`;}"+
                         "else{el.textContent='N/A';}"+
                         "}catch(e){try{document.getElementById('aa-race').textContent='Error: '+e;}catch(_){}}}"+
-                        "load();setInterval(load,15000);})();</script>");
+                        "load();setInterval(load,15000);})();</script>"+
+                        "<script>"+
+                        "async function runBacktest(){"+
+                        "  var ticker=document.getElementById('btTicker').value.trim().toUpperCase();"+
+                        "  var balance=parseFloat(document.getElementById('btBalance').value)||36000;"+
+                        "  if(!ticker){alert('הזן סימול מניה');return;}"+
+                        "  var btn=document.getElementById('btBtn');"+
+                        "  btn.disabled=true;btn.textContent='⏳ מריץ...';"+
+                        "  try{"+
+                        "    var r=await fetch('/api/backtest?ticker='+encodeURIComponent(ticker)+'&balance='+balance);"+
+                        "    var d=await r.json();"+
+                        "    btn.disabled=false;btn.textContent='🚀 הרץ Backtest';"+
+                        "    if(d.error){alert('שגיאה: '+d.error);return;}"+
+                        "    showBacktestResult(d);"+
+                        "  }catch(e){btn.disabled=false;btn.textContent='🚀 הרץ Backtest';alert('שגיאה: '+e);}"+
+                        "}"+
+                        "function showBacktestResult(d){"+
+                        "  var el=document.getElementById('btResult');el.style.display='block';"+
+                        "  var alphaColor=d.alpha>=0?'#22c55e':'#ef4444';"+
+                        "  var retColor=d.totalReturn>=0?'#22c55e':'#ef4444';"+
+                        "  var html='<div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;\">';"+
+                        "  html+='<div style=\"text-align:center;padding:16px;background:#1f2a44;border-radius:8px;\">';"+
+                        "  html+='<div style=\"font-size:28px;font-weight:700;color:'+retColor+';\">'+d.totalReturn.toFixed(1)+'%</div>';"+
+                        "  html+='<div style=\"color:#9ca3af;font-size:12px;\">תשואת האסטרטגיה</div></div>';"+
+                        "  html+='<div style=\"text-align:center;padding:16px;background:#1f2a44;border-radius:8px;\">';"+
+                        "  html+='<div style=\"font-size:28px;font-weight:700;color:#f59e0b;\">'+d.spyReturn.toFixed(1)+'%</div>';"+
+                        "  html+='<div style=\"color:#9ca3af;font-size:12px;\">S&P 500 (Buy & Hold)</div></div>';"+
+                        "  html+='<div style=\"text-align:center;padding:16px;background:#1f2a44;border-radius:8px;border:2px solid '+alphaColor+';\">';"+
+                        "  html+='<div style=\"font-size:28px;font-weight:700;color:'+alphaColor+';\">'+(d.alpha>=0?'+':'')+d.alpha.toFixed(1)+'%</div>';"+
+                        "  html+='<div style=\"color:#9ca3af;font-size:12px;\">אלפא (מנצח את השוק?)</div></div>';"+
+                        "  html+='<div style=\"text-align:center;padding:16px;background:#1f2a44;border-radius:8px;\">';"+
+                        "  html+='<div style=\"font-size:24px;font-weight:600;color:#3b82f6;\">$'+d.finalBalance.toLocaleString('en-US',{maximumFractionDigits:0})+'</div>';"+
+                        "  html+='<div style=\"color:#9ca3af;font-size:12px;\">הון סופי (מתוך $'+d.initialBalance.toLocaleString()+')</div></div>';"+
+                        "  html+='</div>';"+
+                        "  html+='<div style=\"display:flex;flex-wrap:wrap;gap:16px;margin-bottom:12px;\">';"+
+                        "  html+='<div style=\"flex:1;min-width:200px;padding:12px;background:#0b1220;border-radius:8px;\">';"+
+                        "  html+='<div style=\"color:#9ca3af;font-size:13px;margin-bottom:8px;\">📈 סטטיסטיקות</div>';"+
+                        "  html+='<div>עסקאות: <b>'+d.totalTrades+'</b> ('+d.winningTrades+' רווח / '+d.losingTrades+' הפסד)</div>';"+
+                        "  html+='<div>אחוז הצלחה: <b style=\"color:'+(d.winRate>=0.5?'#22c55e':'#ef4444')+';\">'+((d.winRate||0)*100).toFixed(0)+'%</b></div>';"+
+                        "  html+='<div>Profit Factor: <b>'+(d.profitFactor||0).toFixed(2)+'</b></div>';"+
+                        "  html+='</div>';"+
+                        "  html+='<div style=\"flex:1;min-width:200px;padding:12px;background:#0b1220;border-radius:8px;\">';"+
+                        "  html+='<div style=\"color:#9ca3af;font-size:13px;margin-bottom:8px;\">⚠️ סיכון</div>';"+
+                        "  html+='<div>Max Drawdown: <b style=\"color:#ef4444;\">-'+(d.maxDrawdown||0).toFixed(1)+'%</b></div>';"+
+                        "  html+='<div>Sharpe Ratio: <b>'+(d.sharpeRatio||0).toFixed(2)+'</b></div>';"+
+                        "  html+='<div>רווח ממוצע: <b style=\"color:#22c55e;\">$'+(d.avgWin||0).toFixed(0)+'</b> | הפסד: <b style=\"color:#ef4444;\">$'+(d.avgLoss||0).toFixed(0)+'</b></div>';"+
+                        "  html+='</div>';"+
+                        "  html+='<div style=\"flex:1;min-width:200px;padding:12px;background:#0b1220;border-radius:8px;\">';"+
+                        "  html+='<div style=\"color:#9ca3af;font-size:13px;margin-bottom:8px;\">📅 תקופה</div>';"+
+                        "  html+='<div>'+d.startDate+' עד '+d.endDate+'</div>';"+
+                        "  html+='<div>'+d.tradingDays+' ימי מסחר</div>';"+
+                        "  html+='</div></div>';"+
+                        "  el.innerHTML=html;"+
+                        "  drawEquityChart(d);"+
+                        "  showTrades(d.trades);"+
+                        "}"+
+                        "function drawEquityChart(d){"+
+                        "  var chartEl=document.getElementById('btChart');chartEl.style.display='block';"+
+                        "  var eq=d.equityCurve||[];var spy=d.spyCurve||[];"+
+                        "  if(eq.length===0){chartEl.innerHTML='<div style=\"padding:20px;color:#9ca3af;\">אין נתונים לגרף</div>';return;}"+
+                        "  var maxEq=Math.max(...eq.map(p=>p.equity),...spy.map(p=>p.equity));"+
+                        "  var minEq=Math.min(...eq.map(p=>p.equity),...spy.map(p=>p.equity));"+
+                        "  var range=maxEq-minEq||1;"+
+                        "  var w=chartEl.offsetWidth-40;var h=260;"+
+                        "  var svg='<svg width=\"100%\" height=\"'+h+'\" viewBox=\"0 0 '+(w+40)+' '+h+'\">';"+
+                        "  svg+='<text x=\"20\" y=\"20\" fill=\"#9ca3af\" font-size=\"12\">$'+maxEq.toLocaleString('en-US',{maximumFractionDigits:0})+'</text>';"+
+                        "  svg+='<text x=\"20\" y=\"'+(h-10)+'\" fill=\"#9ca3af\" font-size=\"12\">$'+minEq.toLocaleString('en-US',{maximumFractionDigits:0})+'</text>';"+
+                        "  var spyPath='M';"+
+                        "  for(var i=0;i<spy.length;i++){"+
+                        "    var x=40+(i/(spy.length-1||1))*w;"+
+                        "    var y=h-20-((spy[i].equity-minEq)/range)*(h-40);"+
+                        "    spyPath+=(i===0?'':' L')+x.toFixed(1)+','+y.toFixed(1);"+
+                        "  }"+
+                        "  svg+='<path d=\"'+spyPath+'\" stroke=\"#f59e0b\" stroke-width=\"2\" fill=\"none\" opacity=\"0.7\"/>';"+
+                        "  var eqPath='M';"+
+                        "  for(var i=0;i<eq.length;i++){"+
+                        "    var x=40+(i/(eq.length-1||1))*w;"+
+                        "    var y=h-20-((eq[i].equity-minEq)/range)*(h-40);"+
+                        "    eqPath+=(i===0?'':' L')+x.toFixed(1)+','+y.toFixed(1);"+
+                        "  }"+
+                        "  svg+='<path d=\"'+eqPath+'\" stroke=\"#3b82f6\" stroke-width=\"2.5\" fill=\"none\"/>';"+
+                        "  svg+='<circle cx=\"'+(w+30)+'\" cy=\"20\" r=\"6\" fill=\"#3b82f6\"/><text x=\"'+(w+10)+'\" y=\"24\" fill=\"#e5e7eb\" font-size=\"11\">Strategy</text>';"+
+                        "  svg+='<circle cx=\"'+(w+30)+'\" cy=\"40\" r=\"6\" fill=\"#f59e0b\"/><text x=\"'+(w+10)+'\" y=\"44\" fill=\"#e5e7eb\" font-size=\"11\">S&P 500</text>';"+
+                        "  svg+='</svg>';"+
+                        "  chartEl.innerHTML=svg;"+
+                        "}"+
+                        "function showTrades(trades){"+
+                        "  var el=document.getElementById('btTrades');"+
+                        "  if(!trades||trades.length===0){el.style.display='none';return;}"+
+                        "  el.style.display='block';"+
+                        "  var html='<div style=\"color:#9ca3af;margin-bottom:8px;\">📋 היסטוריית עסקאות ('+trades.length+')</div>';"+
+                        "  html+='<div style=\"max-height:200px;overflow-y:auto;\"><table style=\"width:100%;border-collapse:collapse;font-size:12px;\">';"+
+                        "  html+='<thead><tr style=\"background:#0b1220;\"><th style=\"padding:6px;text-align:left;\">תאריך</th><th style=\"padding:6px;\">סוג</th><th style=\"padding:6px;text-align:right;\">מחיר</th><th style=\"padding:6px;text-align:right;\">מניות</th><th style=\"padding:6px;text-align:right;\">רווח/הפסד</th><th style=\"padding:6px;\">סיבה</th></tr></thead><tbody>';"+
+                        "  for(var i=0;i<trades.length;i++){"+
+                        "    var t=trades[i];"+
+                        "    var typeColor=t.type==='BUY'?'#22c55e':'#ef4444';"+
+                        "    var profitColor=(t.profit||0)>=0?'#22c55e':'#ef4444';"+
+                        "    html+='<tr style=\"border-bottom:1px solid #1f2a44;\">';"+
+                        "    html+='<td style=\"padding:6px;\">'+t.date+'</td>';"+
+                        "    html+='<td style=\"padding:6px;color:'+typeColor+';font-weight:600;\">'+t.type+'</td>';"+
+                        "    html+='<td style=\"padding:6px;text-align:right;\">$'+t.price.toFixed(2)+'</td>';"+
+                        "    html+='<td style=\"padding:6px;text-align:right;\">'+t.shares+'</td>';"+
+                        "    html+='<td style=\"padding:6px;text-align:right;color:'+profitColor+';\">'+(t.profit?((t.profit>=0?'+':'')+t.profit.toFixed(0)):'-')+'</td>';"+
+                        "    html+='<td style=\"padding:6px;color:#9ca3af;\">'+(t.exitReason||'-')+'</td>';"+
+                        "    html+='</tr>';"+
+                        "  }"+
+                        "  html+='</tbody></table></div>';"+
+                        "  el.innerHTML=html;"+
+                        "}"+
+                        "var scPollInterval=null;"+
+                        "async function runStrategyCompare(){"+
+                        "  var count=parseInt(document.getElementById('scCount').value)||5;"+
+                        "  var balance=parseFloat(document.getElementById('scBalance').value)||36000;"+
+                        "  var source=document.getElementById('scSource').value||'random';"+
+                        "  var btn=document.getElementById('scBtn');"+
+                        "  var status=document.getElementById('scStatus');"+
+                        "  btn.disabled=true;btn.textContent='⏳ מריץ ברקע...';"+
+                        "  status.textContent=' מתחיל...';"+
+                        "  try{"+
+                        "    var r=await fetch('/api/strategy-compare/start?count='+count+'&balance='+balance+'&source='+source,{method:'POST'});"+
+                        "    var d=await r.json();"+
+                        "    if(d.error){alert('שגיאה: '+d.error);btn.disabled=false;btn.textContent='🚀 הרץ השוואה';status.textContent='';return;}"+
+                        "    if(scPollInterval)clearInterval(scPollInterval);"+
+                        "    scPollInterval=setInterval(pollStrategyCompare,2000);"+
+                        "    pollStrategyCompare();"+
+                        "  }catch(e){btn.disabled=false;btn.textContent='🚀 הרץ השוואה';status.textContent='';alert('שגיאה: '+e);}"+
+                        "}"+
+                        "async function pollStrategyCompare(){"+
+                        "  try{"+
+                        "    var r=await fetch('/api/strategy-compare/status');"+
+                        "    var d=await r.json();"+
+                        "    var status=document.getElementById('scStatus');"+
+                        "    var btn=document.getElementById('scBtn');"+
+                        "    if(d.running){"+
+                        "      status.textContent=' '+d.progress+' ('+d.currentTicker+')';"+
+                        "    }else{"+
+                        "      if(scPollInterval){clearInterval(scPollInterval);scPollInterval=null;}"+
+                        "      btn.disabled=false;btn.textContent='🚀 הרץ השוואה';status.textContent='';"+
+                        "      if(d.results&&d.results.length>0)showStrategyCompareResults(d);"+
+                        "    }"+
+                        "  }catch(e){}"+
+                        "}"+
+                        "function showStrategyCompareResults(d){"+
+                        "  var el=document.getElementById('scResult');el.style.display='block';"+
+                        "  var html='<div style=\"margin-bottom:12px;color:#9ca3af;\">📊 תוצאות השוואה ('+d.results.length+' מניות × 3 אסטרטגיות)</div>';"+
+                        "  html+='<div style=\"overflow-x:auto;\"><table style=\"width:100%;border-collapse:collapse;font-size:13px;\">';"+
+                        "  html+='<thead><tr style=\"background:#0b1220;\">';"+
+                        "  html+='<th style=\"padding:8px;text-align:left;\">מניה</th>';"+
+                        "  html+='<th style=\"padding:8px;text-align:center;color:#22c55e;\">Long-Term</th>';"+
+                        "  html+='<th style=\"padding:8px;text-align:center;color:#f59e0b;\">Swing</th>';"+
+                        "  html+='<th style=\"padding:8px;text-align:center;color:#8b5cf6;\">Momentum</th>';"+
+                        "  html+='<th style=\"padding:8px;text-align:center;\">S&P 500</th>';"+
+                        "  html+='<th style=\"padding:8px;text-align:center;\">🏆 Best</th>';"+
+                        "  html+='</tr></thead><tbody>';"+
+                        "  var totals={longterm:0,swing:0,momentum:0,spy:0};"+
+                        "  for(var i=0;i<d.results.length;i++){"+
+                        "    var r=d.results[i];"+
+                        "    var best=Math.max(r.longterm||0,r.swing||0,r.momentum||0);"+
+                        "    var bestName=r.longterm===best?'Long-Term':(r.swing===best?'Swing':'Momentum');"+
+                        "    var bestColor=r.longterm===best?'#22c55e':(r.swing===best?'#f59e0b':'#8b5cf6');"+
+                        "    totals.longterm+=(r.longterm||0);totals.swing+=(r.swing||0);totals.momentum+=(r.momentum||0);totals.spy+=(r.spy||0);"+
+                        "    html+='<tr style=\"border-bottom:1px solid #1f2a44;\">';"+
+                        "    html+='<td style=\"padding:8px;font-weight:600;\">'+r.ticker+'</td>';"+
+                        "    var ltT=r.ltTrades||0,swT=r.swTrades||0,moT=r.moTrades||0;"+
+                        "    html+='<td style=\"padding:8px;text-align:center;color:'+(r.longterm>=0?'#22c55e':'#ef4444')+';\">'+(r.longterm>=0?'+':'')+r.longterm.toFixed(1)+'% <span style=\"color:#6b7280;font-size:11px;\">('+ltT+')</span></td>';"+
+                        "    html+='<td style=\"padding:8px;text-align:center;color:'+(r.swing>=0?'#22c55e':'#ef4444')+';\">'+(r.swing>=0?'+':'')+r.swing.toFixed(1)+'% <span style=\"color:#6b7280;font-size:11px;\">('+swT+')</span></td>';"+
+                        "    html+='<td style=\"padding:8px;text-align:center;color:'+(r.momentum>=0?'#22c55e':'#ef4444')+';\">'+(r.momentum>=0?'+':'')+r.momentum.toFixed(1)+'% <span style=\"color:#6b7280;font-size:11px;\">('+moT+')</span></td>';"+
+                        "    html+='<td style=\"padding:8px;text-align:center;color:#9ca3af;\">'+(r.spy>=0?'+':'')+r.spy.toFixed(1)+'%</td>';"+
+                        "    html+='<td style=\"padding:8px;text-align:center;font-weight:600;color:'+bestColor+';\">'+bestName+'</td>';"+
+                        "    html+='</tr>';"+
+                        "  }"+
+                        "  var n=d.results.length||1;"+
+                        "  var avgLT=totals.longterm/n,avgSW=totals.swing/n,avgMO=totals.momentum/n,avgSPY=totals.spy/n;"+
+                        "  var bestAvg=Math.max(avgLT,avgSW,avgMO);"+
+                        "  var bestAvgName=avgLT===bestAvg?'Long-Term':(avgSW===bestAvg?'Swing':'Momentum');"+
+                        "  var bestAvgColor=avgLT===bestAvg?'#22c55e':(avgSW===bestAvg?'#f59e0b':'#8b5cf6');"+
+                        "  html+='<tr style=\"background:#1f2a44;font-weight:700;\">';"+
+                        "  html+='<td style=\"padding:8px;\">ממוצע</td>';"+
+                        "  html+='<td style=\"padding:8px;text-align:center;color:'+(avgLT>=0?'#22c55e':'#ef4444')+';\">'+(avgLT>=0?'+':'')+avgLT.toFixed(1)+'%</td>';"+
+                        "  html+='<td style=\"padding:8px;text-align:center;color:'+(avgSW>=0?'#22c55e':'#ef4444')+';\">'+(avgSW>=0?'+':'')+avgSW.toFixed(1)+'%</td>';"+
+                        "  html+='<td style=\"padding:8px;text-align:center;color:'+(avgMO>=0?'#22c55e':'#ef4444')+';\">'+(avgMO>=0?'+':'')+avgMO.toFixed(1)+'%</td>';"+
+                        "  html+='<td style=\"padding:8px;text-align:center;color:#9ca3af;\">'+(avgSPY>=0?'+':'')+avgSPY.toFixed(1)+'%</td>';"+
+                        "  html+='<td style=\"padding:8px;text-align:center;color:'+bestAvgColor+';\">🏆 '+bestAvgName+'</td>';"+
+                        "  html+='</tr></tbody></table></div>';"+
+                        "  el.innerHTML=html;"+
+                        "}"+
+                        "</script>");
 
                 respondHtml(ex, htmlPage(sb.toString()), 200);
             }
@@ -3864,6 +4646,156 @@ public class WebServer {
             }
         });
 
+        // ---------------- Backtest API Endpoint ----------------
+        server.createContext("/api/backtest", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                String ticker = qp.getOrDefault("ticker", "").trim().toUpperCase();
+                double balance = 36000;
+                try { balance = Double.parseDouble(qp.getOrDefault("balance", "36000")); } catch (Exception ignore) {}
+
+                if (ticker.isEmpty()) {
+                    respondJson(ex, Map.of("error", "Missing ticker parameter"), 400);
+                    return;
+                }
+
+                try {
+                    StrategyBacktester.BacktestResult result = StrategyBacktester.runBacktestForTicker(ticker, balance);
+                    
+                    Map<String, Object> out = new LinkedHashMap<>();
+                    out.put("ticker", result.ticker);
+                    out.put("initialBalance", result.initialBalance);
+                    out.put("finalBalance", result.finalBalance);
+                    out.put("totalReturn", result.totalReturn);
+                    out.put("spyReturn", result.spyReturn);
+                    out.put("alpha", result.alpha);
+                    out.put("totalTrades", result.totalTrades);
+                    out.put("winningTrades", result.winningTrades);
+                    out.put("losingTrades", result.losingTrades);
+                    out.put("winRate", result.winRate);
+                    out.put("maxDrawdown", result.maxDrawdown);
+                    out.put("sharpeRatio", result.sharpeRatio);
+                    out.put("profitFactor", result.profitFactor);
+                    out.put("avgWin", result.avgWin);
+                    out.put("avgLoss", result.avgLoss);
+                    out.put("startDate", result.startDate);
+                    out.put("endDate", result.endDate);
+                    out.put("tradingDays", result.tradingDays);
+
+                    // Equity curve for chart
+                    List<Map<String, Object>> equityCurve = new ArrayList<>();
+                    for (StrategyBacktester.EquityPoint ep : result.equityCurve) {
+                        Map<String, Object> pt = new LinkedHashMap<>();
+                        pt.put("day", ep.dayIndex);
+                        pt.put("date", ep.date);
+                        pt.put("equity", ep.equity);
+                        pt.put("drawdown", ep.drawdown);
+                        equityCurve.add(pt);
+                    }
+                    out.put("equityCurve", equityCurve);
+
+                    // SPY curve for comparison
+                    List<Map<String, Object>> spyCurve = new ArrayList<>();
+                    for (StrategyBacktester.EquityPoint ep : result.spyCurve) {
+                        Map<String, Object> pt = new LinkedHashMap<>();
+                        pt.put("day", ep.dayIndex);
+                        pt.put("date", ep.date);
+                        pt.put("equity", ep.equity);
+                        spyCurve.add(pt);
+                    }
+                    out.put("spyCurve", spyCurve);
+
+                    // Trades
+                    List<Map<String, Object>> trades = new ArrayList<>();
+                    for (StrategyBacktester.Trade t : result.trades) {
+                        Map<String, Object> tr = new LinkedHashMap<>();
+                        tr.put("type", t.type);
+                        tr.put("day", t.dayIndex);
+                        tr.put("date", t.date);
+                        tr.put("price", t.price);
+                        tr.put("shares", t.shares);
+                        if (t.stopLoss > 0) tr.put("stopLoss", t.stopLoss);
+                        if (t.profit != 0) tr.put("profit", t.profit);
+                        if (t.profitPct != 0) tr.put("profitPct", t.profitPct);
+                        if (t.exitReason != null) tr.put("exitReason", t.exitReason);
+                        trades.add(tr);
+                    }
+                    out.put("trades", trades);
+
+                    respondJson(ex, out, 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", "Backtest failed: " + e.getMessage()), 500);
+                }
+            }
+        });
+
+        // ---------------- Strategy Comparison API Endpoints ----------------
+        server.createContext("/api/strategy-compare/start", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                int count = 5;
+                double balance = 36000;
+                String source = qp.getOrDefault("source", "random"); // "random" or "favorites"
+                try { count = Math.min(20, Math.max(1, Integer.parseInt(qp.getOrDefault("count", "5")))); } catch (Exception ignore) {}
+                try { balance = Double.parseDouble(qp.getOrDefault("balance", "36000")); } catch (Exception ignore) {}
+
+                // Build ticker list based on source
+                List<String> tickerList;
+                if ("favorites".equals(source)) {
+                    synchronized (favLockStatic) {
+                        tickerList = new ArrayList<>(favItemsStatic);
+                    }
+                    if (tickerList.isEmpty()) {
+                        respondJson(ex, Map.of("error", "אין מניות במועדפים - הוסף מניות קודם"), 400);
+                        return;
+                    }
+                    // Limit to count
+                    if (tickerList.size() > count) {
+                        tickerList = tickerList.subList(0, count);
+                    }
+                } else {
+                    // Random from POPULAR_TICKERS
+                    tickerList = new ArrayList<>(Arrays.asList(POPULAR_TICKERS));
+                    Collections.shuffle(tickerList, new Random());
+                    tickerList = tickerList.subList(0, Math.min(count, tickerList.size()));
+                }
+
+                final int actualCount = tickerList.size();
+                synchronized (strategyCompareLock) {
+                    if (strategyCompareRunning) {
+                        respondJson(ex, Map.of("error", "Already running"), 400);
+                        return;
+                    }
+                    strategyCompareRunning = true;
+                    strategyCompareProgress = 0;
+                    strategyCompareTotal = actualCount;
+                    strategyCompareCurrentTicker = "";
+                    strategyCompareResults = new ArrayList<>();
+                }
+
+                final List<String> fTickerList = tickerList;
+                final double fBalance = balance;
+                strategyCompareExec.submit(() -> runStrategyComparison(fTickerList, fBalance));
+                respondJson(ex, Map.of("status", "started", "count", actualCount, "source", source), 200);
+            }
+        });
+
+        server.createContext("/api/strategy-compare/status", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                Map<String, Object> out = new LinkedHashMap<>();
+                synchronized (strategyCompareLock) {
+                    out.put("running", strategyCompareRunning);
+                    out.put("progress", strategyCompareProgress + "/" + strategyCompareTotal);
+                    out.put("currentTicker", strategyCompareCurrentTicker);
+                    out.put("results", new ArrayList<>(strategyCompareResults));
+                }
+                respondJson(ex, out, 200);
+            }
+        });
+
         server.createContext("/monitoring-refresh", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
@@ -3977,6 +4909,7 @@ public class WebServer {
                     sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>ATR</th>");
                     sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>Volatility</th>");
                     sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>Signal</th>");
+                    sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>Backtest</th>");
                     sb.append("<th style='border:1px solid #1f2a44;padding:8px;'>Action</th>");
                     sb.append("</tr></thead><tbody>");
 
@@ -4008,6 +4941,9 @@ public class WebServer {
                         sb.append("<td style='border:1px solid #1f2a44;padding:8px;'>").append(escapeHtml(pv.volatilityLevel)).append("</td>");
                         sb.append("<td style='border:1px solid #1f2a44;padding:8px;color:").append(signalColor).append(";font-weight:bold;'>").append(signalText).append("</td>");
                         sb.append("<td style='border:1px solid #1f2a44;padding:8px;'>");
+                        sb.append("<button onclick=\"runPositionBacktest('").append(escapeHtml(pv.symbol)).append("')\" style='font-size:11px;padding:4px 8px;background:#1e3a5f;border-color:#3b82f6;'>📊</button>");
+                        sb.append("</td>");
+                        sb.append("<td style='border:1px solid #1f2a44;padding:8px;'>");
                         sb.append("<form method='post' action='/active-positions-remove' style='margin:0;'>");
                         sb.append("<input type='hidden' name='symbol' value='").append(escapeHtml(pv.symbol)).append("' />");
                         sb.append("<button type='submit' style='background:#7f1d1d;border-color:#991b1b;font-size:12px;padding:4px 8px;'>🗑️</button>");
@@ -4017,6 +4953,12 @@ public class WebServer {
                     sb.append("</tbody></table></div>");
                 }
 
+                sb.append("</div>");
+
+                // Backtest Results Section
+                sb.append("<div id='backtestSection' class='card' style='display:none;border:2px solid #3b82f6;'>");
+                sb.append("<div class='title'>📊 תוצאות Backtest</div>");
+                sb.append("<div id='backtestResult'></div>");
                 sb.append("</div>");
 
                 sb.append("<div class='card' dir='rtl' style='text-align:right;'>");
@@ -4031,6 +4973,145 @@ public class WebServer {
                 sb.append("</ul>");
                 sb.append("<div style='color:#fbbf24;margin-top:12px;'>💡 <b>טיפ:</b> למניות תנודתיות (כמו NVDA) השתמש במכפיל ATR גבוה יותר (2.5-3.0). למניות יציבות (כמו PEP) השתמש במכפיל נמוך יותר (1.5-2.0).</div>");
                 sb.append("</div>");
+
+                // Position Sizing Section - Risk Management
+                sb.append("<div class='card' dir='rtl' style='text-align:right;border:2px solid #f59e0b;'>");
+                sb.append("<div class='title'>💰 ניהול סיכונים - כמה מניות לקנות? | Position Sizing</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>חשב כמה מניות לקנות כך שהפסד מקסימלי יהיה מוגדר מראש</div>");
+                sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;direction:ltr;'>");
+                sb.append("<div style='flex:1;min-width:120px;'>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>סימול מניה</label>");
+                sb.append("<input id='psSymbol' type='text' placeholder='AAPL' style='width:100%;' onchange='fetchPositionData()'/>");
+                sb.append("</div>");
+                sb.append("<div style='flex:1;min-width:120px;'>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>גודל תיק ($)</label>");
+                sb.append("<input id='psEquity' type='number' value='36000' min='1000' step='1000' style='width:100%;' onchange='calcPositionSize()'/>");
+                sb.append("</div>");
+                sb.append("<div style='flex:1;min-width:120px;'>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>אחוז סיכון (%)</label>");
+                sb.append("<input id='psRisk' type='number' value='1' min='0.5' max='5' step='0.5' style='width:100%;' onchange='calcPositionSize()'/>");
+                sb.append("</div>");
+                sb.append("<div style='flex:1;min-width:120px;'>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>מכפיל ATR</label>");
+                sb.append("<input id='psAtrMult' type='number' value='2.5' min='1.5' max='4' step='0.5' style='width:100%;' onchange='calcPositionSize()'/>");
+                sb.append("</div>");
+                sb.append("<div style='flex:1;min-width:120px;'>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>יחס R:R</label>");
+                sb.append("<input id='psRR' type='number' value='2' min='1' max='5' step='0.5' style='width:100%;' onchange='calcPositionSize()'/>");
+                sb.append("</div>");
+                sb.append("<div style='display:flex;align-items:flex-end;'>");
+                sb.append("<button type='button' onclick='fetchPositionData()'>🔍 חשב</button>");
+                sb.append("</div>");
+                sb.append("</div>");
+                sb.append("<div id='psResult' style='background:#0b1220;border-radius:8px;padding:16px;direction:ltr;'>");
+                sb.append("<div style='color:#9ca3af;text-align:center;'>הזן סימול מניה ולחץ \"חשב\"</div>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                sb.append("<script>");
+                sb.append("var psPrice = 0; var psAtr = 0; var psTicker = '';");
+                sb.append("function fetchPositionData() {");
+                sb.append("  var sym = document.getElementById('psSymbol').value.trim().toUpperCase();");
+                sb.append("  if (!sym) { alert('הזן סימול מניה'); return; }");
+                sb.append("  psTicker = sym;");
+                sb.append("  document.getElementById('psResult').innerHTML = '<div style=\"color:#9ca3af;text-align:center;\">⏳ טוען נתונים...</div>';");
+                sb.append("  fetch('/api/fetch-atr?symbol=' + encodeURIComponent(sym))");
+                sb.append("    .then(function(r) { return r.json(); })");
+                sb.append("    .then(function(data) {");
+                sb.append("      if (data.error) { document.getElementById('psResult').innerHTML = '<div style=\"color:#ef4444;text-align:center;\">❌ ' + data.error + '</div>'; return; }");
+                sb.append("      psPrice = data.currentPrice; psAtr = data.atr;");
+                sb.append("      calcPositionSize();");
+                sb.append("    })");
+                sb.append("    .catch(function(e) { document.getElementById('psResult').innerHTML = '<div style=\"color:#ef4444;text-align:center;\">❌ שגיאה בטעינת נתונים</div>'; });");
+                sb.append("}");
+                sb.append("function calcPositionSize() {");
+                sb.append("  if (!psPrice || !psAtr || psAtr <= 0) { return; }");
+                sb.append("  var equity = parseFloat(document.getElementById('psEquity').value) || 36000;");
+                sb.append("  var riskPct = (parseFloat(document.getElementById('psRisk').value) || 1) / 100;");
+                sb.append("  var atrMult = parseFloat(document.getElementById('psAtrMult').value) || 2.5;");
+                sb.append("  var rrRatio = parseFloat(document.getElementById('psRR').value) || 2;");
+                sb.append("  var amountToRisk = equity * riskPct;");
+                sb.append("  var stopDistance = psAtr * atrMult;");
+                sb.append("  var shares = Math.floor(amountToRisk / stopDistance);");
+                sb.append("  var maxShares = Math.floor(equity / psPrice);");
+                sb.append("  shares = Math.min(shares, maxShares);");
+                sb.append("  if (shares <= 0) { document.getElementById('psResult').innerHTML = '<div style=\"color:#ef4444;text-align:center;\">גודל התיק קטן מדי לעסקה זו</div>'; return; }");
+                sb.append("  var totalInvest = shares * psPrice;");
+                sb.append("  var portfolioPct = (totalInvest / equity) * 100;");
+                sb.append("  var stopLossPrice = psPrice - stopDistance;");
+                sb.append("  var takeProfitPrice = psPrice + (stopDistance * rrRatio);");
+                sb.append("  var maxLoss = shares * stopDistance;");
+                sb.append("  var potentialProfit = shares * stopDistance * rrRatio;");
+                sb.append("  var html = '';");
+                sb.append("  html += '<div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;\">';");
+                sb.append("  html += '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">';");
+                sb.append("  html += '<div style=\"font-size:28px;font-weight:700;color:#22c55e;\">' + shares + '</div>';");
+                sb.append("  html += '<div style=\"color:#9ca3af;font-size:12px;\">מניות לקנייה</div></div>';");
+                sb.append("  html += '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">';");
+                sb.append("  html += '<div style=\"font-size:20px;font-weight:600;color:#3b82f6;\">$' + totalInvest.toLocaleString('en-US',{maximumFractionDigits:0}) + '</div>';");
+                sb.append("  html += '<div style=\"color:#9ca3af;font-size:12px;\">השקעה (' + portfolioPct.toFixed(1) + '%)</div></div>';");
+                sb.append("  html += '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">';");
+                sb.append("  html += '<div style=\"font-size:20px;font-weight:600;color:#ef4444;\">-$' + maxLoss.toFixed(0) + '</div>';");
+                sb.append("  html += '<div style=\"color:#9ca3af;font-size:12px;\">הפסד מקס</div></div>';");
+                sb.append("  html += '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">';");
+                sb.append("  html += '<div style=\"font-size:20px;font-weight:600;color:#22c55e;\">+$' + potentialProfit.toFixed(0) + '</div>';");
+                sb.append("  html += '<div style=\"color:#9ca3af;font-size:12px;\">רווח (1:' + rrRatio + ')</div></div></div>';");
+                sb.append("  html += '<div style=\"margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;\">';");
+                sb.append("  html += '<div style=\"padding:8px 12px;background:#0f172a;border:1px solid #1f2a44;border-radius:6px;\"><span style=\"color:#9ca3af;\">Entry:</span> <b style=\"color:#e5e7eb;\">$' + psPrice.toFixed(2) + '</b></div>';");
+                sb.append("  html += '<div style=\"padding:8px 12px;background:#0f172a;border:1px solid #ef4444;border-radius:6px;\"><span style=\"color:#ef4444;\">🛑 Stop:</span> <b style=\"color:#ef4444;\">$' + stopLossPrice.toFixed(2) + '</b></div>';");
+                sb.append("  html += '<div style=\"padding:8px 12px;background:#0f172a;border:1px solid #22c55e;border-radius:6px;\"><span style=\"color:#22c55e;\">🎯 Target:</span> <b style=\"color:#22c55e;\">$' + takeProfitPrice.toFixed(2) + '</b></div></div>';");
+                sb.append("  html += '<div style=\"margin-top:10px;padding:8px;background:#1e3a5f;border-radius:6px;color:#93c5fd;font-size:12px;text-align:center;\">';");
+                sb.append("  html += '📌 <b>' + psTicker + '</b>: קנה ' + shares + ' מניות @ $' + psPrice.toFixed(2) + ' | Stop: $' + stopLossPrice.toFixed(2) + ' | Target: $' + takeProfitPrice.toFixed(2) + '</div>';");
+                sb.append("  document.getElementById('psResult').innerHTML = html;");
+                sb.append("}");
+                sb.append("async function runPositionBacktest(ticker) {");
+                sb.append("  var section = document.getElementById('backtestSection');");
+                sb.append("  var result = document.getElementById('backtestResult');");
+                sb.append("  section.style.display = 'block';");
+                sb.append("  result.innerHTML = '<div style=\"text-align:center;color:#9ca3af;\">⏳ מריץ בקטסט עבור ' + ticker + '...</div>';");
+                sb.append("  try {");
+                sb.append("    var equity = parseFloat(document.getElementById('psEquity').value) || 36000;");
+                sb.append("    var r = await fetch('/api/backtest?ticker=' + encodeURIComponent(ticker) + '&balance=' + equity);");
+                sb.append("    var d = await r.json();");
+                sb.append("    if (d.error) { result.innerHTML = '<div style=\"color:#ef4444;\">❌ ' + d.error + '</div>'; return; }");
+                sb.append("    var alphaColor = d.alpha >= 0 ? '#22c55e' : '#ef4444';");
+                sb.append("    var retColor = d.totalReturn >= 0 ? '#22c55e' : '#ef4444';");
+                sb.append("    var html = '<div style=\"text-align:center;margin-bottom:12px;\"><b style=\"font-size:18px;\">' + ticker + '</b></div>';");
+                sb.append("    html += '<div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px;\">';");
+                sb.append("    html += '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">';");
+                sb.append("    html += '<div style=\"font-size:22px;font-weight:700;color:' + retColor + ';\">' + d.totalReturn.toFixed(1) + '%</div>';");
+                sb.append("    html += '<div style=\"color:#9ca3af;font-size:11px;\">תשואת האסטרטגיה</div></div>';");
+                sb.append("    html += '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">';");
+                sb.append("    html += '<div style=\"font-size:22px;font-weight:700;color:#f59e0b;\">' + d.spyReturn.toFixed(1) + '%</div>';");
+                sb.append("    html += '<div style=\"color:#9ca3af;font-size:11px;\">S&P 500</div></div>';");
+                sb.append("    html += '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;border:2px solid ' + alphaColor + ';\">';");
+                sb.append("    html += '<div style=\"font-size:22px;font-weight:700;color:' + alphaColor + ';\">' + (d.alpha >= 0 ? '+' : '') + d.alpha.toFixed(1) + '%</div>';");
+                sb.append("    html += '<div style=\"color:#9ca3af;font-size:11px;\">אלפא</div></div>';");
+                sb.append("    html += '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">';");
+                sb.append("    html += '<div style=\"font-size:18px;font-weight:600;color:#3b82f6;\">$' + d.finalBalance.toLocaleString('en-US',{maximumFractionDigits:0}) + '</div>';");
+                sb.append("    html += '<div style=\"color:#9ca3af;font-size:11px;\">הון סופי</div></div></div>';");
+                sb.append("    html += '<div style=\"display:flex;flex-wrap:wrap;gap:12px;font-size:12px;\">';");
+                sb.append("    html += '<div style=\"flex:1;min-width:150px;padding:10px;background:#0b1220;border-radius:6px;\">';");
+                sb.append("    html += '<div style=\"color:#9ca3af;margin-bottom:4px;\">📈 עסקאות</div>';");
+                sb.append("    html += '<div>' + d.totalTrades + ' עסקאות | ' + ((d.winRate||0)*100).toFixed(0) + '% הצלחה</div></div>';");
+                sb.append("    html += '<div style=\"flex:1;min-width:150px;padding:10px;background:#0b1220;border-radius:6px;\">';");
+                sb.append("    html += '<div style=\"color:#9ca3af;margin-bottom:4px;\">⚠️ סיכון</div>';");
+                sb.append("    html += '<div>Drawdown: <span style=\"color:#ef4444;\">-' + (d.maxDrawdown||0).toFixed(1) + '%</span></div></div>';");
+                sb.append("    html += '<div style=\"flex:1;min-width:150px;padding:10px;background:#0b1220;border-radius:6px;\">';");
+                sb.append("    html += '<div style=\"color:#9ca3af;margin-bottom:4px;\">📅 תקופה</div>';");
+                sb.append("    html += '<div>' + d.tradingDays + ' ימים</div></div></div>';");
+                sb.append("    if (d.alpha >= 0) {");
+                sb.append("      html += '<div style=\"margin-top:12px;padding:10px;background:#14532d;border:1px solid #22c55e;border-radius:6px;color:#86efac;text-align:center;\">';");
+                sb.append("      html += '✅ האסטרטגיה הייתה מנצחת את השוק ב-' + d.alpha.toFixed(1) + '% על ' + ticker + '</div>';");
+                sb.append("    } else {");
+                sb.append("      html += '<div style=\"margin-top:12px;padding:10px;background:#7f1d1d;border:1px solid #ef4444;border-radius:6px;color:#fca5a5;text-align:center;\">';");
+                sb.append("      html += '⚠️ האסטרטגיה הייתה מפגרת אחרי השוק ב-' + Math.abs(d.alpha).toFixed(1) + '% על ' + ticker + '</div>';");
+                sb.append("    }");
+                sb.append("    result.innerHTML = html;");
+                sb.append("    section.scrollIntoView({behavior:'smooth'});");
+                sb.append("  } catch(e) { result.innerHTML = '<div style=\"color:#ef4444;\">❌ שגיאה: ' + e + '</div>'; }");
+                sb.append("}");
+                sb.append("</script>");
 
                 respondHtml(ex, htmlPage(sb.toString()), 200);
             }
@@ -4408,7 +5489,10 @@ public class WebServer {
             if (Files.exists(favPath)) {
                 for (String line : Files.readAllLines(favPath, StandardCharsets.UTF_8)) {
                     String t = line == null ? "" : line.trim().toUpperCase();
-                    if (!t.isEmpty()) fav.items.add(t);
+                    if (!t.isEmpty()) {
+                        fav.items.add(t);
+                        synchronized (favLockStatic) { favItemsStatic.add(t); }
+                    }
                 }
             }
         } catch (Exception ignore) {}
@@ -4559,32 +5643,74 @@ public class WebServer {
                     sb.append("<table style='width:100%;border-collapse:collapse;'>");
                     sb.append("<thead><tr>");
                     sb.append("<th style='text-align:left;padding:8px;border-bottom:1px solid #1f2a44;'>Ticker</th>");
-                    sb.append("<th style='text-align:left;padding:8px;border-bottom:1px solid #1f2a44;'>Score <span onclick=\"document.getElementById('scoreExplanation').style.display=document.getElementById('scoreExplanation').style.display==='none'?'block':'none';\" style='cursor:pointer;background:#1f2a44;border-radius:50%;padding:2px 7px;font-size:12px;margin-left:4px;color:#93c5fd;'>+</span></th>");
-                    sb.append("<th style='text-align:left;padding:8px;border-bottom:1px solid #1f2a44;'>Recommendation</th>");
-                    sb.append("<th style='text-align:left;padding:8px;border-bottom:1px solid #1f2a44;'>Updated (NY)</th>");
+                    sb.append("<th style='text-align:left;padding:8px;border-bottom:1px solid #1f2a44;'>Score</th>");
+                    sb.append("<th style='text-align:left;padding:8px;border-bottom:1px solid #1f2a44;'>Rec</th>");
+                    sb.append("<th style='text-align:right;padding:8px;border-bottom:1px solid #1f2a44;color:#3b82f6;'>Entry $</th>");
+                    sb.append("<th style='text-align:right;padding:8px;border-bottom:1px solid #1f2a44;color:#ef4444;'>Stop $</th>");
+                    sb.append("<th style='text-align:right;padding:8px;border-bottom:1px solid #1f2a44;color:#22c55e;'>Target $</th>");
                     sb.append("<th style='text-align:left;padding:8px;border-bottom:1px solid #1f2a44;'>Action</th>");
                     sb.append("</tr></thead><tbody>");
                     if (snap.green == null || snap.green.isEmpty()) {
-                        sb.append("<tr><td colspan='5' style='padding:10px;color:#9ca3af'>No GREEN recommendations yet (will populate after daily scan).</td></tr>");
+                        sb.append("<tr><td colspan='7' style='padding:10px;color:#9ca3af'>No GREEN recommendations yet (will populate after daily scan).</td></tr>");
                     } else {
                         for (DailyGreenTicker t : snap.green) {
                             if (t == null || t.ticker == null) continue;
                             String esc = escapeHtml(t.ticker);
-                            sb.append("<tr>");
+                            sb.append("<tr id='row-").append(esc).append("'>");
                             sb.append("<td style='padding:8px;border-bottom:1px solid #0f172a;'><span style='color:#22c55e;font-weight:700;'>").append(esc).append("</span></td>");
                             sb.append("<td style='padding:8px;border-bottom:1px solid #0f172a;'>").append(t.finalScore == null ? "" : escapeHtml(String.valueOf(t.finalScore))).append("</td>");
                             sb.append("<td style='padding:8px;border-bottom:1px solid #0f172a;'>").append(t.recommendation == null ? "" : escapeHtml(t.recommendation)).append("</td>");
-                            sb.append("<td style='padding:8px;border-bottom:1px solid #0f172a;color:#9ca3af;'>").append(t.lastUpdatedNy == null ? "" : escapeHtml(t.lastUpdatedNy)).append("</td>");
+                            sb.append("<td id='entry-").append(esc).append("' style='padding:8px;border-bottom:1px solid #0f172a;text-align:right;color:#3b82f6;'>-</td>");
+                            sb.append("<td id='stop-").append(esc).append("' style='padding:8px;border-bottom:1px solid #0f172a;text-align:right;color:#ef4444;'>-</td>");
+                            sb.append("<td id='target-").append(esc).append("' style='padding:8px;border-bottom:1px solid #0f172a;text-align:right;color:#22c55e;'>-</td>");
                             sb.append("<td style='padding:8px;border-bottom:1px solid #0f172a;'>");
                             sb.append("<form method='post' action='/run-main' target='_blank' style='display:inline'>")
                                     .append("<input type='hidden' name='symbol' value='").append(esc).append("'/>")
                                     .append("<button type='submit'>Analyze</button></form> ");
-                            sb.append("<a href='/monitoring#snap-details-").append(esc).append("' target='_blank' style='display:inline-block;padding:6px 12px;background:#1f2a44;border-radius:6px;color:#93c5fd;text-decoration:none;font-size:13px;'>📈 History</a>");
+                            sb.append("<a href='/monitoring#snap-details-").append(esc).append("' target='_blank' style='display:inline-block;padding:6px 12px;background:#1f2a44;border-radius:6px;color:#93c5fd;text-decoration:none;font-size:13px;'>📈</a>");
                             sb.append("</td>");
                             sb.append("</tr>");
                         }
                     }
                     sb.append("</tbody></table></div>");
+
+                    // JavaScript to fetch ATR and calculate Entry/Stop/Target for each GREEN ticker
+                    ScoringConfig.EntryFiltersConfig entryFilters = ScoringConfig.getActiveEntryFilters();
+                    sb.append("<script>");
+                    sb.append("var greenTickers = [");
+                    boolean first = true;
+                    for (DailyGreenTicker gt : snap.green) {
+                        if (gt != null && gt.ticker != null) {
+                            if (!first) sb.append(",");
+                            sb.append("'").append(escapeHtml(gt.ticker)).append("'");
+                            first = false;
+                        }
+                    }
+                    sb.append("];");
+                    sb.append("var atrMultiplier = ").append(entryFilters.atrStopLossMultiplier).append(";");
+                    sb.append("var rrRatio = ").append(entryFilters.riskRewardRatio).append(";");
+                    sb.append("async function loadTradingData() {");
+                    sb.append("  for (var i = 0; i < greenTickers.length; i++) {");
+                    sb.append("    var ticker = greenTickers[i];");
+                    sb.append("    try {");
+                    sb.append("      var r = await fetch('/api/fetch-atr?symbol=' + encodeURIComponent(ticker));");
+                    sb.append("      var d = await r.json();");
+                    sb.append("      if (d.error) continue;");
+                    sb.append("      var entry = d.currentPrice;");
+                    sb.append("      var stopDist = d.atr * atrMultiplier;");
+                    sb.append("      var stop = entry - stopDist;");
+                    sb.append("      var target = entry + (stopDist * rrRatio);");
+                    sb.append("      var entryEl = document.getElementById('entry-' + ticker);");
+                    sb.append("      var stopEl = document.getElementById('stop-' + ticker);");
+                    sb.append("      var targetEl = document.getElementById('target-' + ticker);");
+                    sb.append("      if (entryEl) entryEl.innerHTML = '$' + entry.toFixed(2);");
+                    sb.append("      if (stopEl) stopEl.innerHTML = '$' + stop.toFixed(2);");
+                    sb.append("      if (targetEl) targetEl.innerHTML = '$' + target.toFixed(2);");
+                    sb.append("    } catch(e) {}");
+                    sb.append("  }");
+                    sb.append("}");
+                    sb.append("loadTradingData();");
+                    sb.append("</script>");
 
                     if (snap.running) {
                         sb.append("<script>setTimeout(function(){location.reload();},15000);</script>");
@@ -4631,6 +5757,7 @@ public class WebServer {
                 boolean added = false;
                 if (!t.isEmpty() && t.matches("[A-Z0-9.:-]{1,10}")) {
                     synchronized (favLock) { added = fav.items.add(t); try { Files.write(favPath, (String.join("\n", fav.items)+"\n").getBytes(StandardCharsets.UTF_8)); } catch (Exception ignore) {} }
+                    if (added) { synchronized (favLockStatic) { favItemsStatic.add(t); } }
                 }
                 ex.getResponseHeaders().add("Location", "/favorites?status="+(added?"added":"invalid_or_exists"));
                 ex.sendResponseHeaders(303, -1); ex.close();
@@ -4646,6 +5773,7 @@ public class WebServer {
                 String t = sym == null ? "" : sym.trim().toUpperCase();
                 boolean removed = false;
                 synchronized (favLock) { removed = fav.items.remove(t); try { Files.write(favPath, (String.join("\n", fav.items)+"\n").getBytes(StandardCharsets.UTF_8)); } catch (Exception ignore) {} }
+                if (removed) { synchronized (favLockStatic) { favItemsStatic.remove(t); } }
                 ex.getResponseHeaders().add("Location", "/favorites?status="+(removed?"removed":"not_found"));
                 ex.sendResponseHeaders(303, -1); ex.close();
             }
@@ -4761,58 +5889,110 @@ public class WebServer {
                 }
                 sb.append("</table></div>");
 
-                // Entry Filters section (NEW)
-                sb.append("<div style='margin-top:16px;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;'>");
-                sb.append("<div style='font-weight:600;margin-bottom:12px;color:#f59e0b;'>🚦 Entry Filters | פילטרים לכניסה:</div>");
-                sb.append("<div style='color:#9ca3af;font-size:13px;margin-bottom:12px;'>פילטרים קשיחים שמונעים קנייה של מניות לא מתאימות</div>");
-                
+                // Entry & Exit Rules section
                 ScoringConfig.EntryFiltersConfig ef = activeCfg.entryFilters;
                 if (ef == null) ef = new ScoringConfig.EntryFiltersConfig();
                 
+                // Gate 1: Safety (Veto)
+                sb.append("<div style='margin-top:16px;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:12px;color:#ef4444;'>🚨 שער 1: בטיחות (Veto)</div>");
+                sb.append("<div style='color:#9ca3af;font-size:13px;margin-bottom:12px;'>מניות מסוכנות נחסמות אוטומטית</div>");
                 sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
-                sb.append("<tr style='border-bottom:1px solid #1f2a44;'><th style='text-align:left;padding:6px;'>Filter | פילטר</th><th style='text-align:center;padding:6px;'>Enabled</th><th style='text-align:right;padding:6px;'>Value</th></tr>");
+                String mScoreIcon = ef.vetoMScoreEnabled ? "✓" : "✗";
+                String mScoreColor = ef.vetoMScoreEnabled ? "#22c55e" : "#ef4444";
+                sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                sb.append("<td style='padding:6px;'>M-Score (סיכון הונאה)</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:").append(mScoreColor).append(";'>").append(mScoreIcon).append("</td>");
+                sb.append("<td style='padding:6px;text-align:right;'>חסום אם > ").append(String.format("%.2f", ef.vetoMScoreThreshold)).append("</td></tr>");
+                String zScoreIcon = ef.vetoZScoreEnabled ? "✓" : "✗";
+                String zScoreColor = ef.vetoZScoreEnabled ? "#22c55e" : "#ef4444";
+                sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                sb.append("<td style='padding:6px;'>Z-Score (סיכון פשיטת רגל)</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:").append(zScoreColor).append(";'>").append(zScoreIcon).append("</td>");
+                sb.append("<td style='padding:6px;text-align:right;'>חסום אם < ").append(String.format("%.1f", ef.vetoZScoreThreshold)).append("</td></tr>");
+                sb.append("</table></div>");
                 
-                // SMA200 Filter
+                // Gate 2: Relative Strength (The Leader)
+                sb.append("<div style='margin-top:12px;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:12px;color:#f59e0b;'>💪 שער 2: כוח יחסי (RS)</div>");
+                sb.append("<div style='color:#9ca3af;font-size:13px;margin-bottom:12px;'>המניה חייבת להיות חזקה מהשוק</div>");
+                sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
+                String rsIcon = ef.rsEntryFilterEnabled ? "✓" : "✗";
+                String rsColor = ef.rsEntryFilterEnabled ? "#22c55e" : "#ef4444";
+                sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                sb.append("<td style='padding:6px;'>RS Entry (כניסה)</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:").append(rsColor).append(";'>").append(rsIcon).append("</td>");
+                sb.append("<td style='padding:6px;text-align:right;'>RS > ").append(String.format("%.2f", ef.rsEntryThreshold)).append(" (חזק ב-").append(String.format("%.0f", (ef.rsEntryThreshold - 1) * 100)).append("%)</td></tr>");
+                sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                sb.append("<td style='padding:6px;'>RS Exit (יציאה)</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:").append(rsColor).append(";'>").append(rsIcon).append("</td>");
+                sb.append("<td style='padding:6px;text-align:right;'>RS < ").append(String.format("%.2f", ef.rsExitThreshold)).append(" (חלש ב-").append(String.format("%.0f", (1 - ef.rsExitThreshold) * 100)).append("%)</td></tr>");
+                sb.append("</table></div>");
+                
+                // Gate 3: Technical Timing
+                sb.append("<div style='margin-top:12px;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:12px;color:#3b82f6;'>📊 שער 3: תזמון טכני</div>");
+                sb.append("<div style='color:#9ca3af;font-size:13px;margin-bottom:12px;'>המחיר וה-RSI חייבים לתמוך בכניסה</div>");
+                sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
+                String smaIcon = ef.smaFilterEnabled ? "✓" : "✗";
+                String smaColor = ef.smaFilterEnabled ? "#22c55e" : "#ef4444";
+                sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                sb.append("<td style='padding:6px;'>SMA ").append(ef.smaPeriod).append(" (ממוצע נע)</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:").append(smaColor).append(";'>").append(smaIcon).append("</td>");
+                sb.append("<td style='padding:6px;text-align:right;'>מחיר > SMA").append(ef.smaPeriod).append("</td></tr>");
                 String sma200Icon = ef.sma200FilterEnabled ? "✓" : "✗";
                 String sma200Color = ef.sma200FilterEnabled ? "#22c55e" : "#ef4444";
                 sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
-                sb.append("<td style='padding:6px;'>SMA200 (מגמה)</td>");
+                sb.append("<td style='padding:6px;'>SMA200 (מגמה ראשית)</td>");
                 sb.append("<td style='padding:6px;text-align:center;color:").append(sma200Color).append(";'>").append(sma200Icon).append("</td>");
-                sb.append("<td style='padding:6px;text-align:right;color:#9ca3af;'>מחיר > SMA200</td>");
-                sb.append("</tr>");
-                
-                // RSI Overbought Filter
-                String rsiIcon = ef.rsiOverboughtFilterEnabled ? "✓" : "✗";
-                String rsiColor = ef.rsiOverboughtFilterEnabled ? "#22c55e" : "#ef4444";
+                sb.append("<td style='padding:6px;text-align:right;'>מחיר > SMA200</td></tr>");
+                String rsiIcon = ef.rsiFilterEnabled ? "✓" : "✗";
+                String rsiColor = ef.rsiFilterEnabled ? "#22c55e" : "#ef4444";
                 sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
-                sb.append("<td style='padding:6px;'>RSI Overbought (קניית יתר)</td>");
+                sb.append("<td style='padding:6px;'>RSI Range (טווח)</td>");
                 sb.append("<td style='padding:6px;text-align:center;color:").append(rsiColor).append(";'>").append(rsiIcon).append("</td>");
-                sb.append("<td style='padding:6px;text-align:right;'>RSI < ").append(String.format("%.0f", ef.rsiOverboughtThreshold)).append("</td>");
-                sb.append("</tr>");
-                
-                // Volume Filter
-                String volIcon = ef.volumeFilterEnabled ? "✓" : "✗";
-                String volColor = ef.volumeFilterEnabled ? "#22c55e" : "#ef4444";
+                sb.append("<td style='padding:6px;text-align:right;'>").append(String.format("%.0f", ef.rsiMinThreshold)).append(" < RSI < ").append(String.format("%.0f", ef.rsiMaxThreshold)).append("</td></tr>");
+                String rsiRisingIcon = ef.rsiRisingRequired ? "✓" : "✗";
+                String rsiRisingColor = ef.rsiRisingRequired ? "#22c55e" : "#ef4444";
                 sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
-                sb.append("<td style='padding:6px;'>Volume (נפח מסחר)</td>");
-                sb.append("<td style='padding:6px;text-align:center;color:").append(volColor).append(";'>").append(volIcon).append("</td>");
-                sb.append("<td style='padding:6px;text-align:right;'>").append(String.format("+%.0f%%", (ef.volumeMinRatioToAvg - 1) * 100)).append(" מממוצע</td>");
-                sb.append("</tr>");
+                sb.append("<td style='padding:6px;'>RSI Rising (עולה)</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:").append(rsiRisingColor).append(";'>").append(rsiRisingIcon).append("</td>");
+                sb.append("<td style='padding:6px;text-align:right;'>RSI במגמת עלייה</td></tr>");
+                sb.append("</table></div>");
                 
-                // ATR Stop-Loss
+                // Risk Management
+                sb.append("<div style='margin-top:12px;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:12px;color:#22c55e;'>💰 ניהול סיכונים</div>");
+                sb.append("<div style='color:#9ca3af;font-size:13px;margin-bottom:12px;'>הגדרות Position Sizing וסטופ-לוס</div>");
+                sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
+                sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                sb.append("<td style='padding:6px;'>סיכון לעסקה</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:#22c55e;'>✓</td>");
+                sb.append("<td style='padding:6px;text-align:right;'>").append(String.format("%.1f%%", ef.riskPercentPerTrade)).append(" מההון</td></tr>");
+                sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                sb.append("<td style='padding:6px;'>הון ברירת מחדל</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:#3b82f6;'>$</td>");
+                sb.append("<td style='padding:6px;text-align:right;'>$").append(String.format("%,.0f", ef.accountEquity)).append("</td></tr>");
                 String atrIcon = ef.atrStopLossEnabled ? "✓" : "✗";
                 String atrColor = ef.atrStopLossEnabled ? "#22c55e" : "#ef4444";
                 sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
-                sb.append("<td style='padding:6px;'>ATR Stop-Loss (סטופ-לוס)</td>");
+                sb.append("<td style='padding:6px;'>סטופ-לוס (ATR)</td>");
                 sb.append("<td style='padding:6px;text-align:center;color:").append(atrColor).append(";'>").append(atrIcon).append("</td>");
-                sb.append("<td style='padding:6px;text-align:right;'>").append(String.format("%.1fx", ef.atrStopLossMultiplier)).append(" ATR</td>");
-                sb.append("</tr>");
-                
+                sb.append("<td style='padding:6px;text-align:right;'>").append(String.format("%.1fx", ef.atrStopLossMultiplier)).append(" ATR</td></tr>");
+                String trailingIcon = ef.trailingStopEnabled ? "✓" : "✗";
+                String trailingColor = ef.trailingStopEnabled ? "#22c55e" : "#ef4444";
+                sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                sb.append("<td style='padding:6px;'>Trailing Stop (סטופ נגרר)</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:").append(trailingColor).append(";'>").append(trailingIcon).append("</td>");
+                sb.append("<td style='padding:6px;text-align:right;'>נועל רווחים</td></tr>");
+                sb.append("<tr style='border-bottom:1px solid #0f172a;'>");
+                sb.append("<td style='padding:6px;'>יעד רווח (R:R)</td>");
+                sb.append("<td style='padding:6px;text-align:center;color:#22c55e;'>🎯</td>");
+                sb.append("<td style='padding:6px;text-align:right;'>1:").append(String.format("%.1f", ef.riskRewardRatio)).append("</td></tr>");
                 sb.append("</table>");
                 sb.append("<div style='margin-top:10px;padding:8px;background:#1f2a44;border-radius:6px;font-size:12px;color:#9ca3af;'>");
-                sb.append("💡 לעריכה: שנה את הקובץ <code>scoring-config.json</code> בתיקיית הפרויקט");
-                sb.append("</div>");
-                sb.append("</div>");
+                sb.append("💡 לעריכה מתקדמת: שנה את הקובץ <code>scoring-config.json</code>");
+                sb.append("</div></div>");
 
                 // Mode descriptions
                 sb.append("<div style='margin-top:20px;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;'>");
