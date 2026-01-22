@@ -147,6 +147,10 @@ public class MonitoringAlphaVantageClient {
         if (ent == null || ent.isBlank()) {
             ent = System.getenv("ALPHA_VANTAGE_ENTITLEMENT");
         }
-        return ent;
+        // Validate entitlement - must be "delayed" or "realtime", otherwise default to "delayed"
+        if (ent == null || ent.isBlank() || (!"delayed".equalsIgnoreCase(ent) && !"realtime".equalsIgnoreCase(ent))) {
+            ent = "delayed";
+        }
+        return ent.toLowerCase();
     }
 }

@@ -50,6 +50,7 @@ public class DataFetcher {
                 .timeout(REQUEST_TIMEOUT)
                 .build();
         try {
+            ApiUsageTracker.track("CASH_FLOW");
             HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 return response.body();
@@ -75,6 +76,7 @@ public class DataFetcher {
                 .timeout(REQUEST_TIMEOUT)
                 .build();
         try {
+            ApiUsageTracker.track("INCOME_STATEMENT");
             HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 return response.body();
@@ -100,6 +102,7 @@ public class DataFetcher {
                 .timeout(REQUEST_TIMEOUT)
                 .build();
         try {
+            ApiUsageTracker.track("BALANCE_SHEET");
             HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 return response.body();
@@ -130,6 +133,7 @@ public class DataFetcher {
                 .build();
 
         try {
+            ApiUsageTracker.track("NEWS_SENTIMENT");
             HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 return response.body();
@@ -172,6 +176,7 @@ public class DataFetcher {
                 .build();
 
         try {
+            ApiUsageTracker.track("TIME_SERIES_DAILY");
             // שליחת הבקשה וקבלת התגובה (Response)
             HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
@@ -201,6 +206,7 @@ public class DataFetcher {
                 .timeout(REQUEST_TIMEOUT)
                 .build();
         try {
+            ApiUsageTracker.track("EARNINGS");
             HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 return response.body();
@@ -226,6 +232,7 @@ public class DataFetcher {
                 .timeout(REQUEST_TIMEOUT)
                 .build();
         try {
+            ApiUsageTracker.track("EARNINGS_ESTIMATES");
             HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 return response.body();
@@ -250,6 +257,7 @@ public class DataFetcher {
                 .build();
 
         try {
+            ApiUsageTracker.track("TOP_GAINERS_LOSERS");
             HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 return response.body();
@@ -321,6 +329,7 @@ public class DataFetcher {
                 .timeout(REQUEST_TIMEOUT)
                 .build();
         try {
+            ApiUsageTracker.track("OVERVIEW");
             HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 return response.body();
@@ -353,6 +362,10 @@ public class DataFetcher {
         if (ent == null || ent.isBlank()) {
             ent = System.getenv("ALPHA_VANTAGE_ENTITLEMENT");
         }
-        return ent;
+        // Validate entitlement - must be "delayed" or "realtime", otherwise default to "delayed"
+        if (ent == null || ent.isBlank() || (!"delayed".equalsIgnoreCase(ent) && !"realtime".equalsIgnoreCase(ent))) {
+            ent = "delayed";
+        }
+        return ent.toLowerCase();
     }
 }

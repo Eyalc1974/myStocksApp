@@ -112,13 +112,12 @@ public class WebServer {
     }
 
     private static String bestEffortReadDailyJsonNoFetch(String symbol) {
+        // No caching - always fetch fresh data from AlphaVantage
         try {
             if (symbol == null || symbol.isBlank()) return null;
             String sym = symbol.trim().toUpperCase();
-            Path p = Paths.get("finder-cache").resolve("daily-" + sym + ".json");
-            if (!Files.exists(p)) return null;
-            String s = Files.readString(p, StandardCharsets.UTF_8);
-            return (s == null || s.isBlank()) ? null : s;
+            DataFetcher.setTicker(sym);
+            return DataFetcher.fetchStockData();
         } catch (Exception ignore) {
             return null;
         }
@@ -341,14 +340,9 @@ public class WebServer {
             for (int i = 0; i < toFetch.size(); i++) {
                 String t = toFetch.get(i);
                 try {
-                    // This will fetch + write finder-cache/daily-{sym}.json if cache is missing/old.
+                    // Always fetch fresh from AlphaVantage - no caching
                     DataFetcher.setTicker(t);
                     String json = DataFetcher.fetchStockData();
-                    try {
-                        Path cacheFile = Paths.get("finder-cache").resolve("daily-" + t + ".json");
-                        Files.createDirectories(cacheFile.getParent());
-                        Files.writeString(cacheFile, json == null ? "" : json, StandardCharsets.UTF_8);
-                    } catch (Exception ignore) {}
 
                     Double sc = scoreAlphaAgentSymbolFromDailyJson(json);
                     if (sc == null || Double.isNaN(sc)) continue;
@@ -1185,12 +1179,24 @@ public class WebServer {
         volatile String avNote;
         volatile String avInformation;
         volatile String avErrorMessage;
+
+        // Breakout Scanner fields
+        volatile IntradayScanner.ScanResult scanResult;
+        volatile Double avgDailyVolume;
+        volatile Double previousDayHigh;
+        volatile Double previousDayClose;
+        volatile Double spyChangePct;
+        volatile Double openPrice;
     }
 
     private static Double extractGlobalQuotePrice(JsonNode root) {
         try {
             if (root == null) return null;
+            // Handle both "Global Quote" and "Global Quote - DATA DELAYED BY 15 MINUTES"
             JsonNode q = root.path("Global Quote");
+            if (q == null || q.isMissingNode()) {
+                q = root.path("Global Quote - DATA DELAYED BY 15 MINUTES");
+            }
             if (q == null || q.isMissingNode()) return null;
             String p = q.path("05. price").asText("");
             return parseDoubleOrNull(p);
@@ -1444,27 +1450,12 @@ public class WebServer {
     }
 
     private static Map<String, Double> loadDailyCloseByDateCached(String symbol) {
+        // No caching - always fetch fresh data from AlphaVantage
         try {
             if (symbol == null || symbol.isBlank()) return Map.of();
             String sym = symbol.trim().toUpperCase();
-            Path dir = Paths.get("finder-cache");
-            Files.createDirectories(dir);
-            Path cacheFile = dir.resolve("daily-" + sym + ".json");
-            String json = null;
-            long now = System.currentTimeMillis();
-            if (Files.exists(cacheFile)) {
-                try {
-                    long age = now - Files.getLastModifiedTime(cacheFile).toMillis();
-                    if (age < 6L * 60 * 60 * 1000) {
-                        json = Files.readString(cacheFile, StandardCharsets.UTF_8);
-                    }
-                } catch (Exception ignore) {}
-            }
-            if (json == null) {
-                try { DataFetcher.setTicker(sym); } catch (Exception ignore) {}
-                json = DataFetcher.fetchStockData();
-                try { Files.writeString(cacheFile, json == null ? "" : json, StandardCharsets.UTF_8); } catch (Exception ignore) {}
-            }
+            try { DataFetcher.setTicker(sym); } catch (Exception ignore) {}
+            String json = DataFetcher.fetchStockData();
             return PriceJsonParser.extractCloseByDate(json);
         } catch (Exception ignore) {
             return Map.of();
@@ -1604,8 +1595,69 @@ public class WebServer {
         st.lastVolume = vol;
 
         if (close == null || prevClose == null || prevClose == 0.0) return "HOLD";
-        double pct = (close - prevClose) / prevClose * 100.0;
 
+        // Build IntradayBar list for the scanner
+        List<IntradayScanner.IntradayBar> bars = new ArrayList<>();
+        for (String ts : keys) {
+            try {
+                JsonNode bar = series.path(ts);
+                Double openVal = parseDoubleOrNull(bar.path("1. open").asText(""));
+                Double highVal = parseDoubleOrNull(bar.path("2. high").asText(""));
+                Double lowVal = parseDoubleOrNull(bar.path("3. low").asText(""));
+                Double closeVal = parseDoubleOrNull(bar.path("4. close").asText(""));
+                String vs = bar.path("5. volume").asText("");
+                if (openVal != null && highVal != null && lowVal != null && closeVal != null) {
+                    IntradayScanner.IntradayBar ib = new IntradayScanner.IntradayBar();
+                    ib.timestamp = ts;
+                    ib.open = openVal;
+                    ib.high = highVal;
+                    ib.low = lowVal;
+                    ib.close = closeVal;
+                    ib.volume = (vs != null && !vs.isBlank()) ? Long.parseLong(vs.trim()) : 0;
+                    bars.add(ib);
+                }
+            } catch (Exception ignore) {}
+        }
+
+        // Get open price from first bar of the day
+        if (!bars.isEmpty()) {
+            st.openPrice = bars.get(bars.size() - 1).open;
+        }
+
+        // Use IntradayScanner for breakout detection
+        double avgDailyVol = st.avgDailyVolume != null ? st.avgDailyVolume : 0;
+        double prevDayHigh = st.previousDayHigh != null ? st.previousDayHigh : 0;
+        double prevDayClose = st.previousDayClose != null ? st.previousDayClose : prevClose;
+        double spyChange = st.spyChangePct != null ? st.spyChangePct : 0;
+
+        // If we don't have avg volume, estimate from bars
+        if (avgDailyVol <= 0 && !bars.isEmpty()) {
+            long totalVol = 0;
+            for (IntradayScanner.IntradayBar bar : bars) {
+                totalVol += bar.volume;
+            }
+            // Estimate daily volume based on bars we have
+            double hoursOfData = bars.size() * (5.0 / 60.0);
+            if (hoursOfData > 0) {
+                avgDailyVol = totalVol * (6.5 / hoursOfData);
+            }
+        }
+
+        IntradayScanner.ScanResult scanResult = IntradayScanner.scan(
+            st.symbol, bars, avgDailyVol, prevDayHigh, prevDayClose, spyChange
+        );
+        st.scanResult = scanResult;
+
+        // Map scanner signal to legacy signals (BUY/SELL/HOLD)
+        String signal = scanResult.signal;
+        if ("BREAKOUT_BUY".equals(signal) || "MOMENTUM_BUY".equals(signal)) {
+            return "BUY";
+        } else if ("MISSED".equals(signal) || "OVERBOUGHT".equals(signal)) {
+            return "HOLD"; // Don't chase
+        }
+
+        // Fallback to original simple logic for SELL detection
+        double pct = (close - prevClose) / prevClose * 100.0;
         int n = Math.min(12, keys.size());
         double sumVol = 0.0;
         int cntVol = 0;
@@ -1622,7 +1674,6 @@ public class WebServer {
         double avgVol = cntVol == 0 ? 0.0 : (sumVol / cntVol);
         boolean volSpike = vol != null && avgVol > 0.0 && (vol.doubleValue() >= (2.0 * avgVol));
 
-        if (volSpike && pct >= 0.50) return "BUY";
         if (volSpike && pct <= -0.50) return "SELL";
         return "HOLD";
     }
@@ -1762,34 +1813,16 @@ public class WebServer {
             if (symbol == null || symbol.isBlank()) return "";
             String sym = symbol.trim().toUpperCase();
 
-            Path dir = Paths.get("analysts-cache");
-            Files.createDirectories(dir);
-            Path cacheFile = dir.resolve(sym + "-alphavantage.json");
-            String cachedJson = null;
-            long now = System.currentTimeMillis();
-            if (Files.exists(cacheFile)) {
-                try {
-                    long age = now - Files.getLastModifiedTime(cacheFile).toMillis();
-                    if (age < 24L * 60 * 60 * 1000) {
-                        cachedJson = Files.readString(cacheFile, StandardCharsets.UTF_8);
-                    }
-                } catch (Exception ignore) {}
-            }
-
+            // No caching - always fetch fresh data from AlphaVantage
             ObjectMapper om = new ObjectMapper();
             JsonNode combined;
-            if (cachedJson == null) {
-                MonitoringAlphaVantageClient av = MonitoringAlphaVantageClient.fromEnv();
-                JsonNode overview = null;
-                JsonNode news = null;
-                try { overview = av.overview(sym); } catch (Exception ignore) {}
-                try { news = av.newsSentiment(sym); } catch (Exception ignore) {}
-                String combinedJson = "{\n\"overview\": " + (overview == null ? "{}" : overview.toString()) + ",\n\"news\": " + (news == null ? "{}" : news.toString()) + "\n}";
-                try { Files.writeString(cacheFile, combinedJson, StandardCharsets.UTF_8); } catch (Exception ignore) {}
-                combined = om.readTree(combinedJson);
-            } else {
-                combined = om.readTree(cachedJson);
-            }
+            MonitoringAlphaVantageClient av = MonitoringAlphaVantageClient.fromEnv();
+            JsonNode overview = null;
+            JsonNode news = null;
+            try { overview = av.overview(sym); } catch (Exception ignore) {}
+            try { news = av.newsSentiment(sym); } catch (Exception ignore) {}
+            String combinedJson = "{\n\"overview\": " + (overview == null ? "{}" : overview.toString()) + ",\n\"news\": " + (news == null ? "{}" : news.toString()) + "\n}";
+            combined = om.readTree(combinedJson);
 
             JsonNode ov = combined.path("overview");
             String name = ov.path("Name").asText("");
@@ -1919,7 +1952,7 @@ public class WebServer {
         return "\"" + escaped + "\"";
     }
 
-    // -------- Analyst data (Finnhub) with 24h cache ---------
+    // -------- Analyst data (Finnhub) - no caching, always fetch fresh ---------
     private static String buildAnalystCard(String symbol) {
         try {
             if (symbol == null || symbol.isBlank()) return "";
@@ -1927,35 +1960,20 @@ public class WebServer {
             if (key == null || key.isBlank()) {
                 return "<div class='card'><div class='title'>Analyst Consensus</div><div style='color:#9ca3af'>(Set FINNHUB_API_KEY to enable analyst data)</div></div>";
             }
-            Path dir = Paths.get("analysts-cache");
-            Files.createDirectories(dir);
-            Path cacheFile = dir.resolve(symbol.toUpperCase()+".json");
-            String combinedJson = null;
-            long now = System.currentTimeMillis();
-            if (Files.exists(cacheFile)) {
-                try {
-                    long age = now - Files.getLastModifiedTime(cacheFile).toMillis();
-                    if (age < 24L*60*60*1000) {
-                        combinedJson = Files.readString(cacheFile, StandardCharsets.UTF_8);
-                    }
-                } catch (Exception ignore) {}
-            }
+            // No caching - always fetch fresh data from Finnhub
             ObjectMapper om = new ObjectMapper();
             JsonNode combined = null;
-            if (combinedJson == null) {
-                HttpClient client = HttpClient.newHttpClient();
-                String recoUrl = "https://finnhub.io/api/v1/stock/recommendation?symbol="+symbol+"&token="+key;
-                String ptUrl = "https://finnhub.io/api/v1/stock/price-target?symbol="+symbol+"&token="+key;
-                HttpRequest r1 = HttpRequest.newBuilder().uri(URI.create(recoUrl)).build();
-                HttpRequest r2 = HttpRequest.newBuilder().uri(URI.create(ptUrl)).build();
-                HttpResponse<String> h1 = client.send(r1, HttpResponse.BodyHandlers.ofString());
-                HttpResponse<String> h2 = client.send(r2, HttpResponse.BodyHandlers.ofString());
-                String body1 = (h1.statusCode()==200? h1.body(): "[]");
-                String body2 = (h2.statusCode()==200? h2.body(): "{}");
-                // Build combined JSON string
-                combinedJson = "{\n\"recommendation\": "+body1+",\n\"priceTarget\": "+body2+"\n}";
-                try { Files.writeString(cacheFile, combinedJson, StandardCharsets.UTF_8); } catch (Exception ignore) {}
-            }
+            HttpClient client = HttpClient.newHttpClient();
+            String recoUrl = "https://finnhub.io/api/v1/stock/recommendation?symbol="+symbol+"&token="+key;
+            String ptUrl = "https://finnhub.io/api/v1/stock/price-target?symbol="+symbol+"&token="+key;
+            HttpRequest r1 = HttpRequest.newBuilder().uri(URI.create(recoUrl)).build();
+            HttpRequest r2 = HttpRequest.newBuilder().uri(URI.create(ptUrl)).build();
+            HttpResponse<String> h1 = client.send(r1, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> h2 = client.send(r2, HttpResponse.BodyHandlers.ofString());
+            String body1 = (h1.statusCode()==200? h1.body(): "[]");
+            String body2 = (h2.statusCode()==200? h2.body(): "{}");
+            // Build combined JSON string
+            String combinedJson = "{\n\"recommendation\": "+body1+",\n\"priceTarget\": "+body2+"\n}";
             combined = om.readTree(combinedJson);
             JsonNode recArr = combined.path("recommendation");
             String period = "";
@@ -2470,36 +2488,13 @@ public class WebServer {
     }
 
     private static String loadOrFetchDailyJsonForTrend(String ticker) {
+        // No caching - always fetch fresh data from AlphaVantage
         String sym = ticker == null ? "" : ticker.trim().toUpperCase();
         if (sym.isBlank()) return null;
 
-        Path cacheDir = Paths.get("finder-cache");
-        Path cacheFile = cacheDir.resolve("daily-" + sym + ".json");
-        long maxAgeMin = resolveTrendCacheMaxAgeMinutes();
-        try {
-            Files.createDirectories(cacheDir);
-        } catch (Exception ignore) {}
-
-        try {
-            if (Files.exists(cacheFile)) {
-                long ageMs = System.currentTimeMillis() - Files.getLastModifiedTime(cacheFile).toMillis();
-                long maxAgeMs = maxAgeMin * 60_000L;
-                if (maxAgeMs <= 0 || ageMs <= maxAgeMs) {
-                    return Files.readString(cacheFile, StandardCharsets.UTF_8);
-                }
-            }
-        } catch (Exception ignore) {}
-
         try {
             DataFetcher.setTicker(sym);
-            String json = DataFetcher.fetchStockData();
-            if (json == null || json.isBlank()) return json;
-            try {
-                Path tmp = cacheDir.resolve("daily-" + sym + ".json.tmp");
-                Files.writeString(tmp, json, StandardCharsets.UTF_8);
-                Files.move(tmp, cacheFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
-            } catch (Exception ignore2) {}
-            return json;
+            return DataFetcher.fetchStockData();
         } catch (Exception e) {
             return null;
         }
@@ -2549,30 +2544,16 @@ public class WebServer {
     }
 
     public static void main(String[] args) throws IOException {
+        // Log API key status at startup
+        String apiKeyStatus = System.getenv("ALPHAVANTAGE_API_KEY");
+        if (apiKeyStatus == null || apiKeyStatus.isBlank()) apiKeyStatus = System.getenv("ALPHA_VANTAGE_API_KEY");
+        System.out.println("🔑 Alpha Vantage API Key: " + (apiKeyStatus != null && !apiKeyStatus.isBlank() ? "SET (" + apiKeyStatus.substring(0, Math.min(4, apiKeyStatus.length())) + "...)" : "⚠️ NOT SET - using 'demo' key with OLD DATA!"));
+        
         int port = resolvePort();
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         int threads = resolveServerThreads();
 
-        // Simple once-a-day cache for Portfolio Weekly output
-        final Object portfolioCacheLock = new Object();
-        final class PortfolioCache {
-            String text;
-            LocalDate date;
-        }
-        final PortfolioCache portfolioCache = new PortfolioCache();
-
-        // Disk persistence for today's weekly report text
-        final Path weeklyCacheDir = Paths.get("weekly-cache");
-        try { Files.createDirectories(weeklyCacheDir); } catch (Exception ignore) {}
-        try {
-            LocalDate today = LocalDate.now();
-            Path file = weeklyCacheDir.resolve("weekly-" + today + ".txt");
-            if (Files.exists(file)) {
-                String cached = Files.readString(file, StandardCharsets.UTF_8);
-                portfolioCache.text = cached;
-                portfolioCache.date = today;
-            }
-        } catch (Exception ignore) {}
+        // No caching - data is always fetched fresh from AlphaVantage
 
         // Load portfolio from disk (portfolio.txt) at startup
         final Path portfolioPath = Paths.get("portfolio.txt");
@@ -2590,6 +2571,37 @@ public class WebServer {
                 }
             }
         } catch (Exception ignore) {}
+
+        // Shutdown hook - save data when server restarts
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("🛑 Server shutting down - saving data...");
+            try {
+                // Save portfolio to disk
+                java.util.List<String> portfolio = PortfolioWeeklySummary.getPortfolio();
+                if (portfolio != null && !portfolio.isEmpty()) {
+                    Files.write(portfolioPath, (String.join("\n", portfolio) + "\n").getBytes(StandardCharsets.UTF_8));
+                    System.out.println("✅ Portfolio saved to " + portfolioPath);
+                }
+                // Save favorites
+                synchronized (favLockStatic) {
+                    if (!favItemsStatic.isEmpty()) {
+                        Path favPath = Paths.get("favorites.txt");
+                        Files.write(favPath, (String.join("\n", favItemsStatic) + "\n").getBytes(StandardCharsets.UTF_8));
+                        System.out.println("✅ Favorites saved to " + favPath);
+                    }
+                }
+                // Save monitoring stocks
+                MonitoringStore store = MonitoringStore.defaultStore();
+                java.util.List<String> monitoringTickers = store.loadTickers();
+                if (monitoringTickers != null && !monitoringTickers.isEmpty()) {
+                    store.persistTickers(monitoringTickers);
+                    System.out.println("✅ Monitoring stocks saved");
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Error saving data on shutdown: " + e.getMessage());
+            }
+            System.out.println("👋 Server shutdown complete");
+        }));
 
         server.createContext("/", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
@@ -2709,31 +2721,6 @@ public class WebServer {
                 sb.append("<div id='positionResult' style='background:#0b1220;border-radius:8px;padding:16px;'>");
                 sb.append("<div style='color:#9ca3af;'>המתן לחישוב...</div>");
                 sb.append("</div>");
-                sb.append("</div>");
-
-                // Volume Flow Tracker Section
-                sb.append("<div class='card' style='border:2px solid #8b5cf6;'>");
-                sb.append("<div class='title'>📊 Volume Flow Tracker - ניתוח קונים מול מוכרים</div>");
-                sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>מעקב אחר לחץ קנייה/מכירה על פני 7 ימים עם המלצות מחיר</div>");
-                sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;'>");
-                sb.append("<div style='flex:1;min-width:150px;'>");
-                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>סמל מניה</label>");
-                sb.append("<input id='vfTicker' type='text' placeholder='AAPL' style='width:100%;'/>");
-                sb.append("</div>");
-                sb.append("<div style='flex:1;min-width:150px;'>");
-                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>ימים לניתוח</label>");
-                sb.append("<select id='vfDays' style='width:100%;padding:8px;'>");
-                sb.append("<option value='3'>3 ימים</option>");
-                sb.append("<option value='5'>5 ימים</option>");
-                sb.append("<option value='7' selected>7 ימים (שבוע)</option>");
-                sb.append("<option value='14'>14 ימים</option>");
-                sb.append("</select>");
-                sb.append("</div>");
-                sb.append("<div style='display:flex;align-items:flex-end;'>");
-                sb.append("<button id='vfBtn' onclick='fetchVolumeFlow()' style='padding:8px 20px;background:#8b5cf6;'>🔍 נתח</button>");
-                sb.append("</div>");
-                sb.append("</div>");
-                sb.append("<div id='vfResult' style='display:none;'></div>");
                 sb.append("</div>");
 
                 sb.append("<script>" +
@@ -2931,78 +2918,6 @@ public class WebServer {
                         "  html += '</div>';" +
                         "  el.innerHTML = html;" +
                         "}" +
-                        "async function fetchVolumeFlow() {" +
-                        "  var ticker = (document.getElementById('vfTicker').value || '').trim().toUpperCase();" +
-                        "  var days = parseInt(document.getElementById('vfDays').value) || 7;" +
-                        "  if (!ticker) { alert('הכנס סמל מניה'); return; }" +
-                        "  var btn = document.getElementById('vfBtn');" +
-                        "  var el = document.getElementById('vfResult');" +
-                        "  btn.disabled = true; btn.textContent = '⏳ טוען...';" +
-                        "  el.style.display = 'block';" +
-                        "  el.innerHTML = '<div style=\"color:#9ca3af;text-align:center;padding:20px;\">טוען נתונים...</div>';" +
-                        "  try {" +
-                        "    var r = await fetch('/api/volume-flow?ticker=' + encodeURIComponent(ticker) + '&days=' + days);" +
-                        "    var d = await r.json();" +
-                        "    if (d.error) { el.innerHTML = '<div style=\"color:#ef4444;\">' + d.error + '</div>'; return; }" +
-                        "    var html = '';" +
-                        "    html += '<div style=\"background:#0b1220;border-radius:12px;padding:16px;margin-bottom:16px;\">';" +
-                        "    html += '<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;\">';" +
-                        "    html += '<div style=\"font-size:20px;font-weight:700;\">' + d.ticker + '</div>';" +
-                        "    html += '<div style=\"font-size:24px;font-weight:700;color:#e5e7eb;\">$' + (d.currentPrice||0).toFixed(2) + '</div>';" +
-                        "    html += '</div>';" +
-                        "    html += '<div style=\"text-align:center;padding:12px;background:linear-gradient(90deg,#22c55e ' + (d.weeklyBuyPressure||50) + '%,#ef4444 ' + (d.weeklyBuyPressure||50) + '%);border-radius:8px;margin-bottom:8px;\">';" +
-                        "    html += '<span style=\"background:#0b1220;padding:4px 12px;border-radius:4px;font-weight:600;\">קונים ' + (d.weeklyBuyPressure||0).toFixed(0) + '% | מוכרים ' + (d.weeklySellPressure||0).toFixed(0) + '%</span>';" +
-                        "    html += '</div>';" +
-                        "    html += '<div style=\"text-align:center;font-size:18px;font-weight:600;color:' + (d.weeklyTrend.includes('Accumulation')?'#22c55e':'#ef4444') + ';\">' + d.weeklyTrend + '</div>';" +
-                        "    html += '</div>';" +
-                        "    var latestDate = (d.dailyFlow && d.dailyFlow.length > 0) ? d.dailyFlow[d.dailyFlow.length-1].date : '';" +
-                        "    var dataAge = latestDate ? '(נתונים מ-' + latestDate + ')' : '';" +
-                        "    var today = new Date().toISOString().slice(0,10);" +
-                        "    var isStale = latestDate && latestDate < today.slice(0,7);" +
-                        "    html += '<div style=\"font-weight:600;margin-bottom:8px;\">📅 ניתוח יומי: <span style=\"font-size:12px;color:' + (isStale ? '#fbbf24' : '#9ca3af') + ';font-weight:400;\">' + dataAge + (isStale ? ' ⚠️ נתונים ישנים!' : '') + '</span></div>';" +
-                        "    html += '<div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:16px;\">';" +
-                        "    (d.dailyFlow||[]).forEach(function(day,i){" +
-                        "      var bgColor = day.buyPercent > 55 ? '#14532d' : (day.sellPercent > 55 ? '#7f1d1d' : '#1f2a44');" +
-                        "      var icon = day.buyPercent > 55 ? '🟢' : (day.sellPercent > 55 ? '🔴' : '🟡');" +
-                        "      var chgPct = day.priceChangePct || 0;" +
-                        "      var chgColor = chgPct >= 0 ? '#22c55e' : '#ef4444';" +
-                        "      var chgSign = chgPct >= 0 ? '+' : '';" +
-                        "      html += '<div style=\"background:'+bgColor+';padding:10px;border-radius:8px;text-align:center;\">';" +
-                        "      html += '<div style=\"font-size:11px;color:#9ca3af;\">יום ' + (i+1) + '</div>';" +
-                        "      html += '<div style=\"font-size:10px;color:#6b7280;margin-bottom:4px;\">' + (day.date||'') + '</div>';" +
-                        "      html += '<div style=\"font-size:14px;font-weight:600;color:' + chgColor + ';margin-bottom:4px;\">' + chgSign + chgPct.toFixed(2) + '%</div>';" +
-                        "      html += '<div style=\"font-size:16px;\">' + icon + '</div>';" +
-                        "      html += '<div style=\"font-size:11px;color:#22c55e;\">קנייה ' + day.buyPercent.toFixed(0) + '%</div>';" +
-                        "      html += '<div style=\"font-size:11px;color:#ef4444;\">מכירה ' + day.sellPercent.toFixed(0) + '%</div>';" +
-                        "      html += '</div>';" +
-                        "    });" +
-                        "    html += '</div>';" +
-                        "    html += '<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;\">';" +
-                        "    html += '<div style=\"background:#14532d;padding:16px;border-radius:12px;\">';" +
-                        "    html += '<div style=\"font-weight:600;color:#22c55e;margin-bottom:8px;\">🟢 אזור קנייה</div>';" +
-                        "    html += '<div style=\"font-size:20px;font-weight:700;\">$' + (d.buyZoneLow||0).toFixed(2) + ' - $' + (d.buyZoneHigh||0).toFixed(2) + '</div>';" +
-                        "    html += '<div style=\"font-size:12px;color:#9ca3af;margin-top:4px;\">תמיכה: $' + (d.supportLevel||0).toFixed(2) + '</div>';" +
-                        "    html += '</div>';" +
-                        "    html += '<div style=\"background:#7f1d1d;padding:16px;border-radius:12px;\">';" +
-                        "    html += '<div style=\"font-weight:600;color:#ef4444;margin-bottom:8px;\">🔴 אזור מכירה</div>';" +
-                        "    html += '<div style=\"font-size:20px;font-weight:700;\">$' + (d.sellZoneLow||0).toFixed(2) + ' - $' + (d.sellZoneHigh||0).toFixed(2) + '</div>';" +
-                        "    html += '<div style=\"font-size:12px;color:#9ca3af;margin-top:4px;\">התנגדות: $' + (d.resistanceLevel||0).toFixed(2) + '</div>';" +
-                        "    html += '</div>';" +
-                        "    html += '</div>';" +
-                        "    html += '<div style=\"background:#1e3a5f;padding:16px;border-radius:12px;margin-bottom:12px;\">';" +
-                        "    html += '<div style=\"font-size:18px;font-weight:700;margin-bottom:8px;\">' + (d.recommendation||'') + '</div>';" +
-                        "    html += '<div style=\"color:#ef4444;\">🛑 Stop Loss: $' + (d.stopLoss||0).toFixed(2) + '</div>';" +
-                        "    html += '</div>';" +
-                        "    if (d.insights && d.insights.length > 0) {" +
-                        "      html += '<div style=\"background:#0b1220;padding:12px;border-radius:8px;\">';" +
-                        "      html += '<div style=\"font-weight:600;margin-bottom:8px;\">💡 תובנות:</div>';" +
-                        "      d.insights.forEach(function(ins){ html += '<div style=\"color:#cbd5e1;margin-bottom:4px;\">• ' + ins + '</div>'; });" +
-                        "      html += '</div>';" +
-                        "    }" +
-                        "    el.innerHTML = html;" +
-                        "  } catch(e) { el.innerHTML = '<div style=\"color:#ef4444;\">שגיאה: ' + e.message + '</div>'; }" +
-                        "  finally { btn.disabled = false; btn.textContent = '🔍 נתח'; }" +
-                        "}" +
                         "fetchAnalysis('AAPL');" +
                         "</script>");
 
@@ -3124,6 +3039,49 @@ public class WebServer {
             }
         });
 
+        // Clear Cache API
+        server.createContext("/api/clear-cache", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                try {
+                    int finderDeleted = 0;
+                    int monitoringDeleted = 0;
+                    
+                    // Clear finder-cache/*.json
+                    Path finderDir = Paths.get("finder-cache");
+                    if (Files.exists(finderDir) && Files.isDirectory(finderDir)) {
+                        try (java.util.stream.Stream<Path> files = Files.list(finderDir)) {
+                            for (Path f : files.toList()) {
+                                String name = f.getFileName().toString();
+                                if (name.endsWith(".json") && !Files.isDirectory(f)) {
+                                    try { Files.delete(f); finderDeleted++; } catch (Exception ignore) {}
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Clear monitoring-cache/*.json
+                    Path monitorDir = Paths.get("monitoring-cache");
+                    if (Files.exists(monitorDir) && Files.isDirectory(monitorDir)) {
+                        try (java.util.stream.Stream<Path> files = Files.list(monitorDir)) {
+                            for (Path f : files.toList()) {
+                                String name = f.getFileName().toString();
+                                if (name.endsWith(".json") && !Files.isDirectory(f)) {
+                                    try { Files.delete(f); monitoringDeleted++; } catch (Exception ignore) {}
+                                }
+                            }
+                        }
+                    }
+                    
+                    int total = finderDeleted + monitoringDeleted;
+                    String msg = "נמחקו " + total + " קבצי cache (finder: " + finderDeleted + ", monitoring: " + monitoringDeleted + "). הנתונים הבאים יישלפו טריים מה-API.";
+                    respondJson(ex, Map.of("message", msg), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", "שגיאה במחיקת cache: " + e.getMessage()), 500);
+                }
+            }
+        });
+
         // Volume Flow Tracker API
         server.createContext("/api/volume-flow", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
@@ -3152,31 +3110,44 @@ public class WebServer {
                         return;
                     }
 
-                    // Validate data freshness - reject stale data
-                    String lastRefreshed = PriceJsonParser.extractLastRefreshedDate(json);
-                    if (lastRefreshed != null && !lastRefreshed.isBlank()) {
-                        try {
-                            java.time.LocalDate dataDate = java.time.LocalDate.parse(lastRefreshed.substring(0, 10));
-                            java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("America/New_York"));
-                            long daysDiff = java.time.temporal.ChronoUnit.DAYS.between(dataDate, today);
-                            // Allow up to 4 days old (weekend + 1 buffer)
-                            if (daysDiff > 4) {
-                                respondJson(ex, Map.of("error", "Data is stale (from " + lastRefreshed + ") - " + daysDiff + " days old. Please check your Alpha Vantage API key or try again later."), 500);
-                                return;
-                            }
-                        } catch (Exception dateErr) {
-                            // If date parsing fails, continue but log
-                            System.err.println("Warning: Could not parse last refreshed date: " + lastRefreshed);
-                        }
-                    }
-
-                    // Parse price data
+                    // Parse price data first to validate dates
                     List<Double> closes = PriceJsonParser.extractClosingPrices(json);
                     List<Double> highs = PriceJsonParser.extractHighPrices(json);
                     List<Double> lows = PriceJsonParser.extractLowPrices(json);
                     List<Double> opens = PriceJsonParser.extractOpenPrices(json);
                     List<Long> volumes = PriceJsonParser.extractVolumeData(json);
                     List<String> dates = PriceJsonParser.extractDates(json);
+
+                    // Validate data freshness - check ACTUAL most recent date in data
+                    java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("America/New_York"));
+                    String mostRecentDate = null;
+                    
+                    // dates are sorted ascending by PriceJsonParser, so last one is most recent
+                    if (dates != null && !dates.isEmpty()) {
+                        mostRecentDate = dates.get(dates.size() - 1);
+                    }
+                    // Fallback to metadata
+                    if (mostRecentDate == null || mostRecentDate.isBlank()) {
+                        mostRecentDate = PriceJsonParser.extractLastRefreshedDate(json);
+                    }
+                    
+                    if (mostRecentDate != null && !mostRecentDate.isBlank()) {
+                        try {
+                            java.time.LocalDate dataDate = java.time.LocalDate.parse(mostRecentDate.substring(0, 10));
+                            long daysDiff = java.time.temporal.ChronoUnit.DAYS.between(dataDate, today);
+                            // Allow up to 4 days old (weekend + 1 buffer)
+                            if (daysDiff > 4) {
+                                respondJson(ex, Map.of("error", "Data is STALE! Most recent date: " + mostRecentDate + " (" + daysDiff + " days old). Your Alpha Vantage API is returning old data. Check your API key configuration."), 500);
+                                return;
+                            }
+                        } catch (Exception dateErr) {
+                            System.err.println("Warning: Could not parse date: " + mostRecentDate);
+                        }
+                    } else {
+                        // No date info at all - reject to be safe
+                        respondJson(ex, Map.of("error", "Cannot verify data freshness - no date information in API response"), 500);
+                        return;
+                    }
 
                     if (closes == null || closes.isEmpty()) { 
                         respondJson(ex, Map.of("error", "No price data in API response - check if ticker '" + ticker + "' is valid"), 500); 
@@ -3834,16 +3805,7 @@ public class WebServer {
                 Map<String,String> form = parseForm(body);
                 String sym = form.getOrDefault("symbol", "");
                 boolean ok = PortfolioWeeklySummary.addTicker(sym);
-                synchronized (portfolioCacheLock) { // invalidate daily cache
-                    try {
-                        java.lang.reflect.Field fText = portfolioCache.getClass().getDeclaredField("text");
-                        java.lang.reflect.Field fDate = portfolioCache.getClass().getDeclaredField("date");
-                        fText.setAccessible(true);
-                        fDate.setAccessible(true);
-                        fText.set(portfolioCache, null);
-                        fDate.set(portfolioCache, null);
-                    } catch (Exception ignore) {}
-                }
+                // No caching - data is always fetched fresh from AlphaVantage
                 // Persist portfolio to disk
                 try { Files.write(portfolioPath, (String.join("\n", PortfolioWeeklySummary.getPortfolio())+"\n").getBytes(StandardCharsets.UTF_8)); } catch (Exception ignore) {}
                 ex.getResponseHeaders().add("Location", "/portfolio-manage?status=" + (ok?"added":"invalid"));
@@ -3863,16 +3825,7 @@ public class WebServer {
                 Map<String,String> form = parseForm(body);
                 String sym = form.getOrDefault("symbol", "");
                 boolean ok = PortfolioWeeklySummary.removeTicker(sym);
-                synchronized (portfolioCacheLock) { // invalidate daily cache
-                    try {
-                        java.lang.reflect.Field fText = portfolioCache.getClass().getDeclaredField("text");
-                        java.lang.reflect.Field fDate = portfolioCache.getClass().getDeclaredField("date");
-                        fText.setAccessible(true);
-                        fDate.setAccessible(true);
-                        fText.set(portfolioCache, null);
-                        fDate.set(portfolioCache, null);
-                    } catch (Exception ignore) {}
-                }
+                // No caching - data is always fetched fresh from AlphaVantage
                 // Persist portfolio to disk
                 try { Files.write(portfolioPath, (String.join("\n", PortfolioWeeklySummary.getPortfolio())+"\n").getBytes(StandardCharsets.UTF_8)); } catch (Exception ignore) {}
                 ex.getResponseHeaders().add("Location", "/portfolio-manage?status=" + (ok?"removed":"not_found"));
@@ -5270,6 +5223,111 @@ public class WebServer {
                     sb.append("<div style='color:#fca5a5;margin-bottom:12px;'>Last error: ").append(escapeHtml(st.lastError)).append("</div>");
                 }
 
+                // Breakout Scanner Results
+                IntradayScanner.ScanResult scan = st.scanResult;
+                if (scan != null) {
+                    sb.append("</div>"); // Close main card
+                    sb.append("<div class='card'><div class='title'>🚀 Breakout Scanner - מסחר תוך-יומי</div>");
+                    
+                    // Signal with Hebrew
+                    String scanCol = "#93c5fd";
+                    if ("BREAKOUT_BUY".equals(scan.signal) || "MOMENTUM_BUY".equals(scan.signal)) scanCol = "#22c55e";
+                    else if ("MISSED".equals(scan.signal) || "OVERBOUGHT".equals(scan.signal)) scanCol = "#fbbf24";
+                    else if ("WEAK_VOLUME".equals(scan.signal)) scanCol = "#9ca3af";
+                    
+                    sb.append("<div style='font-size:1.3em;margin-bottom:16px;'>")
+                      .append("<span style='color:").append(scanCol).append(";font-weight:700;'>")
+                      .append(escapeHtml(scan.signalHebrew != null ? scan.signalHebrew : scan.signal))
+                      .append("</span></div>");
+                    
+                    // Key metrics grid
+                    sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;'>");
+                    
+                    // Price Change
+                    String pctColor = scan.priceChangePct >= 0 ? "#22c55e" : "#fca5a5";
+                    sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;text-align:center;'>")
+                      .append("<div style='color:#9ca3af;font-size:0.8em;'>שינוי יומי</div>")
+                      .append("<div style='color:").append(pctColor).append(";font-size:1.2em;font-weight:700;'>")
+                      .append(scan.priceChangePct >= 0 ? "+" : "").append(String.format("%.2f%%", scan.priceChangePct))
+                      .append("</div></div>");
+                    
+                    // RVOL
+                    String rvolColor = scan.rvol >= 2.0 ? "#22c55e" : (scan.rvol >= 1.5 ? "#fbbf24" : "#9ca3af");
+                    sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;text-align:center;'>")
+                      .append("<div style='color:#9ca3af;font-size:0.8em;'>RVOL (נפח יחסי)</div>")
+                      .append("<div style='color:").append(rvolColor).append(";font-size:1.2em;font-weight:700;'>")
+                      .append(String.format("%.1fx", scan.rvol))
+                      .append("</div></div>");
+                    
+                    // VWAP
+                    String vwapColor = scan.aboveVwap ? "#22c55e" : "#fca5a5";
+                    String vwapIcon = scan.aboveVwap ? "✅" : "❌";
+                    sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;text-align:center;'>")
+                      .append("<div style='color:#9ca3af;font-size:0.8em;'>VWAP</div>")
+                      .append("<div style='color:").append(vwapColor).append(";font-size:1.2em;font-weight:700;'>")
+                      .append("$").append(String.format("%.2f", scan.vwap)).append(" ").append(vwapIcon)
+                      .append("</div></div>");
+                    
+                    // RSI
+                    String rsiColor = scan.rsi > 70 ? "#fca5a5" : (scan.rsi > 60 ? "#22c55e" : "#9ca3af");
+                    sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;text-align:center;'>")
+                      .append("<div style='color:#9ca3af;font-size:0.8em;'>RSI (תוך-יומי)</div>")
+                      .append("<div style='color:").append(rsiColor).append(";font-size:1.2em;font-weight:700;'>")
+                      .append(String.format("%.0f", scan.rsi))
+                      .append("</div></div>");
+                    
+                    // Market Support
+                    String mktColor = scan.marketSupport ? "#22c55e" : "#fca5a5";
+                    String mktIcon = scan.marketSupport ? "🟢" : "🔴";
+                    sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;text-align:center;'>")
+                      .append("<div style='color:#9ca3af;font-size:0.8em;'>שוק (SPY)</div>")
+                      .append("<div style='color:").append(mktColor).append(";font-size:1.2em;font-weight:700;'>")
+                      .append(mktIcon).append(" ").append(String.format("%.1f%%", scan.spyChangePct))
+                      .append("</div></div>");
+                    
+                    sb.append("</div>"); // Close grid
+                    
+                    // Trade Parameters (if buy signal)
+                    if (scan.suggestedEntry > 0 && ("BREAKOUT_BUY".equals(scan.signal) || "MOMENTUM_BUY".equals(scan.signal))) {
+                        sb.append("<div style='background:#0f1a2a;border:1px solid #22c55e;border-radius:10px;padding:16px;margin-bottom:16px;'>");
+                        sb.append("<div style='color:#22c55e;font-weight:700;margin-bottom:10px;'>📊 תוכנית מסחר</div>");
+                        sb.append("<div style='display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;'>");
+                        sb.append("<div><div style='color:#9ca3af;font-size:0.8em;'>כניסה</div><div style='color:#22c55e;font-weight:700;'>$")
+                          .append(String.format("%.2f", scan.suggestedEntry)).append("</div></div>");
+                        sb.append("<div><div style='color:#9ca3af;font-size:0.8em;'>סטופ לוס</div><div style='color:#fca5a5;font-weight:700;'>$")
+                          .append(String.format("%.2f", scan.suggestedStopLoss)).append("</div></div>");
+                        sb.append("<div><div style='color:#9ca3af;font-size:0.8em;'>יעד</div><div style='color:#22c55e;font-weight:700;'>$")
+                          .append(String.format("%.2f", scan.targetPrice)).append("</div></div>");
+                        sb.append("</div></div>");
+                    }
+                    
+                    // Reasons
+                    if (!scan.reasons.isEmpty()) {
+                        sb.append("<div style='margin-bottom:12px;'><div style='color:#22c55e;margin-bottom:6px;'>✅ סיבות:</div>");
+                        for (String reason : scan.reasons) {
+                            sb.append("<div style='color:#9ca3af;margin-left:16px;'>• ").append(escapeHtml(reason)).append("</div>");
+                        }
+                        sb.append("</div>");
+                    }
+                    
+                    // Warnings
+                    if (!scan.warnings.isEmpty()) {
+                        sb.append("<div style='margin-bottom:12px;'><div style='color:#fbbf24;margin-bottom:6px;'>⚠️ אזהרות:</div>");
+                        for (String warning : scan.warnings) {
+                            sb.append("<div style='color:#9ca3af;margin-left:16px;'>• ").append(escapeHtml(warning)).append("</div>");
+                        }
+                        sb.append("</div>");
+                    }
+                    
+                    // Scanner explanation
+                    sb.append("<div style='color:#6b7280;font-size:0.85em;margin-top:12px;border-top:1px solid #1f2a44;padding-top:12px;'>");
+                    sb.append("<b>מדדי הסורק:</b> RVOL≥2 (נפח חריג), מעל VWAP, RSI>60, תמיכת שוק (SPY לא יורד מעל 0.5%). ");
+                    sb.append("אם המניה כבר עלתה יותר מ-4% - אל תרדוף!");
+                    sb.append("</div>");
+                    
+                    sb.append("<div class='card' style='margin-top:12px;background:#0b1220;'>");
+                }
+
                 if (st.running) {
                     sb.append("<script>setTimeout(function(){location.reload();},60000);</script>");
                 }
@@ -5315,6 +5373,120 @@ public class WebServer {
                 }
                 sb.append("</div>");
 
+                // Volume Flow Tracker Section
+                sb.append("<div class='card' style='border:2px solid #8b5cf6;'>");
+                sb.append("<div class='title'>📊 Volume Flow Tracker - ניתוח קונים מול מוכרים</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>מעקב אחר לחץ קנייה/מכירה על פני 7 ימים עם המלצות מחיר</div>");
+                sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;'>");
+                sb.append("<div style='flex:1;min-width:150px;'>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>סמל מניה</label>");
+                sb.append("<input id='vfTicker' type='text' placeholder='AAPL' style='width:100%;'/>");
+                sb.append("</div>");
+                sb.append("<div style='flex:1;min-width:150px;'>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>ימים לניתוח</label>");
+                sb.append("<select id='vfDays' style='width:100%;padding:8px;'>");
+                sb.append("<option value='3'>3 ימים</option>");
+                sb.append("<option value='5'>5 ימים</option>");
+                sb.append("<option value='7' selected>7 ימים (שבוע)</option>");
+                sb.append("<option value='14'>14 ימים</option>");
+                sb.append("</select>");
+                sb.append("</div>");
+                sb.append("<div style='display:flex;align-items:flex-end;gap:8px;'>");
+                sb.append("<button id='vfBtn' onclick='fetchVolumeFlow()' style='padding:8px 20px;background:#8b5cf6;'>🔍 נתח</button>");
+                sb.append("</div>");
+                sb.append("</div>");
+                sb.append("<div id='vfResult' style='display:none;'></div>");
+                sb.append("</div>");
+
+                // Volume Flow Tracker JavaScript
+                sb.append("<script>" +
+                        "async function fetchVolumeFlow() {" +
+                        "  var ticker = (document.getElementById('vfTicker').value || '').trim().toUpperCase();" +
+                        "  var days = parseInt(document.getElementById('vfDays').value) || 7;" +
+                        "  if (!ticker) { alert('הכנס סמל מניה'); return; }" +
+                        "  var btn = document.getElementById('vfBtn');" +
+                        "  var el = document.getElementById('vfResult');" +
+                        "  btn.disabled = true; btn.textContent = '⏳ טוען...';" +
+                        "  el.style.display = 'block';" +
+                        "  el.innerHTML = '<div style=\"color:#9ca3af;text-align:center;padding:20px;\">טוען נתונים...</div>';" +
+                        "  try {" +
+                        "    var r = await fetch('/api/volume-flow?ticker=' + encodeURIComponent(ticker) + '&days=' + days);" +
+                        "    var d = await r.json();" +
+                        "    if (d.error) { el.innerHTML = '<div style=\"color:#ef4444;\">' + d.error + '</div>'; return; }" +
+                        "    var html = '';" +
+                        "    var latestDay = (d.dailyFlow && d.dailyFlow.length > 0) ? d.dailyFlow[d.dailyFlow.length-1] : null;" +
+                        "    var todayChgPct = latestDay ? (latestDay.priceChangePct || 0) : 0;" +
+                        "    var todayChgColor = todayChgPct >= 0 ? '#22c55e' : '#ef4444';" +
+                        "    var todayChgSign = todayChgPct >= 0 ? '+' : '';" +
+                        "    var todayOpen = latestDay ? (latestDay.open || 0) : 0;" +
+                        "    var todayClose = latestDay ? (latestDay.close || 0) : 0;" +
+                        "    html += '<div style=\"background:#0b1220;border-radius:12px;padding:16px;margin-bottom:16px;\">';" +
+                        "    html += '<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;\">';" +
+                        "    html += '<div style=\"font-size:20px;font-weight:700;\">' + d.ticker + '</div>';" +
+                        "    html += '<div style=\"text-align:right;\">';" +
+                        "    html += '<div style=\"font-size:24px;font-weight:700;color:#e5e7eb;\">$' + (d.currentPrice||0).toFixed(2) + '</div>';" +
+                        "    html += '<div style=\"font-size:18px;font-weight:600;color:' + todayChgColor + ';\">' + todayChgSign + todayChgPct.toFixed(2) + '%</div>';" +
+                        "    html += '</div>';" +
+                        "    html += '</div>';" +
+                        "    html += '<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;background:#1f2a44;padding:12px;border-radius:8px;\">';" +
+                        "    html += '<div style=\"text-align:center;\"><div style=\"font-size:11px;color:#9ca3af;\">פתיחה (Open)</div><div style=\"font-size:16px;font-weight:600;\">$' + todayOpen.toFixed(2) + '</div></div>';" +
+                        "    html += '<div style=\"text-align:center;\"><div style=\"font-size:11px;color:#9ca3af;\">סגירה (Close)</div><div style=\"font-size:16px;font-weight:600;color:' + todayChgColor + ';\">$' + todayClose.toFixed(2) + '</div></div>';" +
+                        "    html += '</div>';" +
+                        "    html += '<div style=\"text-align:center;padding:12px;background:linear-gradient(90deg,#22c55e ' + (d.weeklyBuyPressure||50) + '%,#ef4444 ' + (d.weeklyBuyPressure||50) + '%);border-radius:8px;margin-bottom:8px;\">';" +
+                        "    html += '<span style=\"background:#0b1220;padding:4px 12px;border-radius:4px;font-weight:600;\">קונים ' + (d.weeklyBuyPressure||0).toFixed(0) + '% | מוכרים ' + (d.weeklySellPressure||0).toFixed(0) + '%</span>';" +
+                        "    html += '</div>';" +
+                        "    html += '<div style=\"text-align:center;font-size:18px;font-weight:600;color:' + (d.weeklyTrend.includes('Accumulation')?'#22c55e':'#ef4444') + ';\">' + d.weeklyTrend + '</div>';" +
+                        "    html += '</div>';" +
+                        "    var latestDate = (d.dailyFlow && d.dailyFlow.length > 0) ? d.dailyFlow[d.dailyFlow.length-1].date : '';" +
+                        "    var dataAge = latestDate ? '(נתונים מ-' + latestDate + ')' : '';" +
+                        "    var today = new Date().toISOString().slice(0,10);" +
+                        "    var isStale = latestDate && latestDate < today.slice(0,7);" +
+                        "    html += '<div style=\"font-weight:600;margin-bottom:8px;\">📅 ניתוח יומי: <span style=\"font-size:12px;color:' + (isStale ? '#fbbf24' : '#9ca3af') + ';font-weight:400;\">' + dataAge + (isStale ? ' ⚠️ נתונים ישנים!' : '') + '</span></div>';" +
+                        "    html += '<div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:16px;\">';" +
+                        "    (d.dailyFlow||[]).forEach(function(day,i){" +
+                        "      var bgColor = day.buyPercent > 55 ? '#14532d' : (day.sellPercent > 55 ? '#7f1d1d' : '#1f2a44');" +
+                        "      var icon = day.buyPercent > 55 ? '🟢' : (day.sellPercent > 55 ? '🔴' : '🟡');" +
+                        "      var chgPct = day.priceChangePct || 0;" +
+                        "      var chgColor = chgPct >= 0 ? '#22c55e' : '#ef4444';" +
+                        "      var chgSign = chgPct >= 0 ? '+' : '';" +
+                        "      html += '<div style=\"background:'+bgColor+';padding:10px;border-radius:8px;text-align:center;\">';" +
+                        "      html += '<div style=\"font-size:11px;color:#9ca3af;\">יום ' + (i+1) + '</div>';" +
+                        "      html += '<div style=\"font-size:10px;color:#6b7280;margin-bottom:4px;\">' + (day.date||'') + '</div>';" +
+                        "      html += '<div style=\"font-size:14px;font-weight:600;color:' + chgColor + ';margin-bottom:4px;\">' + chgSign + chgPct.toFixed(2) + '%</div>';" +
+                        "      html += '<div style=\"font-size:16px;\">' + icon + '</div>';" +
+                        "      html += '<div style=\"font-size:11px;color:#22c55e;\">קנייה ' + day.buyPercent.toFixed(0) + '%</div>';" +
+                        "      html += '<div style=\"font-size:11px;color:#ef4444;\">מכירה ' + day.sellPercent.toFixed(0) + '%</div>';" +
+                        "      html += '</div>';" +
+                        "    });" +
+                        "    html += '</div>';" +
+                        "    html += '<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;\">';" +
+                        "    html += '<div style=\"background:#14532d;padding:16px;border-radius:12px;\">';" +
+                        "    html += '<div style=\"font-weight:600;color:#22c55e;margin-bottom:8px;\">🟢 אזור קנייה</div>';" +
+                        "    html += '<div style=\"font-size:20px;font-weight:700;\">$' + (d.buyZoneLow||0).toFixed(2) + ' - $' + (d.buyZoneHigh||0).toFixed(2) + '</div>';" +
+                        "    html += '<div style=\"font-size:12px;color:#9ca3af;margin-top:4px;\">תמיכה: $' + (d.supportLevel||0).toFixed(2) + '</div>';" +
+                        "    html += '</div>';" +
+                        "    html += '<div style=\"background:#7f1d1d;padding:16px;border-radius:12px;\">';" +
+                        "    html += '<div style=\"font-weight:600;color:#ef4444;margin-bottom:8px;\">🔴 אזור מכירה</div>';" +
+                        "    html += '<div style=\"font-size:20px;font-weight:700;\">$' + (d.sellZoneLow||0).toFixed(2) + ' - $' + (d.sellZoneHigh||0).toFixed(2) + '</div>';" +
+                        "    html += '<div style=\"font-size:12px;color:#9ca3af;margin-top:4px;\">התנגדות: $' + (d.resistanceLevel||0).toFixed(2) + '</div>';" +
+                        "    html += '</div>';" +
+                        "    html += '</div>';" +
+                        "    html += '<div style=\"background:#1e3a5f;padding:16px;border-radius:12px;margin-bottom:12px;\">';" +
+                        "    html += '<div style=\"font-size:18px;font-weight:700;margin-bottom:8px;\">' + (d.recommendation||'') + '</div>';" +
+                        "    html += '<div style=\"color:#ef4444;\">🛑 Stop Loss: $' + (d.stopLoss||0).toFixed(2) + '</div>';" +
+                        "    html += '</div>';" +
+                        "    if (d.insights && d.insights.length > 0) {" +
+                        "      html += '<div style=\"background:#0b1220;padding:12px;border-radius:8px;\">';" +
+                        "      html += '<div style=\"font-weight:600;margin-bottom:8px;\">💡 תובנות:</div>';" +
+                        "      d.insights.forEach(function(ins){ html += '<div style=\"color:#cbd5e1;margin-bottom:4px;\">• ' + ins + '</div>'; });" +
+                        "      html += '</div>';" +
+                        "    }" +
+                        "    el.innerHTML = html;" +
+                        "  } catch(e) { el.innerHTML = '<div style=\"color:#ef4444;\">שגיאה: ' + e.message + '</div>'; }" +
+                        "  finally { btn.disabled = false; btn.textContent = '🔍 נתח'; }" +
+                        "}" +
+                        "</script>");
+
                 respondHtml(ex, htmlPage(sb.toString()), 200);
             }
         });
@@ -5339,6 +5511,13 @@ public class WebServer {
                     intradayState.lastPrice = null;
                     intradayState.lastVolume = null;
                     intradayState.history.clear();
+                    // Reset scanner fields
+                    intradayState.scanResult = null;
+                    intradayState.avgDailyVolume = null;
+                    intradayState.previousDayHigh = null;
+                    intradayState.previousDayClose = null;
+                    intradayState.spyChangePct = null;
+                    intradayState.openPrice = null;
                     if (intradayExec != null) {
                         try { intradayExec.shutdownNow(); } catch (Exception ignore) {}
                         intradayExec = null;
@@ -5370,6 +5549,76 @@ public class WebServer {
                         if (!isNyseRegularHoursNow()) return;
                         try {
                             MonitoringAlphaVantageClient av = MonitoringAlphaVantageClient.fromEnv();
+                            
+                            // Fetch SPY for market sentiment (once per session or periodically)
+                            if (st.spyChangePct == null || st.lastCheckNy.getMinute() % 5 == 0) {
+                                try {
+                                    JsonNode spyQuote = av.globalQuote("SPY");
+                                    if (spyQuote != null) {
+                                        // Handle both "Global Quote" and "Global Quote - DATA DELAYED BY 15 MINUTES"
+                                        JsonNode gq = spyQuote.path("Global Quote");
+                                        if (gq == null || gq.isMissingNode()) {
+                                            gq = spyQuote.path("Global Quote - DATA DELAYED BY 15 MINUTES");
+                                        }
+                                        String changePct = gq.path("10. change percent").asText("");
+                                        if (changePct != null && !changePct.isBlank()) {
+                                            changePct = changePct.replace("%", "").trim();
+                                            st.spyChangePct = parseDoubleOrNull(changePct);
+                                        }
+                                    }
+                                } catch (Exception ignore) {
+                                    if (st.spyChangePct == null) st.spyChangePct = 0.0;
+                                }
+                            }
+                            
+                            // Fetch previous day data once
+                            if (st.previousDayHigh == null || st.previousDayClose == null || st.avgDailyVolume == null) {
+                                try {
+                                    Map<String, Double> dailyClose = loadDailyCloseByDateCached(st.symbol);
+                                    if (dailyClose != null && !dailyClose.isEmpty()) {
+                                        // Get yesterday's close
+                                        String yesterday = nyToday();
+                                        Double prevClose = bestEffortCloseOnOrBefore(dailyClose, yesterday);
+                                        if (prevClose != null) st.previousDayClose = prevClose;
+                                    }
+                                } catch (Exception ignore) {}
+                                
+                                // Try to get high and avg volume from daily data
+                                try {
+                                    JsonNode daily = av.timeSeriesDaily(st.symbol);
+                                    if (daily != null) {
+                                        JsonNode ts = daily.path("Time Series (Daily)");
+                                        if (ts != null && ts.isObject()) {
+                                            List<String> dates = new ArrayList<>();
+                                            ts.fieldNames().forEachRemaining(dates::add);
+                                            dates.sort(Comparator.reverseOrder());
+                                            if (!dates.isEmpty()) {
+                                                // Previous day high
+                                                JsonNode prevDay = ts.path(dates.get(0));
+                                                st.previousDayHigh = parseDoubleOrNull(prevDay.path("2. high").asText(""));
+                                                if (st.previousDayClose == null) {
+                                                    st.previousDayClose = parseDoubleOrNull(prevDay.path("4. close").asText(""));
+                                                }
+                                                // Calculate 30-day average volume
+                                                double sumVol = 0;
+                                                int cnt = 0;
+                                                for (int i = 0; i < Math.min(30, dates.size()); i++) {
+                                                    JsonNode d = ts.path(dates.get(i));
+                                                    String v = d.path("5. volume").asText("");
+                                                    if (v != null && !v.isBlank()) {
+                                                        try {
+                                                            sumVol += Double.parseDouble(v.trim());
+                                                            cnt++;
+                                                        } catch (Exception ignore) {}
+                                                    }
+                                                }
+                                                if (cnt > 0) st.avgDailyVolume = sumVol / cnt;
+                                            }
+                                        }
+                                    }
+                                } catch (Exception ignore) {}
+                            }
+                            
                             JsonNode intraday = av.timeSeriesIntraday(st.symbol, intradayIntervalForCurrentEntitlement());
                             String sig = computeIntradaySignal(intraday, st);
                             st.lastSignal = sig;
@@ -5377,8 +5626,14 @@ public class WebServer {
                             if (("BUY".equals(sig) || "SELL".equals(sig)) && st.lastBarTs != null) {
                                 boolean already = sig.equals(st.lastNotifiedSignal) && st.lastBarTs.equals(st.lastNotifiedBarTs);
                                 if (!already) {
-                                    String msg = "Intraday alert: " + sig + " " + st.symbol + " (bar " + st.lastBarTs + ") price=" + (st.lastPrice==null?"N/A":String.format("%.4f", st.lastPrice)) + " vol=" + (st.lastVolume==null?"N/A":String.valueOf(st.lastVolume));
-                                    st.history.add(ZonedDateTime.now(NY).toString() + " | " + msg);
+                                    // Enhanced alert message with scanner data
+                                    String msg;
+                                    if (st.scanResult != null) {
+                                        msg = IntradayScanner.generateAlertMessage(st.scanResult);
+                                    } else {
+                                        msg = "Intraday alert: " + sig + " " + st.symbol + " (bar " + st.lastBarTs + ") price=" + (st.lastPrice==null?"N/A":String.format("%.4f", st.lastPrice)) + " vol=" + (st.lastVolume==null?"N/A":String.valueOf(st.lastVolume));
+                                    }
+                                    st.history.add(ZonedDateTime.now(NY).toString() + " | " + sig + " " + st.symbol);
                                     sendTelegram(msg);
                                     st.lastNotifiedSignal = sig;
                                     st.lastNotifiedBarTs = st.lastBarTs;
@@ -6433,7 +6688,7 @@ public class WebServer {
 
                 String html = htmlPage(favCard + overviewCard + modelSummaryCard + riskModelsCard + analystsCard + "<div class='card'><div class='title'>Models used</div>" + modelsUsedNamesOnlyHtml() + "</div>" + "<div class=\"card\"><div class=\"title\">Output</div><pre>" +
                         escapeHtml(result) + "</pre></div>" + aiCard + charts
-                        + "<script>(function(){try{var AC=window.AudioContext||window.webkitAudioContext;var ctx=new AC();function beep(f,d,t){var o=ctx.createOscillator();var g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(0.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.12,ctx.currentTime+0.02);o.start(t);g.gain.exponentialRampToValueAtTime(0.0001,t+d-0.05);o.stop(t+d);}var now=ctx.currentTime+0.05;beep(880,0.35,now);beep(1320,0.35,now+0.4);}catch(e){}})();</script>");
+                        + "<script>(function(){try{var AC=window.AudioContext||window.webkitAudioContext;var ctx=new AC();function beep(f,d,t){var o=ctx.createOscillator();var g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(0.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.12,ctx.currentTime+0.02);o.start(t);g.gain.exponentialRampToValueAtTime(0.0001,t+d-0.05);o.stop(t+d);}var now=ctx.currentTime+0.05;beep(880,0.25,now);beep(1100,0.25,now+0.3);beep(1320,0.25,now+0.6);}catch(e){}})();</script>");
                 respondHtml(ex, html, 200);
             }
         });
@@ -6741,7 +6996,7 @@ public class WebServer {
 
                 String html = htmlPage("<div class=\"card\"><div class=\"title\">Nasdaq stock recommendations</div><pre>" +
                         escapeHtml(result) + "</pre></div>" + gallery.toString()
-                        + "<script>(function(){try{var AC=window.AudioContext||window.webkitAudioContext;var ctx=new AC();function beep(f,d,t){var o=ctx.createOscillator();var g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(0.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.12,ctx.currentTime+0.02);o.start(t);g.gain.exponentialRampToValueAtTime(0.0001,t+d-0.05);o.stop(t+d);}var now=ctx.currentTime+0.05;beep(880,0.35,now);beep(1320,0.35,now+0.4);}catch(e){}})();</script>");
+                        + "<script>(function(){try{var AC=window.AudioContext||window.webkitAudioContext;var ctx=new AC();function beep(f,d,t){var o=ctx.createOscillator();var g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(0.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.12,ctx.currentTime+0.02);o.start(t);g.gain.exponentialRampToValueAtTime(0.0001,t+d-0.05);o.stop(t+d);}var now=ctx.currentTime+0.05;beep(880,0.25,now);beep(1100,0.25,now+0.3);beep(1320,0.25,now+0.6);}catch(e){}})();</script>");
                 respondHtml(ex, html, 200);
             }
         });
@@ -6862,46 +7117,15 @@ public class WebServer {
                 }
                 String result;
                 try {
-                    String body = readBody(ex);
-                    Map<String,String> form = parseForm(body);
-                    boolean force = "1".equals(form.getOrDefault("force", "")) || "true".equalsIgnoreCase(form.getOrDefault("force", ""));
                     LocalDate today = LocalDate.now();
-                    synchronized (portfolioCacheLock) {
-                        if (force) {
-                            portfolioCache.text = null;
-                            portfolioCache.date = null;
-                            try {
-                                Path file = weeklyCacheDir.resolve("weekly-" + today + ".txt");
-                                try { Files.deleteIfExists(file); } catch (Exception ignore) {}
-                            } catch (Exception ignore) {}
-                        }
-
-                        if (!force && portfolioCache.date != null && portfolioCache.date.equals(today) && portfolioCache.text != null) {
-                            result = portfolioCache.text + "\n(הוצג מהמטמון היומי)";
-                        } else {
-                            // Try disk cache for today
-                            Path file = weeklyCacheDir.resolve("weekly-" + today + ".txt");
-                            if (!force && Files.exists(file)) {
-                                String cached = Files.readString(file, StandardCharsets.UTF_8);
-                                portfolioCache.text = cached;
-                                portfolioCache.date = today;
-                                result = cached + "\n(הוצג ממטמון קובץ יומי)";
-                            } else {
-                                // Compute fresh
-                                String computed = runAndCapture(() -> {
-                                    // Analyze full portfolio (may take longer on free tier)
-                                    PortfolioWeeklySummary.setMaxTickers(-1);
-                                    PortfolioWeeklySummary.configureThrottle(true, 12_500); // ~5 req/min
-                                    PortfolioWeeklySummary.main(new String[]{});
-                                });
-                                portfolioCache.text = computed;
-                                portfolioCache.date = today;
-                                result = computed + (force ? "\n(רענון כפוי בוצע בתאריך " + today + ")" : "\n(עודכן במטמון היומי בתאריך " + today + ")");
-                                // Write to disk for persistence
-                                try { Files.writeString(file, computed, StandardCharsets.UTF_8); } catch (Exception ignore) {}
-                            }
-                        }
-                    }
+                    // No caching - always compute fresh data from AlphaVantage
+                    String computed = runAndCapture(() -> {
+                        // Analyze full portfolio (may take longer on free tier)
+                        PortfolioWeeklySummary.setMaxTickers(-1);
+                        PortfolioWeeklySummary.configureThrottle(true, 12_500); // ~5 req/min
+                        PortfolioWeeklySummary.main(new String[]{});
+                    });
+                    result = computed + "\n(נתונים עדכניים מ-AlphaVantage בתאריך " + today + ")";
                 } catch (Exception e) {
                     result = "Error: " + e.getMessage();
                 }
@@ -7059,7 +7283,7 @@ public class WebServer {
 
                 String html = htmlPage(forceBtn + "<div class=\"card\"><div class=\"title\">My Portfolio - Weekly</div><pre>" +
                         escapeHtml(result) + "</pre></div>" + gallery.toString() + analystsSection.toString() + monitoringSection.toString()
-                        + "<script>(function(){try{var AC=window.AudioContext||window.webkitAudioContext;var ctx=new AC();function beep(f,d,t){var o=ctx.createOscillator();var g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(0.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.12,ctx.currentTime+0.02);o.start(t);g.gain.exponentialRampToValueAtTime(0.0001,t+d-0.05);o.stop(t+d);}var now=ctx.currentTime+0.05;beep(880,0.35,now);beep(1320,0.35,now+0.4);}catch(e){}})();</script>");
+                        + "<script>(function(){try{var AC=window.AudioContext||window.webkitAudioContext;var ctx=new AC();function beep(f,d,t){var o=ctx.createOscillator();var g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(0.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.12,ctx.currentTime+0.02);o.start(t);g.gain.exponentialRampToValueAtTime(0.0001,t+d-0.05);o.stop(t+d);}var now=ctx.currentTime+0.05;beep(880,0.25,now);beep(1100,0.25,now+0.3);beep(1320,0.25,now+0.6);}catch(e){}})();</script>");
                 respondHtml(ex, html, 200);
             }
         });
