@@ -1787,25 +1787,48 @@ public class WebServer {
     }
 
     private static boolean sendTelegram(String text) {
+        // Replaced with Discord webhook - keeping for backward compatibility
+        return sendDiscord(text);
+    }
+
+    private static final String DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1463983226727956482/7UBMocf9gow7p8tGrOP0U2t7GaaBqszoD9HRrn_uDubbWvUiM_znjpBBfX461ntPamd5";
+
+    private static boolean sendDiscord(String text) {
         try {
-            String token = System.getenv("TELEGRAM_BOT_TOKEN");
-            String chat = System.getenv("TELEGRAM_CHAT_ID");
-            if (token == null || token.isBlank() || chat == null || chat.isBlank()) return false;
-            String url = "https://api.telegram.org/bot" + token + "/sendMessage";
-            String body = "chat_id=" + java.net.URLEncoder.encode(chat, StandardCharsets.UTF_8) +
-                    "&text=" + java.net.URLEncoder.encode(text == null ? "" : text, StandardCharsets.UTF_8) +
-                    "&disable_web_page_preview=true";
+            if (text == null || text.isBlank()) return false;
+            // Discord webhook expects JSON with "content" field
+            String jsonBody = "{\"content\": " + escapeJsonString(text) + "}";
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .uri(URI.create(DISCORD_WEBHOOK_URL))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                     .build();
             HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
-            return resp.statusCode() == 200;
-        } catch (Exception ignore) {
+            System.out.println("[Discord] Sent notification, status: " + resp.statusCode());
+            return resp.statusCode() == 200 || resp.statusCode() == 204;
+        } catch (Exception e) {
+            System.err.println("[Discord] Failed to send: " + e.getMessage());
             return false;
         }
+    }
+
+    private static String escapeJsonString(String s) {
+        if (s == null) return "\"\"";
+        StringBuilder sb = new StringBuilder("\"");
+        for (char c : s.toCharArray()) {
+            switch (c) {
+                case '"': sb.append("\\\""); break;
+                case '\\': sb.append("\\\\"); break;
+                case '\n': sb.append("\\n"); break;
+                case '\r': sb.append("\\r"); break;
+                case '\t': sb.append("\\t"); break;
+                default:
+                    if (c < 32) sb.append(String.format("\\u%04x", (int) c));
+                    else sb.append(c);
+            }
+        }
+        return sb.append("\"").toString();
     }
 
     private static String buildAnalystProxyAlphaVantageCard(String symbol) {
@@ -3098,6 +3121,10 @@ public class WebServer {
                     // Fetch stock data - ALWAYS fresh from API, never use cache
                     DataFetcher.setTicker(ticker);
                     String json = DataFetcher.fetchStockData();
+                    System.out.println("[VolumeFlow] Fetched data for " + ticker + ", length=" + (json == null ? 0 : json.length()));
+                    if (json != null && json.length() > 200) {
+                        System.out.println("[VolumeFlow] Raw JSON preview: " + json.substring(0, 200));
+                    }
                     if (json == null || json.isBlank()) { 
                         respondJson(ex, Map.of("error", "Failed to fetch data for " + ticker + " - API returned empty response"), 500); 
                         return; 
@@ -3112,6 +3139,7 @@ public class WebServer {
 
                     // Parse price data first to validate dates
                     List<Double> closes = PriceJsonParser.extractClosingPrices(json);
+                    System.out.println("[VolumeFlow] Parsed " + closes.size() + " closing prices, latest=" + (closes.isEmpty() ? "N/A" : closes.get(closes.size()-1)));
                     List<Double> highs = PriceJsonParser.extractHighPrices(json);
                     List<Double> lows = PriceJsonParser.extractLowPrices(json);
                     List<Double> opens = PriceJsonParser.extractOpenPrices(json);
@@ -3154,16 +3182,18 @@ public class WebServer {
                         return; 
                     }
 
-                    // Reverse to chronological order (oldest first)
-                    java.util.Collections.reverse(closes);
-                    java.util.Collections.reverse(highs);
-                    java.util.Collections.reverse(lows);
-                    java.util.Collections.reverse(opens);
-                    java.util.Collections.reverse(volumes);
-                    java.util.Collections.reverse(dates);
+                    // Data is already in ascending order (oldest first, newest last) from PriceJsonParser
+                    // VolumeFlowTracker expects this order and gets currentPrice from last element
+                    // DO NOT reverse - that would put oldest at end and break currentPrice
 
                     // Run Volume Flow analysis
                     VolumeFlowTracker.FlowAnalysis analysis = VolumeFlowTracker.analyze(ticker, closes, highs, lows, opens, volumes, dates, days);
+                    System.out.println("[VolumeFlow] Analysis result: currentPrice=" + analysis.currentPrice + ", ticker=" + analysis.ticker);
+
+                    // Add cache-control headers to prevent browser caching
+                    ex.getResponseHeaders().add("Cache-Control", "no-cache, no-store, must-revalidate");
+                    ex.getResponseHeaders().add("Pragma", "no-cache");
+                    ex.getResponseHeaders().add("Expires", "0");
 
                     // Build response
                     Map<String, Object> out = new LinkedHashMap<>();
@@ -5247,6 +5277,7 @@ public class WebServer {
                     String pctColor = scan.priceChangePct >= 0 ? "#22c55e" : "#fca5a5";
                     sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;text-align:center;'>")
                       .append("<div style='color:#9ca3af;font-size:0.8em;'>שינוי יומי</div>")
+                      .append("<div style='color:#6b7280;font-size:0.65em;'>שינוי המחיר מאז הפתיחה</div>")
                       .append("<div style='color:").append(pctColor).append(";font-size:1.2em;font-weight:700;'>")
                       .append(scan.priceChangePct >= 0 ? "+" : "").append(String.format("%.2f%%", scan.priceChangePct))
                       .append("</div></div>");
@@ -5255,6 +5286,7 @@ public class WebServer {
                     String rvolColor = scan.rvol >= 2.0 ? "#22c55e" : (scan.rvol >= 1.5 ? "#fbbf24" : "#9ca3af");
                     sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;text-align:center;'>")
                       .append("<div style='color:#9ca3af;font-size:0.8em;'>RVOL (נפח יחסי)</div>")
+                      .append("<div style='color:#6b7280;font-size:0.65em;'>נפח ביחס לממוצע, מעל 2x = חזק</div>")
                       .append("<div style='color:").append(rvolColor).append(";font-size:1.2em;font-weight:700;'>")
                       .append(String.format("%.1fx", scan.rvol))
                       .append("</div></div>");
@@ -5264,6 +5296,7 @@ public class WebServer {
                     String vwapIcon = scan.aboveVwap ? "✅" : "❌";
                     sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;text-align:center;'>")
                       .append("<div style='color:#9ca3af;font-size:0.8em;'>VWAP</div>")
+                      .append("<div style='color:#6b7280;font-size:0.65em;'>מחיר ממוצע משוקלל, מעליו = שורי</div>")
                       .append("<div style='color:").append(vwapColor).append(";font-size:1.2em;font-weight:700;'>")
                       .append("$").append(String.format("%.2f", scan.vwap)).append(" ").append(vwapIcon)
                       .append("</div></div>");
@@ -5272,6 +5305,7 @@ public class WebServer {
                     String rsiColor = scan.rsi > 70 ? "#fca5a5" : (scan.rsi > 60 ? "#22c55e" : "#9ca3af");
                     sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;text-align:center;'>")
                       .append("<div style='color:#9ca3af;font-size:0.8em;'>RSI (תוך-יומי)</div>")
+                      .append("<div style='color:#6b7280;font-size:0.65em;'>עוצמה, 60-70 = מומנטום, מעל 80 = קניית יתר</div>")
                       .append("<div style='color:").append(rsiColor).append(";font-size:1.2em;font-weight:700;'>")
                       .append(String.format("%.0f", scan.rsi))
                       .append("</div></div>");
@@ -5281,6 +5315,7 @@ public class WebServer {
                     String mktIcon = scan.marketSupport ? "🟢" : "🔴";
                     sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;text-align:center;'>")
                       .append("<div style='color:#9ca3af;font-size:0.8em;'>שוק (SPY)</div>")
+                      .append("<div style='color:#6b7280;font-size:0.65em;'>כיוון השוק הכללי, ירוק = תומך</div>")
                       .append("<div style='color:").append(mktColor).append(";font-size:1.2em;font-weight:700;'>")
                       .append(mktIcon).append(" ").append(String.format("%.1f%%", scan.spyChangePct))
                       .append("</div></div>");
@@ -5340,9 +5375,11 @@ public class WebServer {
                         .append("<button type='submit'>Stop</button></form>");
                 sb.append("<form method='post' action='/quote-now' style='margin:0'>")
                         .append("<button type='submit'>Fetch Latest Quote Now</button></form>");
+                sb.append("<form method='post' action='/run-scanner' style='margin:0'>")
+                        .append("<button type='submit' style='background:#7c3aed;'>🔍 Run Scanner (20 Random)</button></form>");
                 sb.append("</div>");
 
-                sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>Telegram: set <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_CHAT_ID</code> to receive alerts.</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>Discord: התראות נשלחות אוטומטית לערוץ Discord.</div>");
                 sb.append("</div>");
 
                 sb.append("<div class='card'><div class='title'>Last 10 Bars</div>");
@@ -5665,6 +5702,135 @@ public class WebServer {
                     }
                 }
                 ex.getResponseHeaders().add("Location", "/intraday-alerts?status=stopped");
+                ex.sendResponseHeaders(303, -1);
+                ex.close();
+            }
+        });
+
+        // Run Scanner - scan 20 random NASDAQ stocks and send Discord alerts for buy signals
+        server.createContext("/run-scanner", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/intraday-alerts");
+                    ex.sendResponseHeaders(303, -1);
+                    ex.close();
+                    return;
+                }
+                
+                // Run scanner in background thread to not block the request
+                new Thread(() -> {
+                    try {
+                        List<String> allTickers = LongTermCandidateFinder.getUniverseTickers();
+                        Collections.shuffle(allTickers);
+                        List<String> selected = allTickers.subList(0, Math.min(20, allTickers.size()));
+                        
+                        sendDiscord("🔍 **Scanner Started**\nסורק " + selected.size() + " מניות אקראיות מ-NASDAQ...\n" + String.join(", ", selected));
+                        
+                        MonitoringAlphaVantageClient av = MonitoringAlphaVantageClient.fromEnv();
+                        String interval = intradayIntervalForCurrentEntitlement();
+                        int buysFound = 0;
+                        
+                        for (String symbol : selected) {
+                            try {
+                                // Throttle to respect API limits
+                                Thread.sleep(13000); // ~5 requests per minute for free tier
+                                
+                                // Get SPY for market sentiment
+                                double spyChange = 0.0;
+                                try {
+                                    JsonNode spyQuote = av.globalQuote("SPY");
+                                    if (spyQuote != null) {
+                                        JsonNode gq = spyQuote.path("Global Quote");
+                                        if (gq == null || gq.isMissingNode()) {
+                                            gq = spyQuote.path("Global Quote - DATA DELAYED BY 15 MINUTES");
+                                        }
+                                        String pct = gq.path("10. change percent").asText("").replace("%", "").trim();
+                                        if (!pct.isBlank()) spyChange = Double.parseDouble(pct);
+                                    }
+                                } catch (Exception ignore) {}
+                                
+                                // Fetch intraday data
+                                JsonNode intraday = av.timeSeriesIntraday(symbol, interval);
+                                if (intraday == null) continue;
+                                
+                                JsonNode meta = intraday.path("Meta Data");
+                                JsonNode ts = intraday.path("Time Series (" + interval + ")");
+                                if (ts == null || ts.isMissingNode() || !ts.fields().hasNext()) {
+                                    // Try delayed format
+                                    ts = intraday.path("Time Series (" + interval + ") - DATA DELAYED BY 15 MINUTES");
+                                }
+                                if (ts == null || ts.isMissingNode() || !ts.fields().hasNext()) continue;
+                                
+                                // Build bars
+                                List<String> keys = new ArrayList<>();
+                                ts.fieldNames().forEachRemaining(keys::add);
+                                Collections.sort(keys);
+                                if (keys.size() < 5) continue;
+                                
+                                List<IntradayScanner.IntradayBar> bars = new ArrayList<>();
+                                for (String tsKey : keys) {
+                                    JsonNode bar = ts.path(tsKey);
+                                    IntradayScanner.IntradayBar ib = new IntradayScanner.IntradayBar();
+                                    ib.timestamp = tsKey;
+                                    ib.open = parseDoubleOrNull(bar.path("1. open").asText(""));
+                                    ib.high = parseDoubleOrNull(bar.path("2. high").asText(""));
+                                    ib.low = parseDoubleOrNull(bar.path("3. low").asText(""));
+                                    ib.close = parseDoubleOrNull(bar.path("4. close").asText(""));
+                                    String volStr = bar.path("5. volume").asText("");
+                                    ib.volume = volStr.isBlank() ? 0L : Long.parseLong(volStr);
+                                    bars.add(ib);
+                                }
+                                
+                                // Estimate avg daily volume (sum of volumes / estimated days)
+                                long totalVol = bars.stream().mapToLong(b -> b.volume).sum();
+                                double avgDailyVol = totalVol > 0 ? totalVol * 0.5 : 1_000_000;
+                                
+                                // Get prev day high/close from daily data
+                                double prevDayHigh = 0, prevDayClose = 0;
+                                try {
+                                    JsonNode daily = av.timeSeriesDaily(symbol);
+                                    if (daily != null) {
+                                        JsonNode dailyTs = daily.path("Time Series (Daily)");
+                                        if (dailyTs != null && !dailyTs.isMissingNode()) {
+                                            List<String> dailyKeys = new ArrayList<>();
+                                            dailyTs.fieldNames().forEachRemaining(dailyKeys::add);
+                                            Collections.sort(dailyKeys, Collections.reverseOrder());
+                                            if (dailyKeys.size() >= 2) {
+                                                JsonNode prevDay = dailyTs.path(dailyKeys.get(1));
+                                                prevDayHigh = parseDoubleOrNull(prevDay.path("2. high").asText(""));
+                                                prevDayClose = parseDoubleOrNull(prevDay.path("4. close").asText(""));
+                                            }
+                                        }
+                                    }
+                                } catch (Exception ignore) {}
+                                
+                                // Run scanner
+                                IntradayScanner.ScanResult result = IntradayScanner.scan(symbol, bars, avgDailyVol, prevDayHigh, prevDayClose, spyChange);
+                                
+                                // Send Discord alert for BUY signals
+                                if ("BREAKOUT_BUY".equals(result.signal) || "MOMENTUM_BUY".equals(result.signal)) {
+                                    buysFound++;
+                                    String msg = IntradayScanner.generateAlertMessage(result);
+                                    sendDiscord(msg);
+                                    System.out.println("[Scanner] BUY signal for " + symbol + ": " + result.signal);
+                                } else {
+                                    System.out.println("[Scanner] " + symbol + ": " + result.signal + (result.reasons.isEmpty() ? "" : " - " + result.reasons.get(0)));
+                                }
+                                
+                            } catch (Exception e) {
+                                System.err.println("[Scanner] Error scanning " + symbol + ": " + e.getMessage());
+                            }
+                        }
+                        
+                        sendDiscord("✅ **Scanner Completed**\nנסרקו " + selected.size() + " מניות\n🎯 נמצאו " + buysFound + " איתותי קנייה");
+                        
+                    } catch (Exception e) {
+                        System.err.println("[Scanner] Error: " + e.getMessage());
+                        sendDiscord("❌ **Scanner Error**: " + e.getMessage());
+                    }
+                }).start();
+                
+                ex.getResponseHeaders().add("Location", "/intraday-alerts?status=scanner_started");
                 ex.sendResponseHeaders(303, -1);
                 ex.close();
             }

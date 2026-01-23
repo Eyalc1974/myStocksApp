@@ -41,3 +41,12 @@ export WEB_PORT=8080
 export OPENAI_API_KEY=sk-xxx
 export FINNHUB_API_KEY=xxx
 mvn exec:java -Dexec.mainClass="WebServer"
+
+
+WebHook for Discord :     private static final String DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1463983226727956482/7UBMocf9gow7p8tGrOP0U2t7GaaBqszoD9HRrn_uDubbWvUiM_znjpBBfX461ntPamd5";
+אני ממליץ בחום לעבור ל-Discord Webhooks. זה לא דורש בוטים חיצוניים ולא "בקשת רשות":
+
+פתח שרת דיסקורד פרטי (לוקח 10 שניות).
+בהגדרות הערוץ, לחץ על Integrations -> Create Webhook.
+תעתיק את ה-URL שהם נותנים לך.
+בקוד ה-Java: אתה פשוט שולח הודעת POST לכתובת הזו. זה עובד ב-100% מהפעמים, ללא דיליי, ובחינם לגמרי

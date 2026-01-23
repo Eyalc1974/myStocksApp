@@ -10,6 +10,24 @@ import java.util.TreeMap;
 
 public class PriceJsonParser {
 
+    // Helper to get daily time series, handling both standard and delayed formats
+    private static JsonNode getDailyTimeSeries(JsonNode root) {
+        if (root == null) return null;
+        // Try standard format first
+        JsonNode series = root.get("Time Series (Daily)");
+        // Try delayed format (with entitlement=delayed)
+        if (series == null || !series.isObject()) {
+            series = root.get("Time Series (Daily) - DATA DELAYED BY 15 MINUTES");
+        }
+        // Try other alternatives
+        if (series == null || !series.isObject()) {
+            JsonNode alt1 = root.get("Time Series (Digital Currency Daily)");
+            JsonNode alt2 = root.get("Time Series (5min)");
+            series = alt1 != null ? alt1 : alt2;
+        }
+        return (series != null && series.isObject()) ? series : null;
+    }
+
     // Parses Alpha Vantage TIME_SERIES_DAILY JSON and returns closing prices ordered by date ascending
     public static List<Double> extractClosingPrices(String json) throws Exception {
         if (json == null || json.isEmpty()) {
@@ -19,15 +37,8 @@ public class PriceJsonParser {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(json);
 
-        // Alpha Vantage key typically: "Time Series (Daily)"
-        JsonNode series = root.get("Time Series (Daily)");
-        if (series == null || !series.isObject()) {
-            // Sometimes error payloads or different keys; try a couple of alternatives
-            JsonNode alt1 = root.get("Time Series (Digital Currency Daily)");
-            JsonNode alt2 = root.get("Time Series (5min)");
-            series = series != null ? series : (alt1 != null ? alt1 : alt2);
-        }
-        if (series == null || !series.isObject()) {
+        JsonNode series = getDailyTimeSeries(root);
+        if (series == null) {
             return Collections.emptyList();
         }
 
@@ -71,8 +82,8 @@ public class PriceJsonParser {
         }
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(json);
-        JsonNode series = root.get("Time Series (Daily)");
-        if (series == null || !series.isObject()) {
+        JsonNode series = getDailyTimeSeries(root);
+        if (series == null) {
             return Collections.emptyList();
         }
         List<String> dates = new ArrayList<>();
@@ -90,13 +101,8 @@ public class PriceJsonParser {
         }
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(json);
-        JsonNode series = root.get("Time Series (Daily)");
-        if (series == null || !series.isObject()) {
-            JsonNode alt1 = root.get("Time Series (Digital Currency Daily)");
-            JsonNode alt2 = root.get("Time Series (5min)");
-            series = series != null ? series : (alt1 != null ? alt1 : alt2);
-        }
-        if (series == null || !series.isObject()) {
+        JsonNode series = getDailyTimeSeries(root);
+        if (series == null) {
             return Collections.emptyMap();
         }
         Map<String, Double> byDate = new TreeMap<>();
@@ -127,13 +133,8 @@ public class PriceJsonParser {
         }
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(json);
-        JsonNode series = root.get("Time Series (Daily)");
-        if (series == null || !series.isObject()) {
-            JsonNode alt1 = root.get("Time Series (Digital Currency Daily)");
-            JsonNode alt2 = root.get("Time Series (5min)");
-            series = series != null ? series : (alt1 != null ? alt1 : alt2);
-        }
-        if (series == null || !series.isObject()) {
+        JsonNode series = getDailyTimeSeries(root);
+        if (series == null) {
             return Collections.emptyMap();
         }
 
@@ -185,13 +186,8 @@ public class PriceJsonParser {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(json);
 
-        JsonNode series = root.get("Time Series (Daily)");
-        if (series == null || !series.isObject()) {
-            JsonNode alt1 = root.get("Time Series (Digital Currency Daily)");
-            JsonNode alt2 = root.get("Time Series (5min)");
-            series = series != null ? series : (alt1 != null ? alt1 : alt2);
-        }
-        if (series == null || !series.isObject()) {
+        JsonNode series = getDailyTimeSeries(root);
+        if (series == null) {
             return Collections.emptyList();
         }
 
@@ -231,13 +227,8 @@ public class PriceJsonParser {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(json);
 
-        JsonNode series = root.get("Time Series (Daily)");
-        if (series == null || !series.isObject()) {
-            JsonNode alt1 = root.get("Time Series (Digital Currency Daily)");
-            JsonNode alt2 = root.get("Time Series (5min)");
-            series = series != null ? series : (alt1 != null ? alt1 : alt2);
-        }
-        if (series == null || !series.isObject()) {
+        JsonNode series = getDailyTimeSeries(root);
+        if (series == null) {
             return Collections.emptyList();
         }
 
@@ -277,13 +268,8 @@ public class PriceJsonParser {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(json);
 
-        JsonNode series = root.get("Time Series (Daily)");
-        if (series == null || !series.isObject()) {
-            JsonNode alt1 = root.get("Time Series (Digital Currency Daily)");
-            JsonNode alt2 = root.get("Time Series (5min)");
-            series = series != null ? series : (alt1 != null ? alt1 : alt2);
-        }
-        if (series == null || !series.isObject()) {
+        JsonNode series = getDailyTimeSeries(root);
+        if (series == null) {
             return Collections.emptyList();
         }
 
@@ -323,13 +309,8 @@ public class PriceJsonParser {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(json);
 
-        JsonNode series = root.get("Time Series (Daily)");
-        if (series == null || !series.isObject()) {
-            JsonNode alt1 = root.get("Time Series (Digital Currency Daily)");
-            JsonNode alt2 = root.get("Time Series (5min)");
-            series = series != null ? series : (alt1 != null ? alt1 : alt2);
-        }
-        if (series == null || !series.isObject()) {
+        JsonNode series = getDailyTimeSeries(root);
+        if (series == null) {
             return Collections.emptyList();
         }
 
@@ -369,7 +350,7 @@ public class PriceJsonParser {
         JsonNode rootNode = mapper.readTree(jsonData);
 
         // ניגש לאזור המכיל את נתוני סדרת הזמן (Time Series)
-        JsonNode timeSeriesNode = rootNode.get("Time Series (Daily)");
+        JsonNode timeSeriesNode = getDailyTimeSeries(rootNode);
 
         if (timeSeriesNode == null) {
             // אם ה-API החזיר שגיאה או שהמפתח השתנה
