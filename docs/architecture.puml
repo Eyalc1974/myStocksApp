@@ -1,0 +1,175 @@
+@startuml MyStocksApp Architecture
+
+!theme cyborg
+skinparam backgroundColor #0d1117
+skinparam componentStyle rectangle
+
+title MyStocksApp - Stock Analysis Platform Architecture
+
+package "🌐 Web Layer" #1f2937 {
+    [WebServer] as WS #3b82f6
+    note right of WS : HTTP Server\nAll UI Pages\nREST APIs
+}
+
+package "📊 Core Analysis Engine" #1e3a5f {
+    [Main] as M #22c55e
+    [FinalScoringEngine] as FSE #22c55e
+    [StockAnalysisResult] as SAR #22c55e
+    [ScoringConfig] as SC #22c55e
+}
+
+package "💰 Valuation Models" #14532d {
+    [DCFModel] as DCF #10b981
+    [GrahamValuation] as GV #10b981
+    [GrahamNumber] as GN #10b981
+    [ValuationEngine] as VE #10b981
+    [EVSales] as EVS #10b981
+}
+
+package "📈 Technical Indicators" #7f1d1d {
+    [RSI] as RSI #ef4444
+    [MACD] as MACD #ef4444
+    [ADX] as ADX #ef4444
+    [ATR] as ATR #ef4444
+    [BollingerBands] as BB #ef4444
+    [Stochastic] as STOCH #ef4444
+    [CCI] as CCI #ef4444
+    [FibonacciRetracement] as FIB #ef4444
+    [PivotPoints] as PP #ef4444
+    [TechnicalAnalysisModel] as TAM #ef4444
+}
+
+package "📉 Volume Indicators" #4c1d95 {
+    [OBV] as OBV #a855f7
+    [MFI] as MFI #a855f7
+    [CMF] as CMF #a855f7
+    [ADLine] as ADL #a855f7
+    [VolumeFlowTracker] as VFT #a855f7
+}
+
+package "🏛️ Fundamental Analysis" #854d0e {
+    [FundamentalAnalysis] as FA #f59e0b
+    [AltmanZScore] as AZ #f59e0b
+    [BeneishMScore] as BM #f59e0b
+    [PiotroskiFScore] as PF #f59e0b
+    [SloanAnalysis] as SA #f59e0b
+    [DuPontAnalysis] as DP #f59e0b
+}
+
+package "🔍 Scanners & Finders" #155e75 {
+    [LongTermCandidateFinder] as LTCF #06b6d4
+    [IntradayScanner] as IS #06b6d4
+    [StockScannerRunner] as SSR #06b6d4
+    [EntryFilterValidator] as EFV #06b6d4
+}
+
+package "📡 Monitoring System" #064e3b {
+    [MonitoringScheduler] as MS #10b981
+    [MonitoringAnalyzer] as MA #10b981
+    [MonitoringStore] as MST #10b981
+    [MonitoringSnapshot] as MSN #10b981
+    [MonitoringAlphaVantageClient] as MAVC #10b981
+}
+
+package "💼 Portfolio Management" #1e1b4b {
+    [ActivePositionsStore] as APS #6366f1
+    [RiskManager] as RM #6366f1
+    [TrailingStopLoss] as TSL #6366f1
+    [PortfolioWeeklySummary] as PWS #6366f1
+}
+
+package "🤖 AI & Sentiment" #831843 {
+    [SentimentModel] as SM #ec4899
+    [EventAnalysis] as EA #ec4899
+    [RelativeStrength] as RS #ec4899
+    [MarketRegimeFilter] as MRF #ec4899
+}
+
+package "🔧 Data & Utilities" #374151 {
+    [DataFetcher] as DF #9ca3af
+    [PriceJsonParser] as PJP #9ca3af
+    [ApiUsageTracker] as AUT #9ca3af
+    [StrategyBacktester] as SB #9ca3af
+}
+
+' ===== Relationships =====
+
+' Web Server connections
+WS --> M : triggers analysis
+WS --> FSE : scoring
+WS --> LTCF : finder
+WS --> IS : intraday
+WS --> MS : monitoring
+WS --> APS : portfolio
+WS --> VFT : volume flow
+
+' Main analysis flow
+M --> DF : fetch data
+M --> TAM : technical
+M --> FA : fundamental
+M --> VE : valuation
+M --> FSE : final score
+
+' Data flow
+DF --> PJP : parse JSON
+DF --> MAVC : API calls
+MAVC --> AUT : track usage
+
+' Scoring engine
+FSE --> SC : config
+FSE --> SAR : result
+FSE --> SM : sentiment
+FSE --> RS : relative strength
+
+' Technical analysis
+TAM --> RSI
+TAM --> MACD
+TAM --> ADX
+TAM --> ATR
+TAM --> BB
+TAM --> STOCH
+
+' Fundamental analysis
+FA --> AZ
+FA --> BM
+FA --> PF
+FA --> SA
+FA --> DP
+
+' Valuation
+VE --> DCF
+VE --> GV
+VE --> GN
+VE --> EVS
+
+' Monitoring
+MS --> MA
+MS --> MST
+MA --> MSN
+MS --> MAVC
+
+' Portfolio
+APS --> RM
+RM --> TSL
+
+' Scanners
+LTCF --> EFV
+SSR --> LTCF
+IS --> MRF
+
+legend right
+  |= Layer |= Description |
+  | 🌐 Web | HTTP Server & UI |
+  | 📊 Core | Analysis Engine |
+  | 💰 Valuation | DCF, Graham |
+  | 📈 Technical | RSI, MACD, etc |
+  | 📉 Volume | OBV, MFI, CMF |
+  | 🏛️ Fundamental | Piotroski, Altman |
+  | 🔍 Scanners | Stock Finders |
+  | 📡 Monitoring | Auto Tracking |
+  | 💼 Portfolio | Position Mgmt |
+  | 🤖 AI | Sentiment & ML |
+  | 🔧 Utilities | Data & APIs |
+endlegend
+
+@enduml

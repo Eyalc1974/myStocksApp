@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyStocksApp - Architecture</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+            color: #e6edf3;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2rem;
+            background: linear-gradient(90deg, #58a6ff, #3fb950, #f78166);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            text-align: center;
+            color: #8b949e;
+            margin-bottom: 40px;
+        }
+        .architecture {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .layer {
+            background: #21262d;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #30363d;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .layer:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .layer-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid;
+        }
+        .web .layer-title { border-color: #58a6ff; color: #58a6ff; }
+        .core .layer-title { border-color: #3fb950; color: #3fb950; }
+        .valuation .layer-title { border-color: #56d364; color: #56d364; }
+        .technical .layer-title { border-color: #f85149; color: #f85149; }
+        .volume .layer-title { border-color: #a371f7; color: #a371f7; }
+        .fundamental .layer-title { border-color: #d29922; color: #d29922; }
+        .scanners .layer-title { border-color: #39d2c0; color: #39d2c0; }
+        .monitoring .layer-title { border-color: #2ea043; color: #2ea043; }
+        .portfolio .layer-title { border-color: #8b5cf6; color: #8b5cf6; }
+        .ai .layer-title { border-color: #db61a2; color: #db61a2; }
+        .utilities .layer-title { border-color: #8b949e; color: #8b949e; }
+        .classes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .class-item {
+            background: #0d1117;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-family: 'SF Mono', Consolas, monospace;
+            border: 1px solid #30363d;
+        }
+        .web .class-item { border-left: 3px solid #58a6ff; }
+        .core .class-item { border-left: 3px solid #3fb950; }
+        .valuation .class-item { border-left: 3px solid #56d364; }
+        .technical .class-item { border-left: 3px solid #f85149; }
+        .volume .class-item { border-left: 3px solid #a371f7; }
+        .fundamental .class-item { border-left: 3px solid #d29922; }
+        .scanners .class-item { border-left: 3px solid #39d2c0; }
+        .monitoring .class-item { border-left: 3px solid #2ea043; }
+        .portfolio .class-item { border-left: 3px solid #8b5cf6; }
+        .ai .class-item { border-left: 3px solid #db61a2; }
+        .utilities .class-item { border-left: 3px solid #8b949e; }
+        .layer-desc {
+            font-size: 0.8rem;
+            color: #8b949e;
+            margin-bottom: 12px;
+        }
+        .flow-section {
+            max-width: 1400px;
+            margin: 40px auto;
+            background: #21262d;
+            border-radius: 12px;
+            padding: 30px;
+            border: 1px solid #30363d;
+        }
+        .flow-title {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #58a6ff;
+        }
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 20px;
+            background: #0d1117;
+            border-radius: 8px;
+        }
+        .flow-box {
+            background: #21262d;
+            padding: 15px 25px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #30363d;
+        }
+        .flow-arrow {
+            font-size: 1.5rem;
+            color: #58a6ff;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            max-width: 1400px;
+            margin: 40px auto;
+        }
+        .stat-box {
+            background: #21262d;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #30363d;
+        }
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #58a6ff, #3fb950);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .stat-label {
+            color: #8b949e;
+            margin-top: 5px;
+        }
+        @media (max-width: 768px) {
+            .stats { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <h1>🏗️ MyStocksApp Architecture</h1>
+    <p class="subtitle">Stock Analysis Platform - Component Overview</p>
+
+    <div class="stats">
+        <div class="stat-box">
+            <div class="stat-number">51</div>
+            <div class="stat-label">Java Classes</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">11</div>
+            <div class="stat-label">Layers</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">15+</div>
+            <div class="stat-label">Technical Indicators</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">5</div>
+            <div class="stat-label">Valuation Models</div>
+        </div>
+    </div>
+
+    <div class="flow-section">
+        <div class="flow-title">📊 Main Analysis Flow</div>
+        <div class="flow-diagram">
+            <div class="flow-box">🌐 WebServer<br><small>User Request</small></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box">📡 DataFetcher<br><small>Alpha Vantage API</small></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box">🔧 PriceJsonParser<br><small>Parse Data</small></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box">📈 Technical<br>+ 🏛️ Fundamental</small></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box">⚡ FinalScoringEngine<br><small>Calculate Score</small></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box">📋 StockAnalysisResult<br><small>Report</small></div>
+        </div>
+    </div>
+
+    <div class="architecture">
+        <div class="layer web">
+            <div class="layer-title">🌐 Web Layer</div>
+            <div class="layer-desc">HTTP Server, REST APIs, UI Pages</div>
+            <div class="classes">
+                <span class="class-item">WebServer</span>
+            </div>
+        </div>
+
+        <div class="layer core">
+            <div class="layer-title">📊 Core Analysis Engine</div>
+            <div class="layer-desc">Main orchestration and scoring</div>
+            <div class="classes">
+                <span class="class-item">Main</span>
+                <span class="class-item">FinalScoringEngine</span>
+                <span class="class-item">StockAnalysisResult</span>
+                <span class="class-item">ScoringConfig</span>
+            </div>
+        </div>
+
+        <div class="layer valuation">
+            <div class="layer-title">💰 Valuation Models</div>
+            <div class="layer-desc">Intrinsic value calculations</div>
+            <div class="classes">
+                <span class="class-item">DCFModel</span>
+                <span class="class-item">GrahamValuation</span>
+                <span class="class-item">GrahamNumber</span>
+                <span class="class-item">ValuationEngine</span>
+                <span class="class-item">EVSales</span>
+            </div>
+        </div>
+
+        <div class="layer technical">
+            <div class="layer-title">📈 Technical Indicators</div>
+            <div class="layer-desc">Price and momentum analysis</div>
+            <div class="classes">
+                <span class="class-item">RSI</span>
+                <span class="class-item">MACD</span>
+                <span class="class-item">ADX</span>
+                <span class="class-item">ATR</span>
+                <span class="class-item">BollingerBands</span>
+                <span class="class-item">Stochastic</span>
+                <span class="class-item">CCI</span>
+                <span class="class-item">FibonacciRetracement</span>
+                <span class="class-item">PivotPoints</span>
+                <span class="class-item">TechnicalAnalysisModel</span>
+            </div>
+        </div>
+
+        <div class="layer volume">
+            <div class="layer-title">📉 Volume Indicators</div>
+            <div class="layer-desc">Volume flow and liquidity analysis</div>
+            <div class="classes">
+                <span class="class-item">OBV</span>
+                <span class="class-item">MFI</span>
+                <span class="class-item">CMF</span>
+                <span class="class-item">ADLine</span>
+                <span class="class-item">VolumeFlowTracker</span>
+            </div>
+        </div>
+
+        <div class="layer fundamental">
+            <div class="layer-title">🏛️ Fundamental Analysis</div>
+            <div class="layer-desc">Financial health and quality metrics</div>
+            <div class="classes">
+                <span class="class-item">FundamentalAnalysis</span>
+                <span class="class-item">AltmanZScore</span>
+                <span class="class-item">BeneishMScore</span>
+                <span class="class-item">PiotroskiFScore</span>
+                <span class="class-item">SloanAnalysis</span>
+                <span class="class-item">DuPontAnalysis</span>
+            </div>
+        </div>
+
+        <div class="layer scanners">
+            <div class="layer-title">🔍 Scanners & Finders</div>
+            <div class="layer-desc">Stock discovery and filtering</div>
+            <div class="classes">
+                <span class="class-item">LongTermCandidateFinder</span>
+                <span class="class-item">IntradayScanner</span>
+                <span class="class-item">StockScannerRunner</span>
+                <span class="class-item">EntryFilterValidator</span>
+            </div>
+        </div>
+
+        <div class="layer monitoring">
+            <div class="layer-title">📡 Monitoring System</div>
+            <div class="layer-desc">Automated stock tracking</div>
+            <div class="classes">
+                <span class="class-item">MonitoringScheduler</span>
+                <span class="class-item">MonitoringAnalyzer</span>
+                <span class="class-item">MonitoringStore</span>
+                <span class="class-item">MonitoringSnapshot</span>
+                <span class="class-item">MonitoringAlphaVantageClient</span>
+            </div>
+        </div>
+
+        <div class="layer portfolio">
+            <div class="layer-title">💼 Portfolio Management</div>
+            <div class="layer-desc">Position and risk management</div>
+            <div class="classes">
+                <span class="class-item">ActivePositionsStore</span>
+                <span class="class-item">RiskManager</span>
+                <span class="class-item">TrailingStopLoss</span>
+                <span class="class-item">PortfolioWeeklySummary</span>
+            </div>
+        </div>
+
+        <div class="layer ai">
+            <div class="layer-title">🤖 AI & Sentiment</div>
+            <div class="layer-desc">Market sentiment and ML models</div>
+            <div class="classes">
+                <span class="class-item">SentimentModel</span>
+                <span class="class-item">EventAnalysis</span>
+                <span class="class-item">RelativeStrength</span>
+                <span class="class-item">MarketRegimeFilter</span>
+            </div>
+        </div>
+
+        <div class="layer utilities">
+            <div class="layer-title">🔧 Data & Utilities</div>
+            <div class="layer-desc">Data fetching and parsing</div>
+            <div class="classes">
+                <span class="class-item">DataFetcher</span>
+                <span class="class-item">PriceJsonParser</span>
+                <span class="class-item">ApiUsageTracker</span>
+                <span class="class-item">StrategyBacktester</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="flow-section">
+        <div class="flow-title">🔄 Data Flow Architecture</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:20px;">
+            <div style="background:#0d1117;padding:20px;border-radius:8px;">
+                <h4 style="color:#58a6ff;margin-bottom:10px;">📥 Input Layer</h4>
+                <ul style="color:#8b949e;font-size:0.9rem;padding-left:20px;">
+                    <li>Alpha Vantage API</li>
+                    <li>User Settings</li>
+                    <li>Favorites List</li>
+                    <li>Portfolio Data</li>
+                </ul>
+            </div>
+            <div style="background:#0d1117;padding:20px;border-radius:8px;">
+                <h4 style="color:#3fb950;margin-bottom:10px;">⚙️ Processing Layer</h4>
+                <ul style="color:#8b949e;font-size:0.9rem;padding-left:20px;">
+                    <li>Technical Analysis</li>
+                    <li>Fundamental Analysis</li>
+                    <li>Valuation Models</li>
+                    <li>AI/Sentiment</li>
+                </ul>
+            </div>
+            <div style="background:#0d1117;padding:20px;border-radius:8px;">
+                <h4 style="color:#f78166;margin-bottom:10px;">📤 Output Layer</h4>
+                <ul style="color:#8b949e;font-size:0.9rem;padding-left:20px;">
+                    <li>Analysis Reports</li>
+                    <li>Alerts (Discord)</li>
+                    <li>Dashboard UI</li>
+                    <li>Portfolio Updates</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <footer style="text-align:center;margin-top:40px;color:#8b949e;font-size:0.85rem;">
+        MyStocksApp Architecture Diagram | Generated: <script>document.write(new Date().toLocaleDateString('he-IL'))</script>
+    </footer>
+</body>
+</html>
