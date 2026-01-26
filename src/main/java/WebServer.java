@@ -2638,6 +2638,73 @@ public class WebServer {
                         "<button type='submit'>Run</button>"+
                         "</form>" +
                         modelsUsedNamesOnlyHtml() +
+                        "</div>" +
+                        // Site capabilities description
+                        "<div class='card' style='border:1px solid #1f2a44;'>" +
+                        "<div class='title' dir='rtl'>📚 יכולות המערכת</div>" +
+                        "<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;'>" +
+                        
+                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #3b82f6;'>" +
+                        "<div style='font-weight:600;color:#93c5fd;margin-bottom:4px;'>📊 Analyze (דוח מלא)</div>" +
+                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>ניתוח מעמיק של מניה בודדת - DCF, טכני, פונדמנטלי, ו-AI. מבוסס על הגדרות האסטרטגיה בדף Settings.</div>" +
+                        "</div>" +
+                        
+                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #22c55e;'>" +
+                        "<div style='font-weight:600;color:#86efac;margin-bottom:4px;'>📈 Dashboard</div>" +
+                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>סיכום מהיר של ניתוח המניה - ציון סופי, המלצה, ומדדים עיקריים במבט אחד.</div>" +
+                        "</div>" +
+                        
+                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #f59e0b;'>" +
+                        "<div style='font-weight:600;color:#fcd34d;margin-bottom:4px;'>⭐ Favorites</div>" +
+                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>סריקת מניות מועדפות ומציאת ההתאמה הטובה ביותר לאסטרטגיה שהגדרת בדף Settings.</div>" +
+                        "</div>" +
+                        
+                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #8b5cf6;'>" +
+                        "<div style='font-weight:600;color:#c4b5fd;margin-bottom:4px;'>💼 Manage Portfolio</div>" +
+                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>ניהול תיק השקעות - מעקב אחר פוזיציות, רווח/הפסד, והיסטוריית עסקאות.</div>" +
+                        "</div>" +
+                        
+                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #ec4899;'>" +
+                        "<div style='font-weight:600;color:#f9a8d4;margin-bottom:4px;'>🤖 AlphaAgent AI</div>" +
+                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>סוכן AI חכם לניתוח מניות, שאלות על השוק, והמלצות מותאמות אישית.</div>" +
+                        "</div>" +
+                        
+                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #06b6d4;'>" +
+                        "<div style='font-weight:600;color:#67e8f9;margin-bottom:4px;'>📡 Monitoring Stocks</div>" +
+                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>מעקב אוטומטי אחר מניות - היסטוריה, התראות, ועדכונים בזמן אמת.</div>" +
+                        "</div>" +
+                        
+                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #ef4444;'>" +
+                        "<div style='font-weight:600;color:#fca5a5;margin-bottom:4px;'>⚡ Intraday Alerts</div>" +
+                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>התראות מסחר יומי - זיהוי פריצות, RVOL, VWAP, RSI וסנטימנט שוק בזמן אמת.</div>" +
+                        "</div>" +
+                        
+                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #14b8a6;'>" +
+                        "<div style='font-weight:600;color:#5eead4;margin-bottom:4px;'>📊 Active Positions</div>" +
+                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>מעקב אחר פוזיציות פתוחות, רווחיות, וניהול סיכונים.</div>" +
+                        "</div>" +
+                        
+                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #a855f7;'>" +
+                        "<div style='font-weight:600;color:#d8b4fe;margin-bottom:4px;'>👥 Analysts</div>" +
+                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>המלצות אנליסטים, מחירי יעד, ודירוגי קונצנזוס ממקורות מובילים.</div>" +
+                        "</div>" +
+                        
+                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #f97316;'>" +
+                        "<div style='font-weight:600;color:#fdba74;margin-bottom:4px;'>🔍 FINDER</div>" +
+                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>מציאת מניות חדשות לפי קריטריונים - סריקת NASDAQ 100 ומניות מובילות.</div>" +
+                        "</div>" +
+                        
+                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #64748b;'>" +
+                        "<div style='font-weight:600;color:#cbd5e1;margin-bottom:4px;'>⚙️ Settings</div>" +
+                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>הגדרת אסטרטגיית ההשקעה - משקלות, סף ציון מינימלי, ופילטרים.</div>" +
+                        "</div>" +
+                        
+                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #78716c;'>" +
+                        "<div style='font-weight:600;color:#d6d3d1;margin-bottom:4px;'>📊 API Usage</div>" +
+                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>מעקב אחר שימוש ב-API של Alpha Vantage - מגבלות והיסטוריה.</div>" +
+                        "</div>" +
+                        
+                        "</div>" +
                         "</div>";
                 respondHtml(ex, htmlPage(content), 200);
             }
@@ -2657,10 +2724,10 @@ public class WebServer {
                 sb.append("</div>");
 
                 sb.append("<div class='card'>");
-                sb.append("<div class='title'>ניתוח מנייה: <span id='tickerTitle' style='color:#93c5fd;'>AAPL</span></div>");
+                sb.append("<div class='title' dir='rtl'>ניתוח מנייה: <span id='tickerTitle' style='color:#93c5fd;'>AAPL</span></div>");
                 sb.append("<div style='display:flex;flex-wrap:wrap;gap:20px;margin-bottom:16px;'>");
                 sb.append("<div style='text-align:center;'>");
-                sb.append("<div style='color:#9ca3af;margin-bottom:6px;'>ציון סופי</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:6px;' dir='rtl'>ציון סופי</div>");
                 sb.append("<div id='finalScore' style='font-size:2.5rem;font-weight:bold;background:#0b1220;border:2px solid #1f2a44;border-radius:50%;width:90px;height:90px;display:flex;align-items:center;justify-content:center;margin:0 auto;'>--</div>");
                 sb.append("<div id='recommendation' style='margin-top:8px;font-weight:600;color:#e5e7eb;'>--</div>");
                 sb.append("</div>");
@@ -2707,42 +2774,42 @@ public class WebServer {
                 sb.append("</div>");
 
                 sb.append("<div class='card'>");
-                sb.append("<div class='title'>💡 תובנות מפתח</div>");
-                sb.append("<ul id='insightsList' style='color:#cbd5e1;line-height:1.8;'><li>המתן לטעינת נתונים...</li></ul>");
+                sb.append("<div class='title' dir='rtl'>💡 תובנות מפתח</div>");
+                sb.append("<ul id='insightsList' style='color:#cbd5e1;line-height:1.8;' dir='rtl'><li>המתן לטעינת נתונים...</li></ul>");
                 sb.append("</div>");
 
                 // AI Summary Section - Plain language explanation
                 sb.append("<div class='card' style='background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);border:2px solid #3b82f6;'>");
-                sb.append("<div class='title'>🤖 סיכום בשפה פשוטה | Plain Language Summary</div>");
-                sb.append("<div id='aiSummary' style='line-height:1.9;'>");
+                sb.append("<div class='title' dir='rtl'>🤖 סיכום בשפה פשוטה | Plain Language Summary</div>");
+                sb.append("<div id='aiSummary' style='line-height:1.9;' dir='rtl'>");
                 sb.append("<div style='color:#9ca3af;'>טוען סיכום...</div>");
                 sb.append("</div>");
                 sb.append("</div>");
 
                 // Position Sizing Section - Risk Management
                 sb.append("<div class='card' style='border:2px solid #f59e0b;'>");
-                sb.append("<div class='title'>💰 ניהול סיכונים - כמה מניות לקנות? | Position Sizing</div>");
-                sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>חשב כמה מניות לקנות כך שהפסד מקסימלי יהיה מוגדר מראש</div>");
+                sb.append("<div class='title' dir='rtl'>💰 ניהול סיכונים - כמה מניות לקנות? | Position Sizing</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:16px;' dir='rtl'>חשב כמה מניות לקנות כך שהפסד מקסימלי יהיה מוגדר מראש</div>");
                 sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;'>");
                 sb.append("<div style='flex:1;min-width:150px;'>");
-                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>גודל תיק ($)</label>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;' dir='rtl'>גודל תיק ($)</label>");
                 sb.append("<input id='accountEquity' type='number' value='36000' min='1000' step='1000' style='width:100%;' onchange='calculatePosition()'/>");
                 sb.append("</div>");
                 sb.append("<div style='flex:1;min-width:150px;'>");
-                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>אחוז סיכון לעסקה (%)</label>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;' dir='rtl'>אחוז סיכון לעסקה (%)</label>");
                 sb.append("<input id='riskPercent' type='number' value='1' min='0.5' max='5' step='0.5' style='width:100%;' onchange='calculatePosition()'/>");
                 sb.append("</div>");
                 sb.append("<div style='flex:1;min-width:150px;'>");
-                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>מכפיל ATR לסטופ</label>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;' dir='rtl'>מכפיל ATR לסטופ</label>");
                 sb.append("<input id='atrMultiplier' type='number' value='2.5' min='1.5' max='4' step='0.5' style='width:100%;' onchange='calculatePosition()'/>");
                 sb.append("</div>");
                 sb.append("<div style='flex:1;min-width:150px;'>");
-                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>יחס סיכון/תגמול</label>");
+                sb.append("<label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;' dir='rtl'>יחס סיכון/תגמול</label>");
                 sb.append("<input id='riskReward' type='number' value='2' min='1' max='5' step='0.5' style='width:100%;' onchange='calculatePosition()'/>");
                 sb.append("</div>");
                 sb.append("</div>");
                 sb.append("<div id='positionResult' style='background:#0b1220;border-radius:8px;padding:16px;'>");
-                sb.append("<div style='color:#9ca3af;'>המתן לחישוב...</div>");
+                sb.append("<div style='color:#9ca3af;' dir='rtl'>המתן לחישוב...</div>");
                 sb.append("</div>");
                 sb.append("</div>");
 
@@ -2816,7 +2883,7 @@ public class WebServer {
                         "  const altmanZ = d.altmanZ;" +
                         "  const verdict = d.finalVerdict || '';" +
                         "  let html = '';" +
-                        "  html += '<div style=\"margin-bottom:16px;padding:12px;background:#0b1220;border-radius:8px;border-left:4px solid '+(score>=60?'#22c55e':'#ef4444')+';\">';" +
+                        "  html += '<div style=\"margin-bottom:16px;padding:12px;background:#0b1220;border-radius:8px;border-left:4px solid '+(score>=60?'#22c55e':'#ef4444')+';\" dir=\"rtl\">';" +
                         "  html += '<div style=\"font-size:18px;font-weight:700;color:'+(score>=60?'#22c55e':'#ef4444')+';margin-bottom:8px;\">📊 המלצה: ' + rec + '</div>';" +
                         "  if (score >= 75) {" +
                         "    html += '<div style=\"color:#e5e7eb;\">המניה מקבלת ציון גבוה (<b>' + score + '</b>) - נראית כהזדמנות טובה.</div>';" +
@@ -2829,7 +2896,7 @@ public class WebServer {
                         "  }" +
                         "  html += '</div>';" +
                         "  html += '<div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;\">';" +
-                        "  html += '<div style=\"padding:12px;background:#0b1220;border-radius:8px;\">';" +
+                        "  html += '<div style=\"padding:12px;background:#0b1220;border-radius:8px;\" dir=\"rtl\">';" +
                         "  html += '<div style=\"color:#3b82f6;font-weight:600;margin-bottom:8px;\">🎯 למה ' + (score>=60?'כדאי':'לא כדאי') + ' לקנות?</div>';" +
                         "  let reasons = [];" +
                         "  if (dcfMargin !== null && dcfMargin !== undefined && !Number.isNaN(dcfMargin)) {" +
@@ -2849,7 +2916,7 @@ public class WebServer {
                         "  if (reasons.length === 0) reasons.push('אין נתונים מספיקים להערכה מלאה');" +
                         "  html += '<div style=\"color:#cbd5e1;font-size:14px;\">' + reasons.join('<br>') + '</div>';" +
                         "  html += '</div>';" +
-                        "  html += '<div style=\"padding:12px;background:#0b1220;border-radius:8px;\">';" +
+                        "  html += '<div style=\"padding:12px;background:#0b1220;border-radius:8px;\" dir=\"rtl\">';" +
                         "  html += '<div style=\"color:#f59e0b;font-weight:600;margin-bottom:8px;\">⏱️ לאיזה טווח זמן?</div>';" +
                         "  html += '<div style=\"color:#cbd5e1;font-size:14px;\">';" +
                         "  html += 'מצב הניתוח הנוכחי: <b>SWING_TRADER</b><br>';" +
@@ -2857,7 +2924,7 @@ public class WebServer {
                         "  html += '• סגנון: מסחר לפי תנודות שוק<br>';" +
                         "  html += '• דגש על: איתותים טכניים וכוח יחסי';" +
                         "  html += '</div></div>';" +
-                        "  html += '<div style=\"padding:12px;background:#0b1220;border-radius:8px;\">';" +
+                        "  html += '<div style=\"padding:12px;background:#0b1220;border-radius:8px;\" dir=\"rtl\">';" +
                         "  html += '<div style=\"color:#ef4444;font-weight:600;margin-bottom:8px;\">⚠️ סיכונים וחסרונות</div>';" +
                         "  let risks = [];" +
                         "  if (altmanZ !== null && altmanZ !== undefined && !Number.isNaN(altmanZ) && altmanZ < 1.8) {" +
@@ -2870,7 +2937,7 @@ public class WebServer {
                         "  risks.push('🟡 אירועי שוק בלתי צפויים יכולים להשפיע');" +
                         "  html += '<div style=\"color:#cbd5e1;font-size:14px;\">' + risks.join('<br>') + '</div>';" +
                         "  html += '</div></div>';" +
-                        "  html += '<div style=\"margin-top:12px;padding:10px;background:#1e3a5f;border-radius:6px;color:#93c5fd;font-size:13px;\">';" +
+                        "  html += '<div style=\"margin-top:12px;padding:10px;background:#1e3a5f;border-radius:6px;color:#93c5fd;font-size:13px;\" dir=\"rtl\">';" +
                         "  html += '💡 <b>טיפ:</b> השתמש ב-Stop Loss מוצע בטבלה למעלה כדי להגן על ההשקעה. לדו\"ח מפורט יותר לחץ \"Open Full Report\".';" +
                         "  html += '</div>';" +
                         "  document.getElementById('aiSummary').innerHTML = html;" +
@@ -2910,23 +2977,23 @@ public class WebServer {
                         "  html += '<div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;\">';" +
                         "  html += '<div style=\"text-align:center;padding:16px;background:#1f2a44;border-radius:8px;\">';" +
                         "  html += '<div style=\"font-size:32px;font-weight:700;color:#22c55e;\">' + shares + '</div>';" +
-                        "  html += '<div style=\"color:#9ca3af;font-size:13px;\">מניות לקנייה</div>';" +
+                        "  html += '<div style=\"color:#9ca3af;font-size:13px;\" dir=\"rtl\">מניות לקנייה</div>';" +
                         "  html += '</div>';" +
                         "  html += '<div style=\"text-align:center;padding:16px;background:#1f2a44;border-radius:8px;\">';" +
                         "  html += '<div style=\"font-size:24px;font-weight:600;color:#3b82f6;\">$' + totalInvest.toLocaleString('en-US', {maximumFractionDigits:0}) + '</div>';" +
-                        "  html += '<div style=\"color:#9ca3af;font-size:13px;\">השקעה כוללת (' + portfolioPct.toFixed(1) + '% מהתיק)</div>';" +
+                        "  html += '<div style=\"color:#9ca3af;font-size:13px;\" dir=\"rtl\">השקעה כוללת (' + portfolioPct.toFixed(1) + '% מהתיק)</div>';" +
                         "  html += '</div>';" +
                         "  html += '<div style=\"text-align:center;padding:16px;background:#1f2a44;border-radius:8px;\">';" +
                         "  html += '<div style=\"font-size:24px;font-weight:600;color:#ef4444;\">-$' + maxLoss.toFixed(0) + '</div>';" +
-                        "  html += '<div style=\"color:#9ca3af;font-size:13px;\">הפסד מקסימלי (' + (riskPct*100).toFixed(1) + '% מהתיק)</div>';" +
+                        "  html += '<div style=\"color:#9ca3af;font-size:13px;\" dir=\"rtl\">הפסד מקסימלי (' + (riskPct*100).toFixed(1) + '% מהתיק)</div>';" +
                         "  html += '</div>';" +
                         "  html += '<div style=\"text-align:center;padding:16px;background:#1f2a44;border-radius:8px;\">';" +
                         "  html += '<div style=\"font-size:24px;font-weight:600;color:#22c55e;\">+$' + potentialProfit.toFixed(0) + '</div>';" +
-                        "  html += '<div style=\"color:#9ca3af;font-size:13px;\">רווח פוטנציאלי (1:' + rrRatio + ')</div>';" +
+                        "  html += '<div style=\"color:#9ca3af;font-size:13px;\" dir=\"rtl\">רווח פוטנציאלי (1:' + rrRatio + ')</div>';" +
                         "  html += '</div>';" +
                         "  html += '</div>';" +
                         "  html += '<div style=\"margin-top:16px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;\">';" +
-                        "  html += '<div style=\"padding:10px 16px;background:#0f172a;border:1px solid #1f2a44;border-radius:6px;\">';" +
+                        "  html += '<div style=\"padding:10px 16px;background:#0f172a;border:1px solid #1f2a44;border-radius:6px;\" dir=\"rtl\">';" +
                         "  html += '<span style=\"color:#9ca3af;\">מחיר כניסה:</span> <span style=\"color:#e5e7eb;font-weight:600;\">$' + currentPrice.toFixed(2) + '</span>';" +
                         "  html += '</div>';" +
                         "  html += '<div style=\"padding:10px 16px;background:#0f172a;border:1px solid #ef4444;border-radius:6px;\">';" +
@@ -2936,7 +3003,7 @@ public class WebServer {
                         "  html += '<span style=\"color:#22c55e;\">🎯 Take Profit:</span> <span style=\"color:#22c55e;font-weight:600;\">$' + takeProfitPrice.toFixed(2) + '</span>';" +
                         "  html += '</div>';" +
                         "  html += '</div>';" +
-                        "  html += '<div style=\"margin-top:12px;padding:10px;background:#1e3a5f;border-radius:6px;color:#93c5fd;font-size:13px;text-align:center;\">';" +
+                        "  html += '<div style=\"margin-top:12px;padding:10px;background:#1e3a5f;border-radius:6px;color:#93c5fd;font-size:13px;text-align:center;\" dir=\"rtl\">';" +
                         "  html += '📌 <b>' + currentTicker + '</b>: קנה ' + shares + ' מניות במחיר $' + currentPrice.toFixed(2) + ' | סטופ ב-$' + stopLossPrice.toFixed(2) + ' | יעד ב-$' + takeProfitPrice.toFixed(2);" +
                         "  html += '</div>';" +
                         "  el.innerHTML = html;" +
@@ -3874,7 +3941,7 @@ public class WebServer {
                 List<String> tickers = monitoringStore.loadTickers();
                 StringBuilder sb = new StringBuilder();
                 sb.append("<div class='card'><div class='title'>Monitoring Stocks</div>");
-                sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>Pick stocks to monitor. Each run saves a snapshot and shows signals for the next 2–10 <b>trading</b> days: <b>return</b>=estimated % move, <b>actual</b>=realized % move once enough days passed, <b>score</b>=signal strength.</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:10px;' dir='rtl'>בחר מניות למעקב. כל הרצה שומרת תמונת מצב ומציגה ביצועים של 2-10 ימי מסחר <b>אחרונים</b>: <b>return</b>=% שינוי בפועל מהעבר, <b>score</b>=עוצמת הסיגנל (מבוסס על אינדיקטורים טכניים + חדשות).</div>");
                 sb.append(modelsUsedNamesOnlyHtml());
 
                 // Data directory (important when running from different working directories)
@@ -4079,127 +4146,12 @@ public class WebServer {
         server.createContext("/alpha-agent", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, htmlPage(""), 200); return; }
-                Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
-                String status = qp.getOrDefault("status", "");
-                String days = qp.getOrDefault("days", String.valueOf(ALPHA_AGENT_DEFAULT_TRACKING_DAYS));
-
-                String pid = qp.getOrDefault("pid", "");
-
-                AlphaAgentPortfolio pf;
-                AlphaAgentStore store;
-                String activeId;
-                synchronized (alphaAgentLock) {
-                    store = bestEffortLoadAlphaAgentStore();
-                    if (pid != null && !pid.isBlank()) bestEffortSetActiveAlphaAgentPortfolioId(pid);
-                    activeId = bestEffortGetActiveAlphaAgentPortfolioId();
-                    pf = (pid != null && !pid.isBlank()) ? bestEffortLoadAlphaAgentPortfolioById(pid) : bestEffortLoadAlphaAgentPortfolio();
-                }
-
-                String effectivePid = (pid != null && !pid.isBlank()) ? pid : (activeId == null ? "" : activeId);
 
                 StringBuilder sb = new StringBuilder();
-                sb.append("<div class='card'><div class='title'>AlphaAgent AI</div>");
-                sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>Real-time means scheduled refresh (~3x/day NY). Portfolio is fixed for the evaluation period (no rebalancing).</div>");
+                sb.append("<div class='card'><div class='title'>AlphaAgent AI - Strategy Tools</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>כלים לבדיקת אסטרטגיות מסחר על נתונים היסטוריים</div>");
                 sb.append(modelsUsedNamesOnlyHtml());
-                if (!status.isEmpty()) sb.append("<div style='margin-bottom:10px;color:#93c5fd;'>Status: ").append(escapeHtml(status)).append("</div>");
-                sb.append("<div id='aa-status' style='margin-bottom:10px;padding:12px;border-radius:8px;background:#0b1220;border:1px solid #1f2a44;display:none;'>");
-                sb.append("<div style='display:flex;align-items:center;gap:8px;'>");
-                sb.append("<span id='aa-status-icon'>⏳</span>");
-                sb.append("<span id='aa-status-text' style='color:#fbbf24;font-weight:600;'></span>");
-                sb.append("</div></div>");
-                sb.append("<div id='aa-timestamps' style='margin-bottom:10px;color:#9ca3af;font-size:13px;'></div>");
-
-                int listCount = store == null || store.portfolios == null ? 0 : store.portfolios.size();
-                StringBuilder controls = new StringBuilder();
-                controls.append("<div class='card'><div class='title'>AlphaAgent Lists</div>");
-                controls.append("<div style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0'>");
-                controls.append("<form method='post' action='/alpha-agent/select' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0'>");
-                controls.append("<label style='color:#9ca3af'>List</label>");
-                controls.append("<select name='pid'>");
-                if (store != null && store.portfolios != null && !store.portfolios.isEmpty()) {
-                    int autoIdx = 1;
-                    int customIdx = 1;
-                    for (Map.Entry<String, AlphaAgentPortfolio> e : store.portfolios.entrySet()) {
-                        String id = e.getKey();
-                        boolean sel = id != null && id.equals(effectivePid);
-                        AlphaAgentPortfolio p = e.getValue();
-                        boolean custom = p != null && p.userManaged;
-                        String label;
-                        if (custom) {
-                            label = "Custom " + customIdx;
-                            customIdx++;
-                        } else {
-                            label = "List " + autoIdx;
-                            autoIdx++;
-                        }
-                        controls.append("<option value='").append(escapeHtml(id)).append("'").append(sel ? " selected" : "").append(">").append(escapeHtml(label)).append("</option>");
-                    }
-                }
-                controls.append("</select>");
-                controls.append("<button type='submit'>Switch</button>");
-                controls.append("</form>");
-
-                controls.append("<form method='post' action='/alpha-agent/drop' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0'>");
-                controls.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
-                controls.append("<button type='submit'>Drop List</button>");
-                controls.append("</form>");
-                controls.append("</div>");
-
-                controls.append("<form method='post' action='/alpha-agent/start' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px'>");
-                controls.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
-                controls.append("<input type='hidden' name='createNew' value='1'/>");
-                controls.append("<input type='number' name='evaluationPeriodDays' min='2' max='60' value='").append(escapeHtml(days)).append("' />");
-                controls.append("<button type='submit'>Start New AlphaAgent List</button>");
-                controls.append("<div style='color:#9ca3af'>Saved lists: ").append(listCount).append("/").append(ALPHA_AGENT_MAX_LISTS).append("</div>");
-                controls.append("</form>");
-
-                boolean isCustom = pf != null && pf.userManaged;
-                
-                // Always show "Create Custom List" if we haven't hit the limit
-                if (listCount < ALPHA_AGENT_MAX_LISTS) {
-                    controls.append("<form method='post' action='/alpha-agent/custom-create' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px'>");
-                    controls.append("<input type='number' name='evaluationPeriodDays' min='2' max='60' value='").append(escapeHtml(days)).append("' />");
-                    controls.append("<button type='submit'>Create New Custom List</button>");
-                    controls.append("<div style='color:#9ca3af'>Creates a new empty list (won't affect existing lists)</div>");
-                    controls.append("</form>");
-                }
-
-                // Show ticker editor only for the current custom list
-                if (isCustom) {
-                    controls.append("<form method='post' action='/alpha-agent/custom-save' style='display:flex;flex-direction:column;gap:10px;margin-top:10px'>");
-                    controls.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
-                    controls.append("<div style='color:#9ca3af'>Edit tickers for current list (comma / space / newline separated)</div>");
-                    controls.append("<textarea name='tickers' rows='3' style='width:100%;max-width:900px'>");
-                    if (pf != null && pf.positions != null && !pf.positions.isEmpty()) {
-                        StringBuilder t = new StringBuilder();
-                        for (AlphaAgentPosition p : pf.positions) {
-                            if (p == null || p.ticker == null || p.ticker.isBlank()) continue;
-                            if (t.length() > 0) t.append(", ");
-                            t.append(p.ticker.trim().toUpperCase());
-                        }
-                        controls.append(escapeHtml(t.toString()));
-                    }
-                    controls.append("</textarea>");
-                    controls.append("<button type='submit'>Save Custom Tickers (Set Entry Date + Entry Price)</button>");
-                    controls.append("</form>");
-                }
-
-                controls.append("<form method='post' action='/alpha-agent/refresh' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px'>");
-                controls.append("<input type='hidden' name='pid' value='").append(escapeHtml(effectivePid)).append("'/>");
-                controls.append("<button type='submit'>Refresh Prices Now</button>");
-                controls.append("<div style='color:#9ca3af'>Fetch latest quote for this list and update % Net P/L (falls back to last close if rate-limited)</div>");
-                controls.append("</form>");
-                controls.append("</div>");
-
-                sb.append("<div class='card'><div class='title'>AlphaAgent Stock Table</div><div style='overflow:auto'><table style='width:100%;border-collapse:collapse'>");
-                sb.append("<thead><tr><th style='text-align:left;padding:8px 10px;border-bottom:1px solid #1f2a44'>Symbol</th><th style='text-align:left;padding:8px 10px;border-bottom:1px solid #1f2a44'>Entry Date</th><th style='text-align:right;padding:8px 10px;border-bottom:1px solid #1f2a44'>Entry</th><th style='text-align:right;padding:8px 10px;border-bottom:1px solid #1f2a44'>Current</th><th style='text-align:right;padding:8px 10px;border-bottom:1px solid #1f2a44'>% Net P/L</th></tr></thead>");
-                sb.append("<tbody id='aa-stocks'><tr><td colspan='5' style='padding:10px;color:#9ca3af'>Loading...</td></tr></tbody></table></div></div>");
-
-                sb.append("<div class='card'><div class='title'>Index Comparison</div><div style='overflow:auto'><table style='width:100%;border-collapse:collapse'>");
-                sb.append("<thead><tr><th style='text-align:left;padding:8px 10px;border-bottom:1px solid #1f2a44'>Index</th><th style='text-align:right;padding:8px 10px;border-bottom:1px solid #1f2a44'>Entry</th><th style='text-align:right;padding:8px 10px;border-bottom:1px solid #1f2a44'>Current</th><th style='text-align:right;padding:8px 10px;border-bottom:1px solid #1f2a44'>% Net P/L</th></tr></thead>");
-                sb.append("<tbody id='aa-index'><tr><td colspan='4' style='padding:10px;color:#9ca3af'>Loading...</td></tr></tbody></table></div></div>");
-
-                sb.append("<div class='card'><div class='title'>Race Result Summary</div><div id='aa-race' style='color:#9ca3af'>Loading...</div></div>");
+                sb.append("</div>");
 
                 // Strategy Backtester Section
                 sb.append("<div class='card' style='border:2px solid #f59e0b;'>");
@@ -4237,57 +4189,71 @@ public class WebServer {
                 sb.append("<div id='scResult' style='display:none;'></div>");
                 sb.append("</div>");
 
-                sb.append(controls);
+                // Daily Trading Simulator Section
+                sb.append("<div class='card' style='border:2px solid #22c55e;'>");
+                sb.append("<div class='title'>🎯 Daily Trading Simulator - סימולציית מסחר יומית</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;' dir='rtl'>סורק 20 מניות אקראיות, בוחר 4 לאסטרטגיית Momentum ו-4 לאסטרטגיית Swing, קונה $1000 לכל מניה, ומנטר כל 15 דקות עם החלטות Stop Loss / Take Profit.</div>");
+                sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;align-items:center;'>");
+                sb.append("<button onclick='toggleDailyScheduler()' id='dtsSchedulerBtn' style='background:#f59e0b;'>📅 Enable Daily Auto-Scan</button>");
+                sb.append("<button onclick='runDailyScanner(false)' id='dtsBtn' style='background:#22c55e;'>🔍 Run Scanner Now</button>");
+                sb.append("<button onclick='runDailyScanner(true)' style='background:#f97316;'>🔄 Force Rescan</button>");
+                sb.append("<button onclick='startMonitoring()' id='dtsMonBtn' style='background:#3b82f6;'>▶️ Start 15-min Monitor</button>");
+                sb.append("<button onclick='stopMonitoring()' style='background:#6b7280;'>⏹️ Stop Monitor</button>");
+                sb.append("<button onclick='refreshDailyTrades()' style='background:#8b5cf6;'>🔄 Refresh</button>");
+                sb.append("<button onclick='clearDailyTrades()' style='background:#ef4444;'>🗑️ Clear All</button>");
+                sb.append("</div>");
+                sb.append("<div id='dtsSchedulerInfo' style='margin-bottom:12px;padding:10px;background:#1f2a44;border-radius:8px;display:none;'>");
+                sb.append("<span style='color:#f59e0b;'>📅 Daily Auto-Scan: </span><span id='dtsNextScan' style='color:#e5e7eb;'></span>");
+                sb.append("</div>");
+                sb.append("<div id='dtsStatus' style='color:#9ca3af;font-size:13px;margin-bottom:12px;'></div>");
+                
+                // Performance Summary
+                sb.append("<div id='dtsSummary' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:16px;'></div>");
+                
+                // Open Positions Table
+                sb.append("<div style='margin-bottom:16px;'>");
+                sb.append("<div style='color:#22c55e;font-weight:600;margin-bottom:8px;'>📈 Open Positions</div>");
+                sb.append("<div style='overflow-x:auto;'><table style='width:100%;border-collapse:collapse;font-size:13px;'>");
+                sb.append("<thead><tr style='background:#0b1220;'>");
+                sb.append("<th style='padding:8px;text-align:left;'>Symbol</th>");
+                sb.append("<th style='padding:8px;text-align:center;'>Strategy</th>");
+                sb.append("<th style='padding:8px;text-align:right;'>Entry</th>");
+                sb.append("<th style='padding:8px;text-align:right;'>Current</th>");
+                sb.append("<th style='padding:8px;text-align:right;'>P/L %</th>");
+                sb.append("<th style='padding:8px;text-align:right;'>Stop</th>");
+                sb.append("<th style='padding:8px;text-align:right;'>Target</th>");
+                sb.append("<th style='padding:8px;text-align:center;'>Status</th>");
+                sb.append("</tr></thead>");
+                sb.append("<tbody id='dtsOpenTbody'><tr><td colspan='8' style='padding:10px;color:#9ca3af;text-align:center;'>No open positions</td></tr></tbody>");
+                sb.append("</table></div></div>");
+                
+                // Closed Positions Table
+                sb.append("<div>");
+                sb.append("<div style='color:#ef4444;font-weight:600;margin-bottom:8px;'>📉 Closed Positions (Today)</div>");
+                sb.append("<div style='overflow-x:auto;'><table style='width:100%;border-collapse:collapse;font-size:13px;'>");
+                sb.append("<thead><tr style='background:#0b1220;'>");
+                sb.append("<th style='padding:8px;text-align:left;'>Symbol</th>");
+                sb.append("<th style='padding:8px;text-align:center;'>Strategy</th>");
+                sb.append("<th style='padding:8px;text-align:right;'>Entry</th>");
+                sb.append("<th style='padding:8px;text-align:right;'>Exit</th>");
+                sb.append("<th style='padding:8px;text-align:right;'>P/L %</th>");
+                sb.append("<th style='padding:8px;text-align:right;'>P/L $</th>");
+                sb.append("<th style='padding:8px;text-align:center;'>Exit Type</th>");
+                sb.append("<th style='padding:8px;text-align:center;'>Time</th>");
+                sb.append("</tr></thead>");
+                sb.append("<tbody id='dtsClosedTbody'><tr><td colspan='8' style='padding:10px;color:#9ca3af;text-align:center;'>No closed positions</td></tr></tbody>");
+                sb.append("</table></div></div>");
+                
+                // Variant Performance Comparison (A/B Testing)
+                sb.append("<div style='margin-top:20px;border:2px solid #f59e0b;border-radius:8px;padding:16px;'>");
+                sb.append("<div style='color:#f59e0b;font-weight:600;margin-bottom:12px;'>🏆 Variant Performance Comparison (A/B Testing)</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:12px;' dir='rtl'>השוואת ביצועים בין קונפיגורציות מומנטום שונות - הווריאנט המנצח מסומן ב-🥇</div>");
+                sb.append("<div id='dtsVariantPerf'><div style='color:#9ca3af;text-align:center;padding:16px;'>Loading variant data...</div></div>");
+                sb.append("</div>");
+                
+                sb.append("</div>");
 
-                sb.append("<script>(function(){"+
-                        "function fmt(x){if(x===null||x===undefined||isNaN(x))return 'N/A';return (x>=0?'+':'')+x.toFixed(2)+'%';}"+
-                        "function money(x){if(x===null||x===undefined||isNaN(x))return 'N/A';return '$'+x.toFixed(2);}"+
-                        "var pid='" + escapeHtml(effectivePid) + "';"+
-                        "async function load(){try{"+
-                        "var st=await fetch('/alpha-agent/status?pid='+encodeURIComponent(pid));var stj=await st.json();"+
-                        "var statusBox=document.getElementById('aa-status');"+
-                        "var statusIcon=document.getElementById('aa-status-icon');"+
-                        "var statusText=document.getElementById('aa-status-text');"+
-                        "if(stj&&stj.lastError&&stj.lastError.length>0){"+
-                        "  statusBox.style.display='block';"+
-                        "  var isRunning=stj.lastError.indexOf('running')>=0||stj.lastError.indexOf('selecting')>=0||stj.lastError.indexOf('starting')>=0;"+
-                        "  var isError=stj.lastError.toLowerCase().indexOf('error')>=0;"+
-                        "  statusIcon.textContent=isError?'❌':(isRunning?'⏳':'✅');"+
-                        "  statusText.style.color=isError?'#fca5a5':(isRunning?'#fbbf24':'#22c55e');"+
-                        "  statusText.textContent=stj.lastError;"+
-                        "}else{statusBox.style.display='none';}"+
-                        "var tsEl=document.getElementById('aa-timestamps');"+
-                        "var tsParts=[];"+
-                        "if(stj&&stj.lastUpdatedNy){tsParts.push('🕐 Last updated: '+new Date(stj.lastUpdatedNy).toLocaleString());}"+
-                        "if(stj&&stj.createdAtNy){tsParts.push('📅 Created: '+new Date(stj.createdAtNy).toLocaleString());}"+
-                        "tsEl.innerHTML=tsParts.join(' | ');"+
-                        "var s=await fetch('/alpha-agent/stocks?pid='+encodeURIComponent(pid));var stocks=await s.json();"+
-                        "var tb=document.getElementById('aa-stocks');"+
-                        "if(!stocks||!stocks.length){tb.innerHTML=`<tr><td colspan='5' style='padding:10px;color:#9ca3af'>No active portfolio. Click Start.</td></tr>`;}"+
-                        "else{var rows='';for(var i=0;i<stocks.length;i++){var r=stocks[i];var p=r.netProfitPct;var c=(p===null||p===undefined||isNaN(p))?'#9ca3af':(p>=0?'#22c55e':'#fca5a5');"+
-                        "rows+=`<tr><td style='padding:8px 10px;border-bottom:1px solid #111827'>${r.symbol||''}</td>`+"+
-                        "`<td style='padding:8px 10px;border-bottom:1px solid #111827;color:#9ca3af'>${r.entryDate||''}</td>`+"+
-                        "`<td style='padding:8px 10px;border-bottom:1px solid #111827;text-align:right'>${money(r.entryPrice)}</td>`+"+
-                        "`<td style='padding:8px 10px;border-bottom:1px solid #111827;text-align:right'>${money(r.currentPrice)}</td>`+"+
-                        "`<td style='padding:8px 10px;border-bottom:1px solid #111827;text-align:right;color:${c};font-weight:700'>${fmt(p)}</td></tr>`;}tb.innerHTML=rows;}"+
-                        "var ix=await fetch('/alpha-agent/index-performance?pid='+encodeURIComponent(pid));var idx=await ix.json();"+
-                        "var itb=document.getElementById('aa-index');"+
-                        "if(!idx||!idx.length){itb.innerHTML=`<tr><td colspan='4' style='padding:10px;color:#9ca3af'>N/A</td></tr>`;}"+
-                        "else{var rows2='';for(var j=0;j<idx.length;j++){var r2=idx[j];var p2=r2.netProfitPct;var c2=(p2===null||p2===undefined||isNaN(p2))?'#9ca3af':(p2>=0?'#22c55e':'#fca5a5');"+
-                        "rows2+=`<tr><td style='padding:8px 10px;border-bottom:1px solid #111827'>${r2.indexName||''}</td>`+"+
-                        "`<td style='padding:8px 10px;border-bottom:1px solid #111827;text-align:right'>${money(r2.entryValue)}</td>`+"+
-                        "`<td style='padding:8px 10px;border-bottom:1px solid #111827;text-align:right'>${money(r2.currentValue)}</td>`+"+
-                        "`<td style='padding:8px 10px;border-bottom:1px solid #111827;text-align:right;color:${c2};font-weight:700'>${fmt(p2)}</td></tr>`;}itb.innerHTML=rows2;}"+
-                        "var rr=await fetch('/alpha-agent/race-result?pid='+encodeURIComponent(pid));var race=await rr.json();"+
-                        "var el=document.getElementById('aa-race');"+
-                        "if(race&&race.message){el.innerHTML=`<div style='font-weight:700;color:#e5e7eb'>${race.message}</div>`+"+
-                        "`<div style='margin-top:6px'>AlphaAgent Avg: <span style='color:#e5e7eb'>${fmt(race.alphaAgentAvgPct)}</span></div>`+"+
-                        "`<div>NASDAQ-100 (QQQ): <span style='color:#e5e7eb'>${fmt(race.nasdaq100Pct)}</span></div>`+"+
-                        "`<div>S&P 500 (SPY): <span style='color:#e5e7eb'>${fmt(race.sp500Pct)}</span></div>`;}"+
-                        "else{el.textContent='N/A';}"+
-                        "}catch(e){try{document.getElementById('aa-race').textContent='Error: '+e;}catch(_){}}}"+
-                        "load();setInterval(load,15000);})();</script>"+
-                        "<script>"+
+                sb.append("<script>"+
                         "async function runBacktest(){"+
                         "  var ticker=document.getElementById('btTicker').value.trim().toUpperCase();"+
                         "  var balance=parseFloat(document.getElementById('btBalance').value)||36000;"+
@@ -4472,6 +4438,165 @@ public class WebServer {
                         "  html+='</tr></tbody></table></div>';"+
                         "  el.innerHTML=html;"+
                         "}"+
+                        // Daily Trading Simulator JavaScript
+                        "var dailySchedulerRunning=false;"+
+                        "async function toggleDailyScheduler(){"+
+                        "  var btn=document.getElementById('dtsSchedulerBtn');"+
+                        "  btn.disabled=true;"+
+                        "  try{"+
+                        "    var endpoint=dailySchedulerRunning?'/api/daily-sim/scheduler/stop':'/api/daily-sim/scheduler/start';"+
+                        "    var r=await fetch(endpoint,{method:'POST'});"+
+                        "    var d=await r.json();"+
+                        "    btn.disabled=false;"+
+                        "    if(d.error){alert('Error: '+d.error);return;}"+
+                        "    dailySchedulerRunning=d.running||false;"+
+                        "    updateSchedulerUI();"+
+                        "    document.getElementById('dtsStatus').textContent=d.status||'';"+
+                        "  }catch(e){btn.disabled=false;alert('Error: '+e);}"+
+                        "}"+
+                        "function updateSchedulerUI(){"+
+                        "  var btn=document.getElementById('dtsSchedulerBtn');"+
+                        "  var info=document.getElementById('dtsSchedulerInfo');"+
+                        "  if(dailySchedulerRunning){"+
+                        "    btn.style.background='#ef4444';"+
+                        "    btn.textContent='⏹️ Disable Daily Auto-Scan';"+
+                        "    info.style.display='block';"+
+                        "  }else{"+
+                        "    btn.style.background='#f59e0b';"+
+                        "    btn.textContent='📅 Enable Daily Auto-Scan';"+
+                        "    info.style.display='none';"+
+                        "  }"+
+                        "}"+
+                        "async function runDailyScanner(force){"+
+                        "  var btn=document.getElementById('dtsBtn');"+
+                        "  btn.disabled=true;btn.textContent='⏳ Scanning...';"+
+                        "  document.getElementById('dtsStatus').textContent='Starting scanner...';"+
+                        "  try{"+
+                        "    var url='/api/daily-sim/scan'+(force?'?force=true':'');"+
+                        "    var r=await fetch(url,{method:'POST'});"+
+                        "    var d=await r.json();"+
+                        "    btn.disabled=false;btn.textContent='🔍 Run Scanner Now';"+
+                        "    if(d.error){alert('Error: '+d.error);return;}"+
+                        "    document.getElementById('dtsStatus').textContent=d.status||'Scanner started';"+
+                        "    setTimeout(refreshDailyTrades,3000);"+
+                        "  }catch(e){btn.disabled=false;btn.textContent='🔍 Run Scanner Now';alert('Error: '+e);}"+
+                        "}"+
+                        "async function startMonitoring(){"+
+                        "  var btn=document.getElementById('dtsMonBtn');"+
+                        "  try{"+
+                        "    var r=await fetch('/api/daily-sim/monitor/start',{method:'POST'});"+
+                        "    var d=await r.json();"+
+                        "    document.getElementById('dtsStatus').textContent=d.status||'Monitoring started';"+
+                        "  }catch(e){alert('Error: '+e);}"+
+                        "}"+
+                        "async function stopMonitoring(){"+
+                        "  try{"+
+                        "    var r=await fetch('/api/daily-sim/monitor/stop',{method:'POST'});"+
+                        "    var d=await r.json();"+
+                        "    document.getElementById('dtsStatus').textContent=d.status||'Monitoring stopped';"+
+                        "  }catch(e){alert('Error: '+e);}"+
+                        "}"+
+                        "async function refreshDailyTrades(){"+
+                        "  try{"+
+                        "    var r=await fetch('/api/daily-sim/trades');"+
+                        "    var d=await r.json();"+
+                        "    renderDailyTrades(d);"+
+                        "  }catch(e){console.error('Refresh error:',e);}"+
+                        "}"+
+                        "async function clearDailyTrades(){"+
+                        "  if(!confirm('Clear all trades?'))return;"+
+                        "  try{"+
+                        "    var r=await fetch('/api/daily-sim/clear',{method:'POST'});"+
+                        "    refreshDailyTrades();"+
+                        "  }catch(e){alert('Error: '+e);}"+
+                        "}"+
+                        "function renderDailyTrades(d){"+
+                        "  var sumEl=document.getElementById('dtsSummary');"+
+                        "  var s=d.summary||{};"+
+                        "  sumEl.innerHTML='<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">'+"+
+                        "    '<div style=\"font-size:20px;font-weight:700;color:#3b82f6;\">'+(s.openPositions||0)+'</div>'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:11px;\">Open</div></div>'+"+
+                        "  '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">'+"+
+                        "    '<div style=\"font-size:20px;font-weight:700;color:#22c55e;\">'+(s.winners||0)+'</div>'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:11px;\">Winners</div></div>'+"+
+                        "  '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">'+"+
+                        "    '<div style=\"font-size:20px;font-weight:700;color:#ef4444;\">'+(s.losers||0)+'</div>'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:11px;\">Losers</div></div>'+"+
+                        "  '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">'+"+
+                        "    '<div style=\"font-size:20px;font-weight:700;color:'+(s.winRate>=50?'#22c55e':'#ef4444')+';\">'+(s.winRate||0).toFixed(0)+'%</div>'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:11px;\">Win Rate</div></div>'+"+
+                        "  '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">'+"+
+                        "    '<div style=\"font-size:20px;font-weight:700;color:'+(s.totalPnL>=0?'#22c55e':'#ef4444')+';\">$'+(s.totalPnL||0).toFixed(0)+'</div>'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:11px;\">Total P/L</div></div>';"+
+                        "  var openTb=document.getElementById('dtsOpenTbody');"+
+                        "  var open=d.open||[];"+
+                        "  if(open.length===0){openTb.innerHTML='<tr><td colspan=\"8\" style=\"padding:10px;color:#9ca3af;text-align:center;\">No open positions</td></tr>';}"+
+                        "  else{var rows='';for(var i=0;i<open.length;i++){var t=open[i];var pnlColor=t.profitLossPct>=0?'#22c55e':'#ef4444';"+
+                        "    var stratColor=t.strategy==='MOMENTUM'?'#8b5cf6':'#f59e0b';"+
+                        "    var scoreColor=t.momentumScore>=70?'#22c55e':(t.momentumScore>=50?'#f59e0b':'#9ca3af');"+
+                        "    var rsColor=t.rsRatio>=1.1?'#22c55e':(t.rsRatio>=1.0?'#f59e0b':'#ef4444');"+
+                        "    var indicators='<span style=\"font-size:10px;color:#9ca3af;\">'+"+
+                        "      'CCI:'+(t.cci||0).toFixed(0)+' RS:'+(t.rsRatio||0).toFixed(2)+"+
+                        "      (t.maCrossover?' ✓MA':'')+'</span>';"+
+                        "    rows+='<tr style=\"border-bottom:1px solid #1f2a44;\">'+"+
+                        "      '<td style=\"padding:8px;\"><div style=\"font-weight:600;\">'+t.ticker+'</div>'+indicators+'</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:center;\"><span style=\"background:'+stratColor+';padding:2px 8px;border-radius:4px;font-size:11px;\">'+t.strategy+'</span>'+"+
+                        "        '<div style=\"font-size:10px;color:'+scoreColor+';margin-top:2px;\">Score:'+t.momentumScore+'</div></td>'+"+
+                        "      '<td style=\"padding:8px;text-align:right;\">$'+t.entryPrice.toFixed(2)+'</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:right;\">$'+t.currentPrice.toFixed(2)+'</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:right;color:'+pnlColor+';font-weight:600;\">'+(t.profitLossPct>=0?'+':'')+t.profitLossPct.toFixed(2)+'%</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:right;color:#ef4444;\">$'+t.stopLossPrice.toFixed(2)+'</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:right;color:#22c55e;\">$'+t.takeProfitPrice.toFixed(2)+(t.pivotR1>0?'<div style=\"font-size:10px;color:#9ca3af;\">R1:$'+t.pivotR1.toFixed(2)+'</div>':'')+'</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:center;\"><span style=\"background:#3b82f6;padding:2px 8px;border-radius:4px;font-size:11px;\">HOLD</span></td>'+"+
+                        "    '</tr>';}openTb.innerHTML=rows;}"+
+                        "  var closedTb=document.getElementById('dtsClosedTbody');"+
+                        "  var closed=d.closed||[];"+
+                        "  if(closed.length===0){closedTb.innerHTML='<tr><td colspan=\"8\" style=\"padding:10px;color:#9ca3af;text-align:center;\">No closed positions</td></tr>';}"+
+                        "  else{var rows2='';for(var j=0;j<closed.length;j++){var c=closed[j];var pnlColor2=c.profitLossPct>=0?'#22c55e':'#ef4444';"+
+                        "    var stratColor2=c.strategy==='MOMENTUM'?'#8b5cf6':'#f59e0b';"+
+                        "    var exitColor=c.exitType==='TAKE_PROFIT'||c.exitType==='TRAILING_STOP'?'#22c55e':'#ef4444';"+
+                        "    rows2+='<tr style=\"border-bottom:1px solid #1f2a44;\">'+"+
+                        "      '<td style=\"padding:8px;font-weight:600;\">'+c.ticker+'</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:center;\"><span style=\"background:'+stratColor2+';padding:2px 8px;border-radius:4px;font-size:11px;\">'+c.strategy+'</span></td>'+"+
+                        "      '<td style=\"padding:8px;text-align:right;\">$'+c.entryPrice.toFixed(2)+'</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:right;\">$'+c.exitPrice.toFixed(2)+'</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:right;color:'+pnlColor2+';font-weight:600;\">'+(c.profitLossPct>=0?'+':'')+c.profitLossPct.toFixed(2)+'%</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:right;color:'+pnlColor2+';font-weight:600;\">$'+c.profitLossDollars.toFixed(0)+'</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:center;\"><span style=\"background:'+exitColor+';padding:2px 8px;border-radius:4px;font-size:11px;\">'+(c.exitTypeDisplay||c.exitType)+'</span></td>'+"+
+                        "      '<td style=\"padding:8px;text-align:center;color:#9ca3af;font-size:12px;\">'+c.exitTime+'</td>'+"+
+                        "    '</tr>';}closedTb.innerHTML=rows2;}"+
+                        "  if(d.scannerStatus){document.getElementById('dtsStatus').textContent=d.scannerStatus;}"+
+                        "  dailySchedulerRunning=d.dailySchedulerRunning||false;"+
+                        "  updateSchedulerUI();"+
+                        "  if(d.nextScheduledScan&&d.dailySchedulerRunning){document.getElementById('dtsNextScan').textContent='Next scan: '+d.nextScheduledScan;}"+
+                        "  var vpEl=document.getElementById('dtsVariantPerf');"+
+                        "  var vp=d.variantPerformance||[];"+
+                        "  if(vp.length===0){vpEl.innerHTML='<div style=\"color:#9ca3af;text-align:center;padding:16px;\">No variant data yet. Run scanner to start A/B testing.</div>';}"+
+                        "  else{var vpHtml='<table style=\"width:100%;border-collapse:collapse;font-size:12px;\">'+"+
+                        "    '<thead><tr style=\"background:#1f2a44;\">'+"+
+                        "    '<th style=\"padding:8px;text-align:left;\">🏆 Variant</th>'+"+
+                        "    '<th style=\"padding:8px;text-align:center;\">Trades</th>'+"+
+                        "    '<th style=\"padding:8px;text-align:center;\">Win Rate</th>'+"+
+                        "    '<th style=\"padding:8px;text-align:right;\">P/L $</th>'+"+
+                        "    '<th style=\"padding:8px;text-align:right;\">P/L %</th>'+"+
+                        "    '<th style=\"padding:8px;text-align:center;\">Profit Factor</th>'+"+
+                        "    '</tr></thead><tbody>';"+
+                        "  for(var v=0;v<vp.length;v++){var vd=vp[v];"+
+                        "    var rank=v+1;var medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';"+
+                        "    var pnlColor=vd.totalProfitLossDollars>=0?'#22c55e':'#ef4444';"+
+                        "    var wrColor=vd.winRate>=50?'#22c55e':'#ef4444';"+
+                        "    var pfColor=vd.profitFactor>=1.5?'#22c55e':(vd.profitFactor>=1?'#f59e0b':'#ef4444');"+
+                        "    vpHtml+='<tr style=\"border-bottom:1px solid #1f2a44;\">'+"+
+                        "      '<td style=\"padding:8px;\">'+medal+'<b>'+vd.variantName+'</b><div style=\"font-size:10px;color:#9ca3af;\">'+vd.variantId+'</div></td>'+"+
+                        "      '<td style=\"padding:8px;text-align:center;\">'+vd.totalTrades+' <span style=\"color:#22c55e;\">('+vd.winningTrades+'W)</span> <span style=\"color:#ef4444;\">('+vd.losingTrades+'L)</span></td>'+"+
+                        "      '<td style=\"padding:8px;text-align:center;color:'+wrColor+';font-weight:600;\">'+vd.winRate.toFixed(0)+'%</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:right;color:'+pnlColor+';font-weight:600;\">$'+vd.totalProfitLossDollars.toFixed(0)+'</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:right;color:'+pnlColor+';\">'+(vd.totalProfitLossPct>=0?'+':'')+vd.totalProfitLossPct.toFixed(1)+'%</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:center;color:'+pfColor+';font-weight:600;\">'+vd.profitFactor.toFixed(2)+'</td>'+"+
+                        "    '</tr>';}"+
+                        "  vpHtml+='</tbody></table>';vpEl.innerHTML=vpHtml;}"+
+                        "}"+
+                        "refreshDailyTrades();setInterval(refreshDailyTrades,30000);"+
                         "</script>");
 
                 respondHtml(ex, htmlPage(sb.toString()), 200);
@@ -4626,6 +4751,200 @@ public class WebServer {
                 }
                 out.put("message", msg);
                 respondJson(ex, out, 200);
+            }
+        });
+
+        // ---------------- Daily Trading Simulator API Endpoints ----------------
+        // Load simulator store on startup
+        DailyTradingSimulator.loadStore();
+
+        server.createContext("/api/daily-sim/scan", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                try {
+                    // Check for force parameter
+                    String query = ex.getRequestURI().getQuery();
+                    boolean force = query != null && query.contains("force=true");
+                    
+                    MonitoringAlphaVantageClient av = MonitoringAlphaVantageClient.fromEnv();
+                    String interval = intradayIntervalForCurrentEntitlement();
+                    DailyTradingSimulator.runDailyScanner(av, interval, force);
+                    respondJson(ex, Map.of("status", force ? "Force rescan started" : "Scanner started in background"), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage()), 500);
+                }
+            }
+        });
+
+        server.createContext("/api/daily-sim/trades", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                try {
+                    Map<String, Object> out = new LinkedHashMap<>();
+                    
+                    // Open trades
+                    List<Map<String, Object>> openList = new ArrayList<>();
+                    for (DailyTradingSimulator.SimulatedTrade t : DailyTradingSimulator.getOpenTrades()) {
+                        Map<String, Object> row = new LinkedHashMap<>();
+                        row.put("ticker", t.ticker);
+                        row.put("strategy", t.strategy != null ? t.strategy.name() : "UNKNOWN");
+                        row.put("entryDate", t.entryDate);
+                        row.put("entryTime", t.entryTime);
+                        row.put("entryPrice", t.entryPrice);
+                        row.put("currentPrice", t.currentPrice);
+                        row.put("profitLossPct", t.profitLossPct);
+                        row.put("profitLossDollars", t.profitLossDollars);
+                        row.put("stopLossPrice", t.stopLossPrice);
+                        row.put("takeProfitPrice", t.takeProfitPrice);
+                        row.put("trailingStopPrice", t.trailingStopPrice);
+                        row.put("highestPrice", t.highestPrice);
+                        row.put("rvol", t.rvol);
+                        row.put("rsi", t.rsi);
+                        // Enhanced momentum indicators
+                        row.put("cci", t.cci);
+                        row.put("cciBreakout", t.cciBreakout);
+                        row.put("rsRatio", t.rsRatio);
+                        row.put("maCrossover", t.maCrossover);
+                        row.put("pivotR1", t.pivotR1);
+                        row.put("pivotR2", t.pivotR2);
+                        row.put("pivotS1", t.pivotS1);
+                        row.put("momentumScore", t.momentumScore);
+                        row.put("entryReason", t.entryReason);
+                        row.put("variantId", t.variantId);
+                        row.put("variantName", t.variantName);
+                        openList.add(row);
+                    }
+                    out.put("open", openList);
+                    
+                    // Closed trades (today only)
+                    List<Map<String, Object>> closedList = new ArrayList<>();
+                    for (DailyTradingSimulator.SimulatedTrade t : DailyTradingSimulator.getClosedTrades()) {
+                        Map<String, Object> row = new LinkedHashMap<>();
+                        row.put("ticker", t.ticker);
+                        row.put("strategy", t.strategy != null ? t.strategy.name() : "UNKNOWN");
+                        row.put("entryDate", t.entryDate);
+                        row.put("entryTime", t.entryTime);
+                        row.put("entryPrice", t.entryPrice);
+                        row.put("exitDate", t.exitDate);
+                        row.put("exitTime", t.exitTime);
+                        row.put("exitPrice", t.exitPrice);
+                        row.put("profitLossPct", t.profitLossPct);
+                        row.put("profitLossDollars", t.profitLossDollars);
+                        row.put("exitType", t.exitType != null ? t.exitType.name() : "UNKNOWN");
+                        row.put("exitTypeDisplay", t.exitType != null ? t.exitType.getDisplay() : "Unknown");
+                        row.put("variantId", t.variantId);
+                        row.put("variantName", t.variantName);
+                        closedList.add(row);
+                    }
+                    out.put("closed", closedList);
+                    
+                    // Summary
+                    out.put("summary", DailyTradingSimulator.getPerformanceSummary());
+                    
+                    // Variant Performance for A/B testing comparison
+                    DailyTradingSimulator.updateVariantPerformance();
+                    List<Map<String, Object>> variantsList = new ArrayList<>();
+                    for (DailyTradingSimulator.VariantPerformance vp : DailyTradingSimulator.getVariantPerformanceRanked()) {
+                        Map<String, Object> v = new LinkedHashMap<>();
+                        v.put("variantId", vp.variantId);
+                        v.put("variantName", vp.variantName);
+                        v.put("totalTrades", vp.totalTrades);
+                        v.put("winningTrades", vp.winningTrades);
+                        v.put("losingTrades", vp.losingTrades);
+                        v.put("winRate", vp.winRate);
+                        v.put("totalProfitLossPct", vp.totalProfitLossPct);
+                        v.put("totalProfitLossDollars", vp.totalProfitLossDollars);
+                        v.put("avgWinPct", vp.avgWinPct);
+                        v.put("avgLossPct", vp.avgLossPct);
+                        v.put("profitFactor", vp.profitFactor);
+                        variantsList.add(v);
+                    }
+                    out.put("variantPerformance", variantsList);
+                    
+                    // Scanner status
+                    DailyTradingSimulator.SimulatorStore store = DailyTradingSimulator.getStore();
+                    out.put("scannerStatus", store.scannerStatus);
+                    out.put("lastScanDate", store.lastScanDate);
+                    out.put("lastScanTime", store.lastScanTime);
+                    out.put("lastUpdateTime", store.lastUpdateTime);
+                    
+                    // Daily scheduler status
+                    out.put("dailySchedulerRunning", DailyTradingSimulator.isDailySchedulerRunning());
+                    out.put("nextScheduledScan", DailyTradingSimulator.getNextScheduledScanTime());
+                    
+                    respondJson(ex, out, 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage()), 500);
+                }
+            }
+        });
+
+        server.createContext("/api/daily-sim/monitor/start", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                try {
+                    MonitoringAlphaVantageClient av = MonitoringAlphaVantageClient.fromEnv();
+                    DailyTradingSimulator.startMonitoring(av);
+                    respondJson(ex, Map.of("status", "15-minute monitoring started"), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage()), 500);
+                }
+            }
+        });
+
+        server.createContext("/api/daily-sim/monitor/stop", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                try {
+                    DailyTradingSimulator.stopMonitoring();
+                    respondJson(ex, Map.of("status", "Monitoring stopped"), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage()), 500);
+                }
+            }
+        });
+
+        server.createContext("/api/daily-sim/clear", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                try {
+                    DailyTradingSimulator.clearAllTrades();
+                    respondJson(ex, Map.of("status", "All trades cleared"), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage()), 500);
+                }
+            }
+        });
+
+        server.createContext("/api/daily-sim/scheduler/start", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                try {
+                    MonitoringAlphaVantageClient av = MonitoringAlphaVantageClient.fromEnv();
+                    String interval = intradayIntervalForCurrentEntitlement();
+                    DailyTradingSimulator.startDailyScheduler(av, interval);
+                    String nextScan = DailyTradingSimulator.getNextScheduledScanTime();
+                    respondJson(ex, Map.of(
+                        "status", "Daily scheduler started",
+                        "nextScan", nextScan,
+                        "running", true
+                    ), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage()), 500);
+                }
+            }
+        });
+
+        server.createContext("/api/daily-sim/scheduler/stop", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                try {
+                    DailyTradingSimulator.stopDailyScheduler();
+                    DailyTradingSimulator.stopMonitoring();
+                    respondJson(ex, Map.of("status", "Daily scheduler stopped", "running", false), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage()), 500);
+                }
             }
         });
 
@@ -6413,6 +6732,49 @@ public class WebServer {
                 sb.append("</table>");
                 sb.append("<div style='margin-top:10px;padding:8px;background:#1f2a44;border-radius:6px;font-size:12px;color:#9ca3af;'>");
                 sb.append("💡 לעריכה מתקדמת: שנה את הקובץ <code>scoring-config.json</code>");
+                sb.append("</div></div>");
+
+                // Features that depend on settings
+                sb.append("<div style='margin-top:20px;background:#0b1220;border:2px solid #f59e0b;border-radius:8px;padding:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:12px;color:#f59e0b;'>🔗 פונקציות התלויות בהגדרות אלו:</div>");
+                sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;'>");
+                
+                // Stock Analysis
+                sb.append("<div style='background:#1f2a44;border-radius:8px;padding:12px;'>");
+                sb.append("<div style='font-weight:600;color:#22c55e;margin-bottom:6px;'>📊 ניתוח מניות (Stock Analysis)</div>");
+                sb.append("<div style='font-size:12px;color:#9ca3af;'>הציון הסופי, הסיגנל (BUY/HOLD/SELL) ומחשבון הפוזיציה מבוססים על המשקלים והאינדיקטורים שהגדרת כאן.</div>");
+                sb.append("</div>");
+                
+                // Strategy Backtester
+                sb.append("<div style='background:#1f2a44;border-radius:8px;padding:12px;'>");
+                sb.append("<div style='font-weight:600;color:#8b5cf6;margin-bottom:6px;'>📈 Strategy Backtester</div>");
+                sb.append("<div style='font-size:12px;color:#9ca3af;'>הבדיקה לאחור משתמשת ב-RS Entry/Exit, ATR Stop Loss ו-R:R שהוגדרו כאן.</div>");
+                sb.append("</div>");
+                
+                // Daily Trading Simulator
+                sb.append("<div style='background:#1f2a44;border-radius:8px;padding:12px;'>");
+                sb.append("<div style='font-weight:600;color:#22c55e;margin-bottom:6px;'>🎯 Daily Trading Simulator</div>");
+                sb.append("<div style='font-size:12px;color:#9ca3af;'>הסימולטור משתמש ב-RVOL, RSI, CCI ו-Pivot Points לבחירת מניות ויעדי רווח.</div>");
+                sb.append("</div>");
+                
+                // Scanner (Intraday Alerts)
+                sb.append("<div style='background:#1f2a44;border-radius:8px;padding:12px;'>");
+                sb.append("<div style='font-weight:600;color:#3b82f6;margin-bottom:6px;'>🔔 Intraday Scanner</div>");
+                sb.append("<div style='font-size:12px;color:#9ca3af;'>הסורק משתמש ב-Volume Filter ו-RSI Thresholds מההגדרות לזיהוי פריצות.</div>");
+                sb.append("</div>");
+                
+                // Favorites & Watchlist
+                sb.append("<div style='background:#1f2a44;border-radius:8px;padding:12px;'>");
+                sb.append("<div style='font-weight:600;color:#f59e0b;margin-bottom:6px;'>⭐ Favorites & Green Stocks</div>");
+                sb.append("<div style='font-size:12px;color:#9ca3af;'>מניות \"ירוקות\" מסוננות לפי ה-Entry Filters (RS, SMA, RSI, Volume).</div>");
+                sb.append("</div>");
+                
+                // VETO System
+                sb.append("<div style='background:#1f2a44;border-radius:8px;padding:12px;'>");
+                sb.append("<div style='font-weight:600;color:#ef4444;margin-bottom:6px;'>🚨 VETO System</div>");
+                sb.append("<div style='font-size:12px;color:#9ca3af;'>כאשר VETO פעיל, מניות עם M-Score או Z-Score מסוכן יקבלו ציון 0 אוטומטית.</div>");
+                sb.append("</div>");
+                
                 sb.append("</div></div>");
 
                 // Mode descriptions
