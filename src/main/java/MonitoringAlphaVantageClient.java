@@ -52,6 +52,10 @@ public class MonitoringAlphaVantageClient {
         String url = "https://www.alphavantage.co/query?" + qs;
         String func = p.getOrDefault("function", "?");
         System.out.println("[AV] " + func + " -> " + url.replaceAll("apikey=[^&]+", "apikey=***"));
+        
+        // Track API usage
+        ApiUsageTracker.track(func);
+        
         HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
         HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
         if (resp.statusCode() != 200) {

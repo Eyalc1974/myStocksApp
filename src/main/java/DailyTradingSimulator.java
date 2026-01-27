@@ -60,7 +60,8 @@ public class DailyTradingSimulator {
     // Strategy types
     public enum Strategy {
         MOMENTUM("Momentum"),
-        SWING("Swing Trader");
+        SWING("Swing Trader"),
+        INTRADAY("Intraday VWAP");
 
         private final String display;
         Strategy(String display) { this.display = display; }
@@ -255,6 +256,7 @@ public class DailyTradingSimulator {
     
     // Momentum Variants Configuration Classes
     private static final Path VARIANTS_CONFIG_PATH = Paths.get("momentum-variants.json");
+    private static final Path INTRADAY_VARIANTS_CONFIG_PATH = Paths.get("intraday-variants.json");
     
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class MomentumVariantsConfig {
@@ -333,6 +335,108 @@ public class DailyTradingSimulator {
         public int rsWeight = 40;
         public int volumeWeight = 25;
         public int maCrossoverBonus = 10;
+    }
+    
+    // Intraday VWAP Variants Configuration Classes
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class IntradayVariantsConfig {
+        public String description;
+        public boolean enabled = true;
+        public int delayMinutes = 15;
+        public IntradayVwapCore vwapCore = new IntradayVwapCore();
+        public List<IntradayVariantConfig> variants = new ArrayList<>();
+        
+        public static IntradayVariantsConfig load() {
+            try {
+                if (Files.exists(INTRADAY_VARIANTS_CONFIG_PATH)) {
+                    ObjectMapper mapper = new ObjectMapper();
+                    return mapper.readValue(INTRADAY_VARIANTS_CONFIG_PATH.toFile(), IntradayVariantsConfig.class);
+                }
+            } catch (Exception e) {
+                System.err.println("[DailyTradingSimulator] Error loading intraday variants config: " + e.getMessage());
+            }
+            return createDefaultIntradayConfig();
+        }
+        
+        private static IntradayVariantsConfig createDefaultIntradayConfig() {
+            IntradayVariantsConfig config = new IntradayVariantsConfig();
+            config.enabled = true;
+            IntradayVariantConfig i1 = new IntradayVariantConfig();
+            i1.id = "I1_DEFAULT";
+            i1.name = "Default Intraday VWAP";
+            i1.stocksPerVariant = 2;
+            config.variants.add(i1);
+            return config;
+        }
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class IntradayVwapCore {
+        public String description;
+        public boolean priceAboveVwapRequired = true;
+        public double vwapBufferPct = 0.5;
+        public boolean pullbackToVwapEnabled = true;
+        public double pullbackMaxDistancePct = 1.0;
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class IntradayVariantConfig {
+        public String id;
+        public String name;
+        public String nameHe;
+        public String description;
+        public String descriptionHe;
+        public int stocksPerVariant = 2;
+        public IntradayEntryFilters entryFilters = new IntradayEntryFilters();
+        public IntradayRiskManagement riskManagement = new IntradayRiskManagement();
+        public IntradayTiming timing = new IntradayTiming();
+        public IntradayScoring scoring = new IntradayScoring();
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class IntradayEntryFilters {
+        public boolean vwapRequired = true;
+        public double priceAboveVwapPct = 0.5;
+        public boolean pullbackToVwapRequired = false;
+        public double pullbackMaxDistancePct = 0.5;
+        public boolean retestVwapRequired = false;
+        public int retestHoldMinutes = 15;
+        public int timeAboveVwapMinutes = 0;
+        public double rvolMin = 1.5;
+        public double rsiMin = 50;
+        public double rsiMax = 75;
+        public double cciMin = 100;
+        public double cciMax = 250;
+        public double rsMin = 1.05;
+        public boolean sma200Required = true;
+        public double intradayPriceChangeMinPct = 1.0;
+        public double intradayPriceChangeMaxPct = 4.0;
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class IntradayRiskManagement {
+        public double stopLossBelowVwapPct = 0.5;
+        public double stopLossMaxPct = 2.0;
+        public double takeProfitPct = 4.0;
+        public double trailingStopPct = 1.5;
+        public double riskRewardRatio = 2.0;
+        public double maxPositionPct = 5.0;
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class IntradayTiming {
+        public String entryWindowStart = "09:45";
+        public String entryWindowEnd = "15:30";
+        public int avoidFirstMinutes = 15;
+        public int avoidLastMinutes = 30;
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class IntradayScoring {
+        public int vwapWeight = 30;
+        public int cciWeight = 25;
+        public int rsWeight = 25;
+        public int volumeWeight = 20;
     }
 
     private static SimulatorStore store = new SimulatorStore();
@@ -469,8 +573,10 @@ public class DailyTradingSimulator {
         }
 
         new Thread(() -> {
+            System.out.println("[DailyTradingSimulator] 🚀 Scanner thread started!");
             try {
                 String today = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate().toString();
+                System.out.println("[DailyTradingSimulator] Today: " + today + ", forceRescan=" + forceRescan);
                 
                 // Check if already scanned today (unless force rescan)
                 if (!forceRescan && today.equals(store.lastScanDate)) {
@@ -487,10 +593,13 @@ public class DailyTradingSimulator {
                     System.out.println("[DailyTradingSimulator] Force rescan requested");
                 }
 
-                // Get universe of tickers
+                // Get universe of tickers - scan more stocks for better coverage
+                System.out.println("[DailyTradingSimulator] Getting universe tickers...");
                 List<String> allTickers = LongTermCandidateFinder.getUniverseTickers();
+                System.out.println("[DailyTradingSimulator] Got " + allTickers.size() + " tickers from universe");
                 Collections.shuffle(allTickers);
-                List<String> toScan = allTickers.subList(0, Math.min(20, allTickers.size()));
+                List<String> toScan = allTickers.subList(0, Math.min(100, allTickers.size()));
+                System.out.println("[DailyTradingSimulator] Will scan " + toScan.size() + " tickers: " + toScan.subList(0, Math.min(5, toScan.size())));
 
                 synchronized (lock) {
                     store.scannedTickers = new ArrayList<>(toScan);
@@ -534,40 +643,45 @@ public class DailyTradingSimulator {
                         
                         IntradayScanner.ScanResult result = enhanced.result;
 
-                        // Categorize by signal type
-                        if ("BREAKOUT_BUY".equals(result.signal) || "MOMENTUM_BUY".equals(result.signal)) {
-                            ScanCandidate candidate = new ScanCandidate(symbol, result);
-                            
-                            // Copy enhanced indicators to candidate
-                            candidate.cci = enhanced.cci;
-                            candidate.cciBreakout = enhanced.cciBreakout;
-                            candidate.rsRatio = enhanced.rsRatio;
-                            candidate.maCrossover = enhanced.maCrossover;
-                            candidate.pivotPP = enhanced.pivotPP;
-                            candidate.pivotR1 = enhanced.pivotR1;
-                            candidate.pivotR2 = enhanced.pivotR2;
-                            candidate.pivotS1 = enhanced.pivotS1;
-                            
-                            // Calculate momentum score
-                            candidate.calculateMomentumScore();
-                            
-                            // RELAXED BASE CRITERIA - let variant filters do the heavy lifting
-                            // Only require basic signal quality, variants will filter by their own rules
-                            boolean validMomentum = result.rvol >= 1.5 && result.rsi >= 40 && result.rsi <= 85;
-                            
-                            if (validMomentum) {
-                                momentumCandidates.add(candidate);
-                                System.out.println("[DailyTradingSimulator] ✅ " + symbol + 
-                                    " MOMENTUM candidate: Score=" + candidate.momentumScore + 
-                                    ", CCI=" + String.format("%.0f", candidate.cci) +
-                                    ", RS=" + String.format("%.2f", candidate.rsRatio) +
-                                    ", RVOL=" + String.format("%.1f", result.rvol));
-                            }
-                            
-                            // SWING CRITERIA: More relaxed for swing variants
-                            if (result.rvol >= 1.2 && result.rsi >= 40 && result.rsi <= 75) {
-                                swingCandidates.add(candidate);
-                            }
+                        // Accept BUY signals only - filter out HOLD/SELL
+                        String sig = result.signal;
+                        boolean isBuySignal = sig != null && (sig.contains("BUY") || sig.contains("BULLISH") || sig.contains("BREAKOUT"));
+                        if (!isBuySignal) {
+                            System.out.println("[DailyTradingSimulator] ⏭️ " + symbol + " skipped: " + sig + " (not a BUY signal)");
+                            continue;
+                        }
+                        
+                        ScanCandidate candidate = new ScanCandidate(symbol, result);
+                        
+                        // Copy enhanced indicators to candidate
+                        candidate.cci = enhanced.cci;
+                        candidate.cciBreakout = enhanced.cciBreakout;
+                        candidate.rsRatio = enhanced.rsRatio;
+                        candidate.maCrossover = enhanced.maCrossover;
+                        candidate.pivotPP = enhanced.pivotPP;
+                        candidate.pivotR1 = enhanced.pivotR1;
+                        candidate.pivotR2 = enhanced.pivotR2;
+                        candidate.pivotS1 = enhanced.pivotS1;
+                        
+                        // Calculate momentum score
+                        candidate.calculateMomentumScore();
+                        
+                        // Add to momentum candidates - very relaxed base criteria
+                        // Variant filters will do the actual filtering
+                        if (result.rvol >= 1.0 && result.rsi >= 30 && result.rsi <= 90) {
+                            momentumCandidates.add(candidate);
+                            System.out.println("[DailyTradingSimulator] ✅ " + symbol + 
+                                " candidate: Signal=" + result.signal +
+                                ", Score=" + candidate.momentumScore + 
+                                ", CCI=" + String.format("%.0f", candidate.cci) +
+                                ", RS=" + String.format("%.2f", candidate.rsRatio) +
+                                ", RVOL=" + String.format("%.1f", result.rvol) +
+                                ", RSI=" + String.format("%.0f", result.rsi));
+                        }
+                        
+                        // Add to swing candidates too
+                        if (result.rvol >= 0.8 && result.rsi >= 30 && result.rsi <= 80) {
+                            swingCandidates.add(candidate);
                         }
 
                         System.out.println("[DailyTradingSimulator] " + symbol + ": " + result.signal + 
@@ -582,14 +696,34 @@ public class DailyTradingSimulator {
                 // Sort MOMENTUM by momentum score (highest first), SWING by RVOL
                 momentumCandidates.sort((a, b) -> Integer.compare(b.momentumScore, a.momentumScore));
                 swingCandidates.sort((a, b) -> Double.compare(b.result.rvol, a.result.rvol));
+                
+                // Build INTRADAY candidates (need VWAP above)
+                List<ScanCandidate> intradayCandidates = new ArrayList<>();
+                for (ScanCandidate c : momentumCandidates) {
+                    // Intraday requires price above VWAP
+                    if (c.result.aboveVwap && c.result.vwap > 0) {
+                        intradayCandidates.add(c);
+                    }
+                }
+                // Sort intraday by combined VWAP distance + momentum score
+                intradayCandidates.sort((a, b) -> {
+                    double aVwapPct = (a.result.currentPrice - a.result.vwap) / a.result.vwap * 100;
+                    double bVwapPct = (b.result.currentPrice - b.result.vwap) / b.result.vwap * 100;
+                    // Prefer closer to VWAP (pullback) with good momentum score
+                    double aScore = a.momentumScore - aVwapPct * 5; // Penalize being too far from VWAP
+                    double bScore = b.momentumScore - bVwapPct * 5;
+                    return Double.compare(bScore, aScore);
+                });
 
                 // Load variant configurations for A/B testing
                 MomentumVariantsConfig variantsConfig = MomentumVariantsConfig.load();
+                IntradayVariantsConfig intradayConfig = IntradayVariantsConfig.load();
                 
                 // Track trades per variant
                 Map<String, Integer> variantTradeCount = new HashMap<>();
                 int totalMomentumTrades = 0;
                 int totalSwingTrades = 0;
+                int totalIntradayTrades = 0;
 
                 synchronized (lock) {
                     // Process each MOMENTUM variant
@@ -637,19 +771,45 @@ public class DailyTradingSimulator {
                                 " @ $" + c.result.currentPrice);
                         }
                     }
+                    
+                    // Process each INTRADAY VWAP variant
+                    if (intradayConfig.enabled) {
+                        for (IntradayVariantConfig variant : intradayConfig.variants) {
+                            int variantCount = 0;
+                            for (ScanCandidate c : intradayCandidates) {
+                                if (variantCount >= variant.stocksPerVariant) break;
+                                
+                                // Check if candidate matches this variant's filters
+                                if (!matchesIntradayVariantFilters(c, variant, intradayConfig)) continue;
+                                
+                                // Check if this ticker already assigned to this variant today
+                                String key = c.ticker + "_" + variant.id;
+                                if (variantTradeCount.containsKey(key)) continue;
+                                
+                                SimulatedTrade trade = createIntradayTrade(c, variant);
+                                store.trades.add(trade);
+                                variantTradeCount.put(key, 1);
+                                variantCount++;
+                                totalIntradayTrades++;
+                                double vwapPct = (c.result.currentPrice - c.result.vwap) / c.result.vwap * 100;
+                                System.out.println("[DailyTradingSimulator] " + variant.id + " BUY: " + c.ticker + 
+                                    " @ $" + c.result.currentPrice + " VWAP=$" + String.format("%.2f", c.result.vwap) +
+                                    " (+" + String.format("%.1f%%", vwapPct) + " above VWAP)");
+                            }
+                        }
+                    }
 
                     ZonedDateTime now = ZonedDateTime.now(ZoneId.of("America/New_York"));
                     store.lastScanDate = today;
                     store.lastScanTime = now.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"));
                     store.scannerRunning = false;
-                    store.scannerStatus = "Completed. " + totalMomentumTrades + " Momentum (" + 
-                        variantsConfig.variants.size() + " variants) + " + totalSwingTrades + " Swing trades";
+                    store.scannerStatus = "Completed. " + totalMomentumTrades + " Momentum + " + 
+                        totalSwingTrades + " Swing + " + totalIntradayTrades + " Intraday VWAP trades";
                     saveStore();
                 }
 
                 System.out.println("[DailyTradingSimulator] Scanner complete: " + totalMomentumTrades + 
-                    " Momentum (across " + variantsConfig.variants.size() + " variants), " + 
-                    totalSwingTrades + " Swing");
+                    " Momentum, " + totalSwingTrades + " Swing, " + totalIntradayTrades + " Intraday VWAP");
 
             } catch (Exception e) {
                 System.err.println("[DailyTradingSimulator] Scanner error: " + e.getMessage());
@@ -1044,20 +1204,36 @@ public class DailyTradingSimulator {
         if (f == null) return true;
         
         // Check RVOL
-        if (c.result.rvol < f.rvolMin) return false;
+        if (c.result.rvol < f.rvolMin) {
+            System.out.println("[Filter] " + c.ticker + " rejected by " + variant.id + ": RVOL " + c.result.rvol + " < " + f.rvolMin);
+            return false;
+        }
         
         // Check RSI range
-        if (c.result.rsi < f.rsiMin || c.result.rsi > f.rsiMax) return false;
+        if (c.result.rsi < f.rsiMin || c.result.rsi > f.rsiMax) {
+            System.out.println("[Filter] " + c.ticker + " rejected by " + variant.id + ": RSI " + c.result.rsi + " not in [" + f.rsiMin + "-" + f.rsiMax + "]");
+            return false;
+        }
         
         // Check CCI range
-        if (c.cci < f.cciMin || c.cci > f.cciMax) return false;
+        if (c.cci < f.cciMin || c.cci > f.cciMax) {
+            System.out.println("[Filter] " + c.ticker + " rejected by " + variant.id + ": CCI " + c.cci + " not in [" + f.cciMin + "-" + f.cciMax + "]");
+            return false;
+        }
         
         // Check RS ratio
-        if (c.rsRatio < f.rsMin) return false;
+        if (c.rsRatio < f.rsMin) {
+            System.out.println("[Filter] " + c.ticker + " rejected by " + variant.id + ": RS " + c.rsRatio + " < " + f.rsMin);
+            return false;
+        }
         
         // Check MA crossover requirement
-        if (f.maCrossoverRequired && !c.maCrossover) return false;
+        if (f.maCrossoverRequired && !c.maCrossover) {
+            System.out.println("[Filter] " + c.ticker + " rejected by " + variant.id + ": MA crossover required but not present");
+            return false;
+        }
         
+        System.out.println("[Filter] ✅ " + c.ticker + " MATCHED " + variant.id);
         return true;
     }
     
@@ -1079,6 +1255,121 @@ public class DailyTradingSimulator {
         
         return true;
     }
+    
+    /**
+     * Check if a candidate matches an intraday VWAP variant's entry filters
+     */
+    private static boolean matchesIntradayVariantFilters(ScanCandidate c, IntradayVariantConfig variant, IntradayVariantsConfig config) {
+        IntradayEntryFilters f = variant.entryFilters;
+        if (f == null) return true;
+        
+        // VWAP is the core filter for intraday
+        if (f.vwapRequired && !c.result.aboveVwap) {
+            System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + ": Not above VWAP");
+            return false;
+        }
+        
+        // Check distance from VWAP (price must be at least X% above VWAP)
+        if (c.result.vwap > 0) {
+            double vwapPct = (c.result.currentPrice - c.result.vwap) / c.result.vwap * 100;
+            if (vwapPct < f.priceAboveVwapPct) {
+                System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
+                    ": VWAP distance " + String.format("%.2f%%", vwapPct) + " < " + f.priceAboveVwapPct + "%");
+                return false;
+            }
+            // Don't chase - reject if too far from VWAP (using intradayPriceChangeMaxPct as proxy)
+            if (vwapPct > f.intradayPriceChangeMaxPct) {
+                System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
+                    ": Too far from VWAP " + String.format("%.2f%%", vwapPct) + " > " + f.intradayPriceChangeMaxPct + "%");
+                return false;
+            }
+        }
+        
+        // Check RVOL
+        if (c.result.rvol < f.rvolMin) {
+            System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
+                ": RVOL " + String.format("%.1f", c.result.rvol) + " < " + f.rvolMin);
+            return false;
+        }
+        
+        // Check RSI range
+        if (c.result.rsi < f.rsiMin || c.result.rsi > f.rsiMax) {
+            System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
+                ": RSI " + String.format("%.0f", c.result.rsi) + " not in [" + f.rsiMin + "-" + f.rsiMax + "]");
+            return false;
+        }
+        
+        // Check CCI range
+        if (c.cci < f.cciMin || c.cci > f.cciMax) {
+            System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
+                ": CCI " + String.format("%.0f", c.cci) + " not in [" + f.cciMin + "-" + f.cciMax + "]");
+            return false;
+        }
+        
+        // Check RS ratio
+        if (c.rsRatio < f.rsMin) {
+            System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
+                ": RS " + String.format("%.2f", c.rsRatio) + " < " + f.rsMin);
+            return false;
+        }
+        
+        // Check intraday price change range
+        double priceChangePct = c.result.priceChangePct;
+        if (priceChangePct < f.intradayPriceChangeMinPct || priceChangePct > f.intradayPriceChangeMaxPct) {
+            System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
+                ": Price change " + String.format("%.1f%%", priceChangePct) + 
+                " not in [" + f.intradayPriceChangeMinPct + "-" + f.intradayPriceChangeMaxPct + "]");
+            return false;
+        }
+        
+        System.out.println("[IntradayFilter] ✅ " + c.ticker + " MATCHED " + variant.id + 
+            " (VWAP=$" + String.format("%.2f", c.result.vwap) + ", RVOL=" + String.format("%.1f", c.result.rvol) + ")");
+        return true;
+    }
+    
+    /**
+     * Create an intraday VWAP trade with variant-specific risk management
+     */
+    private static SimulatedTrade createIntradayTrade(ScanCandidate c, IntradayVariantConfig variant) {
+        SimulatedTrade trade = new SimulatedTrade(
+            c.ticker, Strategy.INTRADAY, c.result.currentPrice,
+            c.result.signal, c.result.rvol, c.result.rsi
+        );
+        
+        // Add enhanced indicators
+        trade.cci = c.cci;
+        trade.cciBreakout = c.cciBreakout;
+        trade.rsRatio = c.rsRatio;
+        trade.maCrossover = c.maCrossover;
+        trade.pivotPP = c.pivotPP;
+        trade.pivotR1 = c.pivotR1;
+        trade.pivotR2 = c.pivotR2;
+        trade.pivotS1 = c.pivotS1;
+        trade.momentumScore = c.momentumScore;
+        
+        // Assign variant ID
+        trade.variantId = variant.id;
+        trade.variantName = variant.name;
+        
+        // VWAP-based risk management
+        double entryPrice = c.result.currentPrice;
+        double vwap = c.result.vwap;
+        IntradayRiskManagement rm = variant.riskManagement;
+        
+        // Stop loss: below VWAP or max stop, whichever is tighter
+        double stopBelowVwap = vwap * (1 - rm.stopLossBelowVwapPct / 100.0);
+        double stopMaxPct = entryPrice * (1 - rm.stopLossMaxPct / 100.0);
+        trade.stopLossPrice = Math.max(stopBelowVwap, stopMaxPct);
+        
+        // Take profit based on variant config
+        trade.takeProfitPrice = entryPrice * (1 + rm.takeProfitPct / 100.0);
+        
+        // Entry reason
+        double vwapPct = (entryPrice - vwap) / vwap * 100;
+        trade.entryReason = "VWAP Trend (" + String.format("+%.1f%%", vwapPct) + " above VWAP); " + c.entryReason;
+        
+        return trade;
+    }
 
     /**
      * Monitor open positions and update prices every 15 minutes.
@@ -1087,11 +1378,11 @@ public class DailyTradingSimulator {
     public static void monitorPositions(MonitoringAlphaVantageClient av) {
         List<SimulatedTrade> openTrades = getOpenTrades();
         if (openTrades.isEmpty()) {
-            System.out.println("[DailyTradingSimulator] No open positions to monitor");
+            System.out.println("[Monitor] No open positions to monitor");
             return;
         }
 
-        System.out.println("[DailyTradingSimulator] Monitoring " + openTrades.size() + " open positions");
+        System.out.println("[Monitor] 📊 Checking " + openTrades.size() + " open positions...");
 
         for (SimulatedTrade trade : openTrades) {
             try {
@@ -1109,14 +1400,22 @@ public class DailyTradingSimulator {
                 if (priceStr.isBlank()) continue;
                 
                 double newPrice = Double.parseDouble(priceStr);
+                double oldPrice = trade.currentPrice;
                 
                 synchronized (lock) {
                     trade.updatePrice(newPrice);
                     
+                    // Log price update
+                    String priceChange = newPrice >= oldPrice ? "📈" : "📉";
+                    System.out.println("[Monitor] " + trade.ticker + " " + priceChange + 
+                        " $" + String.format("%.2f", oldPrice) + " → $" + String.format("%.2f", newPrice) +
+                        " (P/L: " + String.format("%+.1f%%", trade.profitLossPct) + ")" +
+                        " [" + (trade.variantId != null ? trade.variantId : trade.strategy) + "]");
+                    
                     ExitType exitCondition = trade.checkExitCondition();
                     if (exitCondition != ExitType.HOLDING) {
                         trade.closePosition(exitCondition);
-                        System.out.println("[DailyTradingSimulator] CLOSED " + trade.ticker + 
+                        System.out.println("[Monitor] 🔔 CLOSED " + trade.ticker + 
                             " via " + exitCondition.getDisplay() + 
                             " @ $" + String.format("%.2f", newPrice) +
                             " P/L: " + String.format("%.1f%%", trade.profitLossPct));
@@ -1128,9 +1427,10 @@ public class DailyTradingSimulator {
                 }
 
             } catch (Exception e) {
-                System.err.println("[DailyTradingSimulator] Error monitoring " + trade.ticker + ": " + e.getMessage());
+                System.err.println("[Monitor] ❌ Error checking " + trade.ticker + ": " + e.getMessage());
             }
         }
+        System.out.println("[Monitor] ✅ Check complete\n");
     }
 
     /**
@@ -1253,9 +1553,11 @@ public class DailyTradingSimulator {
             store.lastScanDate = null;
             store.lastScanTime = null;
             store.scannerStatus = null;
+            store.scannerRunning = false;  // Reset stuck scanner
+            store.variantPerformance.clear();
             saveStore();
         }
-        System.out.println("[DailyTradingSimulator] All trades cleared");
+        System.out.println("[DailyTradingSimulator] All trades cleared, scanner reset");
     }
 
     /**

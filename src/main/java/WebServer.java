@@ -4538,8 +4538,9 @@ public class WebServer {
                         "    var indicators='<span style=\"font-size:10px;color:#9ca3af;\">'+"+
                         "      'CCI:'+(t.cci||0).toFixed(0)+' RS:'+(t.rsRatio||0).toFixed(2)+"+
                         "      (t.maCrossover?' ✓MA':'')+'</span>';"+
+                        "    var variantBadge=t.variantId?'<div style=\"font-size:9px;color:#60a5fa;margin-top:2px;\">'+t.variantId+'</div>':'';"+
                         "    rows+='<tr style=\"border-bottom:1px solid #1f2a44;\">'+"+
-                        "      '<td style=\"padding:8px;\"><div style=\"font-weight:600;\">'+t.ticker+'</div>'+indicators+'</td>'+"+
+                        "      '<td style=\"padding:8px;\"><div style=\"font-weight:600;\">'+t.ticker+'</div>'+indicators+variantBadge+'</td>'+"+
                         "      '<td style=\"padding:8px;text-align:center;\"><span style=\"background:'+stratColor+';padding:2px 8px;border-radius:4px;font-size:11px;\">'+t.strategy+'</span>'+"+
                         "        '<div style=\"font-size:10px;color:'+scoreColor+';margin-top:2px;\">Score:'+t.momentumScore+'</div></td>'+"+
                         "      '<td style=\"padding:8px;text-align:right;\">$'+t.entryPrice.toFixed(2)+'</td>'+"+
