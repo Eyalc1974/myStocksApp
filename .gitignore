@@ -1,0 +1,11 @@
+analyses/
+analysts-cache/
+finder-cache/
+monitoring-cache/
+api-usage-history.json
+daily-trading-sim.json
+favorites.txt
+monitoring-stocks.txt
+*.log
+*.tmp
+.DS_Store
