@@ -3,6 +3,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.*;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -41,6 +45,8 @@ public class DailyTradingSimulator {
     private static final int SCAN_HOUR_ET = 9;      // 9:45 AM ET - after market open
     private static final int SCAN_MINUTE_ET = 45;
     private static final ZoneId NY_ZONE = ZoneId.of("America/New_York");
+
+    private static final String DISCORD_WEBHOOK_URL = System.getenv("DAILY_SIM_DISCORD_WEBHOOK_URL");
 
     // Exit types
     public enum ExitType {
@@ -741,6 +747,7 @@ public class DailyTradingSimulator {
                             
                             SimulatedTrade trade = createEnhancedTrade(c, Strategy.MOMENTUM, variant);
                             store.trades.add(trade);
+                            notifyOpenPosition(trade);
                             variantTradeCount.put(key, 1);
                             variantCount++;
                             totalMomentumTrades++;
@@ -764,6 +771,7 @@ public class DailyTradingSimulator {
                             
                             SimulatedTrade trade = createEnhancedTrade(c, Strategy.SWING, variant);
                             store.trades.add(trade);
+                            notifyOpenPosition(trade);
                             variantTradeCount.put(key, 1);
                             variantCount++;
                             totalSwingTrades++;
@@ -788,6 +796,7 @@ public class DailyTradingSimulator {
                                 
                                 SimulatedTrade trade = createIntradayTrade(c, variant);
                                 store.trades.add(trade);
+                                notifyOpenPosition(trade);
                                 variantTradeCount.put(key, 1);
                                 variantCount++;
                                 totalIntradayTrades++;
@@ -1419,6 +1428,7 @@ public class DailyTradingSimulator {
                             " via " + exitCondition.getDisplay() + 
                             " @ $" + String.format("%.2f", newPrice) +
                             " P/L: " + String.format("%.1f%%", trade.profitLossPct));
+                        notifyClosedPosition(trade);
                     }
                     
                     store.lastUpdateTime = ZonedDateTime.now(ZoneId.of("America/New_York"))
@@ -1503,6 +1513,8 @@ public class DailyTradingSimulator {
                 System.out.println("[DailyTradingSimulator] EOD CLOSE " + trade.ticker + 
                     " @ $" + String.format("%.2f", trade.exitPrice) +
                     " P/L: " + String.format("%.1f%%", trade.profitLossPct));
+
+                notifyClosedPosition(trade);
                     
                 Thread.sleep(13000); // API rate limit
                 
@@ -1674,5 +1686,54 @@ public class DailyTradingSimulator {
         long delayMs = calculateDelayToNextScan();
         ZonedDateTime nextRun = ZonedDateTime.now(NY_ZONE).plus(Duration.ofMillis(delayMs));
         return nextRun.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " ET";
+    }
+
+    private static void notifyOpenPosition(SimulatedTrade trade) {
+        String msg = "🎯 Daily Trading Simulator - סימולציית מסחר יומית\n" +
+            "📈 Open Positions\n" +
+            "Opened: **" + trade.ticker + "** (" + (trade.variantId != null ? trade.variantId : trade.strategy.getDisplay()) + ")\n" +
+            "Entry: $" + String.format("%.2f", trade.entryPrice) + " | Shares: " + String.format("%.2f", trade.shares) + "\n" +
+            "Signal: " + (trade.scanSignal == null ? "" : trade.scanSignal) + "\n";
+        sendDiscord(msg);
+    }
+
+    private static void notifyClosedPosition(SimulatedTrade trade) {
+        if (trade == null || trade.isOpen) return;
+        String msg = "🎯 Daily Trading Simulator - סימולציית מסחר יומית\n" +
+            "📉 Closed Positions (Today)\n" +
+            "Closed: **" + trade.ticker + "** (" + (trade.variantId != null ? trade.variantId : trade.strategy.getDisplay()) + ")\n" +
+            "Exit: $" + String.format("%.2f", trade.exitPrice) + " via " + (trade.exitType == null ? "" : trade.exitType.getDisplay()) + "\n" +
+            "P/L: " + String.format("%+.1f%%", trade.profitLossPct) + " (" + String.format("%+.2f", trade.profitLossDollars) + ")\n";
+        sendDiscord(msg);
+    }
+
+    private static boolean sendDiscord(String text) {
+        try {
+            if (DISCORD_WEBHOOK_URL == null || DISCORD_WEBHOOK_URL.isBlank()) return false;
+            if (text == null || text.isBlank()) return false;
+            String jsonBody = "{\"content\": " + escapeJsonString(text) + "}";
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(DISCORD_WEBHOOK_URL))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                .build();
+            HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
+            System.out.println("[DailyTradingSimulator][Discord] Sent notification, status: " + resp.statusCode());
+            return resp.statusCode() == 200 || resp.statusCode() == 204;
+        } catch (Exception e) {
+            System.err.println("[DailyTradingSimulator][Discord] Failed to send: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private static String escapeJsonString(String s) {
+        if (s == null) return "\"\"";
+        String escaped = s
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\r", "\\r")
+            .replace("\n", "\\n");
+        return "\"" + escaped + "\"";
     }
 }

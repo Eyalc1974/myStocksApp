@@ -1791,10 +1791,11 @@ public class WebServer {
         return sendDiscord(text);
     }
 
-    private static final String DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1463983226727956482/7UBMocf9gow7p8tGrOP0U2t7GaaBqszoD9HRrn_uDubbWvUiM_znjpBBfX461ntPamd5";
+    private static final String DISCORD_WEBHOOK_URL = System.getenv("DAILY_SIM_DISCORD_WEBHOOK_URL");
 
     private static boolean sendDiscord(String text) {
         try {
+            if (DISCORD_WEBHOOK_URL == null || DISCORD_WEBHOOK_URL.isBlank()) return false;
             if (text == null || text.isBlank()) return false;
             // Discord webhook expects JSON with "content" field
             String jsonBody = "{\"content\": " + escapeJsonString(text) + "}";
