@@ -1,0 +1,342 @@
+{
+  "description": "Intraday VWAP Trend Following Strategy Variants - מבוסס על דיליי 15 דקות ואישור VWAP",
+  "enabled": true,
+  "delayMinutes": 15,
+  "vwapCore": {
+    "description": "VWAP משמש כמסננת אמינות - אם המחיר מעל VWAP, הקונים שולטים ביום",
+    "priceAboveVwapRequired": true,
+    "vwapBufferPct": 0.5,
+    "pullbackToVwapEnabled": true,
+    "pullbackMaxDistancePct": 1.0
+  },
+  "variants": [
+    {
+      "id": "I1_VWAP_BREAKOUT",
+      "name": "VWAP Breakout (Recommended)",
+      "nameHe": "פריצת VWAP (מומלץ)",
+      "description": "Classic VWAP breakout with CCI>100, high RVOL, RS leader - Best for confirmed momentum",
+      "descriptionHe": "פריצה קלאסית מעל VWAP עם CCI>100, נפח חריג ומנהיגות יחסית - לזיהוי מומנטום אמיתי",
+      "stocksPerVariant": 3,
+      "entryFilters": {
+        "vwapRequired": true,
+        "priceAboveVwapPct": 0.5,
+        "rvolMin": 1.2,
+        "rsiMin": 50,
+        "rsiMax": 75,
+        "cciMin": 80,
+        "cciMax": 250,
+        "rsMin": 1.10,
+        "sma200Required": false,
+        "intradayPriceChangeMinPct": 1.0,
+        "intradayPriceChangeMaxPct": 6.0
+      },
+      "riskManagement": {
+        "stopLossBelowVwapPct": 0.5,
+        "stopLossMaxPct": 2.0,
+        "takeProfitPct": 4.0,
+        "trailingStopPct": 1.5,
+        "riskRewardRatio": 2.0,
+        "maxPositionPct": 5.0
+      },
+      "timing": {
+        "entryWindowStart": "09:45",
+        "entryWindowEnd": "15:30",
+        "avoidFirstMinutes": 15,
+        "avoidLastMinutes": 30
+      },
+      "scoring": {
+        "vwapWeight": 30,
+        "cciWeight": 25,
+        "rsWeight": 25,
+        "volumeWeight": 20
+      }
+    },
+    {
+      "id": "I2_VWAP_PULLBACK",
+      "name": "VWAP Pullback Entry",
+      "nameHe": "כניסה בחזרה ל-VWAP",
+      "description": "Wait for pullback to VWAP after breakout - Uses 15-min delay as advantage to confirm strength",
+      "descriptionHe": "המתנה לחזרה ל-VWAP אחרי פריצה - הדיליי של 15 דקות נותן זמן לראות אם הפריצה אמיתית",
+      "stocksPerVariant": 3,
+      "entryFilters": {
+        "vwapRequired": true,
+        "priceAboveVwapPct": 0.0,
+        "pullbackToVwapRequired": true,
+        "pullbackMaxDistancePct": 0.5,
+        "rvolMin": 1.2,
+        "rsiMin": 45,
+        "rsiMax": 70,
+        "cciMin": 50,
+        "cciMax": 200,
+        "rsMin": 1.13,
+        "sma200Required": false,
+        "intradayPriceChangeMinPct": 0.5,
+        "intradayPriceChangeMaxPct": 6.0
+      },
+      "riskManagement": {
+        "stopLossBelowVwapPct": 0.3,
+        "stopLossMaxPct": 1.5,
+        "takeProfitPct": 3.0,
+        "trailingStopPct": 1.0,
+        "riskRewardRatio": 2.0,
+        "maxPositionPct": 5.0
+      },
+      "timing": {
+        "entryWindowStart": "10:00",
+        "entryWindowEnd": "15:00",
+        "avoidFirstMinutes": 30,
+        "avoidLastMinutes": 60
+      },
+      "scoring": {
+        "vwapWeight": 40,
+        "cciWeight": 20,
+        "rsWeight": 25,
+        "volumeWeight": 15
+      }
+    },
+    {
+      "id": "I3_TREND_RIDER",
+      "name": "Trend Rider (Conservative)",
+      "nameHe": "רוכב המגמה (שמרני)",
+      "description": "Conservative trend following - Requires strong RS, stable above VWAP, wider stops",
+      "descriptionHe": "רכיבה שמרנית על המגמה - דורש RS חזק, יציבות מעל VWAP וסטופים רחבים יותר",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "vwapRequired": true,
+        "priceAboveVwapPct": 1.0,
+        "timeAboveVwapMinutes": 30,
+        "rvolMin": 1.2,
+        "rsiMin": 50,
+        "rsiMax": 68,
+        "cciMin": 50,
+        "cciMax": 180,
+        "rsMin": 1.08,
+        "sma200Required": false,
+        "intradayPriceChangeMinPct": 0.5,
+        "intradayPriceChangeMaxPct": 4.5
+      },
+      "riskManagement": {
+        "stopLossBelowVwapPct": 1.0,
+        "stopLossMaxPct": 2.5,
+        "takeProfitPct": 5.0,
+        "trailingStopPct": 2.0,
+        "riskRewardRatio": 2.0,
+        "maxPositionPct": 4.0
+      },
+      "timing": {
+        "entryWindowStart": "10:30",
+        "entryWindowEnd": "14:30",
+        "avoidFirstMinutes": 60,
+        "avoidLastMinutes": 90
+      },
+      "scoring": {
+        "vwapWeight": 35,
+        "cciWeight": 15,
+        "rsWeight": 35,
+        "volumeWeight": 15
+      }
+    },
+    {
+      "id": "I4_VOLUME_SURGE",
+      "name": "Volume Surge + VWAP",
+      "nameHe": "זינוק נפח + VWAP",
+      "description": "High volume breakout with VWAP confirmation - Institutional buying signal",
+      "descriptionHe": "פריצה בנפח גבוה מאוד עם אישור VWAP - סימן לקנייה מוסדית",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "vwapRequired": true,
+        "priceAboveVwapPct": 0.3,
+        "rvolMin": 1.5,
+        "rsiMin": 55,
+        "rsiMax": 78,
+        "cciMin": 80,
+        "cciMax": 300,
+        "rsMin": 1.15,
+        "sma200Required": false,
+        "intradayPriceChangeMinPct": 1.5,
+        "intradayPriceChangeMaxPct": 5.0
+      },
+      "riskManagement": {
+        "stopLossBelowVwapPct": 0.5,
+        "stopLossMaxPct": 2.0,
+        "takeProfitPct": 4.0,
+        "trailingStopPct": 1.5,
+        "riskRewardRatio": 2.0,
+        "maxPositionPct": 4.0
+      },
+      "timing": {
+        "entryWindowStart": "09:45",
+        "entryWindowEnd": "14:00",
+        "avoidFirstMinutes": 15,
+        "avoidLastMinutes": 120
+      },
+      "scoring": {
+        "vwapWeight": 25,
+        "cciWeight": 20,
+        "rsWeight": 20,
+        "volumeWeight": 35
+      }
+    },
+    {
+      "id": "I5_VWAP_RETEST",
+      "name": "VWAP Retest (Bull Trap Filter)",
+      "nameHe": "בדיקה חוזרת של VWAP (סינון מלכודות)",
+      "description": "Enter only after price retests VWAP and holds - Best for avoiding bull traps with 15-min delay",
+      "descriptionHe": "כניסה רק אחרי שהמחיר חזר לבדוק VWAP והחזיק - הדיליי עוזר לסנן מלכודות שוורים",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "vwapRequired": true,
+        "priceAboveVwapPct": 0.2,
+        "retestVwapRequired": true,
+        "retestHoldMinutes": 15,
+        "rvolMin": 1.2,
+        "rsiMin": 48,
+        "rsiMax": 72,
+        "cciMin": 30,
+        "cciMax": 180,
+        "rsMin": 1.12,
+        "sma200Required": false,
+        "intradayPriceChangeMinPct": 0.3,
+        "intradayPriceChangeMaxPct": 4.5
+      },
+      "riskManagement": {
+        "stopLossBelowVwapPct": 0.3,
+        "stopLossMaxPct": 1.5,
+        "takeProfitPct": 3.0,
+        "trailingStopPct": 1.0,
+        "riskRewardRatio": 2.0,
+        "maxPositionPct": 5.0
+      },
+      "timing": {
+        "entryWindowStart": "10:15",
+        "entryWindowEnd": "15:00",
+        "avoidFirstMinutes": 45,
+        "avoidLastMinutes": 60
+      },
+      "scoring": {
+        "vwapWeight": 45,
+        "cciWeight": 15,
+        "rsWeight": 25,
+        "volumeWeight": 15
+      }
+    },
+    {
+      "id": "I6_AGGRESSIVE_INTRADAY",
+      "name": "Aggressive Intraday (High Risk)",
+      "nameHe": "תוך-יומי אגרסיבי (סיכון גבוה)",
+      "description": "Looser filters for more trades - Higher risk, for comparison testing only",
+      "descriptionHe": "פילטרים רופפים יותר לעסקאות רבות יותר - סיכון גבוה, לבדיקה בלבד",
+      "stocksPerVariant": 1,
+      "entryFilters": {
+        "vwapRequired": true,
+        "priceAboveVwapPct": 0.0,
+        "rvolMin": 1.2,
+        "rsiMin": 40,
+        "rsiMax": 80,
+        "cciMin": 0,
+        "cciMax": 350,
+        "rsMin": 1.10,
+        "sma200Required": false,
+        "intradayPriceChangeMinPct": 0.5,
+        "intradayPriceChangeMaxPct": 6.0
+      },
+      "riskManagement": {
+        "stopLossBelowVwapPct": 0.5,
+        "stopLossMaxPct": 2.5,
+        "takeProfitPct": 5.0,
+        "trailingStopPct": 2.0,
+        "riskRewardRatio": 2.0,
+        "maxPositionPct": 3.0
+      },
+      "timing": {
+        "entryWindowStart": "09:45",
+        "entryWindowEnd": "15:30",
+        "avoidFirstMinutes": 15,
+        "avoidLastMinutes": 30
+      },
+      "scoring": {
+        "vwapWeight": 25,
+        "cciWeight": 25,
+        "rsWeight": 25,
+        "volumeWeight": 25
+      }
+    }
+  ],
+  "exitRules": {
+    "description": "כללי יציאה מעסקאות תוך-יומיות",
+    "rules": [
+      {
+        "id": "EXIT_VWAP_BREAK",
+        "name": "VWAP Break Down",
+        "nameHe": "שבירת VWAP מטה",
+        "condition": "Price closes below VWAP on 15-min candle",
+        "action": "EXIT_IMMEDIATELY",
+        "priority": 1
+      },
+      {
+        "id": "EXIT_STOP_LOSS",
+        "name": "Stop Loss Hit",
+        "nameHe": "פגיעה בסטופ לוס",
+        "condition": "Price hits stop loss level",
+        "action": "EXIT_IMMEDIATELY",
+        "priority": 1
+      },
+      {
+        "id": "EXIT_TAKE_PROFIT",
+        "name": "Take Profit Hit",
+        "nameHe": "הגעה ליעד רווח",
+        "condition": "Price hits take profit level",
+        "action": "EXIT_HALF_TRAIL_REST",
+        "priority": 2
+      },
+      {
+        "id": "EXIT_TRAILING_STOP",
+        "name": "Trailing Stop",
+        "nameHe": "סטופ נגרר",
+        "condition": "Price falls from high by trailing stop %",
+        "action": "EXIT_IMMEDIATELY",
+        "priority": 2
+      },
+      {
+        "id": "EXIT_EOD",
+        "name": "End of Day",
+        "nameHe": "סוף יום מסחר",
+        "condition": "15:50 ET - close all intraday positions",
+        "action": "EXIT_ALL",
+        "priority": 3
+      },
+      {
+        "id": "EXIT_RS_WEAK",
+        "name": "RS Weakness",
+        "nameHe": "חולשה יחסית",
+        "condition": "Stock RS falls below 0.98 (underperforming market)",
+        "action": "EXIT_CONSIDER",
+        "priority": 4
+      }
+    ]
+  },
+  "marketConditions": {
+    "description": "תנאי שוק לסינון נוסף",
+    "spyAboveVwapRequired": false,
+    "spyAboveVwapPreferred": true,
+    "spyMaxDropPct": -0.5,
+    "vixMaxLevel": 25,
+    "avoidFedDays": true,
+    "avoidEarningsDays": true
+  },
+  "delayStrategy": {
+    "description": "איך להפוך את הדיליי של 15 דקות ליתרון",
+    "advantages": [
+      "זמן לראות אם הפריצה מחזיקה מעמד",
+      "סינון מלכודות שוורים - פריצות כוזבות נופלות בדרך כלל תוך 15 דקות",
+      "אפשרות לזהות חזרה ל-VWAP (Pullback) לכניסה טובה יותר",
+      "הימנעות מקניית השפיץ - רוב הפריצות מתקררות אחרי הזינוק הראשוני"
+    ],
+    "bestPractices": [
+      "אל תרדוף אחרי מניות שכבר עלו יותר מ-4%",
+      "העדף מניות שחזרו ל-VWAP ונשארו מעליו",
+      "חפש נפח גבוה שמחזיק מעמד (לא רק ספייק חד)",
+      "ודא ש-RS נשאר חיובי לאורך כל 15 הדקות"
+    ]
+  }
+}

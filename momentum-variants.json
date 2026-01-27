@@ -1,0 +1,196 @@
+{
+  "description": "Momentum Strategy Variants for A/B Testing - Comparing different parameter combinations",
+  "enabled": true,
+  "variants": [
+    {
+      "id": "M1_AGGRESSIVE",
+      "name": "Aggressive Momentum",
+      "nameHe": "מומנטום אגרסיבי",
+      "description": "High RVOL, CCI breakout, no SMA200 filter",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 1.0,
+        "rsiMin": 30,
+        "rsiMax": 90,
+        "cciMin": -200,
+        "cciMax": 400,
+        "rsMin": 0.5,
+        "sma200Required": false,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 2.0,
+        "takeProfitPct": 4.0,
+        "trailingStopPct": 1.5,
+        "atrMultiplier": 1.5,
+        "riskRewardRatio": 2.0
+      },
+      "scoring": {
+        "cciWeight": 35,
+        "rsWeight": 40,
+        "volumeWeight": 25,
+        "maCrossoverBonus": 10
+      }
+    },
+    {
+      "id": "M2_CONSERVATIVE",
+      "name": "Conservative Momentum",
+      "nameHe": "מומנטום שמרני",
+      "description": "SMA200 required, wider stops, RS leader focus",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 1.0,
+        "rsiMin": 30,
+        "rsiMax": 85,
+        "cciMin": -150,
+        "cciMax": 350,
+        "rsMin": 0.6,
+        "sma200Required": true,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 3.0,
+        "takeProfitPct": 6.0,
+        "trailingStopPct": 2.0,
+        "atrMultiplier": 2.0,
+        "riskRewardRatio": 2.0
+      },
+      "scoring": {
+        "cciWeight": 25,
+        "rsWeight": 50,
+        "volumeWeight": 25,
+        "maCrossoverBonus": 5
+      }
+    },
+    {
+      "id": "M3_RS_LEADER",
+      "name": "RS Leader Focus",
+      "nameHe": "מנהיגי כוח יחסי",
+      "description": "High RS ratio priority, moderate volume",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 1.0,
+        "rsiMin": 35,
+        "rsiMax": 85,
+        "cciMin": -100,
+        "cciMax": 300,
+        "rsMin": 0.7,
+        "sma200Required": false,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 2.5,
+        "takeProfitPct": 5.0,
+        "trailingStopPct": 1.8,
+        "atrMultiplier": 1.8,
+        "riskRewardRatio": 2.0
+      },
+      "scoring": {
+        "cciWeight": 20,
+        "rsWeight": 55,
+        "volumeWeight": 25,
+        "maCrossoverBonus": 10
+      }
+    },
+    {
+      "id": "M4_VOLUME_SPIKE",
+      "name": "Volume Spike Hunter",
+      "nameHe": "צייד נפחים חריגים",
+      "description": "Very high volume focus, relaxed other criteria",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 1.2,
+        "rsiMin": 30,
+        "rsiMax": 90,
+        "cciMin": -150,
+        "cciMax": 400,
+        "rsMin": 0.5,
+        "sma200Required": false,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 2.0,
+        "takeProfitPct": 3.5,
+        "trailingStopPct": 1.2,
+        "atrMultiplier": 1.5,
+        "riskRewardRatio": 1.75
+      },
+      "scoring": {
+        "cciWeight": 25,
+        "rsWeight": 25,
+        "volumeWeight": 50,
+        "maCrossoverBonus": 5
+      }
+    },
+    {
+      "id": "M5_MA_CROSS",
+      "name": "MA Crossover Momentum",
+      "nameHe": "הצלבת ממוצעים נעים",
+      "description": "MA9/21 crossover required, trend confirmation",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 1.0,
+        "rsiMin": 30,
+        "rsiMax": 85,
+        "cciMin": -100,
+        "cciMax": 350,
+        "rsMin": 0.5,
+        "sma200Required": false,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 2.5,
+        "takeProfitPct": 5.0,
+        "trailingStopPct": 1.5,
+        "atrMultiplier": 2.0,
+        "riskRewardRatio": 2.0
+      },
+      "scoring": {
+        "cciWeight": 25,
+        "rsWeight": 35,
+        "volumeWeight": 20,
+        "maCrossoverBonus": 20
+      }
+    }
+  ],
+  "swingVariants": [
+    {
+      "id": "S1_STANDARD",
+      "name": "Standard Swing",
+      "nameHe": "סווינג סטנדרטי",
+      "description": "Balanced swing trading approach",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 1.5,
+        "rsiMin": 45,
+        "rsiMax": 70,
+        "rsMin": 1.0,
+        "sma200Required": true
+      },
+      "riskManagement": {
+        "stopLossPct": 3.0,
+        "takeProfitPct": 6.0,
+        "trailingStopPct": 2.0
+      }
+    },
+    {
+      "id": "S2_TIGHT",
+      "name": "Tight Swing",
+      "nameHe": "סווינג הדוק",
+      "description": "Tighter stops, faster exits",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 2.0,
+        "rsiMin": 50,
+        "rsiMax": 68,
+        "rsMin": 1.05,
+        "sma200Required": false
+      },
+      "riskManagement": {
+        "stopLossPct": 2.0,
+        "takeProfitPct": 4.0,
+        "trailingStopPct": 1.5
+      }
+    }
+  ]
+}
