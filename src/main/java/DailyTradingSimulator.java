@@ -46,6 +46,8 @@ public class DailyTradingSimulator {
     private static final int SCAN_MINUTE_ET = 45;
     private static final ZoneId NY_ZONE = ZoneId.of("America/New_York");
 
+    private static final String POLYGON_API_KEY = System.getenv("POLYGON_API_KEY");
+
     private static final String DISCORD_WEBHOOK_URL = System.getenv("DAILY_SIM_DISCORD_WEBHOOK_URL");
 
     // Exit types
@@ -1580,6 +1582,36 @@ public class DailyTradingSimulator {
         return day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY;
     }
 
+    private static boolean isUsMarketOpenToday(ZonedDateTime nowNy) {
+        if (POLYGON_API_KEY == null || POLYGON_API_KEY.isBlank()) {
+            return isTradingDay(nowNy);
+        }
+        try {
+            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+            HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.polygon.io/v1/marketstatus/now?apiKey=" + POLYGON_API_KEY))
+                .GET()
+                .build();
+            HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() != 200) {
+                return isTradingDay(nowNy);
+            }
+            ObjectMapper om = new ObjectMapper();
+            JsonNode root = om.readTree(resp.body());
+            String market = root.path("market").asText("");
+            if (!market.isBlank()) {
+                return "open".equalsIgnoreCase(market);
+            }
+            String nasdaq = root.path("exchanges").path("nasdaq").asText("");
+            if (!nasdaq.isBlank()) {
+                return "open".equalsIgnoreCase(nasdaq);
+            }
+            return isTradingDay(nowNy);
+        } catch (Exception ignore) {
+            return isTradingDay(nowNy);
+        }
+    }
+
     /**
      * Calculate delay until next scheduled scan time (9:45 AM ET on weekdays)
      */
@@ -1617,8 +1649,8 @@ public class DailyTradingSimulator {
         Runnable dailyScanTask = () -> {
             try {
                 ZonedDateTime now = ZonedDateTime.now(NY_ZONE);
-                if (!isTradingDay(now)) {
-                    System.out.println("[DailyTradingSimulator] Skipping - not a trading day");
+                if (!isUsMarketOpenToday(now)) {
+                    System.out.println("[DailyTradingSimulator] Skipping - US market is closed");
                     return;
                 }
                 

@@ -46,6 +46,19 @@ ALPHAVANTAGE_API_KEY
 ALPHAVANTAGE_ENTITLEMENT
 FINNHUB_API_KEY
 MONITORING_DATA_DIR
+POLYGON_API_KEY
+
+How to run it locally
+
+export ALPHAVANTAGE_API_KEY="..."
+export ALPHAVANTAGE_ENTITLEMENT="delayed"
+export POLYGON_API_KEY="..."
+export FINNHUB_API_KEY="..."
+export MONITORING_DATA_DIR="/full/path/to/dir"
+export PORT="8080"
+
+mvn -q -DskipTests package
+java -jar target/trading-model-1.0-SNAPSHOT.jar
 
 
 WebHook for Discord :     private static final String DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1463983226727956482/7UBMocf9gow7p8tGrOP0U2t7GaaBqszoD9HRrn_uDubbWvUiM_znjpBBfX461ntPamd5";
