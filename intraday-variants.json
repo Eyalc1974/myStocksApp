@@ -32,7 +32,7 @@
       },
       "riskManagement": {
         "stopLossBelowVwapPct": 0.5,
-        "stopLossMaxPct": 2.0,
+        "stopLossMaxPct": 3.5,
         "takeProfitPct": 4.0,
         "trailingStopPct": 1.5,
         "riskRewardRatio": 2.0,
@@ -68,10 +68,10 @@
         "rsiMax": 70,
         "cciMin": 50,
         "cciMax": 200,
-        "rsMin": 1.13,
+        "rsMin": 1.10,
         "sma200Required": false,
         "intradayPriceChangeMinPct": 0.5,
-        "intradayPriceChangeMaxPct": 6.0
+        "intradayPriceChangeMaxPct": 10.0
       },
       "riskManagement": {
         "stopLossBelowVwapPct": 0.3,
@@ -113,11 +113,11 @@
         "rsMin": 1.08,
         "sma200Required": false,
         "intradayPriceChangeMinPct": 0.5,
-        "intradayPriceChangeMaxPct": 4.5
+        "intradayPriceChangeMaxPct": 8.5
       },
       "riskManagement": {
         "stopLossBelowVwapPct": 1.0,
-        "stopLossMaxPct": 2.5,
+        "stopLossMaxPct": 3.5,
         "takeProfitPct": 5.0,
         "trailingStopPct": 2.0,
         "riskRewardRatio": 2.0,
@@ -151,14 +151,14 @@
         "rsiMax": 78,
         "cciMin": 80,
         "cciMax": 300,
-        "rsMin": 1.15,
+        "rsMin": 1.10,
         "sma200Required": false,
         "intradayPriceChangeMinPct": 1.5,
-        "intradayPriceChangeMaxPct": 5.0
+        "intradayPriceChangeMaxPct": 10.0
       },
       "riskManagement": {
         "stopLossBelowVwapPct": 0.5,
-        "stopLossMaxPct": 2.0,
+        "stopLossMaxPct": 3.5,
         "takeProfitPct": 4.0,
         "trailingStopPct": 1.5,
         "riskRewardRatio": 2.0,
@@ -194,14 +194,14 @@
         "rsiMax": 72,
         "cciMin": 30,
         "cciMax": 180,
-        "rsMin": 1.12,
+        "rsMin": 1.10,
         "sma200Required": false,
         "intradayPriceChangeMinPct": 0.3,
-        "intradayPriceChangeMaxPct": 4.5
+        "intradayPriceChangeMaxPct": 7.5
       },
       "riskManagement": {
         "stopLossBelowVwapPct": 0.3,
-        "stopLossMaxPct": 1.5,
+        "stopLossMaxPct": 3.5,
         "takeProfitPct": 3.0,
         "trailingStopPct": 1.0,
         "riskRewardRatio": 2.0,
@@ -235,14 +235,14 @@
         "rsiMax": 80,
         "cciMin": 0,
         "cciMax": 350,
-        "rsMin": 1.10,
+        "rsMin": 1.12,
         "sma200Required": false,
         "intradayPriceChangeMinPct": 0.5,
-        "intradayPriceChangeMaxPct": 6.0
+        "intradayPriceChangeMaxPct": 8.0
       },
       "riskManagement": {
         "stopLossBelowVwapPct": 0.5,
-        "stopLossMaxPct": 2.5,
+        "stopLossMaxPct": 3.5,
         "takeProfitPct": 5.0,
         "trailingStopPct": 2.0,
         "riskRewardRatio": 2.0,

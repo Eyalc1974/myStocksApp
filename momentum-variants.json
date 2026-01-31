@@ -14,7 +14,7 @@
         "rsiMax": 90,
         "cciMin": -200,
         "cciMax": 400,
-        "rsMin": 0.5,
+        "rsMin": 1.10,
         "sma200Required": false,
         "maCrossoverRequired": false
       },
@@ -44,7 +44,7 @@
         "rsiMax": 85,
         "cciMin": -150,
         "cciMax": 350,
-        "rsMin": 0.6,
+        "rsMin": 1.10,
         "sma200Required": true,
         "maCrossoverRequired": false
       },
@@ -63,6 +63,157 @@
       }
     },
     {
+      "id": "M2_CONSERVATIVE_V2",
+      "name": "Conservative Momentum v2",
+      "nameHe": "מומנטום שמרני – גרסה 2",
+      "description": "Strong trend confirmation, higher RS threshold, tighter risk control",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 1.3,
+        "rsiMin": 40,
+        "rsiMax": 75,
+        "cciMin": -100,
+        "cciMax": 300,
+        "rsMin": 1.10,
+        "sma200Required": true,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 2.5,
+        "takeProfitPct": 5.0,
+        "trailingStopPct": 1.8,
+        "atrMultiplier": 1.8,
+        "riskRewardRatio": 2.0
+      },
+      "scoring": {
+        "cciWeight": 20,
+        "rsWeight": 55,
+        "volumeWeight": 25,
+        "maCrossoverBonus": 3
+      }
+    },
+    {
+      "id": "M3_TREND_LEADER",
+      "name": "Trend Leader Momentum",
+      "nameHe": "מובילי מגמה שמרני",
+      "description": "Only strong trend leaders above SMA200 with high RS",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 1.4,
+        "rsiMin": 45,
+        "rsiMax": 70,
+        "cciMin": -80,
+        "cciMax": 250,
+        "rsMin": 1.10,
+        "sma200Required": true,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 2.2,
+        "takeProfitPct": 5.5,
+        "trailingStopPct": 1.6,
+        "atrMultiplier": 1.7,
+        "riskRewardRatio": 2.5
+      },
+      "scoring": {
+        "cciWeight": 15,
+        "rsWeight": 60,
+        "volumeWeight": 25,
+        "maCrossoverBonus": 3
+      }
+    },
+    {
+      "id": "M4_PULLBACK",
+      "name": "Pullback Momentum",
+      "nameHe": "מומנטום תיקונים",
+      "description": "Trend pullbacks with controlled RSI and strong volume return",
+      "stocksPerVariant": 3,
+      "entryFilters": {
+        "rvolMin": 1.2,
+        "rsiMin": 35,
+        "rsiMax": 65,
+        "cciMin": -200,
+        "cciMax": 200,
+        "rsMin": 1.10,
+        "sma200Required": true,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 2.8,
+        "takeProfitPct": 6.5,
+        "trailingStopPct": 2.0,
+        "atrMultiplier": 2.2,
+        "riskRewardRatio": 2.3
+      },
+      "scoring": {
+        "cciWeight": 35,
+        "rsWeight": 40,
+        "volumeWeight": 25,
+        "maCrossoverBonus": 4
+      }
+    },
+    {
+      "id": "M5_BREAKOUT_FILTERED",
+      "name": "Filtered Breakout Momentum",
+      "nameHe": "פריצות עם סינון חזק",
+      "description": "Breakouts with volume confirmation and trend alignment",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 1.8,
+        "rsiMin": 55,
+        "rsiMax": 85,
+        "cciMin": 50,
+        "cciMax": 400,
+        "rsMin": 1.10,
+        "sma200Required": true,
+        "maCrossoverRequired": true
+      },
+      "riskManagement": {
+        "stopLossPct": 2.5,
+        "takeProfitPct": 7.0,
+        "trailingStopPct": 2.2,
+        "atrMultiplier": 2.0,
+        "riskRewardRatio": 2.8
+      },
+      "scoring": {
+        "cciWeight": 30,
+        "rsWeight": 40,
+        "volumeWeight": 30,
+        "maCrossoverBonus": 8
+      }
+    },
+    {
+      "id": "M6_LOW_NOISE",
+      "name": "Low Noise Momentum",
+      "nameHe": "מומנטום רעש נמוך",
+      "description": "Stable momentum, avoids overextension and hype",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 1.1,
+        "rsiMin": 45,
+        "rsiMax": 68,
+        "cciMin": -120,
+        "cciMax": 220,
+        "rsMin": 1.10,
+        "sma200Required": true,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 2.0,
+        "takeProfitPct": 4.8,
+        "trailingStopPct": 1.4,
+        "atrMultiplier": 1.6,
+        "riskRewardRatio": 2.2
+      },
+      "scoring": {
+        "cciWeight": 20,
+        "rsWeight": 55,
+        "volumeWeight": 25,
+        "maCrossoverBonus": 2
+      }
+    },
+
+    {
       "id": "M3_RS_LEADER",
       "name": "RS Leader Focus",
       "nameHe": "מנהיגי כוח יחסי",
@@ -74,7 +225,7 @@
         "rsiMax": 85,
         "cciMin": -100,
         "cciMax": 300,
-        "rsMin": 0.7,
+        "rsMin": 1.10,
         "sma200Required": false,
         "maCrossoverRequired": false
       },
@@ -104,7 +255,7 @@
         "rsiMax": 90,
         "cciMin": -150,
         "cciMax": 400,
-        "rsMin": 0.5,
+        "rsMin": 1.10,
         "sma200Required": false,
         "maCrossoverRequired": false
       },
@@ -134,7 +285,7 @@
         "rsiMax": 85,
         "cciMin": -100,
         "cciMax": 350,
-        "rsMin": 0.5,
+        "rsMin": 1.10,
         "sma200Required": false,
         "maCrossoverRequired": false
       },
@@ -164,7 +315,7 @@
         "rvolMin": 1.5,
         "rsiMin": 45,
         "rsiMax": 70,
-        "rsMin": 1.0,
+        "rsMin": 1.10,
         "sma200Required": true
       },
       "riskManagement": {
@@ -183,7 +334,7 @@
         "rvolMin": 2.0,
         "rsiMin": 50,
         "rsiMax": 68,
-        "rsMin": 1.05,
+        "rsMin": 1.10,
         "sma200Required": false
       },
       "riskManagement": {

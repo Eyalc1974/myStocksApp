@@ -4531,26 +4531,69 @@ public class WebServer {
                         "    '<div style=\"color:#9ca3af;font-size:11px;\">Total P/L</div></div>';"+
                         "  var openTb=document.getElementById('dtsOpenTbody');"+
                         "  var open=d.open||[];"+
-                        "  if(open.length===0){openTb.innerHTML='<tr><td colspan=\"8\" style=\"padding:10px;color:#9ca3af;text-align:center;\">No open positions</td></tr>';}"+
-                        "  else{var rows='';for(var i=0;i<open.length;i++){var t=open[i];var pnlColor=t.profitLossPct>=0?'#22c55e':'#ef4444';"+
-                        "    var stratColor=t.strategy==='MOMENTUM'?'#8b5cf6':'#f59e0b';"+
-                        "    var scoreColor=t.momentumScore>=70?'#22c55e':(t.momentumScore>=50?'#f59e0b':'#9ca3af');"+
-                        "    var rsColor=t.rsRatio>=1.1?'#22c55e':(t.rsRatio>=1.0?'#f59e0b':'#ef4444');"+
-                        "    var indicators='<span style=\"font-size:10px;color:#9ca3af;\">'+"+
-                        "      'CCI:'+(t.cci||0).toFixed(0)+' RS:'+(t.rsRatio||0).toFixed(2)+"+
-                        "      (t.maCrossover?' ✓MA':'')+'</span>';"+
-                        "    var variantBadge=t.variantId?'<div style=\"font-size:9px;color:#60a5fa;margin-top:2px;\">'+t.variantId+'</div>':'';"+
-                        "    rows+='<tr style=\"border-bottom:1px solid #1f2a44;\">'+"+
-                        "      '<td style=\"padding:8px;\"><div style=\"font-weight:600;\">'+t.ticker+'</div>'+indicators+variantBadge+'</td>'+"+
-                        "      '<td style=\"padding:8px;text-align:center;\"><span style=\"background:'+stratColor+';padding:2px 8px;border-radius:4px;font-size:11px;\">'+t.strategy+'</span>'+"+
-                        "        '<div style=\"font-size:10px;color:'+scoreColor+';margin-top:2px;\">Score:'+t.momentumScore+'</div></td>'+"+
-                        "      '<td style=\"padding:8px;text-align:right;\">$'+t.entryPrice.toFixed(2)+'</td>'+"+
-                        "      '<td style=\"padding:8px;text-align:right;\">$'+t.currentPrice.toFixed(2)+'</td>'+"+
-                        "      '<td style=\"padding:8px;text-align:right;color:'+pnlColor+';font-weight:600;\">'+(t.profitLossPct>=0?'+':'')+t.profitLossPct.toFixed(2)+'%</td>'+"+
-                        "      '<td style=\"padding:8px;text-align:right;color:#ef4444;\">$'+t.stopLossPrice.toFixed(2)+'</td>'+"+
-                        "      '<td style=\"padding:8px;text-align:right;color:#22c55e;\">$'+t.takeProfitPrice.toFixed(2)+(t.pivotR1>0?'<div style=\"font-size:10px;color:#9ca3af;\">R1:$'+t.pivotR1.toFixed(2)+'</div>':'')+'</td>'+"+
-                        "      '<td style=\"padding:8px;text-align:center;\"><span style=\"background:#3b82f6;padding:2px 8px;border-radius:4px;font-size:11px;\">HOLD</span></td>'+"+
-                        "    '</tr>';}openTb.innerHTML=rows;}"+
+                        "  if(open.length===0){openTb.innerHTML='<tr><td colspan=\"8\" style=\"padding:10px;color:#9ca3af;text-align:center;\">No open positions</td></tr>'; }"+
+                        "  else{"+
+                        "    var grouped={};"+
+                        "    for(var i=0;i<open.length;i++){"+
+                        "      var t=open[i]||{};"+
+                        "      var key=(t.ticker||'').toUpperCase();"+
+                        "      if(!key)continue;"+
+                        "      if(!grouped[key])grouped[key]=[];"+
+                        "      grouped[key].push(t);"+
+                        "    }"+
+                        "    var tickers=Object.keys(grouped).sort();"+
+                        "    var rows='';"+
+                        "    for(var k=0;k<tickers.length;k++){"+
+                        "      var sym=tickers[k];"+
+                        "      var arr=grouped[sym]||[];"+
+                        "      var cur=arr[0]||{};"+
+                        "      var entryMin=Number.POSITIVE_INFINITY,entryMax=0,stopMin=Number.POSITIVE_INFINITY,stopMax=0,targetMin=Number.POSITIVE_INFINITY,targetMax=0;"+
+                        "      var pnlMin=Number.POSITIVE_INFINITY,pnlMax=Number.NEGATIVE_INFINITY;"+
+                        "      var bestScore=0;"+
+                        "      var namesSet={};"+
+                        "      for(var j=0;j<arr.length;j++){"+
+                        "        var x=arr[j]||{};"+
+                        "        var ep=+x.entryPrice||0; if(ep>0){entryMin=Math.min(entryMin,ep);entryMax=Math.max(entryMax,ep);}"+
+                        "        var sl=+x.stopLossPrice||0; if(sl>0){stopMin=Math.min(stopMin,sl);stopMax=Math.max(stopMax,sl);}"+
+                        "        var tp=+x.takeProfitPrice||0; if(tp>0){targetMin=Math.min(targetMin,tp);targetMax=Math.max(targetMax,tp);}"+
+                        "        var pl=+x.profitLossPct||0; pnlMin=Math.min(pnlMin,pl); pnlMax=Math.max(pnlMax,pl);"+
+                        "        var sc=+x.momentumScore||0; bestScore=Math.max(bestScore,sc);"+
+                        "        var nm=(x.name||x.strategyName||x.variantName||x.strategy||'').toString().trim();"+
+                        "        if(nm)namesSet[nm]=true;"+
+                        "      }"+
+                        "      if(entryMin===Number.POSITIVE_INFINITY){entryMin=0;}"+
+                        "      if(stopMin===Number.POSITIVE_INFINITY){stopMin=0;}"+
+                        "      if(targetMin===Number.POSITIVE_INFINITY){targetMin=0;}"+
+                        "      if(pnlMin===Number.POSITIVE_INFINITY){pnlMin=0;pnlMax=0;}"+
+                        "      var names=Object.keys(namesSet).sort();"+
+                        "      var namesHtml='';"+
+                        "      for(var n=0;n<names.length;n++){namesHtml+='<div style=\"font-size:10px;color:#9ca3af;margin-top:2px;\">'+names[n]+'</div>'; }"+
+                        "      var indicators='<span style=\"font-size:10px;color:#9ca3af;\">'+"+
+                        "        'CCI:'+(cur.cci||0).toFixed(0)+' RS:'+(cur.rsRatio||0).toFixed(2)+"+
+                        "        (cur.maCrossover?' ✓MA':'')+'</span>';"+
+                        "      var variantBadge=cur.variantId?'<div style=\"font-size:9px;color:#60a5fa;margin-top:2px;\">'+cur.variantId+'</div>':'';"+
+                        "      var entryTxt=entryMin>0?(entryMin===entryMax?('$'+entryMin.toFixed(2)):('$'+entryMin.toFixed(2)+' - $'+entryMax.toFixed(2))):'-';"+
+                        "      var stopTxt=stopMin>0?(stopMin===stopMax?('$'+stopMin.toFixed(2)):('$'+stopMin.toFixed(2)+' - $'+stopMax.toFixed(2))):'-';"+
+                        "      var targetTxt=targetMin>0?(targetMin===targetMax?('$'+targetMin.toFixed(2)):('$'+targetMin.toFixed(2)+' - $'+targetMax.toFixed(2))):'-';"+
+                        "      var pnlTxt=(pnlMin===pnlMax?(pnlMax.toFixed(2)+'%'):(pnlMin.toFixed(2)+'% .. '+pnlMax.toFixed(2)+'%'));"+
+                        "      var pnlColor=(pnlMax>=0?'#22c55e':'#ef4444');"+
+                        "      var scoreColor=bestScore>=70?'#22c55e':(bestScore>=50?'#f59e0b':'#9ca3af');"+
+                        "      rows+='<tr style=\"border-bottom:1px solid #1f2a44;\">'+"+
+                        "        '<td style=\"padding:8px;\"><div style=\"font-weight:700;\">'+sym+'</div>'+namesHtml+indicators+variantBadge+'</td>'+"+
+                        "        '<td style=\"padding:8px;text-align:center;\">'+"+
+                        "          '<div style=\"font-size:11px;color:#e5e7eb;font-weight:600;\">'+names.length+' strategies</div>'+"+
+                        "          '<div style=\"font-size:10px;color:'+scoreColor+';margin-top:2px;\">Best Score:'+bestScore+'</div>'+"+
+                        "        '</td>'+"+
+                        "        '<td style=\"padding:8px;text-align:right;\">'+entryTxt+'</td>'+"+
+                        "        '<td style=\"padding:8px;text-align:right;\">$'+(+cur.currentPrice||0).toFixed(2)+'</td>'+"+
+                        "        '<td style=\"padding:8px;text-align:right;color:'+pnlColor+';font-weight:600;\">'+pnlTxt+'</td>'+"+
+                        "        '<td style=\"padding:8px;text-align:right;color:#ef4444;\">'+stopTxt+'</td>'+"+
+                        "        '<td style=\"padding:8px;text-align:right;color:#22c55e;\">'+targetTxt+(cur.pivotR1>0?'<div style=\"font-size:10px;color:#9ca3af;\">R1:$'+cur.pivotR1.toFixed(2)+'</div>':'')+'</td>'+"+
+                        "        '<td style=\"padding:8px;text-align:center;\"><span style=\"background:#3b82f6;padding:2px 8px;border-radius:4px;font-size:11px;\">HOLD</span></td>'+"+
+                        "      '</tr>';"+
+                        "    }"+
+                        "    openTb.innerHTML=rows;"+
+                        "  }"+
                         "  var closedTb=document.getElementById('dtsClosedTbody');"+
                         "  var closed=d.closed||[];"+
                         "  if(closed.length===0){closedTb.innerHTML='<tr><td colspan=\"8\" style=\"padding:10px;color:#9ca3af;text-align:center;\">No closed positions</td></tr>';}"+
@@ -4789,7 +4832,10 @@ public class WebServer {
                     for (DailyTradingSimulator.SimulatedTrade t : DailyTradingSimulator.getOpenTrades()) {
                         Map<String, Object> row = new LinkedHashMap<>();
                         row.put("ticker", t.ticker);
+                        row.put("tickerName", t.ticker);
                         row.put("strategy", t.strategy != null ? t.strategy.name() : "UNKNOWN");
+                        row.put("name", t.variantName != null ? t.variantName : (t.strategy != null ? t.strategy.name() : "UNKNOWN"));
+                        row.put("strategyName", t.variantName != null ? t.variantName : (t.strategy != null ? t.strategy.name() : "UNKNOWN"));
                         row.put("entryDate", t.entryDate);
                         row.put("entryTime", t.entryTime);
                         row.put("entryPrice", t.entryPrice);
@@ -4823,7 +4869,10 @@ public class WebServer {
                     for (DailyTradingSimulator.SimulatedTrade t : DailyTradingSimulator.getClosedTrades()) {
                         Map<String, Object> row = new LinkedHashMap<>();
                         row.put("ticker", t.ticker);
+                        row.put("tickerName", t.ticker);
                         row.put("strategy", t.strategy != null ? t.strategy.name() : "UNKNOWN");
+                        row.put("name", t.variantName != null ? t.variantName : (t.strategy != null ? t.strategy.name() : "UNKNOWN"));
+                        row.put("strategyName", t.variantName != null ? t.variantName : (t.strategy != null ? t.strategy.name() : "UNKNOWN"));
                         row.put("entryDate", t.entryDate);
                         row.put("entryTime", t.entryTime);
                         row.put("entryPrice", t.entryPrice);
@@ -6239,6 +6288,7 @@ public class WebServer {
             }
         } catch (Exception ignore) {}
 
+        // ---------------- Favorites Page ----------------
         server.createContext("/favorites", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) {
@@ -6274,6 +6324,15 @@ public class WebServer {
 
                     sb.append("<div style='margin-bottom:14px;padding:12px;border-radius:12px;border:1px solid #1f2a44;background:#0b1220;'>");
                     sb.append("<div style='font-weight:600;margin-bottom:6px;'>Daily Recommendations (GREEN)</div>");
+                    try {
+                        ScoringConfig.ModeConfig favCfg = ScoringConfig.getActiveModeConfig();
+                        String favMode = ScoringConfig.getActiveMode();
+                        String favModeName = favCfg.name != null ? favCfg.name : favMode;
+                        String favModeHe = favCfg.nameHe != null ? favCfg.nameHe : "";
+                        sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:8px;'>Strategy: <b style='color:#22c55e;'>").append(escapeHtml(favModeName)).append("</b>");
+                        if (!favModeHe.isEmpty()) sb.append(" <span style='color:#9ca3af;'>| ").append(escapeHtml(favModeHe)).append("</span>");
+                        sb.append(" <a href='/settings' style='margin-left:8px;color:#93c5fd;text-decoration:none;font-size:12px;'>Change →</a></div>");
+                    } catch (Exception ignore) {}
                     sb.append("<div style='color:#9ca3af'>Status: ");
                     if (snap.running) {
                         sb.append("<span style='color:#22c55e;font-weight:700'>RUNNING</span>");
@@ -6547,6 +6606,21 @@ public class WebServer {
                 if (activeCfg.description != null) {
                     sb.append("<div style='color:#9ca3af;font-size:13px;margin-top:4px;'>").append(escapeHtml(activeCfg.description)).append("</div>");
                 }
+                sb.append("</div>");
+
+                // Mode selection form
+                sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:10px;color:#93c5fd;'>Strategy for Favorites / Daily GREEN | אסטרטגיה ל- Favorites (GREEN)</div>");
+                sb.append("<form method='post' action='/settings-mode' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0;'>");
+                sb.append("<select name='mode' style='padding:10px 12px;border-radius:8px;border:1px solid #1f2a44;background:#1f2a44;color:#e5e7eb;min-width:320px;'>");
+                sb.append("<option value='LONG_TERM_INVESTOR'").append("LONG_TERM_INVESTOR".equals(activeMode) ? " selected" : "").append(">Long-Term Investor | משקיע לטווח ארוך</option>");
+                sb.append("<option value='SWING_TRADER'").append("SWING_TRADER".equals(activeMode) ? " selected" : "").append(">Swing Trader | סווינג טריידר (1-5 ימים)</option>");
+                sb.append("<option value='MOMENTUM'").append("MOMENTUM".equals(activeMode) ? " selected" : "").append(">Momentum / Day Trader | מומנטום / יומי</option>");
+                sb.append("<option value='CUSTOM'").append("CUSTOM".equals(activeMode) ? " selected" : "").append(">Custom | מותאם אישית</option>");
+                sb.append("</select>");
+                sb.append("<button type='submit' style='background:#22c55e;color:#000;border:none;'>Save</button>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;'>Used by: Favorites → Daily Recommendations (GREEN)</div>");
+                sb.append("</form>");
                 sb.append("</div>");
 
                 // Mode selection form

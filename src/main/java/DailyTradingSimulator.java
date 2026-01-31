@@ -12,6 +12,7 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * DailyTradingSimulator - Automated daily trading simulation using scanner signals.
@@ -40,6 +41,9 @@ public class DailyTradingSimulator {
     private static ScheduledExecutorService scheduler;
     private static ScheduledExecutorService dailyScheduler;
     private static final Object lock = new Object();
+
+    private static final AtomicLong scannerRunId = new AtomicLong(0);
+    private static volatile Thread scannerThread;
     
     // Daily scheduler settings
     private static final int SCAN_HOUR_ET = 9;      // 9:45 AM ET - after market open
@@ -280,7 +284,7 @@ public class DailyTradingSimulator {
                     return mapper.readValue(VARIANTS_CONFIG_PATH.toFile(), MomentumVariantsConfig.class);
                 }
             } catch (Exception e) {
-                System.err.println("[DailyTradingSimulator] Error loading variants config: " + e.getMessage());
+                logErr("[DailyTradingSimulator] Error loading variants config: " + e.getMessage());
             }
             return createDefaultConfig();
         }
@@ -323,7 +327,7 @@ public class DailyTradingSimulator {
         public double rsiMax = 80;
         public double cciMin = 100;
         public double cciMax = 200;
-        public double rsMin = 1.0;
+        public double rsMin = 1.10;
         public boolean sma200Required = false;
         public boolean maCrossoverRequired = false;
     }
@@ -361,7 +365,7 @@ public class DailyTradingSimulator {
                     return mapper.readValue(INTRADAY_VARIANTS_CONFIG_PATH.toFile(), IntradayVariantsConfig.class);
                 }
             } catch (Exception e) {
-                System.err.println("[DailyTradingSimulator] Error loading intraday variants config: " + e.getMessage());
+                logErr("[DailyTradingSimulator] Error loading intraday variants config: " + e.getMessage());
             }
             return createDefaultIntradayConfig();
         }
@@ -415,7 +419,7 @@ public class DailyTradingSimulator {
         public double rsiMax = 75;
         public double cciMin = 100;
         public double cciMax = 250;
-        public double rsMin = 1.05;
+        public double rsMin = 1.10;
         public boolean sma200Required = true;
         public double intradayPriceChangeMinPct = 1.0;
         public double intradayPriceChangeMaxPct = 4.0;
@@ -449,6 +453,20 @@ public class DailyTradingSimulator {
 
     private static SimulatorStore store = new SimulatorStore();
 
+    private static final DateTimeFormatter LOG_TS_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    private static String logTs() {
+        return ZonedDateTime.now(NY_ZONE).format(LOG_TS_FORMAT);
+    }
+
+    private static void log(String msg) {
+        System.out.println("[" + logTs() + "] " + msg);
+    }
+
+    private static void logErr(String msg) {
+        System.err.println("[" + logTs() + "] " + msg);
+    }
+
     public static void loadStore() {
         synchronized (lock) {
             try {
@@ -460,7 +478,7 @@ public class DailyTradingSimulator {
                     if (store.variantPerformance == null) store.variantPerformance = new LinkedHashMap<>();
                 }
             } catch (Exception e) {
-                System.err.println("[DailyTradingSimulator] Error loading store: " + e.getMessage());
+                logErr("[DailyTradingSimulator] Error loading store: " + e.getMessage());
                 store = new SimulatorStore();
             }
         }
@@ -516,7 +534,7 @@ public class DailyTradingSimulator {
                 mapper.enable(SerializationFeature.INDENT_OUTPUT);
                 mapper.writeValue(STORE_PATH.toFile(), store);
             } catch (Exception e) {
-                System.err.println("[DailyTradingSimulator] Error saving store: " + e.getMessage());
+                logErr("[DailyTradingSimulator] Error saving store: " + e.getMessage());
             }
         }
     }
@@ -570,44 +588,66 @@ public class DailyTradingSimulator {
      * Run the daily scanner with optional force rescan.
      */
     public static void runDailyScanner(MonitoringAlphaVantageClient av, String interval, boolean forceRescan) {
+        final long runId;
         synchronized (lock) {
             if (store.scannerRunning) {
-                System.out.println("[DailyTradingSimulator] Scanner already running");
-                return;
+                if (!forceRescan) {
+                    log("[DailyTradingSimulator] Scanner already running");
+                    return;
+                }
+
+                // Force rescan: cancel the current scan (best-effort) and start a new one.
+                log("[DailyTradingSimulator] Force rescan while scanner running - canceling current scan");
+                Thread t = scannerThread;
+                if (t != null) {
+                    try { t.interrupt(); } catch (Exception ignore) {}
+                }
+                // Invalidate any in-flight scanner thread so it won't overwrite store state.
+                scannerRunId.incrementAndGet();
+                store.scannerRunning = false;
             }
+
+            runId = scannerRunId.incrementAndGet();
             store.scannerRunning = true;
-            store.scannerStatus = "Starting scanner...";
+            store.scannerStatus = forceRescan ? "Starting scanner (forced rescan)..." : "Starting scanner...";
             saveStore();
         }
 
-        new Thread(() -> {
-            System.out.println("[DailyTradingSimulator] 🚀 Scanner thread started!");
+        Thread thread = new Thread(() -> {
+            log("[DailyTradingSimulator] 🚀 Scanner thread started! runId=" + runId);
             try {
                 String today = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate().toString();
-                System.out.println("[DailyTradingSimulator] Today: " + today + ", forceRescan=" + forceRescan);
+                log("[DailyTradingSimulator] Today: " + today + ", forceRescan=" + forceRescan);
+
+                if (Thread.currentThread().isInterrupted() || scannerRunId.get() != runId) {
+                    log("[DailyTradingSimulator] Scanner canceled before start (runId=" + runId + ")");
+                    return;
+                }
                 
                 // Check if already scanned today (unless force rescan)
                 if (!forceRescan && today.equals(store.lastScanDate)) {
-                    System.out.println("[DailyTradingSimulator] Already scanned today");
+                    log("[DailyTradingSimulator] Already scanned today");
                     synchronized (lock) {
-                        store.scannerRunning = false;
-                        store.scannerStatus = "Already scanned today at " + store.lastScanTime;
-                        saveStore();
+                        if (scannerRunId.get() == runId) {
+                            store.scannerRunning = false;
+                            store.scannerStatus = "Already scanned today at " + store.lastScanTime;
+                            saveStore();
+                        }
                     }
                     return;
                 }
                 
                 if (forceRescan) {
-                    System.out.println("[DailyTradingSimulator] Force rescan requested");
+                    log("[DailyTradingSimulator] Force rescan requested");
                 }
 
                 // Get universe of tickers - scan more stocks for better coverage
-                System.out.println("[DailyTradingSimulator] Getting universe tickers...");
+                log("[DailyTradingSimulator] Getting universe tickers...");
                 List<String> allTickers = LongTermCandidateFinder.getUniverseTickers();
-                System.out.println("[DailyTradingSimulator] Got " + allTickers.size() + " tickers from universe");
+                log("[DailyTradingSimulator] Got " + allTickers.size() + " tickers from universe");
                 Collections.shuffle(allTickers);
                 List<String> toScan = allTickers.subList(0, Math.min(100, allTickers.size()));
-                System.out.println("[DailyTradingSimulator] Will scan " + toScan.size() + " tickers: " + toScan.subList(0, Math.min(5, toScan.size())));
+                log("[DailyTradingSimulator] Will scan " + toScan.size() + " tickers: " + toScan.subList(0, Math.min(5, toScan.size())));
 
                 synchronized (lock) {
                     store.scannedTickers = new ArrayList<>(toScan);
@@ -616,7 +656,7 @@ public class DailyTradingSimulator {
                     saveStore();
                 }
 
-                System.out.println("[DailyTradingSimulator] Starting scan of " + toScan.size() + " stocks");
+                log("[DailyTradingSimulator] Starting scan of " + toScan.size() + " stocks");
 
                 // Get SPY for market sentiment
                 double spyChange = 0.0;
@@ -639,10 +679,17 @@ public class DailyTradingSimulator {
                     try {
                         Thread.sleep(13000); // API rate limit
 
+                        if (Thread.currentThread().isInterrupted() || scannerRunId.get() != runId) {
+                            log("[DailyTradingSimulator] Scanner canceled mid-run (runId=" + runId + ")");
+                            return;
+                        }
+
                         synchronized (lock) {
-                            store.totalScannedToday++;
-                            store.scannerStatus = "Scanning " + symbol + " (" + store.totalScannedToday + "/" + toScan.size() + ")";
-                            saveStore();
+                            if (scannerRunId.get() == runId) {
+                                store.totalScannedToday++;
+                                store.scannerStatus = "Scanning " + symbol + " (" + store.totalScannedToday + "/" + toScan.size() + ")";
+                                saveStore();
+                            }
                         }
 
                         // Enhanced scan with momentum indicators
@@ -655,7 +702,7 @@ public class DailyTradingSimulator {
                         String sig = result.signal;
                         boolean isBuySignal = sig != null && (sig.contains("BUY") || sig.contains("BULLISH") || sig.contains("BREAKOUT"));
                         if (!isBuySignal) {
-                            System.out.println("[DailyTradingSimulator] ⏭️ " + symbol + " skipped: " + sig + " (not a BUY signal)");
+                            log("[DailyTradingSimulator] ⏭️ " + symbol + " skipped: " + sig + " (not a BUY signal)");
                             continue;
                         }
                         
@@ -678,7 +725,7 @@ public class DailyTradingSimulator {
                         // Variant filters will do the actual filtering
                         if (result.rvol >= 1.0 && result.rsi >= 30 && result.rsi <= 90) {
                             momentumCandidates.add(candidate);
-                            System.out.println("[DailyTradingSimulator] ✅ " + symbol + 
+                            log("[DailyTradingSimulator] ✅ " + symbol + 
                                 " candidate: Signal=" + result.signal +
                                 ", Score=" + candidate.momentumScore + 
                                 ", CCI=" + String.format("%.0f", candidate.cci) +
@@ -692,12 +739,15 @@ public class DailyTradingSimulator {
                             swingCandidates.add(candidate);
                         }
 
-                        System.out.println("[DailyTradingSimulator] " + symbol + ": " + result.signal + 
+                        log("[DailyTradingSimulator] " + symbol + ": " + result.signal + 
                             " CCI=" + String.format("%.0f", enhanced.cci) + 
                             " RS=" + String.format("%.2f", enhanced.rsRatio));
 
+                    } catch (InterruptedException e) {
+                        log("[DailyTradingSimulator] Scanner interrupted (runId=" + runId + ")");
+                        return;
                     } catch (Exception e) {
-                        System.err.println("[DailyTradingSimulator] Error scanning " + symbol + ": " + e.getMessage());
+                        logErr("[DailyTradingSimulator] Error scanning " + symbol + ": " + e.getMessage());
                     }
                 }
 
@@ -753,7 +803,7 @@ public class DailyTradingSimulator {
                             variantTradeCount.put(key, 1);
                             variantCount++;
                             totalMomentumTrades++;
-                            System.out.println("[DailyTradingSimulator] " + variant.id + " BUY: " + c.ticker + 
+                            log("[DailyTradingSimulator] " + variant.id + " BUY: " + c.ticker + 
                                 " @ $" + c.result.currentPrice + " Score=" + c.momentumScore);
                         }
                     }
@@ -777,7 +827,7 @@ public class DailyTradingSimulator {
                             variantTradeCount.put(key, 1);
                             variantCount++;
                             totalSwingTrades++;
-                            System.out.println("[DailyTradingSimulator] " + variant.id + " BUY: " + c.ticker + 
+                            log("[DailyTradingSimulator] " + variant.id + " BUY: " + c.ticker + 
                                 " @ $" + c.result.currentPrice);
                         }
                     }
@@ -803,7 +853,7 @@ public class DailyTradingSimulator {
                                 variantCount++;
                                 totalIntradayTrades++;
                                 double vwapPct = (c.result.currentPrice - c.result.vwap) / c.result.vwap * 100;
-                                System.out.println("[DailyTradingSimulator] " + variant.id + " BUY: " + c.ticker + 
+                                log("[DailyTradingSimulator] " + variant.id + " BUY: " + c.ticker + 
                                     " @ $" + c.result.currentPrice + " VWAP=$" + String.format("%.2f", c.result.vwap) +
                                     " (+" + String.format("%.1f%%", vwapPct) + " above VWAP)");
                             }
@@ -811,26 +861,34 @@ public class DailyTradingSimulator {
                     }
 
                     ZonedDateTime now = ZonedDateTime.now(ZoneId.of("America/New_York"));
-                    store.lastScanDate = today;
-                    store.lastScanTime = now.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"));
-                    store.scannerRunning = false;
-                    store.scannerStatus = "Completed. " + totalMomentumTrades + " Momentum + " + 
-                        totalSwingTrades + " Swing + " + totalIntradayTrades + " Intraday VWAP trades";
-                    saveStore();
+                    if (scannerRunId.get() == runId) {
+                        store.lastScanDate = today;
+                        store.lastScanTime = now.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"));
+                        store.scannerRunning = false;
+                        store.scannerStatus = "Completed. " + totalMomentumTrades + " Momentum + " +
+                            totalSwingTrades + " Swing + " + totalIntradayTrades + " Intraday VWAP trades";
+                        saveStore();
+                    }
                 }
 
-                System.out.println("[DailyTradingSimulator] Scanner complete: " + totalMomentumTrades + 
+                log("[DailyTradingSimulator] Scanner complete: " + totalMomentumTrades + 
                     " Momentum, " + totalSwingTrades + " Swing, " + totalIntradayTrades + " Intraday VWAP");
 
             } catch (Exception e) {
-                System.err.println("[DailyTradingSimulator] Scanner error: " + e.getMessage());
+                logErr("[DailyTradingSimulator] Scanner error: " + e.getMessage());
                 synchronized (lock) {
-                    store.scannerRunning = false;
-                    store.scannerStatus = "Error: " + e.getMessage();
-                    saveStore();
+                    if (scannerRunId.get() == runId) {
+                        store.scannerRunning = false;
+                        store.scannerStatus = "Error: " + e.getMessage();
+                        saveStore();
+                    }
                 }
             }
-        }).start();
+        });
+        thread.setName("daily-trading-scanner-" + runId);
+        thread.setDaemon(true);
+        scannerThread = thread;
+        thread.start();
     }
 
     /**
@@ -1206,138 +1264,120 @@ public class DailyTradingSimulator {
         
         return trade;
     }
-    
-    /**
-     * Check if a candidate matches a momentum variant's entry filters
-     */
+
     private static boolean matchesVariantFilters(ScanCandidate c, VariantConfig variant) {
         VariantEntryFilters f = variant.entryFilters;
         if (f == null) return true;
-        
-        // Check RVOL
+
         if (c.result.rvol < f.rvolMin) {
-            System.out.println("[Filter] " + c.ticker + " rejected by " + variant.id + ": RVOL " + c.result.rvol + " < " + f.rvolMin);
+            log("[VariantFilter] " + c.ticker + " rejected by " + variant.id + ": RVOL " + String.format("%.1f", c.result.rvol) + " < " + f.rvolMin);
             return false;
         }
-        
-        // Check RSI range
+
         if (c.result.rsi < f.rsiMin || c.result.rsi > f.rsiMax) {
-            System.out.println("[Filter] " + c.ticker + " rejected by " + variant.id + ": RSI " + c.result.rsi + " not in [" + f.rsiMin + "-" + f.rsiMax + "]");
+            log("[VariantFilter] " + c.ticker + " rejected by " + variant.id +
+                ": RSI " + String.format("%.0f", c.result.rsi) + " not in [" + f.rsiMin + "-" + f.rsiMax + "]");
             return false;
         }
-        
-        // Check CCI range
+
         if (c.cci < f.cciMin || c.cci > f.cciMax) {
-            System.out.println("[Filter] " + c.ticker + " rejected by " + variant.id + ": CCI " + c.cci + " not in [" + f.cciMin + "-" + f.cciMax + "]");
+            log("[VariantFilter] " + c.ticker + " rejected by " + variant.id +
+                ": CCI " + String.format("%.0f", c.cci) + " not in [" + f.cciMin + "-" + f.cciMax + "]");
             return false;
         }
-        
-        // Check RS ratio
+
         if (c.rsRatio < f.rsMin) {
-            System.out.println("[Filter] " + c.ticker + " rejected by " + variant.id + ": RS " + c.rsRatio + " < " + f.rsMin);
+            log("[VariantFilter] " + c.ticker + " rejected by " + variant.id +
+                ": RS " + String.format("%.2f", c.rsRatio) + " < " + f.rsMin);
             return false;
         }
-        
-        // Check MA crossover requirement
+
         if (f.maCrossoverRequired && !c.maCrossover) {
-            System.out.println("[Filter] " + c.ticker + " rejected by " + variant.id + ": MA crossover required but not present");
+            log("[VariantFilter] " + c.ticker + " rejected by " + variant.id + ": MA crossover required");
             return false;
         }
-        
-        System.out.println("[Filter] ✅ " + c.ticker + " MATCHED " + variant.id);
+
+        if (f.sma200Required) {
+            log("[VariantFilter] " + c.ticker + " note: " + variant.id + " has sma200Required=true but SMA200 is not available in ScanCandidate; ignoring this filter");
+        }
+
         return true;
     }
-    
-    /**
-     * Check if a candidate matches a swing variant's entry filters
-     */
+
     private static boolean matchesSwingVariantFilters(ScanCandidate c, VariantConfig variant) {
-        VariantEntryFilters f = variant.entryFilters;
-        if (f == null) return true;
-        
-        // Check RVOL
-        if (c.result.rvol < f.rvolMin) return false;
-        
-        // Check RSI range
-        if (c.result.rsi < f.rsiMin || c.result.rsi > f.rsiMax) return false;
-        
-        // Check RS ratio
-        if (c.rsRatio < f.rsMin) return false;
-        
-        return true;
+        return matchesVariantFilters(c, variant);
     }
-    
+
     /**
      * Check if a candidate matches an intraday VWAP variant's entry filters
      */
     private static boolean matchesIntradayVariantFilters(ScanCandidate c, IntradayVariantConfig variant, IntradayVariantsConfig config) {
         IntradayEntryFilters f = variant.entryFilters;
         if (f == null) return true;
-        
+
         // VWAP is the core filter for intraday
         if (f.vwapRequired && !c.result.aboveVwap) {
-            System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + ": Not above VWAP");
+            log("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + ": Not above VWAP");
             return false;
         }
-        
+
         // Check distance from VWAP (price must be at least X% above VWAP)
         if (c.result.vwap > 0) {
             double vwapPct = (c.result.currentPrice - c.result.vwap) / c.result.vwap * 100;
             if (vwapPct < f.priceAboveVwapPct) {
-                System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
+                log("[IntradayFilter] " + c.ticker + " rejected by " + variant.id +
                     ": VWAP distance " + String.format("%.2f%%", vwapPct) + " < " + f.priceAboveVwapPct + "%");
                 return false;
             }
             // Don't chase - reject if too far from VWAP (using intradayPriceChangeMaxPct as proxy)
             if (vwapPct > f.intradayPriceChangeMaxPct) {
-                System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
+                log("[IntradayFilter] " + c.ticker + " rejected by " + variant.id +
                     ": Too far from VWAP " + String.format("%.2f%%", vwapPct) + " > " + f.intradayPriceChangeMaxPct + "%");
                 return false;
             }
         }
-        
+
         // Check RVOL
         if (c.result.rvol < f.rvolMin) {
-            System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
-                ": RVOL " + String.format("%.1f", c.result.rvol) + " < " + f.rvolMin);
+            log("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + ": RVOL " + String.format("%.1f", c.result.rvol) + " < " + f.rvolMin);
             return false;
         }
-        
+
         // Check RSI range
         if (c.result.rsi < f.rsiMin || c.result.rsi > f.rsiMax) {
-            System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
+            log("[IntradayFilter] " + c.ticker + " rejected by " + variant.id +
                 ": RSI " + String.format("%.0f", c.result.rsi) + " not in [" + f.rsiMin + "-" + f.rsiMax + "]");
             return false;
         }
-        
+
         // Check CCI range
         if (c.cci < f.cciMin || c.cci > f.cciMax) {
-            System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
+            log("[IntradayFilter] " + c.ticker + " rejected by " + variant.id +
                 ": CCI " + String.format("%.0f", c.cci) + " not in [" + f.cciMin + "-" + f.cciMax + "]");
             return false;
         }
-        
+
         // Check RS ratio
         if (c.rsRatio < f.rsMin) {
-            System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
+            log("[IntradayFilter] " + c.ticker + " rejected by " + variant.id +
                 ": RS " + String.format("%.2f", c.rsRatio) + " < " + f.rsMin);
             return false;
         }
-        
+
         // Check intraday price change range
         double priceChangePct = c.result.priceChangePct;
         if (priceChangePct < f.intradayPriceChangeMinPct || priceChangePct > f.intradayPriceChangeMaxPct) {
-            System.out.println("[IntradayFilter] " + c.ticker + " rejected by " + variant.id + 
-                ": Price change " + String.format("%.1f%%", priceChangePct) + 
+            log("[IntradayFilter] " + c.ticker + " rejected by " + variant.id +
+                ": Price change " + String.format("%.1f%%", priceChangePct) +
                 " not in [" + f.intradayPriceChangeMinPct + "-" + f.intradayPriceChangeMaxPct + "]");
             return false;
         }
-        
-        System.out.println("[IntradayFilter] ✅ " + c.ticker + " MATCHED " + variant.id + 
+
+        log("[IntradayFilter] ✅ " + c.ticker + " MATCHED " + variant.id +
             " (VWAP=$" + String.format("%.2f", c.result.vwap) + ", RVOL=" + String.format("%.1f", c.result.rvol) + ")");
         return true;
     }
-    
+
     /**
      * Create an intraday VWAP trade with variant-specific risk management
      */
@@ -1346,7 +1386,7 @@ public class DailyTradingSimulator {
             c.ticker, Strategy.INTRADAY, c.result.currentPrice,
             c.result.signal, c.result.rvol, c.result.rsi
         );
-        
+
         // Add enhanced indicators
         trade.cci = c.cci;
         trade.cciBreakout = c.cciBreakout;
@@ -1357,28 +1397,28 @@ public class DailyTradingSimulator {
         trade.pivotR2 = c.pivotR2;
         trade.pivotS1 = c.pivotS1;
         trade.momentumScore = c.momentumScore;
-        
+
         // Assign variant ID
         trade.variantId = variant.id;
         trade.variantName = variant.name;
-        
+
         // VWAP-based risk management
         double entryPrice = c.result.currentPrice;
         double vwap = c.result.vwap;
         IntradayRiskManagement rm = variant.riskManagement;
-        
+
         // Stop loss: below VWAP or max stop, whichever is tighter
         double stopBelowVwap = vwap * (1 - rm.stopLossBelowVwapPct / 100.0);
         double stopMaxPct = entryPrice * (1 - rm.stopLossMaxPct / 100.0);
         trade.stopLossPrice = Math.max(stopBelowVwap, stopMaxPct);
-        
+
         // Take profit based on variant config
         trade.takeProfitPrice = entryPrice * (1 + rm.takeProfitPct / 100.0);
-        
+
         // Entry reason
         double vwapPct = (entryPrice - vwap) / vwap * 100;
         trade.entryReason = "VWAP Trend (" + String.format("+%.1f%%", vwapPct) + " above VWAP); " + c.entryReason;
-        
+
         return trade;
     }
 
@@ -1389,11 +1429,11 @@ public class DailyTradingSimulator {
     public static void monitorPositions(MonitoringAlphaVantageClient av) {
         List<SimulatedTrade> openTrades = getOpenTrades();
         if (openTrades.isEmpty()) {
-            System.out.println("[Monitor] No open positions to monitor");
+            log("[Monitor] No open positions to monitor");
             return;
         }
 
-        System.out.println("[Monitor] 📊 Checking " + openTrades.size() + " open positions...");
+        log("[Monitor] 📊 Checking " + openTrades.size() + " open positions...");
 
         for (SimulatedTrade trade : openTrades) {
             try {
@@ -1418,7 +1458,7 @@ public class DailyTradingSimulator {
                     
                     // Log price update
                     String priceChange = newPrice >= oldPrice ? "📈" : "📉";
-                    System.out.println("[Monitor] " + trade.ticker + " " + priceChange + 
+                    log("[Monitor] " + trade.ticker + " " + priceChange + 
                         " $" + String.format("%.2f", oldPrice) + " → $" + String.format("%.2f", newPrice) +
                         " (P/L: " + String.format("%+.1f%%", trade.profitLossPct) + ")" +
                         " [" + (trade.variantId != null ? trade.variantId : trade.strategy) + "]");
@@ -1426,7 +1466,7 @@ public class DailyTradingSimulator {
                     ExitType exitCondition = trade.checkExitCondition();
                     if (exitCondition != ExitType.HOLDING) {
                         trade.closePosition(exitCondition);
-                        System.out.println("[Monitor] 🔔 CLOSED " + trade.ticker + 
+                        log("[Monitor] 🔔 CLOSED " + trade.ticker + 
                             " via " + exitCondition.getDisplay() + 
                             " @ $" + String.format("%.2f", newPrice) +
                             " P/L: " + String.format("%.1f%%", trade.profitLossPct));
@@ -1439,10 +1479,10 @@ public class DailyTradingSimulator {
                 }
 
             } catch (Exception e) {
-                System.err.println("[Monitor] ❌ Error checking " + trade.ticker + ": " + e.getMessage());
+                logErr("[Monitor] ❌ Error checking " + trade.ticker + ": " + e.getMessage());
             }
         }
-        System.out.println("[Monitor] ✅ Check complete\n");
+        log("[Monitor] ✅ Check complete\n");
     }
 
     /**
@@ -1450,7 +1490,7 @@ public class DailyTradingSimulator {
      */
     public static void startMonitoring(MonitoringAlphaVantageClient av) {
         if (scheduler != null && !scheduler.isShutdown()) {
-            System.out.println("[DailyTradingSimulator] Monitoring already running");
+            log("[DailyTradingSimulator] Monitoring already running");
             return;
         }
 
@@ -1468,11 +1508,11 @@ public class DailyTradingSimulator {
                     monitorPositions(av);
                 }
             } catch (Exception e) {
-                System.err.println("[DailyTradingSimulator] Monitoring error: " + e.getMessage());
+                logErr("[DailyTradingSimulator] Monitoring error: " + e.getMessage());
             }
         }, 0, 15, TimeUnit.MINUTES);
 
-        System.out.println("[DailyTradingSimulator] Started 15-minute monitoring");
+        log("[DailyTradingSimulator] Started 15-minute monitoring");
     }
 
     /**
@@ -1482,7 +1522,7 @@ public class DailyTradingSimulator {
         if (scheduler != null) {
             scheduler.shutdown();
             scheduler = null;
-            System.out.println("[DailyTradingSimulator] Stopped monitoring");
+            log("[DailyTradingSimulator] Stopped monitoring");
         }
     }
 
@@ -1512,7 +1552,7 @@ public class DailyTradingSimulator {
                     saveStore();
                 }
                 
-                System.out.println("[DailyTradingSimulator] EOD CLOSE " + trade.ticker + 
+                log("[DailyTradingSimulator] EOD CLOSE " + trade.ticker + 
                     " @ $" + String.format("%.2f", trade.exitPrice) +
                     " P/L: " + String.format("%.1f%%", trade.profitLossPct));
 
@@ -1521,7 +1561,7 @@ public class DailyTradingSimulator {
                 Thread.sleep(13000); // API rate limit
                 
             } catch (Exception e) {
-                System.err.println("[DailyTradingSimulator] Error closing " + trade.ticker + ": " + e.getMessage());
+                logErr("[DailyTradingSimulator] Error closing " + trade.ticker + ": " + e.getMessage());
             }
         }
     }
@@ -1571,7 +1611,7 @@ public class DailyTradingSimulator {
             store.variantPerformance.clear();
             saveStore();
         }
-        System.out.println("[DailyTradingSimulator] All trades cleared, scanner reset");
+        log("[DailyTradingSimulator] All trades cleared, scanner reset");
     }
 
     /**
@@ -1639,7 +1679,7 @@ public class DailyTradingSimulator {
      */
     public static void startDailyScheduler(MonitoringAlphaVantageClient av, String interval) {
         if (dailyScheduler != null && !dailyScheduler.isShutdown()) {
-            System.out.println("[DailyTradingSimulator] Daily scheduler already running");
+            log("[DailyTradingSimulator] Daily scheduler already running");
             return;
         }
 
@@ -1650,11 +1690,11 @@ public class DailyTradingSimulator {
             try {
                 ZonedDateTime now = ZonedDateTime.now(NY_ZONE);
                 if (!isUsMarketOpenToday(now)) {
-                    System.out.println("[DailyTradingSimulator] Skipping - US market is closed");
+                    log("[DailyTradingSimulator] Skipping - US market is closed");
                     return;
                 }
                 
-                System.out.println("[DailyTradingSimulator] ⏰ Daily scan triggered at " + 
+                log("[DailyTradingSimulator] ⏰ Daily scan triggered at " + 
                     now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " ET");
                 
                 runDailyScanner(av, interval);
@@ -1663,7 +1703,7 @@ public class DailyTradingSimulator {
                 startMonitoring(av);
                 
             } catch (Exception e) {
-                System.err.println("[DailyTradingSimulator] Daily scan error: " + e.getMessage());
+                logErr("[DailyTradingSimulator] Daily scan error: " + e.getMessage());
             }
         };
 
@@ -1674,8 +1714,8 @@ public class DailyTradingSimulator {
         dailyScheduler.scheduleAtFixedRate(dailyScanTask, initialDelay, oneDayMs, TimeUnit.MILLISECONDS);
         
         ZonedDateTime nextRun = ZonedDateTime.now(NY_ZONE).plus(Duration.ofMillis(initialDelay));
-        System.out.println("[DailyTradingSimulator] 📅 Daily scheduler started");
-        System.out.println("[DailyTradingSimulator] 📅 Next scan scheduled at: " + 
+        log("[DailyTradingSimulator] 📅 Daily scheduler started");
+        log("[DailyTradingSimulator] 📅 Next scan scheduled at: " + 
             nextRun.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " ET");
         
         synchronized (lock) {
@@ -1692,7 +1732,7 @@ public class DailyTradingSimulator {
         if (dailyScheduler != null) {
             dailyScheduler.shutdown();
             dailyScheduler = null;
-            System.out.println("[DailyTradingSimulator] Daily scheduler stopped");
+            log("[DailyTradingSimulator] Daily scheduler stopped");
             
             synchronized (lock) {
                 store.scannerStatus = "Daily scheduler stopped";
@@ -1751,10 +1791,10 @@ public class DailyTradingSimulator {
                 .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                 .build();
             HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
-            System.out.println("[DailyTradingSimulator][Discord] Sent notification, status: " + resp.statusCode());
+            log("[DailyTradingSimulator][Discord] Sent notification, status: " + resp.statusCode());
             return resp.statusCode() == 200 || resp.statusCode() == 204;
         } catch (Exception e) {
-            System.err.println("[DailyTradingSimulator][Discord] Failed to send: " + e.getMessage());
+            logErr("[DailyTradingSimulator][Discord] Failed to send: " + e.getMessage());
             return false;
         }
     }
