@@ -37,6 +37,10 @@ public class DailyTradingSimulator {
     private static final int MA_SLOW_PERIOD = 21;              // Slow MA for crossover
     private static final double RS_MIN_RATIO = 1.0;            // Stock must be stronger than market (RS > 1.0)
     private static final double RVOL_MIN_FOR_VALID_BREAKOUT = 1.5; // Minimum RVOL to avoid bull traps
+
+    // Market regime gate (SPY)
+    private static final double MARKET_WAIT_SPY_DROP_PCT = -0.5; // If SPY is down more than -0.5%, do not open new positions
+    private static final int SPY_SMA_PERIOD = 20;
     
     private static ScheduledExecutorService scheduler;
     private static ScheduledExecutorService dailyScheduler;
@@ -204,6 +208,99 @@ public class DailyTradingSimulator {
         public int totalScannedToday;
         public List<String> scannedTickers = new ArrayList<>();
         public Map<String, VariantPerformance> variantPerformance = new LinkedHashMap<>();
+
+        // Market regime (SPY)
+        public String marketCheckedAtNy;
+        public Double spyChangePct;
+        public Double spyPrice;
+        public Double spyPrevClose;
+        public Double spySma20;
+        public Boolean spyAbovePrevClose;
+        public Boolean spyAboveSma20;
+        public Boolean marketWaitMode;
+        public String marketWaitReason;
+    }
+
+    private static class SpyMarketRegime {
+        double price;
+        double prevClose;
+        double changePct;
+        Double sma20;
+        boolean abovePrevClose;
+        Boolean aboveSma20;
+        boolean waitMode;
+        String reason;
+    }
+
+    private static SpyMarketRegime computeSpyMarketRegime(MonitoringAlphaVantageClient av) {
+        SpyMarketRegime r = new SpyMarketRegime();
+        r.reason = "";
+        try {
+            JsonNode spyQuote = av.globalQuote("SPY");
+            if (spyQuote != null) {
+                JsonNode gq = spyQuote.path("Global Quote");
+                if (gq == null || gq.isMissingNode()) {
+                    gq = spyQuote.path("Global Quote - DATA DELAYED BY 15 MINUTES");
+                }
+                r.price = parseDouble(gq.path("05. price").asText(""));
+                r.prevClose = parseDouble(gq.path("08. previous close").asText(""));
+                String pct = gq.path("10. change percent").asText("").replace("%", "").trim();
+                if (!pct.isBlank()) r.changePct = parseDouble(pct);
+            }
+        } catch (Exception ignore) {}
+
+        // Fallback if prev close missing
+        if (r.prevClose <= 0) r.prevClose = r.price;
+        r.abovePrevClose = r.price > r.prevClose;
+
+        // SMA20 from daily closes
+        try {
+            JsonNode daily = av.timeSeriesDaily("SPY");
+            if (daily != null) {
+                JsonNode ts = daily.path("Time Series (Daily)");
+                if (ts != null && !ts.isMissingNode() && ts.fields().hasNext()) {
+                    List<String> keys = new ArrayList<>();
+                    ts.fieldNames().forEachRemaining(keys::add);
+                    Collections.sort(keys, Collections.reverseOrder());
+                    List<Double> closes = new ArrayList<>();
+                    for (String k : keys) {
+                        if (closes.size() >= SPY_SMA_PERIOD) break;
+                        JsonNode day = ts.path(k);
+                        if (day == null || day.isMissingNode()) continue;
+                        double c = parseDouble(day.path("4. close").asText(""));
+                        if (c > 0) closes.add(c);
+                    }
+                    if (closes.size() >= SPY_SMA_PERIOD) {
+                        double sum = 0.0;
+                        for (int i = 0; i < SPY_SMA_PERIOD; i++) sum += closes.get(i);
+                        r.sma20 = sum / SPY_SMA_PERIOD;
+                        r.aboveSma20 = r.price > r.sma20;
+                    }
+                }
+            }
+        } catch (Exception ignore) {}
+
+        boolean waitByDrop = r.changePct <= MARKET_WAIT_SPY_DROP_PCT;
+        boolean waitByTrend;
+        if (r.aboveSma20 != null) {
+            waitByTrend = !r.aboveSma20;
+        } else {
+            // If we cannot compute SMA20, fall back to previous close
+            waitByTrend = !r.abovePrevClose;
+        }
+        r.waitMode = waitByDrop || waitByTrend;
+        if (r.waitMode) {
+            if (waitByDrop) {
+                r.reason = "WAIT: SPY down " + String.format("%.2f", r.changePct) + "%";
+            } else {
+                r.reason = (r.aboveSma20 != null)
+                    ? "WAIT: SPY below SMA" + SPY_SMA_PERIOD
+                    : "WAIT: SPY below prev close";
+            }
+        } else {
+            r.reason = "GO: Market OK";
+        }
+        return r;
     }
     
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -269,6 +366,7 @@ public class DailyTradingSimulator {
     // Momentum Variants Configuration Classes
     private static final Path VARIANTS_CONFIG_PATH = Paths.get("momentum-variants.json");
     private static final Path INTRADAY_VARIANTS_CONFIG_PATH = Paths.get("intraday-variants.json");
+    private static final Path SUCCESS_2026_CONFIG_PATH = Paths.get("momentum-success-2026.json");
     
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class MomentumVariantsConfig {
@@ -449,6 +547,59 @@ public class DailyTradingSimulator {
         public int cciWeight = 25;
         public int rsWeight = 25;
         public int volumeWeight = 20;
+    }
+
+    // Success 2026 Configuration with Market Guard
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Success2026Config {
+        public String description;
+        public boolean enabled = true;
+        public int delayMinutes = 15;
+        public MarketGuardConfig marketGuard = new MarketGuardConfig();
+        public List<VariantConfig> variants = new ArrayList<>();
+        public ExitRulesConfig exitRules = new ExitRulesConfig();
+        
+        public static Success2026Config load() {
+            try {
+                if (Files.exists(SUCCESS_2026_CONFIG_PATH)) {
+                    ObjectMapper mapper = new ObjectMapper();
+                    return mapper.readValue(SUCCESS_2026_CONFIG_PATH.toFile(), Success2026Config.class);
+                }
+            } catch (Exception e) {
+                logErr("[DailyTradingSimulator] Error loading success-2026 config: " + e.getMessage());
+            }
+            return new Success2026Config(); // Return default (disabled)
+        }
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class MarketGuardConfig {
+        public boolean spyFilterEnabled = true;
+        public int spySmaPeriod = 20;
+        public double spyMinVwapDistancePct = 0.1;
+        public double maxSpyDailyDropPct = -0.7;
+        public String description;
+        
+        public boolean isMarketSafe(double spyPrice, double spyVwap, double spySma20, double spyDailyChangePct) {
+            if (!spyFilterEnabled) return true;
+            if (spyVwap > 0 && spyPrice < spyVwap) return false;
+            if (spySma20 > 0 && spyPrice < spySma20) return false;
+            if (spyDailyChangePct < maxSpyDailyDropPct) return false;
+            return true;
+        }
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ExitRulesConfig {
+        public List<ExitRuleConfig> rules = new ArrayList<>();
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ExitRuleConfig {
+        public String id;
+        public String name;
+        public String condition;
+        public String action;
     }
 
     private static SimulatorStore store = new SimulatorStore();
@@ -641,13 +792,12 @@ public class DailyTradingSimulator {
                     log("[DailyTradingSimulator] Force rescan requested");
                 }
 
-                // Get universe of tickers - scan more stocks for better coverage
+                // Get universe of tickers - scan ALL stocks for complete coverage
                 log("[DailyTradingSimulator] Getting universe tickers...");
                 List<String> allTickers = LongTermCandidateFinder.getUniverseTickers();
                 log("[DailyTradingSimulator] Got " + allTickers.size() + " tickers from universe");
-                Collections.shuffle(allTickers);
-                List<String> toScan = allTickers.subList(0, Math.min(100, allTickers.size()));
-                log("[DailyTradingSimulator] Will scan " + toScan.size() + " tickers: " + toScan.subList(0, Math.min(5, toScan.size())));
+                List<String> toScan = new ArrayList<>(allTickers); // Scan ALL tickers
+                log("[DailyTradingSimulator] Will scan ALL " + toScan.size() + " tickers");
 
                 synchronized (lock) {
                     store.scannedTickers = new ArrayList<>(toScan);
@@ -659,18 +809,22 @@ public class DailyTradingSimulator {
                 log("[DailyTradingSimulator] Starting scan of " + toScan.size() + " stocks");
 
                 // Get SPY for market sentiment
-                double spyChange = 0.0;
-                try {
-                    JsonNode spyQuote = av.globalQuote("SPY");
-                    if (spyQuote != null) {
-                        JsonNode gq = spyQuote.path("Global Quote");
-                        if (gq == null || gq.isMissingNode()) {
-                            gq = spyQuote.path("Global Quote - DATA DELAYED BY 15 MINUTES");
-                        }
-                        String pct = gq.path("10. change percent").asText("").replace("%", "").trim();
-                        if (!pct.isBlank()) spyChange = Double.parseDouble(pct);
+                SpyMarketRegime spyRegime = computeSpyMarketRegime(av);
+                double spyChange = spyRegime.changePct;
+                synchronized (lock) {
+                    if (scannerRunId.get() == runId) {
+                        store.marketCheckedAtNy = ZonedDateTime.now(NY_ZONE).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+                        store.spyChangePct = spyRegime.changePct;
+                        store.spyPrice = spyRegime.price;
+                        store.spyPrevClose = spyRegime.prevClose;
+                        store.spySma20 = spyRegime.sma20;
+                        store.spyAbovePrevClose = spyRegime.abovePrevClose;
+                        store.spyAboveSma20 = spyRegime.aboveSma20;
+                        store.marketWaitMode = spyRegime.waitMode;
+                        store.marketWaitReason = spyRegime.reason;
+                        saveStore();
                     }
-                } catch (Exception ignore) {}
+                }
 
                 List<ScanCandidate> momentumCandidates = new ArrayList<>();
                 List<ScanCandidate> swingCandidates = new ArrayList<>();
@@ -773,106 +927,156 @@ public class DailyTradingSimulator {
                     return Double.compare(bScore, aScore);
                 });
 
-                // Load variant configurations for A/B testing
-                MomentumVariantsConfig variantsConfig = MomentumVariantsConfig.load();
+                // Load variant configs
+                MomentumVariantsConfig momentumConfig = MomentumVariantsConfig.load();
                 IntradayVariantsConfig intradayConfig = IntradayVariantsConfig.load();
-                
-                // Track trades per variant
-                Map<String, Integer> variantTradeCount = new HashMap<>();
+                Success2026Config success2026Config = Success2026Config.load();
+
                 int totalMomentumTrades = 0;
                 int totalSwingTrades = 0;
                 int totalIntradayTrades = 0;
+                int totalSuccess2026Trades = 0;
 
-                synchronized (lock) {
-                    // Process each MOMENTUM variant
-                    for (VariantConfig variant : variantsConfig.variants) {
+                // Assign candidates to variants (prevent duplicates per (ticker, variantId))
+                Map<String, Integer> variantTradeCount = new HashMap<>();
+
+                // Process each MOMENTUM variant
+                if (momentumConfig.enabled) {
+                    for (VariantConfig variant : momentumConfig.variants) {
                         int variantCount = 0;
                         for (ScanCandidate c : momentumCandidates) {
                             if (variantCount >= variant.stocksPerVariant) break;
-                            
-                            // Check if candidate matches this variant's filters
                             if (!matchesVariantFilters(c, variant)) continue;
-                            
-                            // Check if this ticker already assigned to this variant today
                             String key = c.ticker + "_" + variant.id;
                             if (variantTradeCount.containsKey(key)) continue;
-                            
+
+                            if (spyRegime.waitMode) {
+                                log("[DailyTradingSimulator] WAIT MODE (" + spyRegime.reason + ") - skipping new MOMENTUM position for " + c.ticker);
+                                continue;
+                            }
+
                             SimulatedTrade trade = createEnhancedTrade(c, Strategy.MOMENTUM, variant);
                             store.trades.add(trade);
                             notifyOpenPosition(trade);
                             variantTradeCount.put(key, 1);
                             variantCount++;
                             totalMomentumTrades++;
-                            log("[DailyTradingSimulator] " + variant.id + " BUY: " + c.ticker + 
+                            log("[DailyTradingSimulator] " + variant.id + " BUY: " + c.ticker +
                                 " @ $" + c.result.currentPrice + " Score=" + c.momentumScore);
                         }
                     }
+                }
 
-                    // Process each SWING variant
-                    for (VariantConfig variant : variantsConfig.swingVariants) {
+                // Process each SWING variant
+                if (momentumConfig.enabled) {
+                    for (VariantConfig variant : momentumConfig.swingVariants) {
                         int variantCount = 0;
                         for (ScanCandidate c : swingCandidates) {
                             if (variantCount >= variant.stocksPerVariant) break;
-                            
-                            // Check if candidate matches this variant's filters
                             if (!matchesSwingVariantFilters(c, variant)) continue;
-                            
-                            // Check if this ticker already assigned to this variant today
                             String key = c.ticker + "_" + variant.id;
                             if (variantTradeCount.containsKey(key)) continue;
-                            
+
+                            if (spyRegime.waitMode) {
+                                log("[DailyTradingSimulator] WAIT MODE (" + spyRegime.reason + ") - skipping new SWING position for " + c.ticker);
+                                continue;
+                            }
+
                             SimulatedTrade trade = createEnhancedTrade(c, Strategy.SWING, variant);
                             store.trades.add(trade);
                             notifyOpenPosition(trade);
                             variantTradeCount.put(key, 1);
                             variantCount++;
                             totalSwingTrades++;
-                            log("[DailyTradingSimulator] " + variant.id + " BUY: " + c.ticker + 
+                            log("[DailyTradingSimulator] " + variant.id + " BUY: " + c.ticker +
                                 " @ $" + c.result.currentPrice);
                         }
                     }
+                }
+
+                // Process each INTRADAY VWAP variant
+                if (intradayConfig.enabled) {
+                    for (IntradayVariantConfig variant : intradayConfig.variants) {
+                        int variantCount = 0;
+                        for (ScanCandidate c : intradayCandidates) {
+                            if (variantCount >= variant.stocksPerVariant) break;
+                            if (!matchesIntradayVariantFilters(c, variant, intradayConfig)) continue;
+                            String key = c.ticker + "_" + variant.id;
+                            if (variantTradeCount.containsKey(key)) continue;
+
+                            if (spyRegime.waitMode) {
+                                log("[DailyTradingSimulator] WAIT MODE (" + spyRegime.reason + ") - skipping new INTRADAY position for " + c.ticker);
+                                continue;
+                            }
+
+                            SimulatedTrade trade = createIntradayTrade(c, variant);
+                            store.trades.add(trade);
+                            notifyOpenPosition(trade);
+                            variantTradeCount.put(key, 1);
+                            variantCount++;
+                            totalIntradayTrades++;
+                            double vwapPct = (c.result.currentPrice - c.result.vwap) / c.result.vwap * 100;
+                            log("[DailyTradingSimulator] " + variant.id + " BUY: " + c.ticker +
+                                " @ $" + c.result.currentPrice + " VWAP=$" + String.format("%.2f", c.result.vwap) +
+                                " (+" + String.format("%.1f%%", vwapPct) + " above VWAP)");
+                        }
+                    }
+                }
+
+                // Process SUCCESS 2026 variants (with enhanced market guard)
+                if (success2026Config.enabled) {
+                    // Check market guard from config (uses stricter thresholds)
+                    boolean marketSafe = success2026Config.marketGuard.isMarketSafe(
+                        spyRegime.price, 
+                        0, // VWAP not available from daily data
+                        spyRegime.sma20 != null ? spyRegime.sma20 : 0,
+                        spyRegime.changePct
+                    );
                     
-                    // Process each INTRADAY VWAP variant
-                    if (intradayConfig.enabled) {
-                        for (IntradayVariantConfig variant : intradayConfig.variants) {
+                    if (!marketSafe) {
+                        log("[DailyTradingSimulator] SUCCESS_2026 Market Guard BLOCKED - SPY conditions not met");
+                    } else {
+                        for (VariantConfig variant : success2026Config.variants) {
                             int variantCount = 0;
-                            for (ScanCandidate c : intradayCandidates) {
+                            for (ScanCandidate c : momentumCandidates) {
                                 if (variantCount >= variant.stocksPerVariant) break;
-                                
-                                // Check if candidate matches this variant's filters
-                                if (!matchesIntradayVariantFilters(c, variant, intradayConfig)) continue;
-                                
-                                // Check if this ticker already assigned to this variant today
+                                if (!matchesVariantFilters(c, variant)) continue;
                                 String key = c.ticker + "_" + variant.id;
                                 if (variantTradeCount.containsKey(key)) continue;
-                                
-                                SimulatedTrade trade = createIntradayTrade(c, variant);
+
+                                if (spyRegime.waitMode) {
+                                    log("[DailyTradingSimulator] WAIT MODE (" + spyRegime.reason + ") - skipping SUCCESS_2026 position for " + c.ticker);
+                                    continue;
+                                }
+
+                                SimulatedTrade trade = createEnhancedTrade(c, Strategy.MOMENTUM, variant);
                                 store.trades.add(trade);
                                 notifyOpenPosition(trade);
                                 variantTradeCount.put(key, 1);
                                 variantCount++;
-                                totalIntradayTrades++;
-                                double vwapPct = (c.result.currentPrice - c.result.vwap) / c.result.vwap * 100;
-                                log("[DailyTradingSimulator] " + variant.id + " BUY: " + c.ticker + 
-                                    " @ $" + c.result.currentPrice + " VWAP=$" + String.format("%.2f", c.result.vwap) +
-                                    " (+" + String.format("%.1f%%", vwapPct) + " above VWAP)");
+                                totalSuccess2026Trades++;
+                                log("[DailyTradingSimulator] SUCCESS_2026 " + variant.id + " BUY: " + c.ticker +
+                                    " @ $" + c.result.currentPrice + " Score=" + c.momentumScore);
                             }
                         }
                     }
+                }
 
-                    ZonedDateTime now = ZonedDateTime.now(ZoneId.of("America/New_York"));
-                    if (scannerRunId.get() == runId) {
-                        store.lastScanDate = today;
-                        store.lastScanTime = now.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"));
-                        store.scannerRunning = false;
-                        store.scannerStatus = "Completed. " + totalMomentumTrades + " Momentum + " +
-                            totalSwingTrades + " Swing + " + totalIntradayTrades + " Intraday VWAP trades";
-                        saveStore();
-                    }
+                ZonedDateTime now = ZonedDateTime.now(ZoneId.of("America/New_York"));
+                if (scannerRunId.get() == runId) {
+                    store.lastScanDate = today;
+                    store.lastScanTime = now.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"));
+                    store.scannerRunning = false;
+                    String waitSuffix = (store.marketWaitMode != null && store.marketWaitMode) ? (" | " + (store.marketWaitReason == null ? "WAIT" : store.marketWaitReason)) : "";
+                    store.scannerStatus = "Completed. " + totalMomentumTrades + " Momentum + " +
+                        totalSwingTrades + " Swing + " + totalIntradayTrades + " Intraday VWAP + " +
+                        totalSuccess2026Trades + " Success2026 trades" + waitSuffix;
+                    saveStore();
                 }
 
                 log("[DailyTradingSimulator] Scanner complete: " + totalMomentumTrades + 
-                    " Momentum, " + totalSwingTrades + " Swing, " + totalIntradayTrades + " Intraday VWAP");
+                    " Momentum, " + totalSwingTrades + " Swing, " + totalIntradayTrades + " Intraday VWAP, " +
+                    totalSuccess2026Trades + " Success2026");
 
             } catch (Exception e) {
                 logErr("[DailyTradingSimulator] Scanner error: " + e.getMessage());
@@ -1593,6 +1797,16 @@ public class DailyTradingSimulator {
             summary.put("totalPnL", totalPnL);
             summary.put("avgPnLPct", totalTrades > 0 ? totalPnLPct / totalTrades : 0);
             summary.put("openPositions", getOpenTrades().size());
+
+            summary.put("marketCheckedAtNy", store.marketCheckedAtNy);
+            summary.put("spyChangePct", store.spyChangePct != null ? store.spyChangePct : 0.0);
+            summary.put("spyPrice", store.spyPrice);
+            summary.put("spyPrevClose", store.spyPrevClose);
+            summary.put("spySma20", store.spySma20);
+            summary.put("spyAbovePrevClose", store.spyAbovePrevClose);
+            summary.put("spyAboveSma20", store.spyAboveSma20);
+            summary.put("marketWaitMode", store.marketWaitMode != null && store.marketWaitMode);
+            summary.put("marketWaitReason", store.marketWaitReason);
         }
         
         return summary;

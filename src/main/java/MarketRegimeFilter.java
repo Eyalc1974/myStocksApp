@@ -37,6 +37,94 @@ public class MarketRegimeFilter {
     }
 
     /**
+     * Intraday Market Guard Result - תוצאת בדיקת השומר היומית
+     */
+    public static class MarketGuardResult {
+        public boolean safe;                    // האם בטוח לסחור
+        public double spyPrice;                 // מחיר SPY נוכחי
+        public double spyVwap;                  // VWAP של SPY
+        public double spySma20;                 // SMA 20 של SPY
+        public double spyDailyChangePct;        // שינוי יומי באחוזים
+        public String reason;                   // סיבת החסימה (אם יש)
+        
+        public String getSummary() {
+            if (safe) {
+                return "🟢 השוק בטוח לסחור - SPY: $" + String.format("%.2f", spyPrice) + 
+                       " | VWAP: $" + String.format("%.2f", spyVwap) +
+                       " | שינוי: " + String.format("%.2f%%", spyDailyChangePct);
+            } else {
+                return "🔴 השוק מסוכן - " + reason;
+            }
+        }
+    }
+
+    /**
+     * בודק אם השוק בטוח לסחור - Intraday Market Guard
+     * מבוסס על תנאי ה-marketGuard מה-JSON:
+     * 1. SPY מעל VWAP
+     * 2. SPY מעל SMA 20
+     * 3. שינוי יומי לא חד מדי (לא פחות מ-maxSpyDailyDropPct)
+     * 
+     * @param spyPrice מחיר SPY נוכחי
+     * @param spyVwap VWAP של SPY
+     * @param spySma20 SMA 20 של SPY
+     * @param spyDailyChangePct שינוי יומי באחוזים
+     * @param maxDailyDropPct סף ירידה יומית מקסימלית (מהקונפיג, למשל -0.7)
+     * @param minVwapDistancePct מרחק מינימלי מ-VWAP (מהקונפיג, למשל 0.1)
+     * @return תוצאת הבדיקה
+     */
+    public static MarketGuardResult isMarketSafe(double spyPrice, double spyVwap, double spySma20, 
+                                                   double spyDailyChangePct, double maxDailyDropPct, 
+                                                   double minVwapDistancePct) {
+        MarketGuardResult result = new MarketGuardResult();
+        result.spyPrice = spyPrice;
+        result.spyVwap = spyVwap;
+        result.spySma20 = spySma20;
+        result.spyDailyChangePct = spyDailyChangePct;
+        result.safe = true;
+        
+        // בדיקה 1: SPY מתחת ל-VWAP
+        if (spyVwap > 0 && spyPrice < spyVwap) {
+            result.safe = false;
+            result.reason = "SPY מתחת ל-VWAP ($" + String.format("%.2f", spyPrice) + 
+                           " < $" + String.format("%.2f", spyVwap) + ")";
+            return result;
+        }
+        
+        // בדיקה 2: SPY מתחת ל-SMA 20
+        if (spySma20 > 0 && spyPrice < spySma20) {
+            result.safe = false;
+            result.reason = "SPY מתחת ל-SMA20 ($" + String.format("%.2f", spyPrice) + 
+                           " < $" + String.format("%.2f", spySma20) + ")";
+            return result;
+        }
+        
+        // בדיקה 3: ירידה יומית חדה מדי
+        if (spyDailyChangePct < maxDailyDropPct) {
+            result.safe = false;
+            result.reason = "ירידה יומית חדה (" + String.format("%.2f%%", spyDailyChangePct) + 
+                           " < " + String.format("%.2f%%", maxDailyDropPct) + ")";
+            return result;
+        }
+        
+        return result;
+    }
+
+    /**
+     * גרסה פשוטה - בודק אם השוק בטוח עם ברירות מחדל
+     * משתמש בערכים מה-momentum-success-2026.json
+     */
+    public static boolean isMarketSafeSimple(double spyPrice, double spyVwap, double spySma20, 
+                                              double spyDailyChangePct) {
+        // ברירות מחדל מה-JSON
+        double maxDailyDropPct = -0.7;
+        double minVwapDistancePct = 0.1;
+        
+        return isMarketSafe(spyPrice, spyVwap, spySma20, spyDailyChangePct, 
+                           maxDailyDropPct, minVwapDistancePct).safe;
+    }
+
+    /**
      * בודק את מצב השוק הכללי - האם S&P 500 מעל ה-SMA 200 שלו
      */
     public static boolean isMarketBullish() {

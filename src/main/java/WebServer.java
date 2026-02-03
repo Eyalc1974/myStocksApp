@@ -4514,6 +4514,11 @@ public class WebServer {
                         "function renderDailyTrades(d){"+
                         "  var sumEl=document.getElementById('dtsSummary');"+
                         "  var s=d.summary||{};"+
+                        "  var isWait=!!s.marketWaitMode;"+
+                        "  var mrColor=isWait?'#ef4444':'#22c55e';"+
+                        "  var mrLabel=isWait?'WAIT':'GO';"+
+                        "  var mrReason=(s.marketWaitReason||'');"+
+                        "  var spyLine='SPY '+((s.spyChangePct||0)>=0?'+':'')+(s.spyChangePct||0).toFixed(2)+'%';"+
                         "  sumEl.innerHTML='<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">'+"+
                         "    '<div style=\"font-size:20px;font-weight:700;color:#3b82f6;\">'+(s.openPositions||0)+'</div>'+"+
                         "    '<div style=\"color:#9ca3af;font-size:11px;\">Open</div></div>'+"+
@@ -4528,7 +4533,13 @@ public class WebServer {
                         "    '<div style=\"color:#9ca3af;font-size:11px;\">Win Rate</div></div>'+"+
                         "  '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">'+"+
                         "    '<div style=\"font-size:20px;font-weight:700;color:'+(s.totalPnL>=0?'#22c55e':'#ef4444')+';\">$'+(s.totalPnL||0).toFixed(0)+'</div>'+"+
-                        "    '<div style=\"color:#9ca3af;font-size:11px;\">Total P/L</div></div>';"+
+                        "    '<div style=\"color:#9ca3af;font-size:11px;\">Total P/L</div></div>'+"+
+                        "  '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;border:2px solid '+mrColor+';\">'+"+
+                        "    '<div style=\"font-size:18px;font-weight:800;color:'+mrColor+';\">'+mrLabel+'</div>'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:11px;\">Market Regime</div>'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:10px;margin-top:4px;\">'+spyLine+'</div>'+"+
+                        "    (mrReason?'<div style=\"color:#9ca3af;font-size:10px;margin-top:2px;\">'+mrReason+'</div>':'')+"+
+                        "  '</div>';"+
                         "  var openTb=document.getElementById('dtsOpenTbody');"+
                         "  var open=d.open||[];"+
                         "  if(open.length===0){openTb.innerHTML='<tr><td colspan=\"8\" style=\"padding:10px;color:#9ca3af;text-align:center;\">No open positions</td></tr>'; }"+

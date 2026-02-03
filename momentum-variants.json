@@ -9,12 +9,12 @@
       "description": "High RVOL, CCI breakout, no SMA200 filter",
       "stocksPerVariant": 2,
       "entryFilters": {
-        "rvolMin": 1.0,
+        "rvolMin": 1.3,
         "rsiMin": 30,
         "rsiMax": 90,
-        "cciMin": -200,
+        "cciMin": 100,
         "cciMax": 400,
-        "rsMin": 1.10,
+        "rsMin": 1.05,
         "sma200Required": false,
         "maCrossoverRequired": false
       },
@@ -39,12 +39,12 @@
       "description": "SMA200 required, wider stops, RS leader focus",
       "stocksPerVariant": 2,
       "entryFilters": {
-        "rvolMin": 1.0,
+        "rvolMin": 1.3,
         "rsiMin": 30,
         "rsiMax": 85,
-        "cciMin": -150,
+        "cciMin": 100,
         "cciMax": 350,
-        "rsMin": 1.10,
+        "rsMin": 1.05,
         "sma200Required": true,
         "maCrossoverRequired": false
       },
@@ -72,9 +72,9 @@
         "rvolMin": 1.3,
         "rsiMin": 40,
         "rsiMax": 75,
-        "cciMin": -100,
+        "cciMin": 100,
         "cciMax": 300,
-        "rsMin": 1.10,
+        "rsMin": 1.05,
         "sma200Required": true,
         "maCrossoverRequired": false
       },
@@ -102,9 +102,9 @@
         "rvolMin": 1.4,
         "rsiMin": 45,
         "rsiMax": 70,
-        "cciMin": -80,
+        "cciMin": 100,
         "cciMax": 250,
-        "rsMin": 1.10,
+        "rsMin": 1.05,
         "sma200Required": true,
         "maCrossoverRequired": false
       },
@@ -129,12 +129,12 @@
       "description": "Trend pullbacks with controlled RSI and strong volume return",
       "stocksPerVariant": 3,
       "entryFilters": {
-        "rvolMin": 1.2,
+        "rvolMin": 1.3,
         "rsiMin": 35,
         "rsiMax": 65,
-        "cciMin": -200,
+        "cciMin": 100,
         "cciMax": 200,
-        "rsMin": 1.10,
+        "rsMin": 1.05,
         "sma200Required": true,
         "maCrossoverRequired": false
       },
@@ -162,9 +162,9 @@
         "rvolMin": 1.8,
         "rsiMin": 55,
         "rsiMax": 85,
-        "cciMin": 50,
+        "cciMin": 100,
         "cciMax": 400,
-        "rsMin": 1.10,
+        "rsMin": 1.05,
         "sma200Required": true,
         "maCrossoverRequired": true
       },
@@ -189,12 +189,12 @@
       "description": "Stable momentum, avoids overextension and hype",
       "stocksPerVariant": 2,
       "entryFilters": {
-        "rvolMin": 1.1,
+        "rvolMin": 1.3,
         "rsiMin": 45,
         "rsiMax": 68,
-        "cciMin": -120,
+        "cciMin": 100,
         "cciMax": 220,
-        "rsMin": 1.10,
+        "rsMin": 1.05,
         "sma200Required": true,
         "maCrossoverRequired": false
       },
@@ -220,12 +220,12 @@
       "description": "High RS ratio priority, moderate volume",
       "stocksPerVariant": 2,
       "entryFilters": {
-        "rvolMin": 1.0,
+        "rvolMin": 1.3,
         "rsiMin": 35,
         "rsiMax": 85,
-        "cciMin": -100,
+        "cciMin": 100,
         "cciMax": 300,
-        "rsMin": 1.10,
+        "rsMin": 1.05,
         "sma200Required": false,
         "maCrossoverRequired": false
       },
@@ -250,12 +250,12 @@
       "description": "Very high volume focus, relaxed other criteria",
       "stocksPerVariant": 2,
       "entryFilters": {
-        "rvolMin": 1.2,
+        "rvolMin": 1.3,
         "rsiMin": 30,
         "rsiMax": 90,
-        "cciMin": -150,
+        "cciMin": 100,
         "cciMax": 400,
-        "rsMin": 1.10,
+        "rsMin": 1.05,
         "sma200Required": false,
         "maCrossoverRequired": false
       },
@@ -280,12 +280,12 @@
       "description": "MA9/21 crossover required, trend confirmation",
       "stocksPerVariant": 2,
       "entryFilters": {
-        "rvolMin": 1.0,
+        "rvolMin": 1.3,
         "rsiMin": 30,
         "rsiMax": 85,
-        "cciMin": -100,
+        "cciMin": 100,
         "cciMax": 350,
-        "rsMin": 1.10,
+        "rsMin": 1.05,
         "sma200Required": false,
         "maCrossoverRequired": false
       },
@@ -315,7 +315,7 @@
         "rvolMin": 1.5,
         "rsiMin": 45,
         "rsiMax": 70,
-        "rsMin": 1.10,
+        "rsMin": 1.05,
         "sma200Required": true
       },
       "riskManagement": {
@@ -334,7 +334,7 @@
         "rvolMin": 2.0,
         "rsiMin": 50,
         "rsiMax": 68,
-        "rsMin": 1.10,
+        "rsMin": 1.05,
         "sma200Required": false
       },
       "riskManagement": {
