@@ -1,0 +1,121 @@
+{
+  "description": "Momentum Success Formula 2026 - With Market Guard",
+  "enabled": true,
+  "delayMinutes": 15,
+  "marketGuard": {
+    "spyFilterEnabled": true,
+    "spySmaPeriod": 20,
+    "spyMinVwapDistancePct": 0.1,
+    "maxSpyDailyDropPct": -0.7,
+    "description": "חוסם כניסה לעסקאות חדשות אם השוק הכללי במגמת ירידה חדה"
+  },
+  "variants": [
+    {
+      "id": "V1_THE_SNIPER",
+      "name": "The Momentum Sniper",
+      "nameHe": "צלף המומנטום",
+      "description": "Strict RS > 1.12, CCI > 100, Price > VWAP. Best for catching the strongest stocks only.",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "vwapRequired": true,
+        "priceAboveVwapPct": 0.2,
+        "rvolMin": 1.5,
+        "rsiMin": 50,
+        "rsiMax": 78,
+        "cciMin": 100,
+        "cciMax": 300,
+        "rsMin": 1.05,
+        "sma200Required": true,
+        "intradayPriceChangeMaxPct": 8.0
+      },
+      "riskManagement": {
+        "stopLossPct": 3.5,
+        "takeProfitPct": 10.5,
+        "trailingStopPct": 2.0,
+        "atrMultiplier": 2.5,
+        "riskRewardRatio": 3.0
+      },
+      "scoring": {
+        "rsWeight": 50,
+        "cciWeight": 25,
+        "volumeWeight": 25
+      }
+    },
+    {
+      "id": "V2_VWAP_RETEST_PRO",
+      "name": "VWAP Retest Pro",
+      "nameHe": "בדיקת VWAP מקצועית",
+      "description": "Wait for price to bounce off VWAP. High win rate because it enters after a dip.",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "vwapRequired": true,
+        "pullbackToVwapRequired": true,
+        "pullbackMaxDistancePct": 0.5,
+        "rvolMin": 1.3,
+        "rsiMin": 45,
+        "cciMin": 50,
+        "rsMin": 1.05,
+        "sma200Required": true,
+        "intradayPriceChangeMaxPct": 6.0
+      },
+      "riskManagement": {
+        "stopLossPct": 3.0,
+        "takeProfitPct": 9.0,
+        "trailingStopPct": 1.5,
+        "atrMultiplier": 2.2,
+        "riskRewardRatio": 3.0
+      },
+      "scoring": {
+        "vwapWeight": 40,
+        "rsWeight": 30,
+        "cciWeight": 15,
+        "volumeWeight": 15
+      }
+    },
+    {
+      "id": "V3_VOLUME_EXPLOSION",
+      "name": "Institutional Volume Surge",
+      "nameHe": "זינוק נפח מוסדי",
+      "description": "Focus on extreme RVOL > 2.0. Follows where the big money flows today.",
+      "stocksPerVariant": 1,
+      "entryFilters": {
+        "vwapRequired": true,
+        "priceAboveVwapPct": 0.5,
+        "rvolMin": 2.2,
+        "rsiMin": 50,
+        "cciMin": 80,
+        "rsMin": 1.05,
+        "sma200Required": false,
+        "intradayPriceChangeMaxPct": 12.0
+      },
+      "riskManagement": {
+        "stopLossPct": 4.0,
+        "takeProfitPct": 8.0,
+        "trailingStopPct": 2.5,
+        "atrMultiplier": 2.8,
+        "riskRewardRatio": 2.0
+      },
+      "scoring": {
+        "volumeWeight": 50,
+        "rsWeight": 25,
+        "cciWeight": 25
+      }
+    }
+  ],
+  "exitRules": {
+    "rules": [
+      {
+        "id": "VWAP_PROTECTION",
+        "name": "VWAP Shield",
+        "condition": "Price < VWAP",
+        "action": "EXIT_IMMEDIATELY"
+      },
+      {
+        "id": "EOD_CLOSE",
+        "name": "End of Day Safety",
+        "condition": "Time == 15:50",
+        "action": "EXIT_ALL"
+      }
+    ]
+  }
+}
