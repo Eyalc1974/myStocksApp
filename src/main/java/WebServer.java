@@ -1347,9 +1347,9 @@ public class WebServer {
                 "<a href=\"/\">Home</a> · " +
                 "<a href=\"/dashboard\">Dashboard</a> · " +
                 "<a href=\"/about\">About</a> · " +
-                "<a href=\"/favorites\">Favorites</a> · " +
+                "<a href=\"/favorites\">SwingLongAiAgent</a> · " +
                 "<a href=\"/portfolio-manage\">Manage Portfolio</a> · " +
-                "<a href=\"/alpha-agent\">AlphaAgent AI</a> · " +
+                "<a href=\"/alpha-agent\">MomentumAiAgent</a> · " +
                 "<a href=\"/monitoring\">Monitoring Stocks - History</a> · " +
                 "<a href=\"/intraday-alerts\">Intraday Alerts</a> · " +
                 "<a href=\"/active-positions\">Active Positions</a> · " +
@@ -2656,7 +2656,7 @@ public class WebServer {
                         "</div>" +
                         
                         "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #f59e0b;'>" +
-                        "<div style='font-weight:600;color:#fcd34d;margin-bottom:4px;'>⭐ Favorites</div>" +
+                        "<div style='font-weight:600;color:#fcd34d;margin-bottom:4px;'>⭐ SwingLongAiAgent</div>" +
                         "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>סריקת מניות מועדפות ומציאת ההתאמה הטובה ביותר לאסטרטגיה שהגדרת בדף Settings.</div>" +
                         "</div>" +
                         
@@ -2666,7 +2666,7 @@ public class WebServer {
                         "</div>" +
                         
                         "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #ec4899;'>" +
-                        "<div style='font-weight:600;color:#f9a8d4;margin-bottom:4px;'>🤖 AlphaAgent AI</div>" +
+                        "<div style='font-weight:600;color:#f9a8d4;margin-bottom:4px;'>🤖 MomentumAiAgent</div>" +
                         "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>סוכן AI חכם לניתוח מניות, שאלות על השוק, והמלצות מותאמות אישית.</div>" +
                         "</div>" +
                         
@@ -4149,45 +4149,9 @@ public class WebServer {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, htmlPage(""), 200); return; }
 
                 StringBuilder sb = new StringBuilder();
-                sb.append("<div class='card'><div class='title'>AlphaAgent AI - Strategy Tools</div>");
+                sb.append("<div class='card'><div class='title'>MomentumAiAgent - Strategy Tools</div>");
                 sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>כלים לבדיקת אסטרטגיות מסחר על נתונים היסטוריים</div>");
                 sb.append(modelsUsedNamesOnlyHtml());
-                sb.append("</div>");
-
-                // Strategy Backtester Section
-                sb.append("<div class='card' style='border:2px solid #f59e0b;'>");
-                sb.append("<div class='title'>📊 Strategy Backtester - בדיקת אסטרטגיה על נתוני עבר</div>");
-                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>הרץ סימולציה של הכללים שלנו (RS, Position Sizing, Trailing Stop) על נתונים היסטוריים והשווה ל-S&P 500</div>");
-                sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;align-items:flex-end;'>");
-                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>סימול מניה</label>");
-                sb.append("<input id='btTicker' type='text' placeholder='AAPL' style='width:120px;'/></div>");
-                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>הון התחלתי ($)</label>");
-                sb.append("<input id='btBalance' type='number' value='36000' min='1000' step='1000' style='width:120px;'/></div>");
-                sb.append("<button onclick='runBacktest()' id='btBtn'>🚀 הרץ Backtest</button>");
-                sb.append("</div>");
-                sb.append("<div id='btResult' style='display:none;'></div>");
-                sb.append("<div id='btChart' style='height:300px;background:#0b1220;border-radius:8px;margin-top:12px;display:none;'></div>");
-                sb.append("<div id='btTrades' style='display:none;margin-top:12px;'></div>");
-                sb.append("</div>");
-
-                // Strategy Comparison Section - בחינת אסטרטגיות
-                sb.append("<div class='card' style='border:2px solid #8b5cf6;'>");
-                sb.append("<div class='title'>🔬 Strategy Comparison - השוואת אסטרטגיות</div>");
-                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>בוחר מניות ומריץ backtest על 100 הימים האחרונים עם כל האסטרטגיות. רץ ברקע - לא חוסם את הדפדפן.</div>");
-                sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;align-items:flex-end;'>");
-                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>מקור מניות</label>");
-                sb.append("<select id='scSource' style='padding:6px 10px;'>");
-                sb.append("<option value='random'>🎲 רנדומלי (מניות פופולריות)</option>");
-                sb.append("<option value='favorites'>⭐ מועדפים</option>");
-                sb.append("</select></div>");
-                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>מספר מניות לבדיקה</label>");
-                sb.append("<input id='scCount' type='number' value='5' min='1' max='20' style='width:80px;'/></div>");
-                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>הון התחלתי ($)</label>");
-                sb.append("<input id='scBalance' type='number' value='36000' min='1000' step='1000' style='width:120px;'/></div>");
-                sb.append("<button onclick='runStrategyCompare()' id='scBtn'>🚀 הרץ השוואה</button>");
-                sb.append("<span id='scStatus' style='color:#9ca3af;font-size:13px;'></span>");
-                sb.append("</div>");
-                sb.append("<div id='scResult' style='display:none;'></div>");
                 sb.append("</div>");
 
                 // Daily Trading Simulator Section
@@ -4800,10 +4764,10 @@ public class WebServer {
                 if (avg == null) msg = "AlphaAgent performance not available yet.";
                 else {
                     double best = avg;
-                    String winner = "AlphaAgent AI";
+                    String winner = "MomentumAiAgent";
                     if (qqq != null && qqq > best) { best = qqq; winner = "NASDAQ-100 (QQQ)"; }
                     if (spy != null && spy > best) { best = spy; winner = "S&P 500 (SPY)"; }
-                    msg = winner.equals("AlphaAgent AI") ? "AlphaAgent AI is leading the race" : (winner + " outperforms AlphaAgent");
+                    msg = winner.equals("MomentumAiAgent") ? "MomentumAiAgent is leading the race" : (winner + " outperforms MomentumAiAgent");
                 }
                 out.put("message", msg);
                 respondJson(ex, out, 200);
@@ -5156,6 +5120,202 @@ public class WebServer {
                     out.put("currentTicker", strategyCompareCurrentTicker);
                     out.put("results", new ArrayList<>(strategyCompareResults));
                 }
+                respondJson(ex, out, 200);
+            }
+        });
+
+        // ---------------- Swing Scanner API Endpoint ----------------
+        server.createContext("/api/swing-scan", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                
+                Map<String, Object> out = new LinkedHashMap<>();
+                List<Map<String, Object>> candidates = new ArrayList<>();
+                
+                try {
+                    System.out.println("[SwingScan] ========== Starting Swing Scanner ==========");
+                    
+                    // Get universe tickers (500+ stocks like momentum scanner)
+                    List<String> allTickers = LongTermCandidateFinder.getUniverseTickers();
+                    System.out.println("[SwingScan] Universe size: " + allTickers.size() + " stocks");
+                    
+                    if (allTickers.isEmpty()) {
+                        System.out.println("[SwingScan] ERROR: No stocks in universe");
+                        out.put("error", "No stocks in universe to scan.");
+                        respondJson(ex, out, 200);
+                        return;
+                    }
+                    
+                    // Limit to first 30 stocks for quick scan (API rate limits)
+                    // Shuffle to get different stocks each time
+                    List<String> tickers = new ArrayList<>(allTickers);
+                    Collections.shuffle(tickers);
+                    int maxStocks = Math.min(100, tickers.size());
+                    tickers = tickers.subList(0, maxStocks);
+                    System.out.println("[SwingScan] Scanning " + maxStocks + " random stocks: " + tickers.subList(0, Math.min(5, tickers.size())) + "...");
+                    
+                    // Load swing config
+                    DailyTradingSimulator.SwingVariantsConfig swingConfig = DailyTradingSimulator.SwingVariantsConfig.load();
+                    if (!swingConfig.enabled || swingConfig.variants == null || swingConfig.variants.isEmpty()) {
+                        System.out.println("[SwingScan] ERROR: Swing variants not configured or disabled");
+                        out.put("error", "Swing variants not configured or disabled.");
+                        respondJson(ex, out, 200);
+                        return;
+                    }
+                    System.out.println("[SwingScan] Loaded " + swingConfig.variants.size() + " swing variants");
+                    for (DailyTradingSimulator.SwingVariantConfig v : swingConfig.variants) {
+                        System.out.println("[SwingScan]   - " + v.id + ": RSI " + (int)v.entryFilters.rsiMin + "-" + (int)v.entryFilters.rsiMax + ", RS>=" + v.entryFilters.rsMin);
+                    }
+                    
+                    out.put("totalUniverse", allTickers.size());
+                    out.put("scanning", maxStocks);
+                    
+                    MonitoringAlphaVantageClient av = MonitoringAlphaVantageClient.fromEnv();
+                    int scanned = 0;
+                    int skippedNoQuote = 0;
+                    int skippedNoPrice = 0;
+                    int matchedVariant = 0;
+                    
+                    for (String ticker : tickers) {
+                        try {
+                            Thread.sleep(800); // Rate limit - faster for smaller batch
+                            
+                            // Get quote data
+                            JsonNode quote = av.globalQuote(ticker);
+                            if (quote == null) {
+                                skippedNoQuote++;
+                                System.out.println("[SwingScan] " + ticker + ": No quote data");
+                                continue;
+                            }
+                            // Handle both "Global Quote" and "Global Quote - DATA DELAYED BY 15 MINUTES"
+                            JsonNode gq = quote.path("Global Quote");
+                            if (gq == null || gq.isMissingNode()) {
+                                gq = quote.path("Global Quote - DATA DELAYED BY 15 MINUTES");
+                            }
+                            if (gq == null || gq.isMissingNode()) {
+                                skippedNoQuote++;
+                                System.out.println("[SwingScan] " + ticker + ": Missing Global Quote");
+                                continue;
+                            }
+                            
+                            Double priceD = parseDoubleOrNull(gq.path("05. price").asText(""));
+                            Double prevCloseD = parseDoubleOrNull(gq.path("08. previous close").asText(""));
+                            double price = priceD != null ? priceD : 0;
+                            double prevClose = prevCloseD != null ? prevCloseD : 0;
+                            if (price <= 0) {
+                                skippedNoPrice++;
+                                System.out.println("[SwingScan] " + ticker + ": Invalid price");
+                                continue;
+                            }
+                            
+                            scanned++;
+                            
+                            // Get technical indicators (simplified - using available data)
+                            double changePct = prevClose > 0 ? ((price - prevClose) / prevClose * 100) : 0;
+                            
+                            // Simulate RSI based on price change (simplified)
+                            double rsi = 50 + (changePct * 5); // Rough approximation
+                            rsi = Math.max(10, Math.min(90, rsi));
+                            
+                            // Simulate RS ratio (would need SPY comparison in real impl)
+                            double rs = 1.0 + (changePct / 100);
+                            
+                            // Simulate RVOL
+                            double rvol = 1.0;
+                            
+                            System.out.println("[SwingScan] " + ticker + ": $" + String.format("%.2f", price) + 
+                                " | Change: " + String.format("%.2f%%", changePct) + 
+                                " | RSI: " + String.format("%.0f", rsi) + 
+                                " | RS: " + String.format("%.2f", rs));
+                            
+                            // Check against each swing variant
+                            boolean matched = false;
+                            for (DailyTradingSimulator.SwingVariantConfig variant : swingConfig.variants) {
+                                DailyTradingSimulator.SwingEntryFilters f = variant.entryFilters;
+                                
+                                // Check filters
+                                if (rsi < f.rsiMin || rsi > f.rsiMax) {
+                                    continue;
+                                }
+                                if (rs < f.rsMin) {
+                                    continue;
+                                }
+                                if (rvol < f.rvolMin) {
+                                    continue;
+                                }
+                                
+                                // Calculate score
+                                int score = 0;
+                                DailyTradingSimulator.SwingScoring scoring = variant.scoring;
+                                
+                                // RS score
+                                if (rs >= 1.20) score += scoring.rsWeight;
+                                else if (rs >= 1.10) score += (int)(scoring.rsWeight * 0.75);
+                                else if (rs >= 1.0) score += (int)(scoring.rsWeight * 0.5);
+                                
+                                // RSI score (lower is better for pullback)
+                                if (rsi <= 35) score += scoring.rsiWeight;
+                                else if (rsi <= 45) score += (int)(scoring.rsiWeight * 0.75);
+                                else if (rsi <= 55) score += (int)(scoring.rsiWeight * 0.5);
+                                
+                                // Volume score
+                                if (rvol >= 1.5) score += scoring.volumeWeight;
+                                else if (rvol >= 1.0) score += (int)(scoring.volumeWeight * 0.6);
+                                
+                                // Calculate entry, stop, target
+                                double entry = price;
+                                double stopLoss = price * (1 - variant.riskManagement.stopLossPct / 100);
+                                double takeProfit = price * (1 + variant.riskManagement.takeProfitPct / 100);
+                                
+                                System.out.println("[SwingScan] ✅ " + ticker + " MATCHED " + variant.id + 
+                                    " | Score: " + score + 
+                                    " | Entry: $" + String.format("%.2f", entry) + 
+                                    " | Stop: $" + String.format("%.2f", stopLoss) + 
+                                    " | Target: $" + String.format("%.2f", takeProfit));
+                                
+                                Map<String, Object> candidate = new LinkedHashMap<>();
+                                candidate.put("ticker", ticker);
+                                candidate.put("variant", variant.id);
+                                candidate.put("variantName", variant.name);
+                                candidate.put("score", score);
+                                candidate.put("rsi", rsi);
+                                candidate.put("rs", rs);
+                                candidate.put("rvol", rvol);
+                                candidate.put("entry", entry);
+                                candidate.put("stop", stopLoss);
+                                candidate.put("target", takeProfit);
+                                candidate.put("price", price);
+                                candidate.put("changePct", changePct);
+                                
+                                candidates.add(candidate);
+                                matched = true;
+                                matchedVariant++;
+                                break; // Only add once per ticker (best matching variant)
+                            }
+                            if (!matched) {
+                                System.out.println("[SwingScan] ❌ " + ticker + " no variant match (RSI/RS out of range)");
+                            }
+                        } catch (Exception e) {
+                            System.err.println("[SwingScan] Error scanning " + ticker + ": " + e.getMessage());
+                        }
+                    }
+                    
+                    // Sort by score descending
+                    candidates.sort((a, b) -> Integer.compare((Integer)b.get("score"), (Integer)a.get("score")));
+                    
+                    System.out.println("[SwingScan] ========== Scan Complete ==========");
+                    System.out.println("[SwingScan] Scanned: " + scanned + " | Matched: " + matchedVariant + " | Skipped (no quote): " + skippedNoQuote + " | Skipped (no price): " + skippedNoPrice);
+                    System.out.println("[SwingScan] Candidates found: " + candidates.size());
+                    
+                    out.put("scanned", scanned);
+                    out.put("candidates", candidates);
+                    
+                } catch (Exception e) {
+                    System.err.println("[SwingScan] FATAL ERROR: " + e.getMessage());
+                    e.printStackTrace();
+                    out.put("error", "Scan error: " + e.getMessage());
+                }
+                
                 respondJson(ex, out, 200);
             }
         });
@@ -5905,6 +6065,95 @@ public class WebServer {
                         "}" +
                         "</script>");
 
+                // Strategy Backtester Section (moved from alpha-agent)
+                sb.append("<div class='card' style='border:2px solid #f59e0b;'>");
+                sb.append("<div class='title'>📊 Strategy Backtester - בדיקת אסטרטגיה על נתוני עבר</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>הרץ סימולציה של הכללים שלנו (RS, Position Sizing, Trailing Stop) על נתונים היסטוריים והשווה ל-S&P 500</div>");
+                sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;align-items:flex-end;'>");
+                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>סימול מניה</label>");
+                sb.append("<input id='btTicker' type='text' placeholder='AAPL' style='width:120px;'/></div>");
+                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>הון התחלתי ($)</label>");
+                sb.append("<input id='btBalance' type='number' value='36000' min='1000' step='1000' style='width:120px;'/></div>");
+                sb.append("<button onclick='runBacktest()' id='btBtn'>🚀 הרץ Backtest</button>");
+                sb.append("</div>");
+                sb.append("<div id='btResult' style='display:none;'></div>");
+                sb.append("<div id='btChart' style='height:300px;background:#0b1220;border-radius:8px;margin-top:12px;display:none;'></div>");
+                sb.append("<div id='btTrades' style='display:none;margin-top:12px;'></div>");
+                sb.append("</div>");
+
+                // Strategy Comparison Section (moved from alpha-agent)
+                sb.append("<div class='card' style='border:2px solid #8b5cf6;'>");
+                sb.append("<div class='title'>🔬 Strategy Comparison - השוואת אסטרטגיות</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>בוחר מניות ומריץ backtest על 100 הימים האחרונים עם כל האסטרטגיות. רץ ברקע - לא חוסם את הדפדפן.</div>");
+                sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;align-items:flex-end;'>");
+                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>מקור מניות</label>");
+                sb.append("<select id='scSource' style='padding:6px 10px;'>");
+                sb.append("<option value='random'>🎲 רנדומלי (מניות פופולריות)</option>");
+                sb.append("<option value='favorites'>⭐ מועדפים</option>");
+                sb.append("</select></div>");
+                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>מספר מניות לבדיקה</label>");
+                sb.append("<input id='scCount' type='number' value='5' min='1' max='20' style='width:80px;'/></div>");
+                sb.append("<div><label style='display:block;color:#9ca3af;font-size:12px;margin-bottom:4px;'>הון התחלתי ($)</label>");
+                sb.append("<input id='scBalance' type='number' value='36000' min='1000' step='1000' style='width:120px;'/></div>");
+                sb.append("<button onclick='runStrategyCompare()' id='scBtn'>🚀 הרץ השוואה</button>");
+                sb.append("<span id='scStatus' style='color:#9ca3af;font-size:13px;'></span>");
+                sb.append("</div>");
+                sb.append("<div id='scResult' style='display:none;'></div>");
+                sb.append("</div>");
+
+                // JavaScript for Backtester
+                sb.append("<script>");
+                sb.append("async function runBacktest() {");
+                sb.append("  var ticker = (document.getElementById('btTicker').value || '').trim().toUpperCase();");
+                sb.append("  var balance = parseInt(document.getElementById('btBalance').value) || 36000;");
+                sb.append("  if (!ticker) { alert('הכנס סמל מניה'); return; }");
+                sb.append("  var btn = document.getElementById('btBtn');");
+                sb.append("  btn.disabled = true; btn.textContent = '⏳ מריץ...';");
+                sb.append("  try {");
+                sb.append("    var r = await fetch('/api/backtest?ticker=' + encodeURIComponent(ticker) + '&balance=' + balance);");
+                sb.append("    var d = await r.json();");
+                sb.append("    var el = document.getElementById('btResult');");
+                sb.append("    el.style.display = 'block';");
+                sb.append("    if (d.error) { el.innerHTML = '<div style=\"color:#ef4444;\">' + d.error + '</div>'; return; }");
+                sb.append("    var html = '<div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;\">';");
+                sb.append("    html += '<div style=\"background:#0b1220;padding:12px;border-radius:8px;text-align:center;\"><div style=\"color:#9ca3af;font-size:12px;\">תשואה</div><div style=\"font-size:20px;font-weight:700;color:' + (d.totalReturnPct >= 0 ? '#22c55e' : '#ef4444') + ';\">' + (d.totalReturnPct >= 0 ? '+' : '') + d.totalReturnPct.toFixed(2) + '%</div></div>';");
+                sb.append("    html += '<div style=\"background:#0b1220;padding:12px;border-radius:8px;text-align:center;\"><div style=\"color:#9ca3af;font-size:12px;\">S&P 500</div><div style=\"font-size:20px;font-weight:700;color:' + (d.spyReturnPct >= 0 ? '#22c55e' : '#ef4444') + ';\">' + (d.spyReturnPct >= 0 ? '+' : '') + d.spyReturnPct.toFixed(2) + '%</div></div>';");
+                sb.append("    html += '<div style=\"background:#0b1220;padding:12px;border-radius:8px;text-align:center;\"><div style=\"color:#9ca3af;font-size:12px;\">עסקאות</div><div style=\"font-size:20px;font-weight:700;\">' + d.totalTrades + '</div></div>';");
+                sb.append("    html += '<div style=\"background:#0b1220;padding:12px;border-radius:8px;text-align:center;\"><div style=\"color:#9ca3af;font-size:12px;\">Win Rate</div><div style=\"font-size:20px;font-weight:700;\">' + d.winRate.toFixed(1) + '%</div></div>';");
+                sb.append("    html += '</div>';");
+                sb.append("    el.innerHTML = html;");
+                sb.append("  } catch(e) { document.getElementById('btResult').innerHTML = '<div style=\"color:#ef4444;\">שגיאה: ' + e.message + '</div>'; }");
+                sb.append("  finally { btn.disabled = false; btn.textContent = '🚀 הרץ Backtest'; }");
+                sb.append("}");
+                sb.append("async function runStrategyCompare() {");
+                sb.append("  var source = document.getElementById('scSource').value;");
+                sb.append("  var count = parseInt(document.getElementById('scCount').value) || 5;");
+                sb.append("  var balance = parseInt(document.getElementById('scBalance').value) || 36000;");
+                sb.append("  var btn = document.getElementById('scBtn');");
+                sb.append("  var status = document.getElementById('scStatus');");
+                sb.append("  btn.disabled = true; btn.textContent = '⏳ מריץ...';");
+                sb.append("  status.textContent = ' מתחיל השוואה...';");
+                sb.append("  try {");
+                sb.append("    var r = await fetch('/api/strategy-compare?source=' + source + '&count=' + count + '&balance=' + balance);");
+                sb.append("    var d = await r.json();");
+                sb.append("    var el = document.getElementById('scResult');");
+                sb.append("    el.style.display = 'block';");
+                sb.append("    if (d.error) { el.innerHTML = '<div style=\"color:#ef4444;\">' + d.error + '</div>'; status.textContent = ''; return; }");
+                sb.append("    status.textContent = ' הושלם!';");
+                sb.append("    var html = '<table style=\"width:100%;border-collapse:collapse;font-size:13px;\">';");
+                sb.append("    html += '<thead><tr style=\"background:#0b1220;\"><th style=\"padding:8px;text-align:left;\">אסטרטגיה</th><th style=\"padding:8px;text-align:right;\">תשואה</th><th style=\"padding:8px;text-align:right;\">Win Rate</th><th style=\"padding:8px;text-align:right;\">עסקאות</th></tr></thead>';");
+                sb.append("    html += '<tbody>';");
+                sb.append("    (d.results || []).forEach(function(r) {");
+                sb.append("      var retColor = r.returnPct >= 0 ? '#22c55e' : '#ef4444';");
+                sb.append("      html += '<tr style=\"border-bottom:1px solid #1f2a44;\"><td style=\"padding:8px;\">' + r.strategy + '</td><td style=\"padding:8px;text-align:right;color:' + retColor + ';\">' + (r.returnPct >= 0 ? '+' : '') + r.returnPct.toFixed(2) + '%</td><td style=\"padding:8px;text-align:right;\">' + r.winRate.toFixed(1) + '%</td><td style=\"padding:8px;text-align:right;\">' + r.trades + '</td></tr>';");
+                sb.append("    });");
+                sb.append("    html += '</tbody></table>';");
+                sb.append("    el.innerHTML = html;");
+                sb.append("  } catch(e) { document.getElementById('scResult').innerHTML = '<div style=\"color:#ef4444;\">שגיאה: ' + e.message + '</div>'; status.textContent = ''; }");
+                sb.append("  finally { btn.disabled = false; btn.textContent = '🚀 הרץ השוואה'; }");
+                sb.append("}");
+                sb.append("</script>");
+
                 respondHtml(ex, htmlPage(sb.toString()), 200);
             }
         });
@@ -6309,7 +6558,7 @@ public class WebServer {
                 String syncStatus = qp.getOrDefault("syncStatus", "");
 
                 StringBuilder sb = new StringBuilder();
-                sb.append("<div class='card'><div class='title'>Favorites</div>");
+                sb.append("<div class='card'><div class='title'>SwingLongAiAgent</div>");
 
                 if (syncStatus.startsWith("added_")) {
                     String count = syncStatus.substring(6);
@@ -6555,6 +6804,98 @@ public class WebServer {
                         "<input type='text' name='symbol' placeholder='Add ticker (e.g. AAPL)' required/> "+
                         "<button type='submit'>Add to Favorites</button></form>");
                 sb.append("</div>");
+
+                // Swing Trading Simulator Section
+                sb.append("<div class='card' style='border:2px solid #f59e0b;'>");
+                sb.append("<div class='title'>🎯 Swing Trading Simulator - סימולציית סווינג</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;' dir='rtl'>סורק מניות מועדפות לאיתור הזדמנויות סווינג - נסיגה איכותית, פריצה, ומעקב מגמה. מבוסס על swing-variants.json</div>");
+                
+                // Load swing variants config for display
+                try {
+                    DailyTradingSimulator.SwingVariantsConfig swingConfig = DailyTradingSimulator.SwingVariantsConfig.load();
+                    if (swingConfig.enabled && swingConfig.variants != null && !swingConfig.variants.isEmpty()) {
+                        sb.append("<div style='background:#0b1220;border-radius:8px;padding:12px;margin-bottom:12px;'>");
+                        sb.append("<div style='font-weight:600;color:#f59e0b;margin-bottom:8px;'>📋 Active Swing Variants (A/B Testing)</div>");
+                        sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;'>");
+                        for (DailyTradingSimulator.SwingVariantConfig v : swingConfig.variants) {
+                            sb.append("<div style='background:#1f2a44;padding:8px;border-radius:6px;'>");
+                            sb.append("<div style='font-weight:600;color:#fcd34d;'>").append(escapeHtml(v.name)).append("</div>");
+                            if (v.nameHe != null) sb.append("<div style='font-size:11px;color:#9ca3af;'>").append(escapeHtml(v.nameHe)).append("</div>");
+                            sb.append("<div style='font-size:11px;color:#6b7280;margin-top:4px;'>");
+                            sb.append("RSI: ").append((int)v.entryFilters.rsiMin).append("-").append((int)v.entryFilters.rsiMax);
+                            sb.append(" | RS≥").append(String.format("%.2f", v.entryFilters.rsMin));
+                            sb.append(" | SL:").append(String.format("%.0f%%", v.riskManagement.stopLossPct));
+                            sb.append(" | TP:").append(String.format("%.0f%%", v.riskManagement.takeProfitPct));
+                            sb.append("</div>");
+                            sb.append("</div>");
+                        }
+                        sb.append("</div>");
+                        sb.append("</div>");
+                    }
+                } catch (Exception ignore) {}
+                
+                sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;align-items:center;'>");
+                sb.append("<button onclick='runSwingScanner()' id='swingBtn' style='background:#f59e0b;'>🔍 Scan Stocks for Swing</button>");
+                sb.append("<button onclick='refreshSwingResults()' style='background:#8b5cf6;'>🔄 Refresh</button>");
+                sb.append("</div>");
+                sb.append("<div id='swingStatus' style='color:#9ca3af;font-size:13px;margin-bottom:12px;'></div>");
+                sb.append("<div id='swingResults' style='display:none;'></div>");
+                
+                // Swing Scanner JavaScript
+                sb.append("<script>");
+                sb.append("async function runSwingScanner() {");
+                sb.append("  var btn = document.getElementById('swingBtn');");
+                sb.append("  var status = document.getElementById('swingStatus');");
+                sb.append("  var results = document.getElementById('swingResults');");
+                sb.append("  btn.disabled = true; btn.textContent = '⏳ סורק...';");
+                sb.append("  status.textContent = 'סורק 100 מניות אקראיות מתוך 500+... (כ-90 שניות)';");
+                sb.append("  try {");
+                sb.append("    var r = await fetch('/api/swing-scan');");
+                sb.append("    var d = await r.json();");
+                sb.append("    results.style.display = 'block';");
+                sb.append("    if (d.error) { results.innerHTML = '<div style=\"color:#ef4444;\">' + d.error + '</div>'; status.textContent = ''; return; }");
+                sb.append("    status.textContent = 'נסרקו ' + (d.scanned || 0) + ' מניות, נמצאו ' + (d.candidates ? d.candidates.length : 0) + ' מועמדים';");
+                sb.append("    var html = '';");
+                sb.append("    if (!d.candidates || d.candidates.length === 0) {");
+                sb.append("      html = '<div style=\"color:#9ca3af;text-align:center;padding:20px;\">לא נמצאו מועמדים לסווינג כרגע</div>';");
+                sb.append("    } else {");
+                sb.append("      html = '<table style=\"width:100%;border-collapse:collapse;font-size:13px;\">';");
+                sb.append("      html += '<thead><tr style=\"background:#0b1220;\">';");
+                sb.append("      html += '<th style=\"padding:8px;text-align:left;\">Symbol</th>';");
+                sb.append("      html += '<th style=\"padding:8px;text-align:center;\">Variant</th>';");
+                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">Score</th>';");
+                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">RSI</th>';");
+                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">RS</th>';");
+                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">RVOL</th>';");
+                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">Entry</th>';");
+                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">Stop</th>';");
+                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">Target</th>';");
+                sb.append("      html += '</tr></thead><tbody>';");
+                sb.append("      d.candidates.forEach(function(c) {");
+                sb.append("        var rsiColor = c.rsi <= 40 ? '#22c55e' : (c.rsi <= 55 ? '#fbbf24' : '#9ca3af');");
+                sb.append("        var rsColor = c.rs >= 1.1 ? '#22c55e' : (c.rs >= 1.0 ? '#fbbf24' : '#ef4444');");
+                sb.append("        html += '<tr style=\"border-bottom:1px solid #1f2a44;\">';");
+                sb.append("        html += '<td style=\"padding:8px;font-weight:600;\">' + c.ticker + '</td>';");
+                sb.append("        html += '<td style=\"padding:8px;text-align:center;color:#f59e0b;\">' + (c.variant || '-') + '</td>';");
+                sb.append("        html += '<td style=\"padding:8px;text-align:right;font-weight:600;color:#22c55e;\">' + c.score + '</td>';");
+                sb.append("        html += '<td style=\"padding:8px;text-align:right;color:' + rsiColor + ';\">' + c.rsi.toFixed(0) + '</td>';");
+                sb.append("        html += '<td style=\"padding:8px;text-align:right;color:' + rsColor + ';\">' + c.rs.toFixed(2) + '</td>';");
+                sb.append("        html += '<td style=\"padding:8px;text-align:right;\">' + c.rvol.toFixed(1) + 'x</td>';");
+                sb.append("        html += '<td style=\"padding:8px;text-align:right;\">$' + c.entry.toFixed(2) + '</td>';");
+                sb.append("        html += '<td style=\"padding:8px;text-align:right;color:#ef4444;\">$' + c.stop.toFixed(2) + '</td>';");
+                sb.append("        html += '<td style=\"padding:8px;text-align:right;color:#22c55e;\">$' + c.target.toFixed(2) + '</td>';");
+                sb.append("        html += '</tr>';");
+                sb.append("      });");
+                sb.append("      html += '</tbody></table>';");
+                sb.append("    }");
+                sb.append("    results.innerHTML = html;");
+                sb.append("  } catch(e) { results.innerHTML = '<div style=\"color:#ef4444;\">שגיאה: ' + e.message + '</div>'; status.textContent = ''; }");
+                sb.append("  finally { btn.disabled = false; btn.textContent = '🔍 Scan Stocks for Swing'; }");
+                sb.append("}");
+                sb.append("function refreshSwingResults() { runSwingScanner(); }");
+                sb.append("</script>");
+                sb.append("</div>");
+
                 respondHtml(ex, htmlPage(sb.toString()), 200);
             }
         });
@@ -6626,7 +6967,6 @@ public class WebServer {
                 sb.append("<select name='mode' style='padding:10px 12px;border-radius:8px;border:1px solid #1f2a44;background:#1f2a44;color:#e5e7eb;min-width:320px;'>");
                 sb.append("<option value='LONG_TERM_INVESTOR'").append("LONG_TERM_INVESTOR".equals(activeMode) ? " selected" : "").append(">Long-Term Investor | משקיע לטווח ארוך</option>");
                 sb.append("<option value='SWING_TRADER'").append("SWING_TRADER".equals(activeMode) ? " selected" : "").append(">Swing Trader | סווינג טריידר (1-5 ימים)</option>");
-                sb.append("<option value='MOMENTUM'").append("MOMENTUM".equals(activeMode) ? " selected" : "").append(">Momentum / Day Trader | מומנטום / יומי</option>");
                 sb.append("<option value='CUSTOM'").append("CUSTOM".equals(activeMode) ? " selected" : "").append(">Custom | מותאם אישית</option>");
                 sb.append("</select>");
                 sb.append("<button type='submit' style='background:#22c55e;color:#000;border:none;'>Save</button>");
@@ -6639,7 +6979,7 @@ public class WebServer {
                 sb.append("<div style='font-weight:600;margin-bottom:8px;'>Select Trading Mode | בחר מצב מסחר:</div>");
                 sb.append("<div style='display:flex;flex-wrap:wrap;gap:10px;'>");
 
-                for (String modeKey : new String[]{"LONG_TERM_INVESTOR", "SWING_TRADER", "MOMENTUM", "CUSTOM"}) {
+                for (String modeKey : new String[]{"LONG_TERM_INVESTOR", "SWING_TRADER", "CUSTOM"}) {
                     ScoringConfig.ModeConfig m = config.presets.get(modeKey);
                     if (m == null) continue;
                     String name = m.name != null ? m.name : modeKey;

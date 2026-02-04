@@ -22,9 +22,9 @@
         "rvolMin": 1.5,
         "rsiMin": 50,
         "rsiMax": 78,
-        "cciMin": 100,
+        "cciMin": 50,
         "cciMax": 300,
-        "rsMin": 1.05,
+        "rsMin": 1.02,
         "sma200Required": true,
         "intradayPriceChangeMaxPct": 8.0
       },
@@ -54,7 +54,7 @@
         "rvolMin": 1.3,
         "rsiMin": 45,
         "cciMin": 50,
-        "rsMin": 1.05,
+        "rsMin": 1.02,
         "sma200Required": true,
         "intradayPriceChangeMaxPct": 6.0
       },
@@ -81,10 +81,10 @@
       "entryFilters": {
         "vwapRequired": true,
         "priceAboveVwapPct": 0.5,
-        "rvolMin": 2.2,
+        "rvolMin": 1.5,
         "rsiMin": 50,
         "cciMin": 80,
-        "rsMin": 1.05,
+        "rsMin": 1.02,
         "sma200Required": false,
         "intradayPriceChangeMaxPct": 12.0
       },

@@ -1,0 +1,157 @@
+{
+  "description": "Swing Trading Strategy Variants for A/B Testing - Quality pullback strategies for 1-5 day holds",
+  "enabled": true,
+  "variants": [
+    {
+      "id": "S1_SWING_PULLBACK",
+      "name": "Quality Swing Pullback",
+      "nameHe": "סווינג נסיגה איכותי",
+      "description": "Buying strong stocks during a healthy pullback to SMA 50/20.",
+      "stocksPerVariant": 3,
+      "entryFilters": {
+        "rvolMin": 0.8,
+        "rsiMin": 30,
+        "rsiMax": 50,
+        "rsMin": 1.05,
+        "sma200Required": true,
+        "priceAboveVwapRequired": false,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 5.0,
+        "takeProfitPct": 15.0,
+        "trailingStopPct": 3.0,
+        "atrMultiplier": 3.5,
+        "riskRewardRatio": 3.0
+      },
+      "scoring": {
+        "rsWeight": 60,
+        "rsiWeight": 20,
+        "volumeWeight": 20,
+        "maCrossoverBonus": 0
+      }
+    },
+    {
+      "id": "S2_SWING_BREAKOUT",
+      "name": "Swing Breakout",
+      "nameHe": "סווינג פריצה",
+      "description": "Catching breakouts from consolidation with volume confirmation.",
+      "stocksPerVariant": 3,
+      "entryFilters": {
+        "rvolMin": 1.2,
+        "rsiMin": 50,
+        "rsiMax": 70,
+        "rsMin": 1.05,
+        "sma200Required": true,
+        "priceAboveVwapRequired": true,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 4.0,
+        "takeProfitPct": 12.0,
+        "trailingStopPct": 2.5,
+        "atrMultiplier": 3.0,
+        "riskRewardRatio": 3.0
+      },
+      "scoring": {
+        "rsWeight": 50,
+        "rsiWeight": 20,
+        "volumeWeight": 30,
+        "maCrossoverBonus": 5
+      }
+    },
+    {
+      "id": "S3_SWING_TREND_FOLLOW",
+      "name": "Swing Trend Follower",
+      "nameHe": "סווינג עוקב מגמה",
+      "description": "Following established uptrends with MA crossover confirmation.",
+      "stocksPerVariant": 3,
+      "entryFilters": {
+        "rvolMin": 0.9,
+        "rsiMin": 40,
+        "rsiMax": 65,
+        "rsMin": 1.08,
+        "sma200Required": true,
+        "priceAboveVwapRequired": false,
+        "maCrossoverRequired": true
+      },
+      "riskManagement": {
+        "stopLossPct": 5.0,
+        "takeProfitPct": 15.0,
+        "trailingStopPct": 3.0,
+        "atrMultiplier": 3.5,
+        "riskRewardRatio": 3.0
+      },
+      "scoring": {
+        "rsWeight": 55,
+        "rsiWeight": 15,
+        "volumeWeight": 20,
+        "maCrossoverBonus": 10
+      }
+    },
+    {
+      "id": "S4_SWING_VALUE",
+      "name": "Swing Value Play",
+      "nameHe": "סווינג ערך",
+      "description": "Deep pullback in quality stocks - buying fear.",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 0.7,
+        "rsiMin": 25,
+        "rsiMax": 40,
+        "rsMin": 1.0,
+        "sma200Required": true,
+        "priceAboveVwapRequired": false,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 6.0,
+        "takeProfitPct": 18.0,
+        "trailingStopPct": 4.0,
+        "atrMultiplier": 4.0,
+        "riskRewardRatio": 3.0
+      },
+      "scoring": {
+        "rsWeight": 40,
+        "rsiWeight": 40,
+        "volumeWeight": 20,
+        "maCrossoverBonus": 0
+      }
+    },
+    {
+      "id": "S5_SWING_AGGRESSIVE",
+      "name": "Aggressive Swing",
+      "nameHe": "סווינג אגרסיבי",
+      "description": "Higher risk swing trades with tighter stops and bigger targets.",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 1.0,
+        "rsiMin": 35,
+        "rsiMax": 60,
+        "rsMin": 1.1,
+        "sma200Required": false,
+        "priceAboveVwapRequired": true,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 3.5,
+        "takeProfitPct": 10.0,
+        "trailingStopPct": 2.0,
+        "atrMultiplier": 2.5,
+        "riskRewardRatio": 2.8
+      },
+      "scoring": {
+        "rsWeight": 50,
+        "rsiWeight": 25,
+        "volumeWeight": 25,
+        "maCrossoverBonus": 5
+      }
+    }
+  ],
+  "marketGuard": {
+    "spyFilterEnabled": true,
+    "spySmaPeriod": 20,
+    "spyMinVwapDistancePct": -0.5,
+    "maxSpyDailyDropPct": -0.7
+  }
+}

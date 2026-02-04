@@ -41,6 +41,8 @@ public class DailyTradingSimulator {
     // Market regime gate (SPY)
     private static final double MARKET_WAIT_SPY_DROP_PCT = -0.5; // If SPY is down more than -0.5%, do not open new positions
     private static final int SPY_SMA_PERIOD = 20;
+    private static final long SPY_RECHECK_INTERVAL_MS = 15 * 60 * 1000; // Re-check SPY every 15 minutes when in WAIT mode
+    private static volatile long lastSpyCheckTime = 0;
     
     private static ScheduledExecutorService scheduler;
     private static ScheduledExecutorService dailyScheduler;
@@ -367,6 +369,7 @@ public class DailyTradingSimulator {
     private static final Path VARIANTS_CONFIG_PATH = Paths.get("momentum-variants.json");
     private static final Path INTRADAY_VARIANTS_CONFIG_PATH = Paths.get("intraday-variants.json");
     private static final Path SUCCESS_2026_CONFIG_PATH = Paths.get("momentum-success-2026.json");
+    private static final Path SWING_VARIANTS_CONFIG_PATH = Paths.get("swing-variants.json");
     
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class MomentumVariantsConfig {
@@ -601,6 +604,78 @@ public class DailyTradingSimulator {
         public String condition;
         public String action;
     }
+    
+    // Swing Variants Configuration
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class SwingVariantsConfig {
+        public String description;
+        public boolean enabled = true;
+        public List<SwingVariantConfig> variants = new ArrayList<>();
+        public MarketGuardConfig marketGuard = new MarketGuardConfig();
+        
+        public static SwingVariantsConfig load() {
+            try {
+                if (Files.exists(SWING_VARIANTS_CONFIG_PATH)) {
+                    ObjectMapper mapper = new ObjectMapper();
+                    return mapper.readValue(SWING_VARIANTS_CONFIG_PATH.toFile(), SwingVariantsConfig.class);
+                }
+            } catch (Exception e) {
+                logErr("[DailyTradingSimulator] Error loading swing variants config: " + e.getMessage());
+            }
+            return createDefaultSwingConfig();
+        }
+        
+        private static SwingVariantsConfig createDefaultSwingConfig() {
+            SwingVariantsConfig config = new SwingVariantsConfig();
+            config.enabled = true;
+            SwingVariantConfig s1 = new SwingVariantConfig();
+            s1.id = "S1_DEFAULT";
+            s1.name = "Default Swing Pullback";
+            s1.stocksPerVariant = 3;
+            config.variants.add(s1);
+            return config;
+        }
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class SwingVariantConfig {
+        public String id;
+        public String name;
+        public String nameHe;
+        public String description;
+        public int stocksPerVariant = 3;
+        public SwingEntryFilters entryFilters = new SwingEntryFilters();
+        public SwingRiskManagement riskManagement = new SwingRiskManagement();
+        public SwingScoring scoring = new SwingScoring();
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class SwingEntryFilters {
+        public double rvolMin = 0.8;
+        public double rsiMin = 30;
+        public double rsiMax = 50;
+        public double rsMin = 1.05;
+        public boolean sma200Required = true;
+        public boolean priceAboveVwapRequired = false;
+        public boolean maCrossoverRequired = false;
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class SwingRiskManagement {
+        public double stopLossPct = 5.0;
+        public double takeProfitPct = 15.0;
+        public double trailingStopPct = 3.0;
+        public double atrMultiplier = 3.5;
+        public double riskRewardRatio = 3.0;
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class SwingScoring {
+        public int rsWeight = 60;
+        public int rsiWeight = 20;
+        public int volumeWeight = 20;
+        public int maCrossoverBonus = 0;
+    }
 
     private static SimulatorStore store = new SimulatorStore();
 
@@ -808,20 +883,21 @@ public class DailyTradingSimulator {
 
                 log("[DailyTradingSimulator] Starting scan of " + toScan.size() + " stocks");
 
-                // Get SPY for market sentiment
-                SpyMarketRegime spyRegime = computeSpyMarketRegime(av);
-                double spyChange = spyRegime.changePct;
+                // Get SPY for market sentiment (use array wrapper to allow reassignment in re-check)
+                final SpyMarketRegime[] spyRegimeHolder = new SpyMarketRegime[] { computeSpyMarketRegime(av) };
+                lastSpyCheckTime = System.currentTimeMillis();
+                final double[] spyChangeHolder = new double[] { spyRegimeHolder[0].changePct };
                 synchronized (lock) {
                     if (scannerRunId.get() == runId) {
                         store.marketCheckedAtNy = ZonedDateTime.now(NY_ZONE).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-                        store.spyChangePct = spyRegime.changePct;
-                        store.spyPrice = spyRegime.price;
-                        store.spyPrevClose = spyRegime.prevClose;
-                        store.spySma20 = spyRegime.sma20;
-                        store.spyAbovePrevClose = spyRegime.abovePrevClose;
-                        store.spyAboveSma20 = spyRegime.aboveSma20;
-                        store.marketWaitMode = spyRegime.waitMode;
-                        store.marketWaitReason = spyRegime.reason;
+                        store.spyChangePct = spyRegimeHolder[0].changePct;
+                        store.spyPrice = spyRegimeHolder[0].price;
+                        store.spyPrevClose = spyRegimeHolder[0].prevClose;
+                        store.spySma20 = spyRegimeHolder[0].sma20;
+                        store.spyAbovePrevClose = spyRegimeHolder[0].abovePrevClose;
+                        store.spyAboveSma20 = spyRegimeHolder[0].aboveSma20;
+                        store.marketWaitMode = spyRegimeHolder[0].waitMode;
+                        store.marketWaitReason = spyRegimeHolder[0].reason;
                         saveStore();
                     }
                 }
@@ -847,7 +923,7 @@ public class DailyTradingSimulator {
                         }
 
                         // Enhanced scan with momentum indicators
-                        EnhancedScanResult enhanced = scanStockEnhanced(av, symbol, interval, spyChange);
+                        EnhancedScanResult enhanced = scanStockEnhanced(av, symbol, interval, spyChangeHolder[0]);
                         if (enhanced == null || enhanced.result == null) continue;
                         
                         IntradayScanner.ScanResult result = enhanced.result;
@@ -940,6 +1016,36 @@ public class DailyTradingSimulator {
                 // Assign candidates to variants (prevent duplicates per (ticker, variantId))
                 Map<String, Integer> variantTradeCount = new HashMap<>();
 
+                // Re-check SPY if in WAIT mode and 15 minutes have passed
+                if (spyRegimeHolder[0].waitMode && (System.currentTimeMillis() - lastSpyCheckTime) >= SPY_RECHECK_INTERVAL_MS) {
+                    log("[DailyTradingSimulator] Re-checking SPY (15 min passed, was in WAIT mode)...");
+                    spyRegimeHolder[0] = computeSpyMarketRegime(av);
+                    lastSpyCheckTime = System.currentTimeMillis();
+                    spyChangeHolder[0] = spyRegimeHolder[0].changePct;
+                    
+                    // Update store with new SPY data
+                    synchronized (lock) {
+                        if (scannerRunId.get() == runId) {
+                            store.marketCheckedAtNy = ZonedDateTime.now(NY_ZONE).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+                            store.spyChangePct = spyRegimeHolder[0].changePct;
+                            store.spyPrice = spyRegimeHolder[0].price;
+                            store.spyPrevClose = spyRegimeHolder[0].prevClose;
+                            store.spySma20 = spyRegimeHolder[0].sma20;
+                            store.spyAbovePrevClose = spyRegimeHolder[0].abovePrevClose;
+                            store.spyAboveSma20 = spyRegimeHolder[0].aboveSma20;
+                            store.marketWaitMode = spyRegimeHolder[0].waitMode;
+                            store.marketWaitReason = spyRegimeHolder[0].reason;
+                            saveStore();
+                        }
+                    }
+                    
+                    if (!spyRegimeHolder[0].waitMode) {
+                        log("[DailyTradingSimulator] ✅ SPY recovered! Market now in GO mode: " + spyRegimeHolder[0].reason);
+                    } else {
+                        log("[DailyTradingSimulator] ⏳ SPY still in WAIT mode: " + spyRegimeHolder[0].reason);
+                    }
+                }
+
                 // Process each MOMENTUM variant
                 if (momentumConfig.enabled) {
                     for (VariantConfig variant : momentumConfig.variants) {
@@ -950,8 +1056,8 @@ public class DailyTradingSimulator {
                             String key = c.ticker + "_" + variant.id;
                             if (variantTradeCount.containsKey(key)) continue;
 
-                            if (spyRegime.waitMode) {
-                                log("[DailyTradingSimulator] WAIT MODE (" + spyRegime.reason + ") - skipping new MOMENTUM position for " + c.ticker);
+                            if (spyRegimeHolder[0].waitMode) {
+                                log("[DailyTradingSimulator] WAIT MODE (" + spyRegimeHolder[0].reason + ") - skipping new MOMENTUM position for " + c.ticker);
                                 continue;
                             }
 
@@ -977,8 +1083,8 @@ public class DailyTradingSimulator {
                             String key = c.ticker + "_" + variant.id;
                             if (variantTradeCount.containsKey(key)) continue;
 
-                            if (spyRegime.waitMode) {
-                                log("[DailyTradingSimulator] WAIT MODE (" + spyRegime.reason + ") - skipping new SWING position for " + c.ticker);
+                            if (spyRegimeHolder[0].waitMode) {
+                                log("[DailyTradingSimulator] WAIT MODE (" + spyRegimeHolder[0].reason + ") - skipping new SWING position for " + c.ticker);
                                 continue;
                             }
 
@@ -1004,8 +1110,8 @@ public class DailyTradingSimulator {
                             String key = c.ticker + "_" + variant.id;
                             if (variantTradeCount.containsKey(key)) continue;
 
-                            if (spyRegime.waitMode) {
-                                log("[DailyTradingSimulator] WAIT MODE (" + spyRegime.reason + ") - skipping new INTRADAY position for " + c.ticker);
+                            if (spyRegimeHolder[0].waitMode) {
+                                log("[DailyTradingSimulator] WAIT MODE (" + spyRegimeHolder[0].reason + ") - skipping new INTRADAY position for " + c.ticker);
                                 continue;
                             }
 
@@ -1027,10 +1133,10 @@ public class DailyTradingSimulator {
                 if (success2026Config.enabled) {
                     // Check market guard from config (uses stricter thresholds)
                     boolean marketSafe = success2026Config.marketGuard.isMarketSafe(
-                        spyRegime.price, 
+                        spyRegimeHolder[0].price, 
                         0, // VWAP not available from daily data
-                        spyRegime.sma20 != null ? spyRegime.sma20 : 0,
-                        spyRegime.changePct
+                        spyRegimeHolder[0].sma20 != null ? spyRegimeHolder[0].sma20 : 0,
+                        spyRegimeHolder[0].changePct
                     );
                     
                     if (!marketSafe) {
@@ -1044,8 +1150,8 @@ public class DailyTradingSimulator {
                                 String key = c.ticker + "_" + variant.id;
                                 if (variantTradeCount.containsKey(key)) continue;
 
-                                if (spyRegime.waitMode) {
-                                    log("[DailyTradingSimulator] WAIT MODE (" + spyRegime.reason + ") - skipping SUCCESS_2026 position for " + c.ticker);
+                                if (spyRegimeHolder[0].waitMode) {
+                                    log("[DailyTradingSimulator] WAIT MODE (" + spyRegimeHolder[0].reason + ") - skipping SUCCESS_2026 position for " + c.ticker);
                                     continue;
                                 }
 
@@ -1510,6 +1616,88 @@ public class DailyTradingSimulator {
 
     private static boolean matchesSwingVariantFilters(ScanCandidate c, VariantConfig variant) {
         return matchesVariantFilters(c, variant);
+    }
+    
+    /**
+     * Check if a candidate matches a swing variant's entry filters (from swing-variants.json)
+     */
+    private static boolean matchesSwingVariantFiltersNew(ScanCandidate c, SwingVariantConfig variant) {
+        SwingEntryFilters f = variant.entryFilters;
+        if (f == null) return true;
+
+        // Check RVOL (swing has lower requirements)
+        if (c.result.rvol < f.rvolMin) {
+            log("[SwingFilter] " + c.ticker + " rejected by " + variant.id + ": RVOL " + String.format("%.1f", c.result.rvol) + " < " + f.rvolMin);
+            return false;
+        }
+
+        // Check RSI range - for swing pullback we want LOW RSI (oversold)
+        if (c.result.rsi < f.rsiMin || c.result.rsi > f.rsiMax) {
+            log("[SwingFilter] " + c.ticker + " rejected by " + variant.id +
+                ": RSI " + String.format("%.0f", c.result.rsi) + " not in [" + f.rsiMin + "-" + f.rsiMax + "]");
+            return false;
+        }
+
+        // Check RS (Relative Strength vs SPY)
+        if (c.rsRatio < f.rsMin) {
+            log("[SwingFilter] " + c.ticker + " rejected by " + variant.id + ": RS " + String.format("%.2f", c.rsRatio) + " < " + f.rsMin);
+            return false;
+        }
+
+        // Check MA crossover if required
+        if (f.maCrossoverRequired && !c.maCrossover) {
+            log("[SwingFilter] " + c.ticker + " rejected by " + variant.id + ": MA crossover required but not present");
+            return false;
+        }
+
+        // Check VWAP if required
+        if (f.priceAboveVwapRequired && !c.result.aboveVwap) {
+            log("[SwingFilter] " + c.ticker + " rejected by " + variant.id + ": Price above VWAP required but not met");
+            return false;
+        }
+
+        return true;
+    }
+    
+    /**
+     * Calculate swing score based on swing-specific scoring weights
+     */
+    private static int calculateSwingScore(ScanCandidate c, SwingScoring scoring) {
+        int score = 0;
+        
+        // RS Weight - most important for swing (historical strength)
+        if (c.rsRatio >= 1.20) {
+            score += scoring.rsWeight;
+        } else if (c.rsRatio >= 1.10) {
+            score += (int)(scoring.rsWeight * 0.75);
+        } else if (c.rsRatio >= 1.0) {
+            score += (int)(scoring.rsWeight * 0.5);
+        }
+        
+        // RSI Weight - for pullback, lower RSI is better (more oversold)
+        if (c.result.rsi <= 35) {
+            score += scoring.rsiWeight; // Deep pullback - full points
+        } else if (c.result.rsi <= 45) {
+            score += (int)(scoring.rsiWeight * 0.75);
+        } else if (c.result.rsi <= 55) {
+            score += (int)(scoring.rsiWeight * 0.5);
+        }
+        
+        // Volume Weight
+        if (c.result.rvol >= 1.5) {
+            score += scoring.volumeWeight;
+        } else if (c.result.rvol >= 1.0) {
+            score += (int)(scoring.volumeWeight * 0.6);
+        } else if (c.result.rvol >= 0.8) {
+            score += (int)(scoring.volumeWeight * 0.3);
+        }
+        
+        // MA Crossover Bonus
+        if (c.maCrossover) {
+            score += scoring.maCrossoverBonus;
+        }
+        
+        return Math.min(100, score);
     }
 
     /**
