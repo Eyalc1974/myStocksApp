@@ -5213,15 +5213,19 @@ public class WebServer {
                             // Get technical indicators (simplified - using available data)
                             double changePct = prevClose > 0 ? ((price - prevClose) / prevClose * 100) : 0;
                             
-                            // Simulate RSI based on price change (simplified)
-                            double rsi = 50 + (changePct * 5); // Rough approximation
-                            rsi = Math.max(10, Math.min(90, rsi));
+                            // Better RSI simulation: use price change with more variance
+                            // Negative change = lower RSI (oversold), positive = higher RSI (overbought)
+                            double rsi = 50 + (changePct * 10); // More sensitive to change
+                            rsi = Math.max(20, Math.min(80, rsi));
                             
-                            // Simulate RS ratio (would need SPY comparison in real impl)
-                            double rs = 1.0 + (changePct / 100);
+                            // Better RS simulation: stocks that are up relative to market are stronger
+                            // Assume market is flat, so stock change = relative strength
+                            double rs = 1.0 + (changePct / 50); // More generous RS calculation
+                            rs = Math.max(0.8, Math.min(1.5, rs));
                             
-                            // Simulate RVOL
-                            double rvol = 1.0;
+                            // Simulate RVOL based on some randomness (in real impl would use actual volume)
+                            double rvol = 0.8 + Math.abs(changePct) * 0.3; // Higher change = higher volume
+                            rvol = Math.max(0.5, Math.min(3.0, rvol));
                             
                             System.out.println("[SwingScan] " + ticker + ": $" + String.format("%.2f", price) + 
                                 " | Change: " + String.format("%.2f%%", changePct) + 

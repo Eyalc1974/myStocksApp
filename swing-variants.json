@@ -12,7 +12,7 @@
         "rvolMin": 0.8,
         "rsiMin": 30,
         "rsiMax": 50,
-        "rsMin": 1.05,
+        "rsMin": 1.03,
         "sma200Required": true,
         "priceAboveVwapRequired": false,
         "maCrossoverRequired": false
@@ -40,8 +40,8 @@
       "entryFilters": {
         "rvolMin": 1.2,
         "rsiMin": 50,
-        "rsiMax": 70,
-        "rsMin": 1.05,
+        "rsiMax": 75,
+        "rsMin": 1.03,
         "sma200Required": true,
         "priceAboveVwapRequired": true,
         "maCrossoverRequired": false
