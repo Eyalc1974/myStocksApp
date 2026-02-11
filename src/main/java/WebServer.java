@@ -52,6 +52,13 @@ public class WebServer {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private static final Object RUN_CAPTURE_LOCK = new Object();
+    
+    // Swing scan state for background scanning
+    private static volatile boolean swingScanRunning = false;
+    private static volatile int swingScanProgress = 0;
+    private static volatile int swingScanTotal = 0;
+    private static volatile String swingScanCurrentTicker = "";
+    private static volatile String swingScanStartTime = "";
 
     private static final int DAILY_TOP_PICK_COUNT = 5;
     private static final int DAILY_TRACKING_DAYS = 31;
@@ -5124,203 +5131,222 @@ public class WebServer {
             }
         });
 
-        // ---------------- Swing Scanner API Endpoint ----------------
-        server.createContext("/api/swing-scan", new HttpHandler() {
+        // ---------------- Swing Scanner API Endpoint (Background) ----------------
+        // Start scan in background
+        server.createContext("/api/swing-scan/start", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                
+                if (swingScanRunning) {
+                    respondJson(ex, Map.of("status", "already_running", "progress", swingScanProgress, "total", swingScanTotal, "currentTicker", swingScanCurrentTicker), 200);
+                    return;
+                }
+                
+                // Start background scan
+                swingScanRunning = true;
+                swingScanProgress = 0;
+                swingScanTotal = 100;
+                swingScanCurrentTicker = "";
+                swingScanStartTime = java.time.ZonedDateTime.now(NY).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+                
+                new Thread(() -> {
+                    List<Map<String, Object>> candidates = new ArrayList<>();
+                    int scanned = 0;
+                    int matchedVariant = 0;
+                    
+                    try {
+                        System.out.println("[SwingScan] ========== Starting Background Swing Scanner ==========");
+                        
+                        List<String> allTickers = LongTermCandidateFinder.getUniverseTickers();
+                        System.out.println("[SwingScan] Universe size: " + allTickers.size() + " stocks");
+                        
+                        if (allTickers.isEmpty()) {
+                            System.out.println("[SwingScan] ERROR: No stocks in universe");
+                            swingScanRunning = false;
+                            return;
+                        }
+                        
+                        List<String> tickers = new ArrayList<>(allTickers);
+                        Collections.shuffle(tickers);
+                        int maxStocks = Math.min(100, tickers.size());
+                        tickers = tickers.subList(0, maxStocks);
+                        swingScanTotal = maxStocks;
+                        System.out.println("[SwingScan] Scanning " + maxStocks + " random stocks...");
+                        
+                        DailyTradingSimulator.SwingVariantsConfig swingConfig = DailyTradingSimulator.SwingVariantsConfig.load();
+                        if (!swingConfig.enabled || swingConfig.variants == null || swingConfig.variants.isEmpty()) {
+                            System.out.println("[SwingScan] ERROR: Swing variants not configured");
+                            swingScanRunning = false;
+                            return;
+                        }
+                        
+                        MonitoringAlphaVantageClient av = MonitoringAlphaVantageClient.fromEnv();
+                        
+                        for (int i = 0; i < tickers.size(); i++) {
+                            String ticker = tickers.get(i);
+                            swingScanProgress = i + 1;
+                            swingScanCurrentTicker = ticker;
+                            
+                            try {
+                                Thread.sleep(800);
+                                
+                                JsonNode quote = av.globalQuote(ticker);
+                                if (quote == null) continue;
+                                
+                                JsonNode gq = quote.path("Global Quote");
+                                if (gq == null || gq.isMissingNode()) {
+                                    gq = quote.path("Global Quote - DATA DELAYED BY 15 MINUTES");
+                                }
+                                if (gq == null || gq.isMissingNode()) continue;
+                                
+                                Double priceD = parseDoubleOrNull(gq.path("05. price").asText(""));
+                                Double prevCloseD = parseDoubleOrNull(gq.path("08. previous close").asText(""));
+                                double price = priceD != null ? priceD : 0;
+                                double prevClose = prevCloseD != null ? prevCloseD : 0;
+                                if (price <= 0) continue;
+                                
+                                scanned++;
+                                double changePct = prevClose > 0 ? ((price - prevClose) / prevClose * 100) : 0;
+                                double rsi = 50 + (changePct * 10);
+                                rsi = Math.max(20, Math.min(80, rsi));
+                                double rs = 1.0 + (changePct / 50);
+                                rs = Math.max(0.8, Math.min(1.5, rs));
+                                double rvol = 0.8 + Math.abs(changePct) * 0.3;
+                                rvol = Math.max(0.5, Math.min(3.0, rvol));
+                                
+                                System.out.println("[SwingScan] " + ticker + ": $" + String.format("%.2f", price) + 
+                                    " | Change: " + String.format("%.2f%%", changePct) + 
+                                    " | RSI: " + String.format("%.0f", rsi) + 
+                                    " | RS: " + String.format("%.2f", rs));
+                                
+                                for (DailyTradingSimulator.SwingVariantConfig variant : swingConfig.variants) {
+                                    DailyTradingSimulator.SwingEntryFilters f = variant.entryFilters;
+                                    if (rsi < f.rsiMin || rsi > f.rsiMax) continue;
+                                    if (rs < f.rsMin) continue;
+                                    if (rvol < f.rvolMin) continue;
+                                    
+                                    int score = 0;
+                                    DailyTradingSimulator.SwingScoring scoring = variant.scoring;
+                                    if (rs >= 1.20) score += scoring.rsWeight;
+                                    else if (rs >= 1.10) score += (int)(scoring.rsWeight * 0.75);
+                                    else if (rs >= 1.0) score += (int)(scoring.rsWeight * 0.5);
+                                    if (rsi <= 35) score += scoring.rsiWeight;
+                                    else if (rsi <= 45) score += (int)(scoring.rsiWeight * 0.75);
+                                    else if (rsi <= 55) score += (int)(scoring.rsiWeight * 0.5);
+                                    if (rvol >= 1.5) score += scoring.volumeWeight;
+                                    else if (rvol >= 1.0) score += (int)(scoring.volumeWeight * 0.6);
+                                    
+                                    double stopLoss = price * (1 - variant.riskManagement.stopLossPct / 100);
+                                    double takeProfit = price * (1 + variant.riskManagement.takeProfitPct / 100);
+                                    
+                                    System.out.println("[SwingScan] ✅ " + ticker + " MATCHED " + variant.id + " | Score: " + score);
+                                    
+                                    Map<String, Object> candidate = new LinkedHashMap<>();
+                                    candidate.put("ticker", ticker);
+                                    candidate.put("variant", variant.id);
+                                    candidate.put("variantName", variant.name);
+                                    candidate.put("score", score);
+                                    candidate.put("rsi", rsi);
+                                    candidate.put("rs", rs);
+                                    candidate.put("rvol", rvol);
+                                    candidate.put("entry", price);
+                                    candidate.put("stop", stopLoss);
+                                    candidate.put("target", takeProfit);
+                                    candidate.put("price", price);
+                                    candidate.put("changePct", changePct);
+                                    
+                                    candidates.add(candidate);
+                                    matchedVariant++;
+                                    break;
+                                }
+                            } catch (Exception e) {
+                                System.err.println("[SwingScan] Error scanning " + ticker + ": " + e.getMessage());
+                            }
+                        }
+                        
+                        candidates.sort((a, b) -> Integer.compare((Integer)b.get("score"), (Integer)a.get("score")));
+                        
+                        System.out.println("[SwingScan] ========== Scan Complete ==========");
+                        System.out.println("[SwingScan] Scanned: " + scanned + " | Matched: " + matchedVariant);
+                        
+                        // Save results
+                        Map<String, Object> out = new LinkedHashMap<>();
+                        out.put("scanned", scanned);
+                        out.put("candidates", candidates);
+                        out.put("scanTime", swingScanStartTime);
+                        
+                        try {
+                            java.nio.file.Files.writeString(
+                                java.nio.file.Path.of("swing-scan-results.json"),
+                                JSON.writerWithDefaultPrettyPrinter().writeValueAsString(out)
+                            );
+                            System.out.println("[SwingScan] Results saved to swing-scan-results.json");
+                        } catch (Exception saveErr) {
+                            System.err.println("[SwingScan] Failed to save results: " + saveErr.getMessage());
+                        }
+                        
+                    } catch (Exception e) {
+                        System.err.println("[SwingScan] FATAL ERROR: " + e.getMessage());
+                        e.printStackTrace();
+                    } finally {
+                        swingScanRunning = false;
+                        swingScanCurrentTicker = "";
+                    }
+                }).start();
+                
+                respondJson(ex, Map.of("status", "started", "total", swingScanTotal), 200);
+            }
+        });
+        
+        // Get scan status
+        server.createContext("/api/swing-scan/status", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
                 
-                Map<String, Object> out = new LinkedHashMap<>();
-                List<Map<String, Object>> candidates = new ArrayList<>();
+                Map<String, Object> status = new LinkedHashMap<>();
+                status.put("running", swingScanRunning);
+                status.put("progress", swingScanProgress);
+                status.put("total", swingScanTotal);
+                status.put("currentTicker", swingScanCurrentTicker);
+                status.put("startTime", swingScanStartTime);
                 
+                respondJson(ex, status, 200);
+            }
+        });
+        
+        // Get saved swing scan results
+        server.createContext("/api/swing-scan/results", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
                 try {
-                    System.out.println("[SwingScan] ========== Starting Swing Scanner ==========");
-                    
-                    // Get universe tickers (500+ stocks like momentum scanner)
-                    List<String> allTickers = LongTermCandidateFinder.getUniverseTickers();
-                    System.out.println("[SwingScan] Universe size: " + allTickers.size() + " stocks");
-                    
-                    if (allTickers.isEmpty()) {
-                        System.out.println("[SwingScan] ERROR: No stocks in universe");
-                        out.put("error", "No stocks in universe to scan.");
-                        respondJson(ex, out, 200);
-                        return;
+                    java.nio.file.Path resultsPath = java.nio.file.Path.of("swing-scan-results.json");
+                    if (java.nio.file.Files.exists(resultsPath)) {
+                        String json = java.nio.file.Files.readString(resultsPath);
+                        Map<String, Object> results = JSON.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                        respondJson(ex, results, 200);
+                    } else {
+                        respondJson(ex, Map.of("candidates", List.of()), 200);
                     }
-                    
-                    // Limit to first 30 stocks for quick scan (API rate limits)
-                    // Shuffle to get different stocks each time
-                    List<String> tickers = new ArrayList<>(allTickers);
-                    Collections.shuffle(tickers);
-                    int maxStocks = Math.min(100, tickers.size());
-                    tickers = tickers.subList(0, maxStocks);
-                    System.out.println("[SwingScan] Scanning " + maxStocks + " random stocks: " + tickers.subList(0, Math.min(5, tickers.size())) + "...");
-                    
-                    // Load swing config
-                    DailyTradingSimulator.SwingVariantsConfig swingConfig = DailyTradingSimulator.SwingVariantsConfig.load();
-                    if (!swingConfig.enabled || swingConfig.variants == null || swingConfig.variants.isEmpty()) {
-                        System.out.println("[SwingScan] ERROR: Swing variants not configured or disabled");
-                        out.put("error", "Swing variants not configured or disabled.");
-                        respondJson(ex, out, 200);
-                        return;
-                    }
-                    System.out.println("[SwingScan] Loaded " + swingConfig.variants.size() + " swing variants");
-                    for (DailyTradingSimulator.SwingVariantConfig v : swingConfig.variants) {
-                        System.out.println("[SwingScan]   - " + v.id + ": RSI " + (int)v.entryFilters.rsiMin + "-" + (int)v.entryFilters.rsiMax + ", RS>=" + v.entryFilters.rsMin);
-                    }
-                    
-                    out.put("totalUniverse", allTickers.size());
-                    out.put("scanning", maxStocks);
-                    
-                    MonitoringAlphaVantageClient av = MonitoringAlphaVantageClient.fromEnv();
-                    int scanned = 0;
-                    int skippedNoQuote = 0;
-                    int skippedNoPrice = 0;
-                    int matchedVariant = 0;
-                    
-                    for (String ticker : tickers) {
-                        try {
-                            Thread.sleep(800); // Rate limit - faster for smaller batch
-                            
-                            // Get quote data
-                            JsonNode quote = av.globalQuote(ticker);
-                            if (quote == null) {
-                                skippedNoQuote++;
-                                System.out.println("[SwingScan] " + ticker + ": No quote data");
-                                continue;
-                            }
-                            // Handle both "Global Quote" and "Global Quote - DATA DELAYED BY 15 MINUTES"
-                            JsonNode gq = quote.path("Global Quote");
-                            if (gq == null || gq.isMissingNode()) {
-                                gq = quote.path("Global Quote - DATA DELAYED BY 15 MINUTES");
-                            }
-                            if (gq == null || gq.isMissingNode()) {
-                                skippedNoQuote++;
-                                System.out.println("[SwingScan] " + ticker + ": Missing Global Quote");
-                                continue;
-                            }
-                            
-                            Double priceD = parseDoubleOrNull(gq.path("05. price").asText(""));
-                            Double prevCloseD = parseDoubleOrNull(gq.path("08. previous close").asText(""));
-                            double price = priceD != null ? priceD : 0;
-                            double prevClose = prevCloseD != null ? prevCloseD : 0;
-                            if (price <= 0) {
-                                skippedNoPrice++;
-                                System.out.println("[SwingScan] " + ticker + ": Invalid price");
-                                continue;
-                            }
-                            
-                            scanned++;
-                            
-                            // Get technical indicators (simplified - using available data)
-                            double changePct = prevClose > 0 ? ((price - prevClose) / prevClose * 100) : 0;
-                            
-                            // Better RSI simulation: use price change with more variance
-                            // Negative change = lower RSI (oversold), positive = higher RSI (overbought)
-                            double rsi = 50 + (changePct * 10); // More sensitive to change
-                            rsi = Math.max(20, Math.min(80, rsi));
-                            
-                            // Better RS simulation: stocks that are up relative to market are stronger
-                            // Assume market is flat, so stock change = relative strength
-                            double rs = 1.0 + (changePct / 50); // More generous RS calculation
-                            rs = Math.max(0.8, Math.min(1.5, rs));
-                            
-                            // Simulate RVOL based on some randomness (in real impl would use actual volume)
-                            double rvol = 0.8 + Math.abs(changePct) * 0.3; // Higher change = higher volume
-                            rvol = Math.max(0.5, Math.min(3.0, rvol));
-                            
-                            System.out.println("[SwingScan] " + ticker + ": $" + String.format("%.2f", price) + 
-                                " | Change: " + String.format("%.2f%%", changePct) + 
-                                " | RSI: " + String.format("%.0f", rsi) + 
-                                " | RS: " + String.format("%.2f", rs));
-                            
-                            // Check against each swing variant
-                            boolean matched = false;
-                            for (DailyTradingSimulator.SwingVariantConfig variant : swingConfig.variants) {
-                                DailyTradingSimulator.SwingEntryFilters f = variant.entryFilters;
-                                
-                                // Check filters
-                                if (rsi < f.rsiMin || rsi > f.rsiMax) {
-                                    continue;
-                                }
-                                if (rs < f.rsMin) {
-                                    continue;
-                                }
-                                if (rvol < f.rvolMin) {
-                                    continue;
-                                }
-                                
-                                // Calculate score
-                                int score = 0;
-                                DailyTradingSimulator.SwingScoring scoring = variant.scoring;
-                                
-                                // RS score
-                                if (rs >= 1.20) score += scoring.rsWeight;
-                                else if (rs >= 1.10) score += (int)(scoring.rsWeight * 0.75);
-                                else if (rs >= 1.0) score += (int)(scoring.rsWeight * 0.5);
-                                
-                                // RSI score (lower is better for pullback)
-                                if (rsi <= 35) score += scoring.rsiWeight;
-                                else if (rsi <= 45) score += (int)(scoring.rsiWeight * 0.75);
-                                else if (rsi <= 55) score += (int)(scoring.rsiWeight * 0.5);
-                                
-                                // Volume score
-                                if (rvol >= 1.5) score += scoring.volumeWeight;
-                                else if (rvol >= 1.0) score += (int)(scoring.volumeWeight * 0.6);
-                                
-                                // Calculate entry, stop, target
-                                double entry = price;
-                                double stopLoss = price * (1 - variant.riskManagement.stopLossPct / 100);
-                                double takeProfit = price * (1 + variant.riskManagement.takeProfitPct / 100);
-                                
-                                System.out.println("[SwingScan] ✅ " + ticker + " MATCHED " + variant.id + 
-                                    " | Score: " + score + 
-                                    " | Entry: $" + String.format("%.2f", entry) + 
-                                    " | Stop: $" + String.format("%.2f", stopLoss) + 
-                                    " | Target: $" + String.format("%.2f", takeProfit));
-                                
-                                Map<String, Object> candidate = new LinkedHashMap<>();
-                                candidate.put("ticker", ticker);
-                                candidate.put("variant", variant.id);
-                                candidate.put("variantName", variant.name);
-                                candidate.put("score", score);
-                                candidate.put("rsi", rsi);
-                                candidate.put("rs", rs);
-                                candidate.put("rvol", rvol);
-                                candidate.put("entry", entry);
-                                candidate.put("stop", stopLoss);
-                                candidate.put("target", takeProfit);
-                                candidate.put("price", price);
-                                candidate.put("changePct", changePct);
-                                
-                                candidates.add(candidate);
-                                matched = true;
-                                matchedVariant++;
-                                break; // Only add once per ticker (best matching variant)
-                            }
-                            if (!matched) {
-                                System.out.println("[SwingScan] ❌ " + ticker + " no variant match (RSI/RS out of range)");
-                            }
-                        } catch (Exception e) {
-                            System.err.println("[SwingScan] Error scanning " + ticker + ": " + e.getMessage());
-                        }
-                    }
-                    
-                    // Sort by score descending
-                    candidates.sort((a, b) -> Integer.compare((Integer)b.get("score"), (Integer)a.get("score")));
-                    
-                    System.out.println("[SwingScan] ========== Scan Complete ==========");
-                    System.out.println("[SwingScan] Scanned: " + scanned + " | Matched: " + matchedVariant + " | Skipped (no quote): " + skippedNoQuote + " | Skipped (no price): " + skippedNoPrice);
-                    System.out.println("[SwingScan] Candidates found: " + candidates.size());
-                    
-                    out.put("scanned", scanned);
-                    out.put("candidates", candidates);
-                    
                 } catch (Exception e) {
-                    System.err.println("[SwingScan] FATAL ERROR: " + e.getMessage());
-                    e.printStackTrace();
-                    out.put("error", "Scan error: " + e.getMessage());
+                    respondJson(ex, Map.of("error", e.getMessage()), 500);
                 }
-                
-                respondJson(ex, out, 200);
+            }
+        });
+        
+        // Clear swing scan results
+        server.createContext("/api/swing-scan/clear", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                try {
+                    java.nio.file.Path resultsPath = java.nio.file.Path.of("swing-scan-results.json");
+                    if (java.nio.file.Files.exists(resultsPath)) {
+                        java.nio.file.Files.delete(resultsPath);
+                        System.out.println("[SwingScan] Results cleared");
+                    }
+                    respondJson(ex, Map.of("success", true), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage()), 500);
+                }
             }
         });
 
@@ -6840,63 +6866,126 @@ public class WebServer {
                 
                 sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;align-items:center;'>");
                 sb.append("<button onclick='runSwingScanner()' id='swingBtn' style='background:#f59e0b;'>🔍 Scan Stocks for Swing</button>");
-                sb.append("<button onclick='refreshSwingResults()' style='background:#8b5cf6;'>🔄 Refresh</button>");
+                sb.append("<button onclick='clearSwingResults()' id='clearSwingBtn' style='background:#ef4444;display:none;'>🗑️ Clear Results</button>");
                 sb.append("</div>");
                 sb.append("<div id='swingStatus' style='color:#9ca3af;font-size:13px;margin-bottom:12px;'></div>");
                 sb.append("<div id='swingResults' style='display:none;'></div>");
                 
                 // Swing Scanner JavaScript
                 sb.append("<script>");
+                sb.append("var swingPollInterval = null;");
+                // Render results function (shared by scan and load)
+                sb.append("function renderSwingResults(d) {");
+                sb.append("  var status = document.getElementById('swingStatus');");
+                sb.append("  var results = document.getElementById('swingResults');");
+                sb.append("  var clearBtn = document.getElementById('clearSwingBtn');");
+                sb.append("  results.style.display = 'block';");
+                sb.append("  if (d.error) { results.innerHTML = '<div style=\"color:#ef4444;\">' + d.error + '</div>'; status.textContent = ''; clearBtn.style.display = 'none'; return; }");
+                sb.append("  var scanTime = d.scanTime ? ' (סריקה: ' + d.scanTime + ')' : '';");
+                sb.append("  status.textContent = 'נסרקו ' + (d.scanned || 0) + ' מניות, נמצאו ' + (d.candidates ? d.candidates.length : 0) + ' מועמדים' + scanTime;");
+                sb.append("  var html = '';");
+                sb.append("  if (!d.candidates || d.candidates.length === 0) {");
+                sb.append("    html = '<div style=\"color:#9ca3af;text-align:center;padding:20px;\">לא נמצאו מועמדים לסווינג כרגע</div>';");
+                sb.append("    clearBtn.style.display = 'none';");
+                sb.append("  } else {");
+                sb.append("    clearBtn.style.display = 'inline-block';");
+                sb.append("    html = '<table style=\"width:100%;border-collapse:collapse;font-size:13px;\">';");
+                sb.append("    html += '<thead><tr style=\"background:#0b1220;\">';");
+                sb.append("    html += '<th style=\"padding:8px;text-align:left;\">Symbol</th>';");
+                sb.append("    html += '<th style=\"padding:8px;text-align:center;\">Variant</th>';");
+                sb.append("    html += '<th style=\"padding:8px;text-align:right;\">Score</th>';");
+                sb.append("    html += '<th style=\"padding:8px;text-align:right;\">RSI</th>';");
+                sb.append("    html += '<th style=\"padding:8px;text-align:right;\">RS</th>';");
+                sb.append("    html += '<th style=\"padding:8px;text-align:right;\">RVOL</th>';");
+                sb.append("    html += '<th style=\"padding:8px;text-align:right;\">Entry</th>';");
+                sb.append("    html += '<th style=\"padding:8px;text-align:right;\">Stop</th>';");
+                sb.append("    html += '<th style=\"padding:8px;text-align:right;\">Target</th>';");
+                sb.append("    html += '</tr></thead><tbody>';");
+                sb.append("    d.candidates.forEach(function(c) {");
+                sb.append("      var rsiColor = c.rsi <= 40 ? '#22c55e' : (c.rsi <= 55 ? '#fbbf24' : '#9ca3af');");
+                sb.append("      var rsColor = c.rs >= 1.1 ? '#22c55e' : (c.rs >= 1.0 ? '#fbbf24' : '#ef4444');");
+                sb.append("      html += '<tr style=\"border-bottom:1px solid #1f2a44;\">';");
+                sb.append("      html += '<td style=\"padding:8px;font-weight:600;\">' + c.ticker + '</td>';");
+                sb.append("      html += '<td style=\"padding:8px;text-align:center;color:#f59e0b;\">' + (c.variant || '-') + '</td>';");
+                sb.append("      html += '<td style=\"padding:8px;text-align:right;font-weight:600;color:#22c55e;\">' + c.score + '</td>';");
+                sb.append("      html += '<td style=\"padding:8px;text-align:right;color:' + rsiColor + ';\">' + c.rsi.toFixed(0) + '</td>';");
+                sb.append("      html += '<td style=\"padding:8px;text-align:right;color:' + rsColor + ';\">' + c.rs.toFixed(2) + '</td>';");
+                sb.append("      html += '<td style=\"padding:8px;text-align:right;\">' + c.rvol.toFixed(1) + 'x</td>';");
+                sb.append("      html += '<td style=\"padding:8px;text-align:right;\">$' + c.entry.toFixed(2) + '</td>';");
+                sb.append("      html += '<td style=\"padding:8px;text-align:right;color:#ef4444;\">$' + c.stop.toFixed(2) + '</td>';");
+                sb.append("      html += '<td style=\"padding:8px;text-align:right;color:#22c55e;\">$' + c.target.toFixed(2) + '</td>';");
+                sb.append("      html += '</tr>';");
+                sb.append("    });");
+                sb.append("    html += '</tbody></table>';");
+                sb.append("  }");
+                sb.append("  results.innerHTML = html;");
+                sb.append("}");
+                // Poll for scan status
+                sb.append("async function pollSwingScanStatus() {");
+                sb.append("  try {");
+                sb.append("    var r = await fetch('/api/swing-scan/status');");
+                sb.append("    var s = await r.json();");
+                sb.append("    var btn = document.getElementById('swingBtn');");
+                sb.append("    var status = document.getElementById('swingStatus');");
+                sb.append("    if (s.running) {");
+                sb.append("      btn.disabled = true; btn.textContent = '⏳ סורק...';");
+                sb.append("      status.textContent = 'סורק ' + s.progress + '/' + s.total + ' מניות... (' + s.currentTicker + ')';");
+                sb.append("    } else {");
+                sb.append("      btn.disabled = false; btn.textContent = '🔍 Scan Stocks for Swing';");
+                sb.append("      if (swingPollInterval) { clearInterval(swingPollInterval); swingPollInterval = null; }");
+                sb.append("      loadSavedSwingResults();");
+                sb.append("    }");
+                sb.append("  } catch(e) { console.log('Poll error:', e); }");
+                sb.append("}");
+                // Start scanner (background)
                 sb.append("async function runSwingScanner() {");
                 sb.append("  var btn = document.getElementById('swingBtn');");
                 sb.append("  var status = document.getElementById('swingStatus');");
-                sb.append("  var results = document.getElementById('swingResults');");
-                sb.append("  btn.disabled = true; btn.textContent = '⏳ סורק...';");
-                sb.append("  status.textContent = 'סורק 100 מניות אקראיות מתוך 500+... (כ-90 שניות)';");
+                sb.append("  btn.disabled = true; btn.textContent = '⏳ מתחיל...';");
+                sb.append("  status.textContent = 'מתחיל סריקה...';");
                 sb.append("  try {");
-                sb.append("    var r = await fetch('/api/swing-scan');");
+                sb.append("    var r = await fetch('/api/swing-scan/start', {method:'POST'});");
                 sb.append("    var d = await r.json();");
-                sb.append("    results.style.display = 'block';");
-                sb.append("    if (d.error) { results.innerHTML = '<div style=\"color:#ef4444;\">' + d.error + '</div>'; status.textContent = ''; return; }");
-                sb.append("    status.textContent = 'נסרקו ' + (d.scanned || 0) + ' מניות, נמצאו ' + (d.candidates ? d.candidates.length : 0) + ' מועמדים';");
-                sb.append("    var html = '';");
-                sb.append("    if (!d.candidates || d.candidates.length === 0) {");
-                sb.append("      html = '<div style=\"color:#9ca3af;text-align:center;padding:20px;\">לא נמצאו מועמדים לסווינג כרגע</div>';");
-                sb.append("    } else {");
-                sb.append("      html = '<table style=\"width:100%;border-collapse:collapse;font-size:13px;\">';");
-                sb.append("      html += '<thead><tr style=\"background:#0b1220;\">';");
-                sb.append("      html += '<th style=\"padding:8px;text-align:left;\">Symbol</th>';");
-                sb.append("      html += '<th style=\"padding:8px;text-align:center;\">Variant</th>';");
-                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">Score</th>';");
-                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">RSI</th>';");
-                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">RS</th>';");
-                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">RVOL</th>';");
-                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">Entry</th>';");
-                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">Stop</th>';");
-                sb.append("      html += '<th style=\"padding:8px;text-align:right;\">Target</th>';");
-                sb.append("      html += '</tr></thead><tbody>';");
-                sb.append("      d.candidates.forEach(function(c) {");
-                sb.append("        var rsiColor = c.rsi <= 40 ? '#22c55e' : (c.rsi <= 55 ? '#fbbf24' : '#9ca3af');");
-                sb.append("        var rsColor = c.rs >= 1.1 ? '#22c55e' : (c.rs >= 1.0 ? '#fbbf24' : '#ef4444');");
-                sb.append("        html += '<tr style=\"border-bottom:1px solid #1f2a44;\">';");
-                sb.append("        html += '<td style=\"padding:8px;font-weight:600;\">' + c.ticker + '</td>';");
-                sb.append("        html += '<td style=\"padding:8px;text-align:center;color:#f59e0b;\">' + (c.variant || '-') + '</td>';");
-                sb.append("        html += '<td style=\"padding:8px;text-align:right;font-weight:600;color:#22c55e;\">' + c.score + '</td>';");
-                sb.append("        html += '<td style=\"padding:8px;text-align:right;color:' + rsiColor + ';\">' + c.rsi.toFixed(0) + '</td>';");
-                sb.append("        html += '<td style=\"padding:8px;text-align:right;color:' + rsColor + ';\">' + c.rs.toFixed(2) + '</td>';");
-                sb.append("        html += '<td style=\"padding:8px;text-align:right;\">' + c.rvol.toFixed(1) + 'x</td>';");
-                sb.append("        html += '<td style=\"padding:8px;text-align:right;\">$' + c.entry.toFixed(2) + '</td>';");
-                sb.append("        html += '<td style=\"padding:8px;text-align:right;color:#ef4444;\">$' + c.stop.toFixed(2) + '</td>';");
-                sb.append("        html += '<td style=\"padding:8px;text-align:right;color:#22c55e;\">$' + c.target.toFixed(2) + '</td>';");
-                sb.append("        html += '</tr>';");
-                sb.append("      });");
-                sb.append("      html += '</tbody></table>';");
+                sb.append("    if (d.status === 'started' || d.status === 'already_running') {");
+                sb.append("      btn.textContent = '⏳ סורק...';");
+                sb.append("      status.textContent = 'סורק 0/' + d.total + ' מניות...';");
+                sb.append("      if (!swingPollInterval) { swingPollInterval = setInterval(pollSwingScanStatus, 2000); }");
                 sb.append("    }");
-                sb.append("    results.innerHTML = html;");
-                sb.append("  } catch(e) { results.innerHTML = '<div style=\"color:#ef4444;\">שגיאה: ' + e.message + '</div>'; status.textContent = ''; }");
-                sb.append("  finally { btn.disabled = false; btn.textContent = '🔍 Scan Stocks for Swing'; }");
+                sb.append("  } catch(e) { status.textContent = 'שגיאה: ' + e.message; btn.disabled = false; btn.textContent = '🔍 Scan Stocks for Swing'; }");
                 sb.append("}");
-                sb.append("function refreshSwingResults() { runSwingScanner(); }");
+                // Load saved results on page load
+                sb.append("async function loadSavedSwingResults() {");
+                sb.append("  try {");
+                sb.append("    var r = await fetch('/api/swing-scan/results');");
+                sb.append("    var d = await r.json();");
+                sb.append("    if (d.candidates && d.candidates.length > 0) { renderSwingResults(d); }");
+                sb.append("  } catch(e) { console.log('No saved swing results'); }");
+                sb.append("}");
+                // Clear results function
+                sb.append("async function clearSwingResults() {");
+                sb.append("  if (!confirm('האם למחוק את תוצאות הסריקה?')) return;");
+                sb.append("  try {");
+                sb.append("    await fetch('/api/swing-scan/clear', {method:'POST'});");
+                sb.append("    document.getElementById('swingResults').style.display = 'none';");
+                sb.append("    document.getElementById('swingResults').innerHTML = '';");
+                sb.append("    document.getElementById('swingStatus').textContent = '';");
+                sb.append("    document.getElementById('clearSwingBtn').style.display = 'none';");
+                sb.append("  } catch(e) { alert('שגיאה במחיקה: ' + e.message); }");
+                sb.append("}");
+                // Check status on page load (in case scan is running)
+                sb.append("async function initSwingScanner() {");
+                sb.append("  var r = await fetch('/api/swing-scan/status');");
+                sb.append("  var s = await r.json();");
+                sb.append("  if (s.running) {");
+                sb.append("    document.getElementById('swingBtn').disabled = true;");
+                sb.append("    document.getElementById('swingBtn').textContent = '⏳ סורק...';");
+                sb.append("    document.getElementById('swingStatus').textContent = 'סורק ' + s.progress + '/' + s.total + ' מניות... (' + s.currentTicker + ')';");
+                sb.append("    swingPollInterval = setInterval(pollSwingScanStatus, 2000);");
+                sb.append("  } else {");
+                sb.append("    loadSavedSwingResults();");
+                sb.append("  }");
+                sb.append("}");
+                sb.append("initSwingScanner();");
                 sb.append("</script>");
                 sb.append("</div>");
 
