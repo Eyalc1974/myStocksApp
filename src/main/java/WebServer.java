@@ -1357,6 +1357,7 @@ public class WebServer {
                 "<a href=\"/favorites\">SwingLongAiAgent</a> · " +
                 "<a href=\"/portfolio-manage\">Manage Portfolio</a> · " +
                 "<a href=\"/alpha-agent\">MomentumAiAgent</a> · " +
+                "<a href=\"/aitool\">🤖 AITool</a> · " +
                 "<a href=\"/monitoring\">Monitoring Stocks - History</a> · " +
                 "<a href=\"/intraday-alerts\">Intraday Alerts</a> · " +
                 "<a href=\"/active-positions\">Active Positions</a> · " +
@@ -7021,6 +7022,346 @@ public class WebServer {
                 synchronized (favLock) { removed = fav.items.remove(t); try { Files.write(favPath, (String.join("\n", fav.items)+"\n").getBytes(StandardCharsets.UTF_8)); } catch (Exception ignore) {} }
                 if (removed) { synchronized (favLockStatic) { favItemsStatic.remove(t); } }
                 ex.getResponseHeaders().add("Location", "/favorites?status="+(removed?"removed":"not_found"));
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // ---------------- AITool Page - Multi-Agent Strategy Testing ----------------
+        server.createContext("/aitool", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) {
+                    respondHtml(ex, htmlPage(""), 200); return;
+                }
+
+                // Initialize AITool if needed
+                try { AIToolAgent.initialize(); } catch (Exception ignore) {}
+
+                AIToolAgent.AgentSystemState state = AIToolAgent.getSystemState();
+                List<AIToolAgent.AgentPerformance> performances = AIToolAgent.getAllPerformances();
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("<div class='card'><div class='title'>🤖 AITool - Multi-Agent Strategy Testing</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>Testing multiple trading strategies (agents) to find the best formula for profit.</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>בדיקת אסטרטגיות מסחר מרובות (סוכנים) כדי למצוא את הנוסחה הטובה ביותר לרווח.</div>");
+
+                // Status panel
+                sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:12px;padding:14px;margin-bottom:16px;'>");
+                sb.append("<div style='display:flex;gap:20px;flex-wrap:wrap;align-items:center;'>");
+                sb.append("<div><span style='color:#9ca3af;'>Status:</span> ");
+                if (AIToolAgent.isRunning()) {
+                    sb.append("<span style='color:#22c55e;font-weight:700;'>RUNNING</span>");
+                    String current = AIToolAgent.getCurrentAgent();
+                    if (current != null) sb.append(" · Agent: <b>").append(escapeHtml(current)).append("</b>");
+                } else {
+                    sb.append("<span style='color:#93c5fd;font-weight:700;'>IDLE</span>");
+                }
+                sb.append("</div>");
+                sb.append("<div><span style='color:#9ca3af;'>Agents:</span> <b>").append(AIToolAgent.getAgentCount()).append("</b></div>");
+                if (state != null && state.lastRunTime != null) {
+                    sb.append("<div><span style='color:#9ca3af;'>Last Run:</span> ").append(escapeHtml(state.lastRunTime.substring(0, Math.min(19, state.lastRunTime.length())))).append("</div>");
+                }
+                sb.append("<div><span style='color:#9ca3af;'>Run Count:</span> ").append(state != null ? state.runCount : 0).append("</div>");
+                sb.append("</div>");
+                sb.append("<div style='margin-top:12px;display:flex;gap:10px;'>");
+                sb.append("<form method='post' action='/aitool-run' style='margin:0;'><button type='submit'>▶️ Run All Agents Now</button></form>");
+                sb.append("<a href='/aitool' style='padding:10px 14px;background:#1f2a44;border-radius:8px;'>🔄 Refresh</a>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                // Agent performance table
+                sb.append("<div style='overflow-x:auto;'>");
+                sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
+                sb.append("<thead><tr style='background:#0b1220;'>");
+                sb.append("<th style='padding:10px 8px;text-align:left;border-bottom:1px solid #1f2a44;'>Agent</th>");
+                sb.append("<th style='padding:10px 8px;text-align:left;border-bottom:1px solid #1f2a44;'>Type</th>");
+                sb.append("<th style='padding:10px 8px;text-align:center;border-bottom:1px solid #1f2a44;'>Trades</th>");
+                sb.append("<th style='padding:10px 8px;text-align:center;border-bottom:1px solid #1f2a44;'>Win/Loss</th>");
+                sb.append("<th style='padding:10px 8px;text-align:center;border-bottom:1px solid #1f2a44;'>Win Rate</th>");
+                sb.append("<th style='padding:10px 8px;text-align:right;border-bottom:1px solid #1f2a44;'>Total P/L</th>");
+                sb.append("<th style='padding:10px 8px;text-align:right;border-bottom:1px solid #1f2a44;'>Daily Avg</th>");
+                sb.append("<th style='padding:10px 8px;text-align:right;border-bottom:1px solid #1f2a44;'>Weekly Avg</th>");
+                sb.append("<th style='padding:10px 8px;text-align:right;border-bottom:1px solid #1f2a44;'>Monthly Avg</th>");
+                sb.append("<th style='padding:10px 8px;text-align:left;border-bottom:1px solid #1f2a44;'>Latest 3 Trades</th>");
+                sb.append("<th style='padding:10px 8px;text-align:center;border-bottom:1px solid #1f2a44;'>Config</th>");
+                sb.append("</tr></thead><tbody>");
+
+                // Sort by total P/L descending
+                performances.sort((a, b) -> Double.compare(b.totalProfitLoss, a.totalProfitLoss));
+
+                for (AIToolAgent.AgentPerformance perf : performances) {
+                    String rowBg = perf.isWinning ? "background:rgba(34,197,94,0.15);" : "";
+                    String rowBorder = perf.isWinning ? "border-left:3px solid #22c55e;" : "";
+                    
+                    sb.append("<tr style='").append(rowBg).append(rowBorder).append("'>");
+                    
+                    // Agent name with generation indicator
+                    sb.append("<td style='padding:8px;border-bottom:1px solid #1f2a44;'>");
+                    if (perf.isWinning) sb.append("<span style='color:#22c55e;'>🏆 </span>");
+                    sb.append("<b>").append(escapeHtml(perf.agentName != null ? perf.agentName : perf.agentId)).append("</b>");
+                    if (perf.generation > 0) {
+                        sb.append(" <span style='color:#9ca3af;font-size:11px;'>(Gen ").append(perf.generation).append(")</span>");
+                    }
+                    sb.append("</td>");
+                    
+                    // Type
+                    String typeColor = "#93c5fd";
+                    if ("MOMENTUM".equals(perf.type)) typeColor = "#f97316";
+                    else if ("SWING".equals(perf.type)) typeColor = "#a855f7";
+                    else if ("INTRADAY".equals(perf.type)) typeColor = "#eab308";
+                    else if ("SUCCESS".equals(perf.type)) typeColor = "#22c55e";
+                    sb.append("<td style='padding:8px;border-bottom:1px solid #1f2a44;'><span style='color:").append(typeColor).append(";'>").append(escapeHtml(perf.type != null ? perf.type : "")).append("</span></td>");
+                    
+                    // Trades
+                    sb.append("<td style='padding:8px;text-align:center;border-bottom:1px solid #1f2a44;'>").append(perf.totalTrades).append("</td>");
+                    
+                    // Win/Loss
+                    sb.append("<td style='padding:8px;text-align:center;border-bottom:1px solid #1f2a44;'>");
+                    sb.append("<span style='color:#22c55e;'>").append(perf.wins).append("</span>");
+                    sb.append(" / ");
+                    sb.append("<span style='color:#ef4444;'>").append(perf.losses).append("</span>");
+                    sb.append("</td>");
+                    
+                    // Win Rate
+                    String winRateColor = perf.winRate >= 50 ? "#22c55e" : "#ef4444";
+                    sb.append("<td style='padding:8px;text-align:center;border-bottom:1px solid #1f2a44;color:").append(winRateColor).append(";font-weight:600;'>")
+                      .append(String.format("%.1f%%", perf.winRate)).append("</td>");
+                    
+                    // Total P/L
+                    String plColor = perf.totalProfitLoss >= 0 ? "#22c55e" : "#ef4444";
+                    sb.append("<td style='padding:8px;text-align:right;border-bottom:1px solid #1f2a44;color:").append(plColor).append(";font-weight:600;'>")
+                      .append(String.format("$%.2f", perf.totalProfitLoss)).append("</td>");
+                    
+                    // Daily Avg
+                    String dailyColor = perf.avgDailyReturn >= 0 ? "#22c55e" : "#ef4444";
+                    sb.append("<td style='padding:8px;text-align:right;border-bottom:1px solid #1f2a44;color:").append(dailyColor).append(";'>")
+                      .append(String.format("%.2f%%", perf.avgDailyReturn)).append("</td>");
+                    
+                    // Weekly Avg
+                    String weeklyColor = perf.avgWeeklyReturn >= 0 ? "#22c55e" : "#ef4444";
+                    sb.append("<td style='padding:8px;text-align:right;border-bottom:1px solid #1f2a44;color:").append(weeklyColor).append(";'>")
+                      .append(String.format("%.2f%%", perf.avgWeeklyReturn)).append("</td>");
+                    
+                    // Monthly Avg
+                    String monthlyColor = perf.avgMonthlyReturn >= 0 ? "#22c55e" : "#ef4444";
+                    sb.append("<td style='padding:8px;text-align:right;border-bottom:1px solid #1f2a44;color:").append(monthlyColor).append(";'>")
+                      .append(String.format("%.2f%%", perf.avgMonthlyReturn)).append("</td>");
+                    
+                    // Latest 3 trades
+                    sb.append("<td style='padding:8px;border-bottom:1px solid #1f2a44;font-size:11px;'>");
+                    if (perf.recentTrades != null && !perf.recentTrades.isEmpty()) {
+                        for (int i = 0; i < Math.min(3, perf.recentTrades.size()); i++) {
+                            AIToolAgent.Trade t = perf.recentTrades.get(i);
+                            String tColor = t.profitLoss >= 0 ? "#22c55e" : "#ef4444";
+                            String tIcon = t.profitLoss >= 0 ? "📈" : "📉";
+                            sb.append("<div style='color:").append(tColor).append(";'>");
+                            sb.append(tIcon).append(" ").append(escapeHtml(t.ticker));
+                            sb.append(" ").append(String.format("%+.1f%%", t.profitLossPct));
+                            sb.append("</div>");
+                        }
+                    } else {
+                        sb.append("<span style='color:#6b7280;'>No trades yet</span>");
+                    }
+                    sb.append("</td>");
+                    
+                    // Config changed indicator
+                    sb.append("<td style='padding:8px;text-align:center;border-bottom:1px solid #1f2a44;'>");
+                    if (perf.configChanged && perf.newConfigName != null) {
+                        sb.append("<span style='color:#eab308;' title='Evolved to: ").append(escapeHtml(perf.newConfigName)).append("'>🔄 ").append(escapeHtml(perf.newConfigName)).append("</span>");
+                    } else {
+                        sb.append("<span style='color:#6b7280;'>-</span>");
+                    }
+                    sb.append("</td>");
+                    
+                    sb.append("</tr>");
+                }
+
+                sb.append("</tbody></table>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                // Legend
+                sb.append("<div class='card'><div class='title'>📖 Legend</div>");
+                sb.append("<div style='display:flex;gap:20px;flex-wrap:wrap;font-size:13px;'>");
+                sb.append("<div><span style='color:#22c55e;'>🏆 GREEN row</span> = Winning agent (P/L &gt; 0 and Win Rate &gt; 50%)</div>");
+                sb.append("<div><span style='color:#f97316;'>MOMENTUM</span> = momentum-variants.json</div>");
+                sb.append("<div><span style='color:#a855f7;'>SWING</span> = swing-variants.json</div>");
+                sb.append("<div><span style='color:#eab308;'>INTRADAY</span> = intraday-variants.json</div>");
+                sb.append("<div><span style='color:#22c55e;'>SUCCESS</span> = momentum-success-2026.json</div>");
+                sb.append("<div><span style='color:#eab308;'>🔄</span> = Config evolved (saved to newStrategies/)</div>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                // Trade History Section - All Buy/Sell transactions
+                sb.append("<div class='card'><div class='title'>📜 Trade History - All Buy/Sell Transactions</div>");
+                AIToolAgent.AgentSystemState agentState = AIToolAgent.getSystemState();
+                if (agentState.tradeHistory == null || agentState.tradeHistory.isEmpty()) {
+                    sb.append("<div style='color:#6b7280;padding:20px;text-align:center;'>No trades recorded yet. Run agents to see trade history.</div>");
+                } else {
+                    // Collect all trades and sort by time (newest first)
+                    List<AIToolAgent.Trade> allTrades = new ArrayList<>();
+                    for (List<AIToolAgent.Trade> trades : agentState.tradeHistory.values()) {
+                        allTrades.addAll(trades);
+                    }
+                    allTrades.sort((a, b) -> {
+                        if (a.entryTime == null) return 1;
+                        if (b.entryTime == null) return -1;
+                        return b.entryTime.compareTo(a.entryTime);
+                    });
+                    
+                    sb.append("<div style='margin-bottom:10px;color:#9ca3af;'>Total trades: <b>").append(allTrades.size()).append("</b></div>");
+                    sb.append("<div style='max-height:500px;overflow-y:auto;'>");
+                    sb.append("<table style='width:100%;border-collapse:collapse;font-size:12px;'>");
+                    sb.append("<thead><tr style='background:#1f2a44;position:sticky;top:0;'>");
+                    sb.append("<th style='padding:8px;text-align:left;'>Time</th>");
+                    sb.append("<th style='padding:8px;text-align:left;'>Agent</th>");
+                    sb.append("<th style='padding:8px;text-align:center;'>Action</th>");
+                    sb.append("<th style='padding:8px;text-align:left;'>Ticker</th>");
+                    sb.append("<th style='padding:8px;text-align:right;'>Entry $</th>");
+                    sb.append("<th style='padding:8px;text-align:right;'>Exit $</th>");
+                    sb.append("<th style='padding:8px;text-align:right;'>P/L $</th>");
+                    sb.append("<th style='padding:8px;text-align:right;'>P/L %</th>");
+                    sb.append("<th style='padding:8px;text-align:center;'>Status</th>");
+                    sb.append("</tr></thead><tbody>");
+                    
+                    // Show last 100 trades
+                    int shown = 0;
+                    for (AIToolAgent.Trade t : allTrades) {
+                        if (shown >= 100) break;
+                        shown++;
+                        
+                        String rowBg = t.profitLoss >= 0 ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)";
+                        sb.append("<tr style='background:").append(rowBg).append(";'>");
+                        
+                        // Time
+                        String timeStr = t.entryTime != null ? t.entryTime : "";
+                        if (timeStr.length() > 19) timeStr = timeStr.substring(0, 19).replace("T", " ");
+                        sb.append("<td style='padding:6px;border-bottom:1px solid #1f2a44;color:#9ca3af;font-size:11px;'>").append(escapeHtml(timeStr)).append("</td>");
+                        
+                        // Agent
+                        sb.append("<td style='padding:6px;border-bottom:1px solid #1f2a44;'>").append(escapeHtml(t.agentId != null ? t.agentId : "")).append("</td>");
+                        
+                        // Action
+                        String actionColor = "BUY".equals(t.action) ? "#22c55e" : "#ef4444";
+                        String actionIcon = "BUY".equals(t.action) ? "🟢" : "🔴";
+                        sb.append("<td style='padding:6px;text-align:center;border-bottom:1px solid #1f2a44;color:").append(actionColor).append(";font-weight:600;'>").append(actionIcon).append(" ").append(escapeHtml(t.action != null ? t.action : "")).append("</td>");
+                        
+                        // Ticker
+                        sb.append("<td style='padding:6px;border-bottom:1px solid #1f2a44;font-weight:600;color:#93c5fd;'>").append(escapeHtml(t.ticker != null ? t.ticker : "")).append("</td>");
+                        
+                        // Entry Price
+                        sb.append("<td style='padding:6px;text-align:right;border-bottom:1px solid #1f2a44;'>$").append(String.format("%.2f", t.entryPrice)).append("</td>");
+                        
+                        // Exit Price
+                        sb.append("<td style='padding:6px;text-align:right;border-bottom:1px solid #1f2a44;'>$").append(String.format("%.2f", t.exitPrice)).append("</td>");
+                        
+                        // P/L $
+                        String plColor = t.profitLoss >= 0 ? "#22c55e" : "#ef4444";
+                        sb.append("<td style='padding:6px;text-align:right;border-bottom:1px solid #1f2a44;color:").append(plColor).append(";font-weight:600;'>").append(String.format("%+.2f", t.profitLoss)).append("</td>");
+                        
+                        // P/L %
+                        sb.append("<td style='padding:6px;text-align:right;border-bottom:1px solid #1f2a44;color:").append(plColor).append(";'>").append(String.format("%+.2f%%", t.profitLossPct)).append("</td>");
+                        
+                        // Status
+                        String statusIcon = "CLOSED_WIN".equals(t.status) ? "✅" : "❌";
+                        sb.append("<td style='padding:6px;text-align:center;border-bottom:1px solid #1f2a44;'>").append(statusIcon).append("</td>");
+                        
+                        sb.append("</tr>");
+                    }
+                    
+                    sb.append("</tbody></table>");
+                    if (allTrades.size() > 100) {
+                        sb.append("<div style='color:#6b7280;padding:10px;text-align:center;'>Showing 100 of ").append(allTrades.size()).append(" trades. Full history in newStrategies/agent-state.json</div>");
+                    }
+                    sb.append("</div>");
+                }
+                sb.append("</div>");
+
+                // Source files info
+                sb.append("<div class='card'><div class='title'>📁 Agent Sources</div>");
+                sb.append("<div style='color:#9ca3af;font-size:13px;'>");
+                sb.append("<div>• <b>momentum-variants.json</b> - 10 momentum strategies</div>");
+                sb.append("<div>• <b>momentum-success-2026.json</b> - 3 success formula strategies</div>");
+                sb.append("<div>• <b>intraday-variants.json</b> - 6 intraday VWAP strategies</div>");
+                sb.append("<div>• <b>swing-variants.json</b> - 10 swing trading strategies</div>");
+                sb.append("<div>• <b>newStrategies/</b> - Evolved agent configurations (auto-generated)</div>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                // Evolution Log - shows when/why agents abandoned their strategies
+                List<AIToolAgent.EvolutionEvent> evolutionLog = AIToolAgent.getEvolutionLog();
+                sb.append("<div class='card'><div class='title'>🧬 Evolution Log - Strategy Abandonment History</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>When an agent's win rate drops below 40% after 5+ trades, it abandons its strategy and creates a new evolved version with mutated parameters.</div>");
+                
+                if (evolutionLog.isEmpty()) {
+                    sb.append("<div style='color:#6b7280;padding:20px;text-align:center;'>No evolution events yet. Run agents to see strategy changes.</div>");
+                } else {
+                    sb.append("<div style='max-height:400px;overflow-y:auto;'>");
+                    for (AIToolAgent.EvolutionEvent evt : evolutionLog) {
+                        sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;margin-bottom:10px;'>");
+                        sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;'>");
+                        sb.append("<div style='font-weight:600;color:#eab308;'>🔄 ").append(escapeHtml(evt.originalAgentId)).append(" → ").append(escapeHtml(evt.newAgentId)).append("</div>");
+                        if (evt.timestamp != null) {
+                            String ts = evt.timestamp.length() > 19 ? evt.timestamp.substring(0, 19) : evt.timestamp;
+                            sb.append("<div style='color:#6b7280;font-size:11px;'>").append(escapeHtml(ts)).append("</div>");
+                        }
+                        sb.append("</div>");
+                        sb.append("<div style='color:#ef4444;font-size:13px;margin-bottom:6px;'>⚠️ ").append(escapeHtml(evt.reason != null ? evt.reason : "")).append("</div>");
+                        sb.append("<div style='display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#9ca3af;margin-bottom:6px;'>");
+                        sb.append("<div>Win Rate: <span style='color:#ef4444;'>").append(String.format("%.1f%%", evt.oldWinRate)).append("</span></div>");
+                        sb.append("<div>Trades: ").append(evt.oldTrades).append("</div>");
+                        sb.append("<div>P/L: <span style='color:").append(evt.oldProfitLoss >= 0 ? "#22c55e" : "#ef4444").append(";'>$").append(String.format("%.2f", evt.oldProfitLoss)).append("</span></div>");
+                        sb.append("</div>");
+                        if (evt.parameterChanges != null && !evt.parameterChanges.isEmpty()) {
+                            sb.append("<div style='background:#1f2a44;border-radius:6px;padding:8px;font-size:11px;'>");
+                            sb.append("<div style='color:#93c5fd;margin-bottom:4px;'>Parameter Changes:</div>");
+                            for (Map.Entry<String, String> change : evt.parameterChanges.entrySet()) {
+                                sb.append("<div style='color:#e5e7eb;'>• <b>").append(escapeHtml(change.getKey())).append("</b>: ").append(escapeHtml(change.getValue())).append("</div>");
+                            }
+                            sb.append("</div>");
+                        }
+                        sb.append("</div>");
+                    }
+                    sb.append("</div>");
+                }
+                sb.append("</div>");
+
+                // Evolution Decision Logic explanation
+                sb.append("<div class='card'><div class='title'>🧠 Evolution Decision Logic</div>");
+                sb.append("<div style='color:#9ca3af;font-size:13px;'>");
+                sb.append("<div style='margin-bottom:8px;'><b>When does an agent ABANDON its strategy?</b></div>");
+                sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;'>");
+                sb.append("<div style='margin-bottom:6px;'>An agent will create a new evolved version when ALL conditions are met:</div>");
+                sb.append("<div style='color:#ef4444;'>1. Has completed at least <b>5 trades</b> (enough data to judge)</div>");
+                sb.append("<div style='color:#ef4444;'>2. Win rate is below <b>40%</b> (underperforming threshold)</div>");
+                sb.append("<div style='color:#ef4444;'>3. Has not already evolved in this session</div>");
+                sb.append("</div>");
+                sb.append("<div style='margin-top:12px;margin-bottom:8px;'><b>What parameters are mutated?</b></div>");
+                sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;'>");
+                sb.append("<div>• <b>rsiMin/rsiMax</b> - RSI entry range (±10)</div>");
+                sb.append("<div>• <b>rsMin</b> - Relative Strength threshold (±0.05)</div>");
+                sb.append("<div>• <b>rvolMin</b> - Volume ratio threshold (±0.25)</div>");
+                sb.append("<div>• <b>stopLossPct</b> - Stop loss percentage (±1%)</div>");
+                sb.append("<div>• <b>takeProfitPct</b> - Take profit percentage (±2%)</div>");
+                sb.append("</div>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                respondHtml(ex, htmlPage(sb.toString()), 200);
+            }
+        });
+
+        server.createContext("/aitool-run", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/aitool");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                
+                // Start async run
+                AIToolAgent.runAgentsAsync();
+                
+                ex.getResponseHeaders().add("Location", "/aitool?started=true");
                 ex.sendResponseHeaders(303, -1); ex.close();
             }
         });

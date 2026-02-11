@@ -32,6 +32,151 @@
       }
     },
     {
+      "id": "S6_SWING_MOMENTUM_BLEND",
+      "name": "Swing Momentum Blend",
+      "nameHe": "סווינג מומנטום משולב",
+      "description": "Combines swing timing with momentum signals for faster entries.",
+      "stocksPerVariant": 3,
+      "entryFilters": {
+        "rvolMin": 1.1,
+        "rsiMin": 45,
+        "rsiMax": 70,
+        "rsMin": 1.05,
+        "sma200Required": true,
+        "priceAboveVwapRequired": true,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 4.0,
+        "takeProfitPct": 10.0,
+        "trailingStopPct": 2.5,
+        "atrMultiplier": 2.8,
+        "riskRewardRatio": 2.5
+      },
+      "scoring": {
+        "rsWeight": 45,
+        "rsiWeight": 25,
+        "volumeWeight": 30,
+        "maCrossoverBonus": 5
+      }
+    },
+    {
+      "id": "S7_SWING_CONSERVATIVE",
+      "name": "Conservative Swing",
+      "nameHe": "סווינג שמרני",
+      "description": "Very strict filters, only the highest quality setups.",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 0.9,
+        "rsiMin": 35,
+        "rsiMax": 55,
+        "rsMin": 1.08,
+        "sma200Required": true,
+        "priceAboveVwapRequired": false,
+        "maCrossoverRequired": true
+      },
+      "riskManagement": {
+        "stopLossPct": 6.0,
+        "takeProfitPct": 18.0,
+        "trailingStopPct": 4.0,
+        "atrMultiplier": 4.0,
+        "riskRewardRatio": 3.0
+      },
+      "scoring": {
+        "rsWeight": 55,
+        "rsiWeight": 20,
+        "volumeWeight": 15,
+        "maCrossoverBonus": 10
+      }
+    },
+    {
+      "id": "S8_SWING_OVERSOLD_BOUNCE",
+      "name": "Oversold Bounce Swing",
+      "nameHe": "סווינג קפיצה ממכירת יתר",
+      "description": "Catching oversold bounces in strong stocks.",
+      "stocksPerVariant": 3,
+      "entryFilters": {
+        "rvolMin": 0.7,
+        "rsiMin": 20,
+        "rsiMax": 35,
+        "rsMin": 1.0,
+        "sma200Required": true,
+        "priceAboveVwapRequired": false,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 5.5,
+        "takeProfitPct": 12.0,
+        "trailingStopPct": 3.0,
+        "atrMultiplier": 3.5,
+        "riskRewardRatio": 2.2
+      },
+      "scoring": {
+        "rsWeight": 35,
+        "rsiWeight": 45,
+        "volumeWeight": 20,
+        "maCrossoverBonus": 0
+      }
+    },
+    {
+      "id": "S9_SWING_VOLUME_LEADER",
+      "name": "Volume Leader Swing",
+      "nameHe": "סווינג מוביל נפח",
+      "description": "Focus on unusual volume as primary signal.",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 1.5,
+        "rsiMin": 40,
+        "rsiMax": 70,
+        "rsMin": 1.02,
+        "sma200Required": false,
+        "priceAboveVwapRequired": true,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 4.5,
+        "takeProfitPct": 12.0,
+        "trailingStopPct": 2.5,
+        "atrMultiplier": 3.0,
+        "riskRewardRatio": 2.7
+      },
+      "scoring": {
+        "rsWeight": 30,
+        "rsiWeight": 20,
+        "volumeWeight": 50,
+        "maCrossoverBonus": 5
+      }
+    },
+    {
+      "id": "S10_SWING_TIGHT_RANGE",
+      "name": "Tight Range Breakout Swing",
+      "nameHe": "סווינג פריצת טווח צר",
+      "description": "Stocks consolidating in tight range before breakout.",
+      "stocksPerVariant": 2,
+      "entryFilters": {
+        "rvolMin": 1.2,
+        "rsiMin": 45,
+        "rsiMax": 60,
+        "rsMin": 1.04,
+        "sma200Required": true,
+        "priceAboveVwapRequired": true,
+        "maCrossoverRequired": false
+      },
+      "riskManagement": {
+        "stopLossPct": 3.5,
+        "takeProfitPct": 10.0,
+        "trailingStopPct": 2.0,
+        "atrMultiplier": 2.5,
+        "riskRewardRatio": 2.8
+      },
+      "scoring": {
+        "rsWeight": 40,
+        "rsiWeight": 30,
+        "volumeWeight": 30,
+        "maCrossoverBonus": 8
+      }
+    },
+    {
       "id": "S2_SWING_BREAKOUT",
       "name": "Swing Breakout",
       "nameHe": "סווינג פריצה",
