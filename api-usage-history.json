@@ -266,18 +266,18 @@
     "EARNINGS_ESTIMATES" : 2
   },
   "2026-02-11" : {
-    "SAR" : 15,
-    "OVERVIEW" : 680,
-    "CASH_FLOW" : 1299,
-    "NEWS_SENTIMENT" : 15,
-    "BBANDS" : 15,
-    "OBV" : 15,
-    "TEMA" : 16,
-    "AD" : 15,
-    "INCOME_STATEMENT" : 712,
-    "BALANCE_SHEET" : 636,
-    "TIME_SERIES_DAILY" : 5108,
-    "ATR" : 15
+    "SAR" : 39,
+    "OVERVIEW" : 705,
+    "CASH_FLOW" : 1301,
+    "NEWS_SENTIMENT" : 39,
+    "BBANDS" : 39,
+    "OBV" : 39,
+    "TEMA" : 40,
+    "AD" : 39,
+    "INCOME_STATEMENT" : 713,
+    "BALANCE_SHEET" : 637,
+    "TIME_SERIES_DAILY" : 5528,
+    "ATR" : 39
   },
   "2026-01-23" : {
     "OVERVIEW" : 546,

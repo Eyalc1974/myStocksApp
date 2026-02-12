@@ -32,7 +32,8 @@ public class AIToolAgent {
     private static final int MIN_TRADES_FOR_NOTIFICATION = 5;
     
     // Number of random stocks each agent analyzes per run
-    private static final int STOCKS_PER_AGENT_RUN = 20;
+    // Note: Alpha Vantage free tier = 5 calls/minute, so keep this low
+    private static final int STOCKS_PER_AGENT_RUN = 5;
     
     // Track which agents we've already notified about (to avoid spam)
     private static final Set<String> notifiedWinningAgents = ConcurrentHashMap.newKeySet();
@@ -478,6 +479,12 @@ public class AIToolAgent {
                         updatePerformance(agent.id, trade);
                     }
                 }
+                
+                // Rate limit delay - Alpha Vantage free tier = 5 calls/minute
+                Thread.sleep(12500); // 12.5 seconds between calls = ~5 calls/minute
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                break;
             } catch (Exception e) {
                 System.err.println("[AIToolAgent] Error analyzing " + ticker + " for " + agent.id + ": " + e.getMessage());
             }
@@ -985,6 +992,12 @@ public class AIToolAgent {
         try {
             if (Files.exists(AGENT_STATE_FILE)) {
                 systemState = JSON.readValue(AGENT_STATE_FILE.toFile(), AgentSystemState.class);
+                // Reset running status on startup - it was interrupted
+                if (systemState.running) {
+                    systemState.running = false;
+                    systemState.currentAgent = null;
+                    System.out.println("[AIToolAgent] Reset stuck RUNNING status to IDLE on startup");
+                }
             }
         } catch (Exception e) {
             System.err.println("[AIToolAgent] Error loading state: " + e.getMessage());
@@ -1079,6 +1092,11 @@ public class AIToolAgent {
             Collections.reverse(log);
             return log;
         }
+    }
+
+    // Discord notification - public wrapper for external calls
+    public static boolean sendDiscordPublic(String text) {
+        return sendDiscord(text);
     }
 
     // Discord notification

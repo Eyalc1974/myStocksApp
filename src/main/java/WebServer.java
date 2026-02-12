@@ -2604,9 +2604,13 @@ public class WebServer {
             }
         } catch (Exception ignore) {}
 
+        // Initialize Discord Bot for command listening
+        DiscordBot.initialize();
+
         // Shutdown hook - save data when server restarts
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("🛑 Server shutting down - saving data...");
+            DiscordBot.shutdown();
             try {
                 // Save portfolio to disk
                 java.util.List<String> portfolio = PortfolioWeeklySummary.getPortfolio();
@@ -7085,8 +7089,8 @@ public class WebServer {
                 sb.append("<th style='padding:10px 8px;text-align:center;border-bottom:1px solid #1f2a44;'>Config</th>");
                 sb.append("</tr></thead><tbody>");
 
-                // Sort by total P/L descending
-                performances.sort((a, b) -> Double.compare(b.totalProfitLoss, a.totalProfitLoss));
+                // Sort by win rate descending (best performers first)
+                performances.sort((a, b) -> Double.compare(b.winRate, a.winRate));
 
                 for (AIToolAgent.AgentPerformance perf : performances) {
                     String rowBg = perf.isWinning ? "background:rgba(34,197,94,0.15);" : "";
@@ -7363,6 +7367,31 @@ public class WebServer {
                 
                 ex.getResponseHeaders().add("Location", "/aitool?started=true");
                 ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // API endpoint for external triggers (Discord, curl, etc.)
+        // Usage: GET or POST to /api/aitool/run
+        // Example: curl http://localhost:8080/api/aitool/run
+        server.createContext("/api/aitool/run", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Content-Type", "application/json");
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+                
+                // Start async run
+                AIToolAgent.runAgentsAsync();
+                
+                // Send Discord notification that run was triggered
+                String discordMsg = "🚀 **AITool Agents Started!**\nTriggered via API endpoint at " + 
+                    java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                AIToolAgent.sendDiscordPublic(discordMsg);
+                
+                String json = "{\"status\":\"success\",\"message\":\"AITool agents started\",\"timestamp\":\"" + 
+                    java.time.Instant.now().toString() + "\"}";
+                byte[] resp = json.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                ex.sendResponseHeaders(200, resp.length);
+                ex.getResponseBody().write(resp);
+                ex.close();
             }
         });
 

@@ -5,77 +5,77 @@
   "positions" : [ {
     "ticker" : "EBAY",
     "startNyDate" : "2025-12-22",
-    "lastNyDate" : "2025-12-22",
+    "lastNyDate" : "2026-01-27",
     "startPrice" : 84.66,
-    "lastPrice" : 84.66
+    "lastPrice" : 94.42
   }, {
     "ticker" : "PAYX",
     "startNyDate" : "2025-12-22",
-    "lastNyDate" : "2025-12-22",
+    "lastNyDate" : "2026-01-27",
     "startPrice" : 112.28,
-    "lastPrice" : 112.28
+    "lastPrice" : 106.19
   }, {
     "ticker" : "AEP",
     "startNyDate" : "2025-12-22",
-    "lastNyDate" : "2025-12-22",
+    "lastNyDate" : "2026-01-27",
     "startPrice" : 114.49,
-    "lastPrice" : 114.49
+    "lastPrice" : 118.02
   }, {
     "ticker" : "META",
     "startNyDate" : "2025-12-22",
-    "lastNyDate" : "2025-12-22",
+    "lastNyDate" : "2026-01-27",
     "startPrice" : 658.77,
-    "lastPrice" : 658.77
+    "lastPrice" : 672.36
   }, {
     "ticker" : "BIDU",
     "startNyDate" : "2025-12-22",
-    "lastNyDate" : "2025-12-22",
+    "lastNyDate" : "2026-01-27",
     "startPrice" : 123.82,
-    "lastPrice" : 123.82
+    "lastPrice" : 156.08
   }, {
     "ticker" : "TCOM",
     "startNyDate" : "2025-12-22",
-    "lastNyDate" : "2025-12-22",
+    "lastNyDate" : "2026-01-27",
     "startPrice" : 72.22,
-    "lastPrice" : 72.22
+    "lastPrice" : 63.97
   }, {
     "ticker" : "BIIB",
     "startNyDate" : "2025-12-22",
-    "lastNyDate" : "2025-12-22",
+    "lastNyDate" : "2026-01-27",
     "startPrice" : 174.8,
-    "lastPrice" : 174.8
+    "lastPrice" : 173.12
   }, {
     "ticker" : "GPN",
     "startNyDate" : "2025-12-22",
-    "lastNyDate" : "2025-12-22",
+    "lastNyDate" : "2026-01-27",
     "startPrice" : 80.85,
-    "lastPrice" : 80.85
+    "lastPrice" : 75.44
   }, {
     "ticker" : "CMCSA",
     "startNyDate" : "2025-12-22",
-    "lastNyDate" : "2025-12-22",
+    "lastNyDate" : "2026-01-27",
     "startPrice" : 29.57,
-    "lastPrice" : 29.57
+    "lastPrice" : 29.43
   }, {
     "ticker" : "FMC",
     "startNyDate" : "2025-12-22",
-    "lastNyDate" : "2025-12-22",
+    "lastNyDate" : "2026-01-27",
     "startPrice" : 13.32,
-    "lastPrice" : 13.32
+    "lastPrice" : 16.13
   } ],
   "benchNasdaq100" : {
     "ticker" : "QQQ",
     "startNyDate" : "2025-12-22",
-    "lastNyDate" : "2025-12-22",
+    "lastNyDate" : "2026-01-27",
     "startPrice" : 617.05,
-    "lastPrice" : 617.05
+    "lastPrice" : 625.46
   },
   "benchSp500" : {
     "ticker" : "SPY",
     "startNyDate" : "2025-12-22",
-    "lastNyDate" : "2025-12-22",
+    "lastNyDate" : "2026-01-27",
     "startPrice" : 680.59,
-    "lastPrice" : 680.59
+    "lastPrice" : 692.73
   },
   "lastError" : null
 }
