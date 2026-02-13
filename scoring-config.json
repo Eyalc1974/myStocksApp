@@ -1,5 +1,6 @@
 {
-  "activeMode" : "LONG_TERM_INVESTOR",
+  "activeMode" : "CUSTOM",
+  "activeAgentConfig" : "M4_VOLUME_SPIKE",
   "presets" : {
     "MOMENTUM" : {
       "name" : "Momentum / Day Trader",
@@ -542,6 +543,25 @@
         "volumeMinRatioToAvg" : 1.5,
         "volumeAvgPeriod" : 20
       }
+    }
+  },
+  "savedAgentTrackers" : {
+    "M4_VOLUME_SPIKE" : {
+      "agentId" : "M4_VOLUME_SPIKE",
+      "agentName" : "Volume Spike Hunter",
+      "type" : "MOMENTUM",
+      "cumulativeWins" : 15,
+      "cumulativeTrades" : 20,
+      "cumulativeProfitLoss" : 2921.597715613143,
+      "firstSavedDate" : "2026-02-13",
+      "lastUpdatedDate" : "2026-02-13",
+      "dailySnapshots" : [ {
+        "date" : "2026-02-13",
+        "wins" : 15,
+        "trades" : 20,
+        "winRate" : 75.0,
+        "profitLoss" : 2921.597715613143
+      } ]
     }
   }
 }

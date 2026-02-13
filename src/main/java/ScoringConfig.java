@@ -18,7 +18,29 @@ public class ScoringConfig {
 
     public static class ConfigData {
         public String activeMode = "LONG_TERM_INVESTOR";
+        public String activeAgentConfig = null; // AITool agent ID to use for filtering
         public Map<String, ModeConfig> presets = new ConcurrentHashMap<>();
+        public Map<String, SavedAgentTracker> savedAgentTrackers = new ConcurrentHashMap<>(); // Cumulative tracking
+    }
+
+    public static class SavedAgentTracker {
+        public String agentId;
+        public String agentName;
+        public String type;
+        public int cumulativeWins = 0;
+        public int cumulativeTrades = 0;
+        public double cumulativeProfitLoss = 0.0;
+        public String firstSavedDate;
+        public String lastUpdatedDate;
+        public java.util.List<DailySnapshot> dailySnapshots = new java.util.ArrayList<>();
+    }
+
+    public static class DailySnapshot {
+        public String date;
+        public int wins;
+        public int trades;
+        public double winRate;
+        public double profitLoss;
     }
 
     public static class ModeConfig {
@@ -149,6 +171,104 @@ public class ScoringConfig {
 
     public static String getActiveMode() {
         return load().activeMode;
+    }
+
+    public static String getActiveAgentConfig() {
+        return load().activeAgentConfig;
+    }
+
+    public static void setActiveAgentConfig(String agentId) {
+        ConfigData config = load();
+        config.activeAgentConfig = (agentId != null && !agentId.isBlank()) ? agentId.trim() : null;
+        save(config);
+        System.out.println("[ScoringConfig] Active agent config set to: " + config.activeAgentConfig);
+    }
+
+    public static Map<String, SavedAgentTracker> getSavedAgentTrackers() {
+        ConfigData config = load();
+        if (config.savedAgentTrackers == null) {
+            config.savedAgentTrackers = new ConcurrentHashMap<>();
+        }
+        return config.savedAgentTrackers;
+    }
+
+    public static SavedAgentTracker getOrCreateTracker(String agentId, String agentName, String type) {
+        ConfigData config = load();
+        if (config.savedAgentTrackers == null) {
+            config.savedAgentTrackers = new ConcurrentHashMap<>();
+        }
+        SavedAgentTracker tracker = config.savedAgentTrackers.get(agentId);
+        if (tracker == null) {
+            tracker = new SavedAgentTracker();
+            tracker.agentId = agentId;
+            tracker.agentName = agentName;
+            tracker.type = type;
+            tracker.firstSavedDate = java.time.LocalDate.now().toString();
+            config.savedAgentTrackers.put(agentId, tracker);
+            save(config);
+        }
+        return tracker;
+    }
+
+    public static void updateTrackerWithDailyStats(String agentId, int wins, int trades, double profitLoss) {
+        ConfigData config = load();
+        if (config.savedAgentTrackers == null) return;
+        SavedAgentTracker tracker = config.savedAgentTrackers.get(agentId);
+        if (tracker == null) return;
+        
+        String today = java.time.LocalDate.now().toString();
+        
+        // Check if we already have a snapshot for today
+        DailySnapshot todaySnapshot = null;
+        for (DailySnapshot snap : tracker.dailySnapshots) {
+            if (today.equals(snap.date)) {
+                todaySnapshot = snap;
+                break;
+            }
+        }
+        
+        if (todaySnapshot == null) {
+            // New day - add new snapshot
+            todaySnapshot = new DailySnapshot();
+            todaySnapshot.date = today;
+            todaySnapshot.wins = wins;
+            todaySnapshot.trades = trades;
+            todaySnapshot.winRate = trades > 0 ? (wins * 100.0 / trades) : 0;
+            todaySnapshot.profitLoss = profitLoss;
+            tracker.dailySnapshots.add(todaySnapshot);
+            
+            // Update cumulative
+            tracker.cumulativeWins += wins;
+            tracker.cumulativeTrades += trades;
+            tracker.cumulativeProfitLoss += profitLoss;
+        } else {
+            // Update existing snapshot - calculate delta
+            int deltaWins = wins - todaySnapshot.wins;
+            int deltaTrades = trades - todaySnapshot.trades;
+            double deltaPL = profitLoss - todaySnapshot.profitLoss;
+            
+            todaySnapshot.wins = wins;
+            todaySnapshot.trades = trades;
+            todaySnapshot.winRate = trades > 0 ? (wins * 100.0 / trades) : 0;
+            todaySnapshot.profitLoss = profitLoss;
+            
+            tracker.cumulativeWins += deltaWins;
+            tracker.cumulativeTrades += deltaTrades;
+            tracker.cumulativeProfitLoss += deltaPL;
+        }
+        
+        tracker.lastUpdatedDate = today;
+        save(config);
+        System.out.println("[ScoringConfig] Updated tracker for " + agentId + ": " + tracker.cumulativeWins + "/" + tracker.cumulativeTrades);
+    }
+
+    public static void deleteTracker(String agentId) {
+        ConfigData config = load();
+        if (config.savedAgentTrackers != null) {
+            config.savedAgentTrackers.remove(agentId);
+            save(config);
+            System.out.println("[ScoringConfig] Deleted tracker for: " + agentId);
+        }
     }
 
     public static ModeConfig getActiveModeConfig() {

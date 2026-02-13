@@ -7350,6 +7350,100 @@ public class WebServer {
                 sb.append("</div>");
                 sb.append("</div>");
 
+                // Saved Configurations with Cumulative Tracking Section
+                sb.append("<div class='card'><div class='title'>💾 Saved Configurations & Cumulative Tracking</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>Track your best performing agents over time. Agents with >75% win rate are auto-saved daily.</div>");
+                
+                // Show saved trackers with cumulative stats
+                Map<String, ScoringConfig.SavedAgentTracker> trackers = ScoringConfig.getSavedAgentTrackers();
+                String currentSavedAgent = ScoringConfig.getActiveAgentConfig();
+                
+                if (trackers != null && !trackers.isEmpty()) {
+                    sb.append("<div style='margin-bottom:16px;'>");
+                    sb.append("<div style='font-weight:600;margin-bottom:10px;color:#22c55e;'>📊 Your Tracked Agents (Cumulative Stats):</div>");
+                    sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
+                    sb.append("<thead><tr style='background:#1f2a44;'>");
+                    sb.append("<th style='padding:10px;text-align:left;'>Agent</th>");
+                    sb.append("<th style='padding:10px;text-align:center;'>Cumulative</th>");
+                    sb.append("<th style='padding:10px;text-align:center;'>Win Rate</th>");
+                    sb.append("<th style='padding:10px;text-align:right;'>Total P/L</th>");
+                    sb.append("<th style='padding:10px;text-align:center;'>Since</th>");
+                    sb.append("<th style='padding:10px;text-align:center;'>Actions</th>");
+                    sb.append("</tr></thead><tbody>");
+                    
+                    for (ScoringConfig.SavedAgentTracker tracker : trackers.values()) {
+                        double cumWinRate = tracker.cumulativeTrades > 0 ? (tracker.cumulativeWins * 100.0 / tracker.cumulativeTrades) : 0;
+                        String winColor = cumWinRate >= 75 ? "#22c55e" : cumWinRate >= 50 ? "#eab308" : "#ef4444";
+                        boolean isActive = tracker.agentId.equals(currentSavedAgent);
+                        String rowBg = isActive ? "background:rgba(34,197,94,0.15);" : "";
+                        
+                        sb.append("<tr style='border-bottom:1px solid #1f2a44;").append(rowBg).append("'>");
+                        sb.append("<td style='padding:10px;'>");
+                        if (isActive) sb.append("✅ ");
+                        sb.append("<b>").append(escapeHtml(tracker.agentId)).append("</b>");
+                        if (tracker.type != null) sb.append("<div style='color:#6b7280;font-size:11px;'>").append(escapeHtml(tracker.type)).append("</div>");
+                        sb.append("</td>");
+                        sb.append("<td style='padding:10px;text-align:center;font-weight:600;'>").append(tracker.cumulativeWins).append("/").append(tracker.cumulativeTrades).append("</td>");
+                        sb.append("<td style='padding:10px;text-align:center;color:").append(winColor).append(";font-weight:700;'>").append(String.format("%.1f%%", cumWinRate)).append("</td>");
+                        sb.append("<td style='padding:10px;text-align:right;color:").append(tracker.cumulativeProfitLoss >= 0 ? "#22c55e" : "#ef4444").append(";'>$").append(String.format("%.2f", tracker.cumulativeProfitLoss)).append("</td>");
+                        sb.append("<td style='padding:10px;text-align:center;color:#6b7280;font-size:11px;'>").append(tracker.firstSavedDate != null ? tracker.firstSavedDate : "-").append("</td>");
+                        sb.append("<td style='padding:10px;text-align:center;'>");
+                        sb.append("<div style='display:flex;gap:6px;justify-content:center;'>");
+                        // Set as active button
+                        if (!isActive) {
+                            sb.append("<form method='post' action='/aitool-save-config' style='margin:0;'>");
+                            sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(tracker.agentId)).append("' />");
+                            sb.append("<button type='submit' style='background:#3b82f6;color:#fff;padding:4px 8px;font-size:11px;'>Use</button>");
+                            sb.append("</form>");
+                        }
+                        // Delete button
+                        sb.append("<form method='post' action='/aitool-delete-tracker' style='margin:0;'>");
+                        sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(tracker.agentId)).append("' />");
+                        sb.append("<button type='submit' style='background:#ef4444;color:#fff;padding:4px 8px;font-size:11px;'>🗑️</button>");
+                        sb.append("</form>");
+                        sb.append("</div>");
+                        sb.append("</td>");
+                        sb.append("</tr>");
+                    }
+                    sb.append("</tbody></table>");
+                    sb.append("</div>");
+                } else {
+                    sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;margin-bottom:16px;color:#6b7280;'>");
+                    sb.append("No tracked agents yet. Save an agent below to start tracking cumulative performance.");
+                    sb.append("</div>");
+                }
+                
+                // List top agents to save (>75% win rate highlighted)
+                sb.append("<div style='font-weight:600;margin-bottom:10px;color:#93c5fd;'>🏆 Top Performing Agents (click to track):</div>");
+                sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;'>");
+                List<AIToolAgent.AgentPerformance> topAgents = new ArrayList<>(performances);
+                topAgents.sort((a, b) -> Double.compare(b.winRate, a.winRate));
+                int savedCount = 0;
+                for (AIToolAgent.AgentPerformance p : topAgents) {
+                    if (savedCount >= 10) break;
+                    if (p.totalTrades < 3) continue;
+                    boolean isWinner = p.winRate >= 75;
+                    boolean isTracked = trackers != null && trackers.containsKey(p.agentId);
+                    String winColor = p.winRate >= 75 ? "#22c55e" : p.winRate >= 50 ? "#eab308" : "#ef4444";
+                    String borderColor = isTracked ? "#22c55e" : (isWinner ? "#eab308" : "#1f2a44");
+                    sb.append("<form method='post' action='/aitool-track-agent' style='margin:0;'>");
+                    sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(p.agentId)).append("' />");
+                    sb.append("<button type='submit' style='width:100%;text-align:left;background:#0b1220;border:2px solid ").append(borderColor).append(";border-radius:8px;padding:12px;cursor:pointer;'>");
+                    sb.append("<div style='display:flex;justify-content:space-between;align-items:center;'>");
+                    sb.append("<div style='font-weight:600;color:#e5e7eb;'>");
+                    if (isWinner) sb.append("🏆 ");
+                    if (isTracked) sb.append("✓ ");
+                    sb.append(escapeHtml(p.agentId)).append("</div>");
+                    sb.append("<div style='color:").append(winColor).append(";font-weight:700;'>").append(String.format("%.1f%%", p.winRate)).append("</div>");
+                    sb.append("</div>");
+                    sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades | P/L: $").append(String.format("%.2f", p.totalProfitLoss)).append("</div>");
+                    sb.append("</button>");
+                    sb.append("</form>");
+                    savedCount++;
+                }
+                sb.append("</div>");
+                sb.append("</div>");
+
                 respondHtml(ex, htmlPage(sb.toString()), 200);
             }
         });
@@ -7366,6 +7460,98 @@ public class WebServer {
                 AIToolAgent.runAgentsAsync();
                 
                 ex.getResponseHeaders().add("Location", "/aitool?started=true");
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // Save AITool agent configuration
+        server.createContext("/aitool-save-config", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/aitool");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                String agentId = form.getOrDefault("agentId", "").trim();
+                
+                if (agentId.isEmpty()) {
+                    ScoringConfig.setActiveAgentConfig(null);
+                } else {
+                    ScoringConfig.setActiveAgentConfig(agentId);
+                }
+                
+                ex.getResponseHeaders().add("Location", "/aitool?saved=true");
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // Delete tracker endpoint
+        server.createContext("/aitool-delete-tracker", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/aitool");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                String agentId = form.getOrDefault("agentId", "").trim();
+                
+                if (!agentId.isEmpty()) {
+                    ScoringConfig.deleteTracker(agentId);
+                    // Also clear active config if it was the deleted one
+                    String activeConfig = ScoringConfig.getActiveAgentConfig();
+                    if (agentId.equals(activeConfig)) {
+                        ScoringConfig.setActiveAgentConfig(null);
+                    }
+                }
+                
+                ex.getResponseHeaders().add("Location", "/aitool?deleted=true");
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // Track agent endpoint - saves agent with cumulative tracking
+        server.createContext("/aitool-track-agent", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/aitool");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                String agentId = form.getOrDefault("agentId", "").trim();
+                
+                if (!agentId.isEmpty()) {
+                    // Get agent info
+                    AIToolAgent.AgentConfig agentCfg = AIToolAgent.getAgentConfig(agentId);
+                    AIToolAgent.AgentPerformance perf = null;
+                    for (AIToolAgent.AgentPerformance p : AIToolAgent.getAllPerformances()) {
+                        if (agentId.equals(p.agentId)) {
+                            perf = p;
+                            break;
+                        }
+                    }
+                    
+                    String agentName = agentCfg != null && agentCfg.name != null ? agentCfg.name : agentId;
+                    String type = agentCfg != null && agentCfg.type != null ? agentCfg.type : "UNKNOWN";
+                    
+                    // Create or get tracker
+                    ScoringConfig.getOrCreateTracker(agentId, agentName, type);
+                    
+                    // Update with current stats
+                    if (perf != null) {
+                        ScoringConfig.updateTrackerWithDailyStats(agentId, perf.wins, perf.totalTrades, perf.totalProfitLoss);
+                    }
+                    
+                    // Also set as active config
+                    ScoringConfig.setActiveAgentConfig(agentId);
+                }
+                
+                ex.getResponseHeaders().add("Location", "/aitool?tracked=true");
                 ex.sendResponseHeaders(303, -1); ex.close();
             }
         });
@@ -7457,6 +7643,67 @@ public class WebServer {
                     sb.append("</button>");
                 }
                 sb.append("</div></form>");
+
+                // AITool Agent Configuration Selection
+                sb.append("<div style='background:#0b1220;border:2px solid #8b5cf6;border-radius:8px;padding:16px;margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:10px;color:#8b5cf6;'>🤖 AITool Agent Configuration | קונפיגורציה מ-AITool</div>");
+                sb.append("<div style='color:#9ca3af;font-size:13px;margin-bottom:12px;'>Use a winning agent's configuration from AITool for Daily Recommendations (GREEN).<br/>השתמש בקונפיגורציה של סוכן מנצח מ-AITool עבור המלצות יומיות.</div>");
+                
+                // Get current selected agent
+                String currentAgentConfig = ScoringConfig.getActiveAgentConfig();
+                
+                sb.append("<form method='post' action='/settings-agent-config' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;'>");
+                sb.append("<input type='text' name='agentId' placeholder='Agent ID (e.g., M2_CONSERVATIVE_V2)' ");
+                sb.append("value='").append(escapeHtml(currentAgentConfig != null ? currentAgentConfig : "")).append("' ");
+                sb.append("style='padding:10px 12px;border-radius:8px;border:1px solid #1f2a44;background:#1f2a44;color:#e5e7eb;min-width:280px;' />");
+                sb.append("<button type='submit' style='background:#8b5cf6;color:#fff;border:none;padding:10px 20px;border-radius:8px;'>Apply Agent Config</button>");
+                sb.append("<button type='submit' name='clear' value='true' style='background:#ef4444;color:#fff;border:none;padding:10px 20px;border-radius:8px;'>Clear</button>");
+                sb.append("</form>");
+                
+                // Show current agent config status
+                if (currentAgentConfig != null && !currentAgentConfig.isBlank()) {
+                    AIToolAgent.AgentConfig agentCfg = AIToolAgent.getAgentConfig(currentAgentConfig);
+                    if (agentCfg != null) {
+                        sb.append("<div style='margin-top:12px;padding:10px;background:#1f2a44;border-radius:8px;border-left:3px solid #22c55e;'>");
+                        sb.append("<div style='color:#22c55e;font-weight:600;'>✅ Active: ").append(escapeHtml(agentCfg.name != null ? agentCfg.name : agentCfg.id)).append("</div>");
+                        sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>Type: ").append(escapeHtml(agentCfg.type != null ? agentCfg.type : "")).append(" | Generation: ").append(agentCfg.generation).append("</div>");
+                        if (agentCfg.entryFilters != null) {
+                            sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:4px;'>Filters: ");
+                            sb.append("RSI ").append(String.format("%.0f-%.0f", agentCfg.entryFilters.getOrDefault("rsiMin", 30.0), agentCfg.entryFilters.getOrDefault("rsiMax", 70.0)));
+                            sb.append(" | RS > ").append(String.format("%.2f", agentCfg.entryFilters.getOrDefault("rsMin", 1.0)));
+                            sb.append(" | RVOL > ").append(String.format("%.2f", agentCfg.entryFilters.getOrDefault("rvolMin", 1.0)));
+                            sb.append("</div>");
+                        }
+                        sb.append("</div>");
+                    } else {
+                        sb.append("<div style='margin-top:12px;padding:10px;background:#1f2a44;border-radius:8px;border-left:3px solid #ef4444;'>");
+                        sb.append("<div style='color:#ef4444;'>⚠️ Agent '").append(escapeHtml(currentAgentConfig)).append("' not found. Check the ID.</div>");
+                        sb.append("</div>");
+                    }
+                }
+                
+                // List available agents
+                List<AIToolAgent.AgentPerformance> agentPerfs = AIToolAgent.getAllPerformances();
+                if (agentPerfs != null && !agentPerfs.isEmpty()) {
+                    agentPerfs.sort((a, b) -> Double.compare(b.winRate, a.winRate));
+                    sb.append("<div style='margin-top:12px;'>");
+                    sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:6px;'>Top performing agents (click to copy ID):</div>");
+                    sb.append("<div style='display:flex;flex-wrap:wrap;gap:6px;'>");
+                    int shown = 0;
+                    for (AIToolAgent.AgentPerformance p : agentPerfs) {
+                        if (shown >= 5) break;
+                        if (p.totalTrades < 3) continue;
+                        String winColor = p.winRate >= 50 ? "#22c55e" : "#ef4444";
+                        sb.append("<span onclick=\"document.querySelector('input[name=agentId]').value='").append(escapeHtml(p.agentId)).append("'\" ");
+                        sb.append("style='cursor:pointer;padding:4px 8px;background:#1f2a44;border-radius:4px;font-size:11px;'>");
+                        sb.append("<span style='color:").append(winColor).append(";'>").append(String.format("%.0f%%", p.winRate)).append("</span> ");
+                        sb.append(escapeHtml(p.agentId));
+                        sb.append("</span>");
+                        shown++;
+                    }
+                    sb.append("</div></div>");
+                }
+                sb.append("</div>");
 
                 // Weight visualization
                 sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;margin-bottom:16px;'>");
@@ -7693,6 +7940,29 @@ public class WebServer {
                 String mode = form.getOrDefault("mode", "LONG_TERM_INVESTOR");
                 ScoringConfig.setActiveMode(mode);
                 ex.getResponseHeaders().add("Location", "/settings?saved=true");
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // Settings - Agent Config endpoint
+        server.createContext("/settings-agent-config", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/settings");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                
+                if ("true".equals(form.get("clear"))) {
+                    ScoringConfig.setActiveAgentConfig(null);
+                } else {
+                    String agentId = form.getOrDefault("agentId", "").trim();
+                    ScoringConfig.setActiveAgentConfig(agentId);
+                }
+                
+                ex.getResponseHeaders().add("Location", "/settings?agent_saved=true");
                 ex.sendResponseHeaders(303, -1); ex.close();
             }
         });
@@ -8760,7 +9030,7 @@ public class WebServer {
         );
     }
 
-    private static boolean isGreenBuy(FinalScoringEngine.AnalysisResult ar) {
+    private static boolean isGreenBuy(FinalScoringEngine.AnalysisResult ar, StockAnalysisResult stockResult) {
         if (ar == null) return false;
         String rec = ar.recommendation == null ? "" : ar.recommendation.toUpperCase();
         ScoringConfig.ModeConfig cfg = ScoringConfig.getActiveModeConfig();
@@ -8774,7 +9044,40 @@ public class WebServer {
         
         if (rec.contains("AVOID") || rec.contains("SELL")) return false;
         if (!rec.contains("BUY")) return false;
-        return ar.finalScore >= threshold;
+        if (ar.finalScore < threshold) return false;
+        
+        // Apply AITool agent configuration filters if set
+        String agentConfigId = ScoringConfig.getActiveAgentConfig();
+        if (agentConfigId != null && !agentConfigId.isBlank() && stockResult != null) {
+            AIToolAgent.AgentConfig agentCfg = AIToolAgent.getAgentConfig(agentConfigId);
+            if (agentCfg != null && agentCfg.entryFilters != null) {
+                // Get stock values
+                double stockRsi = (stockResult.latestRsi != null && Double.isFinite(stockResult.latestRsi)) ? stockResult.latestRsi : 50.0;
+                double stockRs = (stockResult.relativeStrength3M != null && Double.isFinite(stockResult.relativeStrength3M)) ? stockResult.relativeStrength3M : 1.0;
+                double stockRvol = (stockResult.volumeRatio != null && Double.isFinite(stockResult.volumeRatio)) ? stockResult.volumeRatio : 1.0;
+                
+                // Check RSI range
+                double rsiMin = getDoubleFromMap(agentCfg.entryFilters, "rsiMin", 0.0);
+                double rsiMax = getDoubleFromMap(agentCfg.entryFilters, "rsiMax", 100.0);
+                if (stockRsi < rsiMin || stockRsi > rsiMax) {
+                    return false;
+                }
+                
+                // Check RS (Relative Strength) minimum
+                double rsMin = getDoubleFromMap(agentCfg.entryFilters, "rsMin", 0.0);
+                if (rsMin > 0 && stockRs < rsMin) {
+                    return false;
+                }
+                
+                // Check RVOL minimum if available
+                double rvolMin = getDoubleFromMap(agentCfg.entryFilters, "rvolMin", 0.0);
+                if (rvolMin > 0 && stockRvol < rvolMin) {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
     }
 
     private static boolean startDailyGreenRecommendationsRunAsync() {
@@ -8824,7 +9127,7 @@ public class WebServer {
                     FinalScoringEngine.AnalysisResult ar = scoreForDashboard(r);
                     processed++;
 
-                    if (isGreenBuy(ar)) {
+                    if (isGreenBuy(ar, r)) {
                         DailyGreenTicker row = new DailyGreenTicker();
                         row.ticker = x;
                         row.finalScore = ar.finalScore;
@@ -9090,6 +9393,18 @@ public class WebServer {
             next = next.plusDays(1);
         }
         return Duration.between(now, next).toMillis();
+    }
+
+    private static double getDoubleFromMap(java.util.Map<String, Object> map, String key, double defaultVal) {
+        if (map == null) return defaultVal;
+        Object val = map.get(key);
+        if (val == null) return defaultVal;
+        if (val instanceof Number) return ((Number) val).doubleValue();
+        try {
+            return Double.parseDouble(val.toString());
+        } catch (Exception e) {
+            return defaultVal;
+        }
     }
 
     private static String escapeHtml(String s) {

@@ -442,6 +442,9 @@ public class AIToolAgent {
             // After running all agents, check for evolution opportunities
             evolveUnderperformingAgents();
             
+            // Auto-track winners (>75% win rate) and update existing trackers
+            autoTrackWinners();
+            
             synchronized (LOCK) {
                 systemState.lastRunTime = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
                 systemState.running = false;
@@ -1051,6 +1054,45 @@ public class AIToolAgent {
                 initialize();
             }
             return new ArrayList<>(systemState.performance.values());
+        }
+    }
+
+    public static AgentConfig getAgentConfig(String agentId) {
+        synchronized (LOCK) {
+            if (systemState == null) {
+                initialize();
+            }
+            return systemState.agents.get(agentId);
+        }
+    }
+
+    private static void autoTrackWinners() {
+        try {
+            // Get all performances
+            List<AgentPerformance> perfs = getAllPerformances();
+            Map<String, ScoringConfig.SavedAgentTracker> existingTrackers = ScoringConfig.getSavedAgentTrackers();
+            
+            for (AgentPerformance perf : perfs) {
+                if (perf.totalTrades < 5) continue; // Need at least 5 trades
+                
+                // Auto-track agents with >75% win rate
+                if (perf.winRate >= 75.0) {
+                    if (!existingTrackers.containsKey(perf.agentId)) {
+                        AgentConfig cfg = systemState.agents.get(perf.agentId);
+                        String name = cfg != null && cfg.name != null ? cfg.name : perf.agentId;
+                        String type = cfg != null && cfg.type != null ? cfg.type : "UNKNOWN";
+                        ScoringConfig.getOrCreateTracker(perf.agentId, name, type);
+                        System.out.println("[AIToolAgent] Auto-tracked winner: " + perf.agentId + " (" + String.format("%.1f%%", perf.winRate) + ")");
+                    }
+                }
+                
+                // Update existing trackers with latest stats
+                if (existingTrackers.containsKey(perf.agentId)) {
+                    ScoringConfig.updateTrackerWithDailyStats(perf.agentId, perf.wins, perf.totalTrades, perf.totalProfitLoss);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[AIToolAgent] Error auto-tracking winners: " + e.getMessage());
         }
     }
 
