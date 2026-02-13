@@ -7294,7 +7294,7 @@ public class WebServer {
                 // Evolution Log - shows when/why agents abandoned their strategies
                 List<AIToolAgent.EvolutionEvent> evolutionLog = AIToolAgent.getEvolutionLog();
                 sb.append("<div class='card'><div class='title'>🧬 Evolution Log - Strategy Abandonment History</div>");
-                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>When an agent's win rate drops below 40% after 5+ trades, it abandons its strategy and creates a new evolved version with mutated parameters.</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>When an agent's win rate drops below 70% after 5+ trades, it abandons its strategy and creates a new evolved version with mutated parameters.</div>");
                 
                 if (evolutionLog.isEmpty()) {
                     sb.append("<div style='color:#6b7280;padding:20px;text-align:center;'>No evolution events yet. Run agents to see strategy changes.</div>");
@@ -7323,6 +7323,15 @@ public class WebServer {
                             }
                             sb.append("</div>");
                         }
+                        // AI Improvement Suggestion
+                        if (evt.aiSuggestion != null && !evt.aiSuggestion.isEmpty()) {
+                            sb.append("<div style='background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #4f46e5;border-radius:6px;padding:10px;margin-top:8px;'>");
+                            sb.append("<div style='color:#a78bfa;font-weight:600;margin-bottom:6px;'>🤖 AI Improvement Suggestion:</div>");
+                            sb.append("<div style='color:#e5e7eb;font-size:12px;white-space:pre-wrap;'>").append(escapeHtml(evt.aiSuggestion)).append("</div>");
+                            sb.append("</div>");
+                        } else {
+                            sb.append("<div style='color:#6b7280;font-size:11px;margin-top:6px;font-style:italic;'>⏳ AI suggestion pending... (requires Ollama or OPENAI_API_KEY)</div>");
+                        }
                         sb.append("</div>");
                     }
                     sb.append("</div>");
@@ -7336,7 +7345,7 @@ public class WebServer {
                 sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;'>");
                 sb.append("<div style='margin-bottom:6px;'>An agent will create a new evolved version when ALL conditions are met:</div>");
                 sb.append("<div style='color:#ef4444;'>1. Has completed at least <b>5 trades</b> (enough data to judge)</div>");
-                sb.append("<div style='color:#ef4444;'>2. Win rate is below <b>40%</b> (underperforming threshold)</div>");
+                sb.append("<div style='color:#ef4444;'>2. Win rate is below <b>70%</b> (underperforming threshold)</div>");
                 sb.append("<div style='color:#ef4444;'>3. Has not already evolved in this session</div>");
                 sb.append("</div>");
                 sb.append("<div style='margin-top:12px;margin-bottom:8px;'><b>What parameters are mutated?</b></div>");

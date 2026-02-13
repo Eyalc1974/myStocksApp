@@ -546,6 +546,23 @@
     }
   },
   "savedAgentTrackers" : {
+    "I4_VOLUME_SURGE_GEN1" : {
+      "agentId" : "I4_VOLUME_SURGE_GEN1",
+      "agentName" : "Volume Surge + VWAP (Gen 1)",
+      "type" : "INTRADAY",
+      "cumulativeWins" : 4,
+      "cumulativeTrades" : 5,
+      "cumulativeProfitLoss" : 280.5238501085995,
+      "firstSavedDate" : "2026-02-13",
+      "lastUpdatedDate" : "2026-02-13",
+      "dailySnapshots" : [ {
+        "date" : "2026-02-13",
+        "wins" : 4,
+        "trades" : 5,
+        "winRate" : 80.0,
+        "profitLoss" : 280.5238501085995
+      } ]
+    },
     "M4_VOLUME_SPIKE" : {
       "agentId" : "M4_VOLUME_SPIKE",
       "agentName" : "Volume Spike Hunter",
@@ -561,6 +578,23 @@
         "trades" : 20,
         "winRate" : 75.0,
         "profitLoss" : 2921.597715613143
+      } ]
+    },
+    "M3_RS_LEADER" : {
+      "agentId" : "M3_RS_LEADER",
+      "agentName" : "RS Leader Focus",
+      "type" : "MOMENTUM",
+      "cumulativeWins" : 34,
+      "cumulativeTrades" : 49,
+      "cumulativeProfitLoss" : 10721.939736001492,
+      "firstSavedDate" : "2026-02-13",
+      "lastUpdatedDate" : "2026-02-13",
+      "dailySnapshots" : [ {
+        "date" : "2026-02-13",
+        "wins" : 34,
+        "trades" : 49,
+        "winRate" : 69.38775510204081,
+        "profitLoss" : 10721.939736001492
       } ]
     }
   }

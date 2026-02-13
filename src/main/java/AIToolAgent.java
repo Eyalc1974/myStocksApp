@@ -92,6 +92,7 @@ public class AIToolAgent {
         public int generation = 0; // How many times this agent has evolved
         public String parentId; // Original agent ID if evolved
         public String lastModified;
+        public String aiSuggestion; // AI improvement suggestion from Ollama/ChatGPT
     }
 
     public static class Trade {
@@ -138,6 +139,7 @@ public class AIToolAgent {
         public int oldTrades;
         public double oldProfitLoss;
         public Map<String, String> parameterChanges = new HashMap<>(); // "rsiMin: 30 -> 25"
+        public String aiSuggestion; // ChatGPT improvement suggestion
     }
 
     public static class AgentSystemState {
@@ -175,17 +177,17 @@ public class AIToolAgent {
             // Schedule market open run (9:30 AM ET)
             scheduleMarketOpenRun();
             
-            // Schedule periodic runs every 2 hours during market hours
+            // Schedule periodic runs every 30 minutes during NASDAQ market hours (9:30 AM - 4:00 PM ET)
             scheduler.scheduleAtFixedRate(() -> {
                 try {
                     if (isMarketHours()) {
-                        System.out.println("[AIToolAgent] Scheduled periodic run starting...");
+                        System.out.println("[AIToolAgent] Scheduled 30-min periodic run starting...");
                         runAllAgents();
                     }
                 } catch (Exception e) {
                     System.err.println("[AIToolAgent] Scheduled run error: " + e.getMessage());
                 }
-            }, 30, 120, TimeUnit.MINUTES); // Start after 30 min, then every 2 hours
+            }, 30, 30, TimeUnit.MINUTES); // Start after 30 min, then every 30 minutes
             
             // AUTO-RUN ON STARTUP: If market is currently open, run immediately
             if (isMarketHours()) {
@@ -737,11 +739,11 @@ public class AIToolAgent {
                 // EVOLUTION DECISION LOGIC:
                 // Agent will ABANDON its strategy and create a new evolved version if:
                 // 1. Has at least 5 trades (enough data to judge)
-                // 2. Win rate is below 40% (underperforming)
+                // 2. Win rate is below 70% (underperforming)
                 // 3. Has not already evolved in this session
                 
                 boolean hasEnoughTrades = perf.totalTrades >= 5;
-                boolean isUnderperforming = perf.winRate < 40;
+                boolean isUnderperforming = perf.winRate < 70;
                 boolean hasNotEvolvedYet = !perf.configChanged;
                 
                 if (hasEnoughTrades && isUnderperforming && hasNotEvolvedYet) {
@@ -750,7 +752,7 @@ public class AIToolAgent {
                     
                     // Build evolution reason
                     String reason = String.format(
-                        "Win rate %.1f%% < 40%% threshold after %d trades. Total P/L: $%.2f",
+                        "Win rate %.1f%% < 70%% threshold after %d trades. Total P/L: $%.2f",
                         perf.winRate, perf.totalTrades, perf.totalProfitLoss
                     );
                     
@@ -788,9 +790,27 @@ public class AIToolAgent {
                         event.oldTrades = perf.totalTrades;
                         event.oldProfitLoss = perf.totalProfitLoss;
                         event.parameterChanges = evolveResult.changes;
+                        
+                        // Get AI improvement suggestion asynchronously
+                        final EvolutionEvent finalEvent = event;
+                        final AgentConfig finalOriginal = original;
+                        final AgentConfig finalEvolved = evolved;
+                        scheduler.submit(() -> {
+                            String suggestion = getAIImprovementSuggestion(finalOriginal, perf);
+                            if (suggestion != null && !suggestion.isEmpty()) {
+                                finalEvent.aiSuggestion = suggestion;
+                                // Also store in the evolved agent config
+                                finalEvolved.aiSuggestion = suggestion;
+                                // Re-save the evolved agent with AI suggestion
+                                saveEvolvedAgent(finalEvolved);
+                                saveState();
+                                System.out.println("[AIToolAgent] AI suggestion saved for " + finalEvolved.id + " in newStrategies/");
+                            }
+                        });
+                        
                         systemState.evolutionLog.add(event);
                         
-                        // Save evolved agent to file
+                        // Save evolved agent to file (will be updated with AI suggestion later)
                         saveEvolvedAgent(evolved);
                         
                         // Save state immediately after evolution
@@ -976,6 +996,11 @@ public class AIToolAgent {
                 }
             }
             
+            // Save AI suggestion if available
+            if (agent.aiSuggestion != null && !agent.aiSuggestion.isEmpty()) {
+                root.put("aiSuggestion", agent.aiSuggestion);
+            }
+            
             JSON.writeValue(path.toFile(), root);
         } catch (Exception e) {
             System.err.println("[AIToolAgent] Error saving evolved agent: " + e.getMessage());
@@ -1104,6 +1129,133 @@ public class AIToolAgent {
                 System.err.println("[AIToolAgent] Async run error: " + e.getMessage());
             }
         });
+    }
+
+    private static String getAIImprovementSuggestion(AgentConfig agent, AgentPerformance perf) {
+        try {
+            // Build detailed prompt with agent configuration and performance
+            StringBuilder prompt = new StringBuilder();
+            prompt.append("You are a quantitative trading strategy advisor. Analyze this underperforming trading agent and suggest specific parameter improvements.\n\n");
+            prompt.append("AGENT CONFIGURATION:\n");
+            prompt.append("- ID: ").append(agent.id).append("\n");
+            prompt.append("- Type: ").append(agent.type != null ? agent.type : "UNKNOWN").append("\n");
+            prompt.append("- Generation: ").append(agent.generation).append("\n");
+            
+            if (agent.entryFilters != null) {
+                prompt.append("- Entry Filters:\n");
+                for (Map.Entry<String, Object> entry : agent.entryFilters.entrySet()) {
+                    prompt.append("  * ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                }
+            }
+            if (agent.riskManagement != null) {
+                prompt.append("- Risk Management:\n");
+                for (Map.Entry<String, Object> entry : agent.riskManagement.entrySet()) {
+                    prompt.append("  * ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                }
+            }
+            
+            prompt.append("\nPERFORMANCE (POOR - NEEDS IMPROVEMENT):\n");
+            prompt.append("- Win Rate: ").append(String.format("%.1f%%", perf.winRate)).append(" (threshold: 40%)\n");
+            prompt.append("- Total Trades: ").append(perf.totalTrades).append("\n");
+            prompt.append("- Wins: ").append(perf.wins).append(", Losses: ").append(perf.losses).append("\n");
+            prompt.append("- Total P/L: $").append(String.format("%.2f", perf.totalProfitLoss)).append("\n");
+            
+            prompt.append("\nBased on the agent type (").append(agent.type != null ? agent.type : "UNKNOWN").append("), suggest:\n");
+            prompt.append("1. Which specific parameters should be adjusted and by how much?\n");
+            prompt.append("2. What market conditions might this strategy work better in?\n");
+            prompt.append("3. Any additional filters that could improve win rate?\n");
+            prompt.append("\nBe concise and specific with numerical recommendations. Max 150 words.");
+
+            // Try Ollama first, then OpenAI
+            String result = callOllamaAPI(prompt.toString());
+            if (result != null && !result.isEmpty() && !result.startsWith("(")) {
+                return result;
+            }
+            
+            result = callOpenAIAPI(prompt.toString());
+            if (result != null && !result.isEmpty()) {
+                return result;
+            }
+            
+            return null;
+        } catch (Exception e) {
+            System.err.println("[AIToolAgent] Error getting AI suggestion: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private static String callOllamaAPI(String prompt) {
+        try {
+            String body = "{\"model\":\"llama3.2\",\"prompt\":" + jsonEscape(prompt) + ",\"stream\":false}";
+            
+            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+            java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("http://localhost:11434/api/generate"))
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body))
+                    .timeout(java.time.Duration.ofSeconds(60))
+                    .build();
+            
+            java.net.http.HttpResponse<String> resp = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 200) {
+                com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.JsonNode root = om.readTree(resp.body());
+                if (root.has("response")) {
+                    return root.get("response").asText();
+                }
+            }
+        } catch (Exception e) {
+            // Ollama not available, will try OpenAI
+        }
+        return null;
+    }
+
+    private static String callOpenAIAPI(String prompt) {
+        try {
+            String key = System.getenv("OPENAI_API_KEY");
+            if (key == null || key.isBlank()) return null;
+            
+            String body = "{\n" +
+                    "\"model\":\"gpt-4o-mini\",\n" +
+                    "\"messages\":[{" +
+                    "\"role\":\"system\",\"content\":\"You are a quantitative trading strategy advisor. Be concise and specific.\"}," +
+                    "{\"role\":\"user\",\"content\":" + jsonEscape(prompt) + "}],\n" +
+                    "\"temperature\":0.3,\n" +
+                    "\"max_tokens\":300\n" +
+                    "}";
+            
+            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+            java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("https://api.openai.com/v1/chat/completions"))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + key)
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body))
+                    .timeout(java.time.Duration.ofSeconds(30))
+                    .build();
+            
+            java.net.http.HttpResponse<String> resp = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 200) {
+                com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.JsonNode root = om.readTree(resp.body());
+                com.fasterxml.jackson.databind.JsonNode msg = root.path("choices").isArray() && root.path("choices").size() > 0
+                        ? root.path("choices").get(0).path("message").path("content") : null;
+                if (msg != null && msg.isTextual()) {
+                    return msg.asText();
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[AIToolAgent] OpenAI API error: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private static String jsonEscape(String s) {
+        if (s == null) return "\"\"";
+        return "\"" + s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t") + "\"";
     }
 
     public static boolean isRunning() {
