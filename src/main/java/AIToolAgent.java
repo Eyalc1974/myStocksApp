@@ -177,17 +177,18 @@ public class AIToolAgent {
             // Schedule market open run (9:30 AM ET)
             scheduleMarketOpenRun();
             
-            // Schedule periodic runs every 30 minutes during NASDAQ market hours (9:30 AM - 4:00 PM ET)
+            // Schedule periodic runs every 60 minutes during NASDAQ market hours (9:30 AM - 4:00 PM ET)
+            // Note: Using 60-min interval due to 15-min delay in real-time price data
             scheduler.scheduleAtFixedRate(() -> {
                 try {
                     if (isMarketHours()) {
-                        System.out.println("[AIToolAgent] Scheduled 30-min periodic run starting...");
+                        System.out.println("[AIToolAgent] Scheduled 60-min periodic run starting...");
                         runAllAgents();
                     }
                 } catch (Exception e) {
                     System.err.println("[AIToolAgent] Scheduled run error: " + e.getMessage());
                 }
-            }, 30, 30, TimeUnit.MINUTES); // Start after 30 min, then every 30 minutes
+            }, 60, 60, TimeUnit.MINUTES); // Start after 60 min, then every 60 minutes
             
             // AUTO-RUN ON STARTUP: If market is currently open, run immediately
             if (isMarketHours()) {
