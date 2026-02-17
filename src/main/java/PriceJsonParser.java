@@ -300,6 +300,16 @@ public class PriceJsonParser {
         return prices;
     }
 
+    // Parses Alpha Vantage TIME_SERIES_DAILY JSON and returns volumes as Double ordered by date ascending
+    public static List<Double> extractVolumes(String json) throws Exception {
+        List<Long> longVolumes = extractVolumeData(json);
+        List<Double> volumes = new ArrayList<>(longVolumes.size());
+        for (Long v : longVolumes) {
+            volumes.add(v != null ? v.doubleValue() : 0.0);
+        }
+        return volumes;
+    }
+
     // Parses Alpha Vantage TIME_SERIES_DAILY JSON and returns volumes ordered by date ascending
     public static List<Long> extractVolumeData(String json) throws Exception {
         if (json == null || json.isEmpty()) {

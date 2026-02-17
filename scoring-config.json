@@ -1,6 +1,6 @@
 {
   "activeMode" : "CUSTOM",
-  "activeAgentConfig" : "M4_VOLUME_SPIKE",
+  "activeAgentConfig" : "S10_SWING_TIGHT_RANGE_GEN1",
   "presets" : {
     "MOMENTUM" : {
       "name" : "Momentum / Day Trader",
@@ -595,6 +595,35 @@
         "trades" : 49,
         "winRate" : 69.38775510204081,
         "profitLoss" : 10721.939736001492
+      } ]
+    },
+    "S10_SWING_TIGHT_RANGE_GEN1" : {
+      "agentId" : "S10_SWING_TIGHT_RANGE_GEN1",
+      "agentName" : "Tight Range Breakout Swing (Gen 1)",
+      "type" : "SWING",
+      "cumulativeWins" : 20,
+      "cumulativeTrades" : 20,
+      "cumulativeProfitLoss" : 2536.377708192338,
+      "firstSavedDate" : "2026-02-13",
+      "lastUpdatedDate" : "2026-02-17",
+      "dailySnapshots" : [ {
+        "date" : "2026-02-13",
+        "wins" : 6,
+        "trades" : 6,
+        "winRate" : 100.0,
+        "profitLoss" : 821.8639302328647
+      }, {
+        "date" : "2026-02-14",
+        "wins" : 7,
+        "trades" : 7,
+        "winRate" : 100.0,
+        "profitLoss" : 857.2568889797367
+      }, {
+        "date" : "2026-02-17",
+        "wins" : 7,
+        "trades" : 7,
+        "winRate" : 100.0,
+        "profitLoss" : 857.2568889797367
       } ]
     }
   }
