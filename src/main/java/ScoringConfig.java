@@ -32,6 +32,7 @@ public class ScoringConfig {
         public double cumulativeProfitLoss = 0.0;
         public String firstSavedDate;
         public String lastUpdatedDate;
+        public boolean notifyOnTrade = false; // Discord notification for every trade
         public java.util.List<DailySnapshot> dailySnapshots = new java.util.ArrayList<>();
     }
 
@@ -269,6 +270,29 @@ public class ScoringConfig {
             save(config);
             System.out.println("[ScoringConfig] Deleted tracker for: " + agentId);
         }
+    }
+
+    public static void toggleTradeNotification(String agentId) {
+        ConfigData config = load();
+        if (config.savedAgentTrackers != null) {
+            SavedAgentTracker tracker = config.savedAgentTrackers.get(agentId);
+            if (tracker != null) {
+                tracker.notifyOnTrade = !tracker.notifyOnTrade;
+                save(config);
+                System.out.println("[ScoringConfig] Trade notification for " + agentId + " set to: " + tracker.notifyOnTrade);
+            }
+        }
+    }
+
+    public static boolean isTradeNotificationEnabled(String agentId) {
+        ConfigData config = load();
+        if (config.savedAgentTrackers != null) {
+            SavedAgentTracker tracker = config.savedAgentTrackers.get(agentId);
+            if (tracker != null) {
+                return tracker.notifyOnTrade;
+            }
+        }
+        return false;
     }
 
     public static ModeConfig getActiveModeConfig() {

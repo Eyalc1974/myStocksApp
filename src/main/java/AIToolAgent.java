@@ -215,6 +215,9 @@ public class AIToolAgent {
                 }
             }, 60, 60, TimeUnit.MINUTES); // Start after 60 min, then every 60 minutes
             
+            // Schedule end-of-day cleanup at 4:30 PM ET (after market close)
+            scheduleEndOfDayCleanup();
+            
             // AUTO-RUN ON STARTUP: If market is currently open, run immediately
             if (isMarketHours()) {
                 System.out.println("[AIToolAgent] Market is OPEN - starting immediate run on startup!");
@@ -267,6 +270,101 @@ public class AIToolAgent {
                 System.err.println("[AIToolAgent] Market open run error: " + e.getMessage());
             }
         }, delayMinutes, TimeUnit.MINUTES);
+    }
+
+    private static void scheduleEndOfDayCleanup() {
+        // Calculate delay until 4:30 PM ET (30 minutes after market close)
+        ZonedDateTime now = ZonedDateTime.now(NY);
+        ZonedDateTime nextCleanup = now.withHour(16).withMinute(30).withSecond(0).withNano(0);
+        
+        // If we're past 4:30 PM today, schedule for tomorrow
+        if (now.isAfter(nextCleanup)) {
+            nextCleanup = nextCleanup.plusDays(1);
+        }
+        
+        // Skip weekends
+        while (nextCleanup.getDayOfWeek().getValue() > 5) {
+            nextCleanup = nextCleanup.plusDays(1);
+        }
+        
+        long delayMinutes = Duration.between(now, nextCleanup).toMinutes();
+        
+        System.out.println("[AIToolAgent] End-of-day cleanup scheduled in " + delayMinutes + " minutes (" + nextCleanup.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) + " ET)");
+        
+        scheduler.schedule(() -> {
+            try {
+                System.out.println("[AIToolAgent] END OF DAY - Running cleanup of underperforming agents...");
+                deleteUnderperformingAgents();
+                
+                // Reschedule for next day
+                scheduleEndOfDayCleanup();
+            } catch (Exception e) {
+                System.err.println("[AIToolAgent] End-of-day cleanup error: " + e.getMessage());
+            }
+        }, delayMinutes, TimeUnit.MINUTES);
+    }
+
+    private static void deleteUnderperformingAgents() {
+        // Delete agents with win rate < 50% and at least 5 trades
+        final double UNDERPERFORMING_THRESHOLD = 50.0;
+        final int MIN_TRADES_FOR_DELETION = 5;
+        
+        List<String> agentsToDelete = new ArrayList<>();
+        StringBuilder deletedReport = new StringBuilder();
+        
+        synchronized (LOCK) {
+            for (AgentPerformance perf : systemState.performance.values()) {
+                if (perf.totalTrades >= MIN_TRADES_FOR_DELETION && perf.winRate < UNDERPERFORMING_THRESHOLD) {
+                    agentsToDelete.add(perf.agentId);
+                    deletedReport.append(String.format("• **%s** - %.1f%% win rate (%d/%d trades)\n", 
+                        perf.agentId, perf.winRate, perf.wins, perf.totalTrades));
+                }
+            }
+            
+            // Delete the agents
+            for (String agentId : agentsToDelete) {
+                // Remove from agents map
+                AgentConfig removed = systemState.agents.remove(agentId);
+                
+                // Remove from performance map
+                systemState.performance.remove(agentId);
+                
+                // Remove from trade history
+                systemState.tradeHistory.remove(agentId);
+                
+                // Delete the JSON file if it exists in newStrategies folder
+                try {
+                    Path agentFile = NEW_STRATEGIES_DIR.resolve(agentId + ".json");
+                    if (Files.exists(agentFile)) {
+                        Files.delete(agentFile);
+                        System.out.println("[AIToolAgent] Deleted agent file: " + agentFile);
+                    }
+                } catch (Exception e) {
+                    System.err.println("[AIToolAgent] Error deleting agent file for " + agentId + ": " + e.getMessage());
+                }
+                
+                System.out.println("[AIToolAgent] DELETED underperforming agent: " + agentId);
+            }
+            
+            if (!agentsToDelete.isEmpty()) {
+                saveState();
+            }
+        }
+        
+        // Send Discord notification about deleted agents
+        if (!agentsToDelete.isEmpty()) {
+            String message = String.format(
+                "🗑️ **End-of-Day Cleanup**\n" +
+                "Deleted **%d** underperforming agents (win rate < 50%%):\n%s" +
+                "Remaining agents: **%d**",
+                agentsToDelete.size(),
+                deletedReport.toString(),
+                systemState.agents.size()
+            );
+            sendDiscord(message);
+        } else {
+            System.out.println("[AIToolAgent] No underperforming agents to delete");
+        }
     }
 
     private static boolean isMarketHours() {
@@ -843,6 +941,9 @@ public class AIToolAgent {
             // Check if agent has high win rate and notify via Discord
             checkAndNotifyHighWinRate(perf);
             
+            // Send Discord notification if enabled for this agent
+            notifyTradeIfEnabled(agentId, trade, perf);
+            
             // Save state after every trade update to ensure persistence
             saveState();
         }
@@ -901,6 +1002,41 @@ public class AIToolAgent {
             sendDiscord(message);
             System.out.println("[AIToolAgent] HIGH WIN RATE notification sent for: " + perf.agentId);
         }
+    }
+
+    private static void notifyTradeIfEnabled(String agentId, Trade trade, AgentPerformance perf) {
+        // Check if trade notifications are enabled for this agent
+        if (!ScoringConfig.isTradeNotificationEnabled(agentId)) {
+            return;
+        }
+        
+        String winLoss = trade.status.equals("CLOSED_WIN") ? "✅ WIN" : "❌ LOSS";
+        String emoji = trade.status.equals("CLOSED_WIN") ? "📈" : "📉";
+        
+        String message = String.format(
+            "%s **Trade Alert: %s**\n" +
+            "Agent: **%s** (%s)\n" +
+            "Ticker: **%s** | %s\n" +
+            "Entry: $%.2f → Exit: $%.2f\n" +
+            "P/L: **$%.2f** (%+.2f%%)\n" +
+            "Agent Stats: %d/%d trades (%.1f%% win rate)",
+            emoji,
+            winLoss,
+            perf.agentName != null ? perf.agentName : agentId,
+            perf.type != null ? perf.type : "UNKNOWN",
+            trade.ticker,
+            trade.action,
+            trade.entryPrice,
+            trade.exitPrice,
+            trade.profitLoss,
+            trade.profitLossPct,
+            perf.wins,
+            perf.totalTrades,
+            perf.winRate
+        );
+        
+        sendDiscord(message);
+        System.out.println("[AIToolAgent] Trade notification sent for agent: " + agentId + " ticker: " + trade.ticker);
     }
 
     private static void evolveUnderperformingAgents() {
