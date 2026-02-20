@@ -7066,9 +7066,81 @@ public class WebServer {
                 }
                 sb.append("<div><span style='color:#9ca3af;'>Run Count:</span> ").append(state != null ? state.runCount : 0).append("</div>");
                 sb.append("</div>");
-                sb.append("<div style='margin-top:12px;display:flex;gap:10px;'>");
+                sb.append("<div style='margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;'>");
                 sb.append("<form method='post' action='/aitool-run' style='margin:0;'><button type='submit'>▶️ Run All Agents Now</button></form>");
                 sb.append("<a href='/aitool' style='padding:10px 14px;background:#1f2a44;border-radius:8px;'>🔄 Refresh</a>");
+                sb.append("</div>");
+                
+                // Top 5 Agents Full Scan Section
+                sb.append("<div style='margin-top:16px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:12px;'>");
+                sb.append("<div style='font-weight:600;color:#a78bfa;margin-bottom:8px;'>🚀 Top 5 Agents Full Scan (500+ tickers)</div>");
+                
+                // Get top 5 agents to display
+                List<AIToolAgent.AgentPerformance> top5Agents = AIToolAgent.getTop5Agents();
+                
+                if (top5Agents.isEmpty()) {
+                    sb.append("<div style='color:#9ca3af;'>No qualified agents yet (need at least 3 trades each)</div>");
+                } else {
+                    sb.append("<div style='color:#c4b5fd;font-size:12px;margin-bottom:8px;'>Selected agents (by win rate × trades score):</div>");
+                    sb.append("<form method='post' action='/aitool-full-scan' style='margin:0;'>");
+                    
+                    // Show checkboxes for top 5 agents (can uncheck up to 2)
+                    int agentIdx = 0;
+                    for (AIToolAgent.AgentPerformance p : top5Agents) {
+                        String bgColor = agentIdx % 2 == 0 ? "#2d2a5e" : "#1e1b4b";
+                        sb.append("<div style='display:flex;align-items:center;gap:8px;padding:6px 8px;background:").append(bgColor).append(";border-radius:4px;margin-bottom:4px;'>");
+                        sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(p.agentId)).append("' checked style='width:16px;height:16px;' />");
+                        sb.append("<span style='color:#e5e7eb;font-weight:500;flex:1;'>").append(escapeHtml(p.agentId)).append("</span>");
+                        sb.append("<span style='color:#a78bfa;font-size:11px;'>").append(p.type != null ? p.type : "").append("</span>");
+                        sb.append("<span style='color:#22c55e;font-weight:600;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
+                        sb.append("<span style='color:#9ca3af;font-size:11px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades</span>");
+                        sb.append("</div>");
+                        agentIdx++;
+                    }
+                    
+                    sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:8px;margin-bottom:8px;'>💡 Uncheck up to 2 agents to exclude them from the scan</div>");
+                    sb.append("<button type='submit' style='background:#7c3aed;margin-top:4px;'>🚀 Start Full Scan with Selected Agents</button>");
+                    sb.append("</form>");
+                }
+                
+                // Full scan status (if running or recently completed)
+                if (AIToolAgent.isTopAgentsFullScanRunning() || !AIToolAgent.getTopAgentsFullScanStatus().isEmpty()) {
+                    sb.append("<div style='margin-top:12px;border-top:1px solid #7c3aed;padding-top:12px;'>");
+                    sb.append("<div style='font-weight:600;color:#a78bfa;margin-bottom:8px;'>📊 Scan Status</div>");
+                    if (AIToolAgent.isTopAgentsFullScanRunning()) {
+                        int progress = AIToolAgent.getTopAgentsFullScanProgress();
+                        int total = AIToolAgent.getTopAgentsFullScanTotal();
+                        double pct = total > 0 ? (progress * 100.0 / total) : 0;
+                        sb.append("<div style='color:#c4b5fd;'>Status: <b>RUNNING</b></div>");
+                        sb.append("<div style='color:#9ca3af;font-size:12px;'>").append(AIToolAgent.getTopAgentsFullScanStatus()).append("</div>");
+                        sb.append("<div style='margin-top:8px;background:#374151;border-radius:4px;height:8px;overflow:hidden;'>");
+                        sb.append("<div style='background:#7c3aed;height:100%;width:").append(String.format("%.1f", pct)).append("%;'></div>");
+                        sb.append("</div>");
+                        sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:4px;'>").append(progress).append(" / ").append(total).append(" (").append(String.format("%.1f%%", pct)).append(")</div>");
+                    } else {
+                        sb.append("<div style='color:#22c55e;'>Status: <b>").append(escapeHtml(AIToolAgent.getTopAgentsFullScanStatus())).append("</b></div>");
+                    }
+                    
+                    // Show recent trades from full scan
+                    List<AIToolAgent.Trade> recentScanTrades = AIToolAgent.getRecentFullScanTrades();
+                    if (recentScanTrades != null && !recentScanTrades.isEmpty()) {
+                        sb.append("<div style='margin-top:12px;'>");
+                        sb.append("<div style='color:#a78bfa;font-size:12px;margin-bottom:6px;'>📈 Recent Trades from Scan:</div>");
+                        for (AIToolAgent.Trade t : recentScanTrades) {
+                            String tColor = t.profitLoss >= 0 ? "#22c55e" : "#ef4444";
+                            String tIcon = t.profitLoss >= 0 ? "✅" : "❌";
+                            sb.append("<div style='display:flex;gap:8px;align-items:center;padding:4px 8px;background:#2d2a5e;border-radius:4px;margin-bottom:2px;font-size:12px;'>");
+                            sb.append("<span>").append(tIcon).append("</span>");
+                            sb.append("<span style='color:#e5e7eb;font-weight:500;'>").append(escapeHtml(t.ticker)).append("</span>");
+                            sb.append("<span style='color:#9ca3af;'>").append(escapeHtml(t.agentId)).append("</span>");
+                            sb.append("<span style='color:").append(tColor).append(";font-weight:600;'>").append(String.format("%+.2f%%", t.profitLossPct)).append("</span>");
+                            sb.append("<span style='color:").append(tColor).append(";'>$").append(String.format("%.2f", t.profitLoss)).append("</span>");
+                            sb.append("</div>");
+                        }
+                        sb.append("</div>");
+                    }
+                    sb.append("</div>");
+                }
                 sb.append("</div>");
                 sb.append("</div>");
 
@@ -7092,7 +7164,12 @@ public class WebServer {
                 // Sort by win rate descending (best performers first)
                 performances.sort((a, b) -> Double.compare(b.winRate, a.winRate));
 
+                // Limit to top 10 agents
+                int maxRows = 10;
+                int rowCount = 0;
                 for (AIToolAgent.AgentPerformance perf : performances) {
+                    if (rowCount >= maxRows) break;
+                    rowCount++;
                     String rowBg = perf.isWinning ? "background:rgba(34,197,94,0.15);" : "";
                     String rowBorder = perf.isWinning ? "border-left:3px solid #22c55e;" : "";
                     
@@ -7487,6 +7564,39 @@ public class WebServer {
             }
         });
 
+        // Full scan with selected agents against all 500+ tickers
+        server.createContext("/aitool-full-scan", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/aitool");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                
+                // Parse selected agents from form
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                
+                List<String> selectedAgents = new ArrayList<>();
+                for (int i = 0; i < 5; i++) {
+                    String agentId = form.get("agent" + i);
+                    if (agentId != null && !agentId.trim().isEmpty()) {
+                        selectedAgents.add(agentId.trim());
+                    }
+                }
+                
+                // Start async full scan with selected agents
+                if (selectedAgents.isEmpty()) {
+                    AIToolAgent.runTop5AgentsFullScanAsync();
+                } else {
+                    AIToolAgent.runFullScanWithAgentsAsync(selectedAgents);
+                }
+                
+                ex.getResponseHeaders().add("Location", "/aitool?fullScanStarted=true");
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
         // Save AITool agent configuration
         server.createContext("/aitool-save-config", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
@@ -7749,6 +7859,48 @@ public class WebServer {
                 }
                 sb.append("</div>");
 
+                // Discord Agent Monitor Section
+                sb.append("<div style='background:#0b1220;border:2px solid #5865F2;border-radius:8px;padding:16px;margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:10px;color:#5865F2;'>🔔 Discord Agent Monitor | מעקב סוכן בדיסקורד</div>");
+                sb.append("<div style='color:#9ca3af;font-size:13px;margin-bottom:12px;'>Get Discord notifications for EVERY buy/sell activity of a specific agent.<br/>קבל התראות דיסקורד על כל פעילות קנייה/מכירה של סוכן מסוים.</div>");
+                
+                // Get current monitored agent
+                String monitoredAgent = ScoringConfig.getMonitoredAgentForDiscord();
+                
+                sb.append("<form method='post' action='/settings-monitor-agent' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;'>");
+                sb.append("<input type='text' name='agentId' placeholder='Agent ID (e.g., S10_SWING_TIGHT_RANGE_GEN1)' ");
+                sb.append("value='").append(escapeHtml(monitoredAgent != null ? monitoredAgent : "")).append("' ");
+                sb.append("style='padding:10px 12px;border-radius:8px;border:1px solid #1f2a44;background:#1f2a44;color:#e5e7eb;min-width:320px;' />");
+                sb.append("<button type='submit' style='background:#5865F2;color:#fff;border:none;padding:10px 20px;border-radius:8px;'>🔔 Apply Monitor</button>");
+                sb.append("<button type='submit' name='clear' value='true' style='background:#ef4444;color:#fff;border:none;padding:10px 20px;border-radius:8px;'>Clear</button>");
+                sb.append("</form>");
+                
+                // Show current monitored agent status
+                if (monitoredAgent != null && !monitoredAgent.isBlank()) {
+                    AIToolAgent.AgentConfig agentCfg = AIToolAgent.getAgentConfig(monitoredAgent);
+                    if (agentCfg != null) {
+                        AIToolAgent.AgentPerformance perf = AIToolAgent.getAgentPerformance(monitoredAgent);
+                        sb.append("<div style='margin-top:12px;padding:10px;background:#1f2a44;border-radius:8px;border-left:3px solid #5865F2;'>");
+                        sb.append("<div style='color:#5865F2;font-weight:600;'>🔔 Monitoring: ").append(escapeHtml(agentCfg.name != null ? agentCfg.name : agentCfg.id)).append("</div>");
+                        sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>Type: ").append(escapeHtml(agentCfg.type != null ? agentCfg.type : "")).append(" | Generation: ").append(agentCfg.generation).append("</div>");
+                        if (perf != null) {
+                            String winColor = perf.winRate >= 50 ? "#22c55e" : "#ef4444";
+                            sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>Performance: <span style='color:").append(winColor).append(";font-weight:600;'>").append(String.format("%.1f%%", perf.winRate)).append("</span> win rate | ").append(perf.wins).append("/").append(perf.totalTrades).append(" trades</div>");
+                        }
+                        sb.append("<div style='color:#22c55e;font-size:11px;margin-top:6px;'>✅ You will receive Discord notifications for all trades by this agent</div>");
+                        sb.append("</div>");
+                    } else {
+                        sb.append("<div style='margin-top:12px;padding:10px;background:#1f2a44;border-radius:8px;border-left:3px solid #ef4444;'>");
+                        sb.append("<div style='color:#ef4444;'>⚠️ Agent '").append(escapeHtml(monitoredAgent)).append("' not found. Check the ID.</div>");
+                        sb.append("</div>");
+                    }
+                } else {
+                    sb.append("<div style='margin-top:12px;padding:10px;background:#1f2a44;border-radius:8px;border-left:3px solid #9ca3af;'>");
+                    sb.append("<div style='color:#9ca3af;'>No agent currently monitored. Enter an agent ID above to start receiving Discord notifications.</div>");
+                    sb.append("</div>");
+                }
+                sb.append("</div>");
+
                 // Weight visualization
                 sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;margin-bottom:16px;'>");
                 sb.append("<div style='font-weight:600;margin-bottom:12px;color:#93c5fd;'>Current Weights | משקלים נוכחיים:</div>");
@@ -8007,6 +8159,33 @@ public class WebServer {
                 }
                 
                 ex.getResponseHeaders().add("Location", "/settings?agent_saved=true");
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // Settings - Monitor Agent for Discord endpoint
+        server.createContext("/settings-monitor-agent", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/settings");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                
+                if ("true".equals(form.get("clear"))) {
+                    ScoringConfig.setMonitoredAgentForDiscord(null);
+                } else {
+                    String agentId = form.getOrDefault("agentId", "").trim();
+                    if (!agentId.isEmpty()) {
+                        ScoringConfig.setMonitoredAgentForDiscord(agentId);
+                    } else {
+                        ScoringConfig.setMonitoredAgentForDiscord(null);
+                    }
+                }
+                
+                ex.getResponseHeaders().add("Location", "/settings?monitor_saved=true");
                 ex.sendResponseHeaders(303, -1); ex.close();
             }
         });

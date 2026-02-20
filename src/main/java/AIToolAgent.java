@@ -626,12 +626,23 @@ public class AIToolAgent {
         return shuffled.subList(0, Math.min(count, shuffled.size()));
     }
 
-    private static class TradeDecision {
-        boolean shouldTrade;
-        String action; // BUY or SELL
-        double confidence;
-        double suggestedStopLoss;
-        double suggestedTakeProfit;
+    // Made public for testing/debugging
+    public static class TradeDecision {
+        public boolean shouldTrade;
+        public String action; // BUY or SELL
+        public double confidence;
+        public double suggestedStopLoss;
+        public double suggestedTakeProfit;
+    }
+
+    // Public wrapper for debugging - calls the private analyzeStock
+    public static TradeDecision analyzeStockPublic(String ticker, AgentConfig agent) {
+        return analyzeStock(ticker, agent);
+    }
+
+    // Public wrapper for debugging - calls the private executeTrade
+    public static Trade executeTradePublic(AgentConfig agent, String ticker, TradeDecision decision) {
+        return executeTrade(agent, ticker, decision);
     }
 
     private static TradeDecision analyzeStock(String ticker, AgentConfig agent) {
@@ -757,6 +768,44 @@ public class AIToolAgent {
                 }
             }
             
+            // === CHAIKIN MONEY FLOW (CMF) FILTER - Accumulation vs Distribution ===
+            // CMF > 0 = Buying pressure (accumulation) - BULLISH
+            // CMF < 0 = Selling pressure (distribution) - BEARISH
+            // This filter ensures high RVOL is actually bullish, not distribution
+            if (hasFilter(agent, "cmfMin") || hasFilter(agent, "cmfPositiveRequired")) {
+                if (highPrices != null && lowPrices != null && volumes != null && 
+                    highPrices.size() >= 20 && volumes.size() >= 20) {
+                    
+                    // Convert volumes to Long for CMF calculation
+                    List<Long> volumesLong = new ArrayList<>();
+                    for (Double v : volumes) {
+                        volumesLong.add(v != null ? v.longValue() : 0L);
+                    }
+                    
+                    List<Double> cmfList = CMF.calculateCMF(highPrices, lowPrices, prices, volumesLong, 20);
+                    if (cmfList != null && !cmfList.isEmpty()) {
+                        Double cmf = cmfList.get(cmfList.size() - 1);
+                        if (cmf != null) {
+                            // Check if positive CMF is required (accumulation only)
+                            boolean cmfPositiveRequired = getBooleanFilter(agent, "cmfPositiveRequired", false);
+                            if (cmfPositiveRequired && cmf <= 0) {
+                                System.out.println("[AIToolAgent] " + ticker + " FILTERED: CMF=" + String.format("%.3f", cmf) + " (distribution/selling pressure)");
+                                return decision; // CMF negative = distribution, no trade
+                            }
+                            
+                            // Check minimum CMF threshold
+                            double cmfMin = getDoubleFilter(agent, "cmfMin", -1.0);
+                            if (cmf < cmfMin) {
+                                System.out.println("[AIToolAgent] " + ticker + " FILTERED: CMF=" + String.format("%.3f", cmf) + " < cmfMin=" + cmfMin);
+                                return decision; // CMF below threshold
+                            }
+                            
+                            System.out.println("[AIToolAgent] " + ticker + " CMF PASSED: " + String.format("%.3f", cmf) + " (accumulation/buying pressure)");
+                        }
+                    }
+                }
+            }
+            
             // === OPTIONAL SMA200 FILTER ===
             if (sma200Required && prices.size() >= 200) {
                 List<Double> sma200List = TechnicalAnalysisModel.calculateSMA(prices, 200);
@@ -764,6 +813,35 @@ public class AIToolAgent {
                     Double sma200 = sma200List.get(sma200List.size() - 1);
                     if (sma200 != null && currentPrice <= sma200) {
                         return decision; // Price below SMA200, no trade
+                    }
+                }
+            }
+            
+            // === OPTIONAL PRICE ABOVE VWAP FILTER ===
+            // For daily data, we approximate VWAP using typical price = (high + low + close) / 3
+            if (hasFilter(agent, "priceAboveVwapPct") || hasFilter(agent, "priceAboveVwapRequired")) {
+                if (highPrices != null && lowPrices != null && !highPrices.isEmpty()) {
+                    // Calculate typical price (approximation of VWAP for daily data)
+                    double high = highPrices.get(highPrices.size() - 1);
+                    double low = lowPrices.get(lowPrices.size() - 1);
+                    double typicalPrice = (high + low + currentPrice) / 3.0;
+                    
+                    // Check if priceAboveVwapRequired is set (boolean check)
+                    boolean vwapRequired = getBooleanFilter(agent, "priceAboveVwapRequired", false);
+                    if (vwapRequired && currentPrice <= typicalPrice) {
+                        return decision; // Price not above VWAP/typical price
+                    }
+                    
+                    // Check priceAboveVwapPct (percentage threshold)
+                    // Positive value = must be X% above VWAP
+                    // Negative value = can be up to X% below VWAP (more lenient)
+                    if (hasFilter(agent, "priceAboveVwapPct")) {
+                        double vwapPctThreshold = getDoubleFilter(agent, "priceAboveVwapPct", 0);
+                        double actualVwapPct = ((currentPrice - typicalPrice) / typicalPrice) * 100;
+                        
+                        if (actualVwapPct < vwapPctThreshold) {
+                            return decision; // Price not meeting VWAP percentage threshold
+                        }
                     }
                 }
             }
@@ -838,8 +916,11 @@ public class AIToolAgent {
             List<Double> prices = PriceJsonParser.extractClosingPrices(json);
             if (prices == null || prices.size() < 2) return null;
             
-            double entryPrice = prices.get(prices.size() - 1);
-            double previousPrice = prices.get(prices.size() - 2);
+            // Use REAL market prices from historical data
+            // prices[0] = oldest, prices[size-1] = most recent
+            // Entry = previous day's close, Exit = most recent close (today)
+            double entryPrice = prices.get(prices.size() - 2);  // Previous day close
+            double exitPrice = prices.get(prices.size() - 1);   // Current/latest close (REAL price)
             
             Trade trade = new Trade();
             trade.id = UUID.randomUUID().toString().substring(0, 8);
@@ -848,35 +929,37 @@ public class AIToolAgent {
             trade.action = decision.action;
             trade.entryPrice = entryPrice;
             trade.quantity = 100; // Simulated quantity
-            trade.entryTime = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
             
-            // Simulate exit (using next day's price movement simulation)
-            double priceChange = (entryPrice - previousPrice) / previousPrice;
-            double simulatedExitPrice;
+            // Use actual timestamps based on market data
+            ZonedDateTime now = ZonedDateTime.now(NY);
+            ZonedDateTime entryTime = now.minusDays(1).withHour(9).withMinute(30); // Previous day market open
+            ZonedDateTime exitTime = now.withHour(16).withMinute(0); // Today market close
             
-            // Simulate based on momentum continuation or reversal
-            Random rand = new Random();
-            double momentum = priceChange * (0.5 + rand.nextDouble());
-            simulatedExitPrice = entryPrice * (1 + momentum);
+            trade.entryTime = entryTime.format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
+            trade.exitTime = exitTime.format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
             
-            // Apply stop loss / take profit
+            // Use REAL exit price from market data
+            trade.exitPrice = exitPrice;
+            
+            // Determine win/loss based on actual price movement
+            double priceChange = exitPrice - entryPrice;
             double stopLoss = decision.suggestedStopLoss;
             double takeProfit = decision.suggestedTakeProfit;
             
-            if (simulatedExitPrice <= stopLoss) {
-                simulatedExitPrice = stopLoss;
+            if (exitPrice <= stopLoss) {
                 trade.status = "CLOSED_LOSS";
-            } else if (simulatedExitPrice >= takeProfit) {
-                simulatedExitPrice = takeProfit;
+            } else if (exitPrice >= takeProfit) {
                 trade.status = "CLOSED_WIN";
             } else {
-                trade.status = simulatedExitPrice > entryPrice ? "CLOSED_WIN" : "CLOSED_LOSS";
+                trade.status = priceChange > 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
             }
             
-            trade.exitPrice = simulatedExitPrice;
-            trade.exitTime = ZonedDateTime.now(NY).plusHours(rand.nextInt(24) + 1).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
-            trade.profitLoss = (trade.exitPrice - trade.entryPrice) * trade.quantity;
-            trade.profitLossPct = ((trade.exitPrice - trade.entryPrice) / trade.entryPrice) * 100;
+            // Calculate P/L based on REAL prices
+            trade.profitLoss = priceChange * trade.quantity;
+            trade.profitLossPct = (priceChange / entryPrice) * 100;
+            
+            System.out.println("[AIToolAgent] REAL TRADE: " + ticker + " Entry=$" + String.format("%.2f", entryPrice) + 
+                " Exit=$" + String.format("%.2f", exitPrice) + " P/L=" + String.format("%.2f%%", trade.profitLossPct));
             
             return trade;
         } catch (Exception e) {
@@ -1005,16 +1088,21 @@ public class AIToolAgent {
     }
 
     private static void notifyTradeIfEnabled(String agentId, Trade trade, AgentPerformance perf) {
-        // Check if trade notifications are enabled for this agent
-        if (!ScoringConfig.isTradeNotificationEnabled(agentId)) {
+        // Check if trade notifications are enabled for this agent (from tracked agents)
+        boolean trackedNotify = ScoringConfig.isTradeNotificationEnabled(agentId);
+        // Check if this agent is monitored from Settings page
+        boolean monitoredNotify = ScoringConfig.isAgentMonitoredForDiscord(agentId);
+        
+        if (!trackedNotify && !monitoredNotify) {
             return;
         }
         
         String winLoss = trade.status.equals("CLOSED_WIN") ? "✅ WIN" : "❌ LOSS";
         String emoji = trade.status.equals("CLOSED_WIN") ? "📈" : "📉";
+        String source = monitoredNotify ? "🔔 MONITORED" : "📊 TRACKED";
         
         String message = String.format(
-            "%s **Trade Alert: %s**\n" +
+            "%s **Trade Alert: %s** [%s]\n" +
             "Agent: **%s** (%s)\n" +
             "Ticker: **%s** | %s\n" +
             "Entry: $%.2f → Exit: $%.2f\n" +
@@ -1022,6 +1110,7 @@ public class AIToolAgent {
             "Agent Stats: %d/%d trades (%.1f%% win rate)",
             emoji,
             winLoss,
+            source,
             perf.agentName != null ? perf.agentName : agentId,
             perf.type != null ? perf.type : "UNKNOWN",
             trade.ticker,
@@ -1036,7 +1125,7 @@ public class AIToolAgent {
         );
         
         sendDiscord(message);
-        System.out.println("[AIToolAgent] Trade notification sent for agent: " + agentId + " ticker: " + trade.ticker);
+        System.out.println("[AIToolAgent] Trade notification sent for agent: " + agentId + " ticker: " + trade.ticker + " (monitored=" + monitoredNotify + ", tracked=" + trackedNotify + ")");
     }
 
     private static void evolveUnderperformingAgents() {
@@ -1517,6 +1606,15 @@ public class AIToolAgent {
         }
     }
 
+    public static AgentPerformance getAgentPerformance(String agentId) {
+        synchronized (LOCK) {
+            if (systemState == null) {
+                initialize();
+            }
+            return systemState.performance.get(agentId);
+        }
+    }
+
     private static void autoTrackWinners() {
         try {
             // Get all performances
@@ -1555,6 +1653,223 @@ public class AIToolAgent {
                 System.err.println("[AIToolAgent] Async run error: " + e.getMessage());
             }
         });
+    }
+
+    // Status tracking for top agents full scan
+    private static volatile boolean topAgentsFullScanRunning = false;
+    private static volatile String topAgentsFullScanStatus = "";
+    private static volatile int topAgentsFullScanProgress = 0;
+    private static volatile int topAgentsFullScanTotal = 0;
+    private static final List<Trade> recentFullScanTrades = Collections.synchronizedList(new ArrayList<>());
+    private static volatile List<String> selectedAgentsForScan = null;
+
+    public static boolean isTopAgentsFullScanRunning() {
+        return topAgentsFullScanRunning;
+    }
+
+    public static String getTopAgentsFullScanStatus() {
+        return topAgentsFullScanStatus;
+    }
+
+    public static int getTopAgentsFullScanProgress() {
+        return topAgentsFullScanProgress;
+    }
+
+    public static int getTopAgentsFullScanTotal() {
+        return topAgentsFullScanTotal;
+    }
+
+    public static List<Trade> getRecentFullScanTrades() {
+        synchronized (recentFullScanTrades) {
+            return new ArrayList<>(recentFullScanTrades);
+        }
+    }
+
+    /**
+     * Get top 5 agents sorted by win rate and number of trades (combined score)
+     */
+    public static List<AgentPerformance> getTop5Agents() {
+        List<AgentPerformance> allPerfs = getAllPerformances();
+        
+        // Filter agents with at least 3 trades
+        List<AgentPerformance> qualified = allPerfs.stream()
+            .filter(p -> p.totalTrades >= 3)
+            .collect(Collectors.toList());
+        
+        // Sort by combined score: winRate * log(trades+1) to balance both factors
+        qualified.sort((a, b) -> {
+            double scoreA = a.winRate * Math.log(a.totalTrades + 1);
+            double scoreB = b.winRate * Math.log(b.totalTrades + 1);
+            return Double.compare(scoreB, scoreA);
+        });
+        
+        // Return top 5
+        return qualified.subList(0, Math.min(5, qualified.size()));
+    }
+
+    /**
+     * Run selected agents against ALL tickers from LongTermCandidateFinder (500+ tickers)
+     * @param agentIds List of agent IDs to run, or null to use top 5
+     */
+    public static void runFullScanWithAgentsAsync(List<String> agentIds) {
+        if (topAgentsFullScanRunning) {
+            System.out.println("[AIToolAgent] Top agents full scan already running, skipping...");
+            return;
+        }
+        
+        selectedAgentsForScan = agentIds;
+        
+        scheduler.submit(() -> {
+            try {
+                runTop5AgentsFullScan();
+            } catch (Exception e) {
+                System.err.println("[AIToolAgent] Top agents full scan error: " + e.getMessage());
+                topAgentsFullScanRunning = false;
+                topAgentsFullScanStatus = "Error: " + e.getMessage();
+            }
+        });
+    }
+
+    /**
+     * Run top 5 agents against ALL tickers from LongTermCandidateFinder (500+ tickers)
+     * This is a comprehensive scan that takes a long time due to API rate limits
+     */
+    public static void runTop5AgentsFullScanAsync() {
+        runFullScanWithAgentsAsync(null);
+    }
+
+    private static void runTop5AgentsFullScan() {
+        topAgentsFullScanRunning = true;
+        topAgentsFullScanProgress = 0;
+        
+        // Clear recent trades from previous scan
+        synchronized (recentFullScanTrades) {
+            recentFullScanTrades.clear();
+        }
+        
+        try {
+            // Get agents to run - either selected ones or top 5
+            List<AgentPerformance> agentsToRun = new ArrayList<>();
+            
+            if (selectedAgentsForScan != null && !selectedAgentsForScan.isEmpty()) {
+                // Use selected agents
+                for (String agentId : selectedAgentsForScan) {
+                    AgentPerformance perf = systemState.performance.get(agentId);
+                    if (perf != null) {
+                        agentsToRun.add(perf);
+                    }
+                }
+            } else {
+                // Use top 5
+                agentsToRun = getTop5Agents();
+            }
+            
+            if (agentsToRun.isEmpty()) {
+                topAgentsFullScanStatus = "No qualified agents found (need at least 3 trades)";
+                topAgentsFullScanRunning = false;
+                return;
+            }
+            
+            // Get all tickers from LongTermCandidateFinder
+            List<String> allTickers = LongTermCandidateFinder.getUniverseTickers();
+            topAgentsFullScanTotal = allTickers.size() * agentsToRun.size();
+            
+            // Build agent names for notification
+            StringBuilder agentNames = new StringBuilder();
+            for (AgentPerformance p : agentsToRun) {
+                agentNames.append("• **").append(p.agentId).append("** (").append(String.format("%.1f%%", p.winRate)).append(" win rate, ").append(p.totalTrades).append(" trades)\n");
+            }
+            
+            // Send Discord notification
+            String startMsg = String.format(
+                "🚀 **Full Scan Started**\n" +
+                "Scanning **%d tickers** with %d agents:\n%s" +
+                "Estimated time: ~%d minutes (API rate limited)",
+                allTickers.size(),
+                agentsToRun.size(),
+                agentNames.toString(),
+                (allTickers.size() * agentsToRun.size() * 13) / 60 // ~13 seconds per ticker
+            );
+            sendDiscord(startMsg);
+            
+            topAgentsFullScanStatus = "Running: 0/" + topAgentsFullScanTotal + " analyzed";
+            System.out.println("[AIToolAgent] Starting full scan with " + agentsToRun.size() + " agents and " + allTickers.size() + " tickers");
+            
+            int totalAnalyzed = 0;
+            int totalTrades = 0;
+            
+            // Run each agent against all tickers
+            for (AgentPerformance perfInfo : agentsToRun) {
+                AgentConfig agent = systemState.agents.get(perfInfo.agentId);
+                if (agent == null) continue;
+                
+                System.out.println("[AIToolAgent] Full scan with agent: " + agent.id);
+                
+                for (String ticker : allTickers) {
+                    try {
+                        topAgentsFullScanStatus = "Analyzing " + ticker + " with " + agent.id + " (" + totalAnalyzed + "/" + topAgentsFullScanTotal + ")";
+                        
+                        // Analyze stock
+                        TradeDecision decision = analyzeStock(ticker, agent);
+                        
+                        if (decision != null && decision.shouldTrade) {
+                            Trade trade = executeTrade(agent, ticker, decision);
+                            if (trade != null) {
+                                synchronized (LOCK) {
+                                    systemState.tradeHistory.computeIfAbsent(agent.id, k -> new ArrayList<>()).add(trade);
+                                }
+                                updatePerformance(agent.id, trade);
+                                totalTrades++;
+                                
+                                // Add to recent full scan trades (keep last 20)
+                                synchronized (recentFullScanTrades) {
+                                    recentFullScanTrades.add(0, trade);
+                                    while (recentFullScanTrades.size() > 20) {
+                                        recentFullScanTrades.remove(recentFullScanTrades.size() - 1);
+                                    }
+                                }
+                                
+                                System.out.println("[AIToolAgent] Full scan trade: " + agent.id + " " + trade.action + " " + ticker + " P/L: $" + String.format("%.2f", trade.profitLoss));
+                            }
+                        }
+                        
+                        totalAnalyzed++;
+                        topAgentsFullScanProgress = totalAnalyzed;
+                        
+                        // Rate limit delay - Alpha Vantage free tier = 5 calls/minute
+                        Thread.sleep(12500);
+                        
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    } catch (Exception e) {
+                        System.err.println("[AIToolAgent] Full scan error for " + ticker + ": " + e.getMessage());
+                        totalAnalyzed++;
+                        topAgentsFullScanProgress = totalAnalyzed;
+                    }
+                }
+            }
+            
+            // Save state
+            saveState();
+            
+            // Send completion notification
+            String completeMsg = String.format(
+                "✅ **Top 5 Agents Full Scan Complete**\n" +
+                "Analyzed: **%d** ticker-agent combinations\n" +
+                "Trades executed: **%d**\n" +
+                "Check /aitool for updated performance stats.",
+                totalAnalyzed,
+                totalTrades
+            );
+            sendDiscord(completeMsg);
+            
+            topAgentsFullScanStatus = "Complete: " + totalAnalyzed + " analyzed, " + totalTrades + " trades";
+            System.out.println("[AIToolAgent] Top 5 agents full scan complete: " + totalAnalyzed + " analyzed, " + totalTrades + " trades");
+            
+        } finally {
+            topAgentsFullScanRunning = false;
+        }
     }
 
     // Result class for structured AI suggestions

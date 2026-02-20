@@ -19,6 +19,7 @@ public class ScoringConfig {
     public static class ConfigData {
         public String activeMode = "LONG_TERM_INVESTOR";
         public String activeAgentConfig = null; // AITool agent ID to use for filtering
+        public String monitoredAgentForDiscord = null; // Agent ID to monitor for Discord notifications
         public Map<String, ModeConfig> presets = new ConcurrentHashMap<>();
         public Map<String, SavedAgentTracker> savedAgentTrackers = new ConcurrentHashMap<>(); // Cumulative tracking
     }
@@ -293,6 +294,25 @@ public class ScoringConfig {
             }
         }
         return false;
+    }
+
+    // Discord Agent Monitor methods
+    public static String getMonitoredAgentForDiscord() {
+        ConfigData config = load();
+        return config.monitoredAgentForDiscord;
+    }
+
+    public static void setMonitoredAgentForDiscord(String agentId) {
+        ConfigData config = load();
+        config.monitoredAgentForDiscord = agentId;
+        save(config);
+        System.out.println("[ScoringConfig] Monitored agent for Discord set to: " + (agentId != null ? agentId : "none"));
+    }
+
+    public static boolean isAgentMonitoredForDiscord(String agentId) {
+        if (agentId == null || agentId.isBlank()) return false;
+        ConfigData config = load();
+        return agentId.equals(config.monitoredAgentForDiscord);
     }
 
     public static ModeConfig getActiveModeConfig() {
