@@ -600,6 +600,9 @@ public class AIToolAgent {
                 TradeDecision decision = analyzeStock(ticker, agent);
                 
                 if (decision != null && decision.shouldTrade) {
+                    // Send BUY ALERT notification BEFORE executing trade
+                    sendBuyAlertIfMonitored(agent, ticker, decision);
+                    
                     Trade trade = executeTrade(agent, ticker, decision);
                     if (trade != null) {
                         synchronized (LOCK) {
@@ -643,6 +646,267 @@ public class AIToolAgent {
     // Public wrapper for debugging - calls the private executeTrade
     public static Trade executeTradePublic(AgentConfig agent, String ticker, TradeDecision decision) {
         return executeTrade(agent, ticker, decision);
+    }
+
+    /**
+     * Full analysis report for a single symbol - returns detailed breakdown of all filters
+     */
+    public static class AnalysisReport {
+        public String ticker;
+        public String agentId;
+        public boolean passed;
+        public String failedAt;
+        
+        // Price data
+        public double currentPrice;
+        public double sma20;
+        public double sma200;
+        
+        // RSI
+        public double rsi;
+        public double rsiMin;
+        public double rsiMax;
+        public boolean rsiPassed;
+        
+        // RVOL
+        public double rvol;
+        public double rvolMin;
+        public boolean rvolPassed;
+        
+        // CMF (Chaikin Money Flow)
+        public double cmf;
+        public boolean cmfPositiveRequired;
+        public boolean cmfPassed;
+        
+        // VWAP
+        public double vwap;
+        public int vwapHoldBars;
+        public int vwapHoldBarsRequired;
+        public boolean vwapPassed;
+        
+        // SMA200
+        public boolean sma200Required;
+        public boolean sma200Passed;
+        
+        // Trade recommendation
+        public String action;
+        public double stopLoss;
+        public double takeProfit;
+        public double riskPct;
+        public double rewardPct;
+        public double riskReward;
+        
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("\n╔══════════════════════════════════════════════════════════════╗\n");
+            sb.append(String.format("║  FULL ANALYSIS REPORT: %-37s ║\n", ticker));
+            sb.append(String.format("║  Agent: %-52s ║\n", agentId));
+            sb.append("╠══════════════════════════════════════════════════════════════╣\n");
+            sb.append(String.format("║  Current Price: $%-43.2f ║\n", currentPrice));
+            sb.append("╠══════════════════════════════════════════════════════════════╣\n");
+            
+            // RSI
+            String rsiStatus = rsiPassed ? "✅ PASS" : "❌ FAIL";
+            sb.append(String.format("║  RSI: %.2f  (Range: %.2f - %.2f)  %s              ║\n", 
+                rsi, rsiMin, rsiMax, rsiStatus));
+            
+            // Price vs SMA20
+            String sma20Status = currentPrice > sma20 ? "✅ PASS" : "❌ FAIL";
+            sb.append(String.format("║  Price > SMA20: $%.2f > $%.2f  %s               ║\n", 
+                currentPrice, sma20, sma20Status));
+            
+            // RVOL
+            String rvolStatus = rvolPassed ? "✅ PASS" : "❌ FAIL";
+            sb.append(String.format("║  RVOL: %.2f  (Min: %.2f)  %s                      ║\n", 
+                rvol, rvolMin, rvolStatus));
+            
+            // CMF
+            String cmfStatus = cmfPassed ? "✅ PASS" : "❌ FAIL";
+            String cmfReq = cmfPositiveRequired ? "> 0 required" : "not required";
+            sb.append(String.format("║  CMF: %.3f  (%s)  %s                  ║\n", 
+                cmf, cmfReq, cmfStatus));
+            
+            // VWAP Hold
+            String vwapStatus = vwapPassed ? "✅ PASS" : "❌ FAIL";
+            sb.append(String.format("║  VWAP Hold: %d bars  (Min: %d bars)  %s              ║\n", 
+                vwapHoldBars, vwapHoldBarsRequired, vwapStatus));
+            
+            // SMA200
+            if (sma200Required) {
+                String sma200Status = sma200Passed ? "✅ PASS" : "❌ FAIL";
+                sb.append(String.format("║  Price > SMA200: $%.2f > $%.2f  %s            ║\n", 
+                    currentPrice, sma200, sma200Status));
+            }
+            
+            sb.append("╠══════════════════════════════════════════════════════════════╣\n");
+            
+            if (passed) {
+                sb.append("║  🚀 RESULT: ALL FILTERS PASSED - TRADE SIGNAL!              ║\n");
+                sb.append("╠══════════════════════════════════════════════════════════════╣\n");
+                sb.append(String.format("║  📍 Entry: $%-48.2f ║\n", currentPrice));
+                sb.append(String.format("║  🛑 Stop Loss: $%.2f (-%.1f%%)                              ║\n", stopLoss, riskPct));
+                sb.append(String.format("║  🎯 Take Profit: $%.2f (+%.1f%%)                           ║\n", takeProfit, rewardPct));
+                sb.append(String.format("║  📊 Risk/Reward: 1:%.1f                                     ║\n", riskReward));
+            } else {
+                sb.append(String.format("║  ❌ RESULT: FILTERED OUT at: %-31s ║\n", failedAt));
+            }
+            
+            sb.append("╚══════════════════════════════════════════════════════════════╝\n");
+            return sb.toString();
+        }
+    }
+
+    /**
+     * Analyze a single symbol and return full detailed report
+     */
+    public static AnalysisReport analyzeStockWithReport(String ticker, AgentConfig agent) {
+        AnalysisReport report = new AnalysisReport();
+        report.ticker = ticker;
+        report.agentId = agent.id;
+        report.passed = false;
+        report.failedAt = "Unknown";
+        
+        try {
+            // Fetch current price data
+            DataFetcher.setTicker(ticker);
+            String json = DataFetcher.fetchStockData();
+            if (json == null || json.isBlank()) {
+                report.failedAt = "No data available";
+                return report;
+            }
+            
+            List<Double> prices = PriceJsonParser.extractClosingPrices(json);
+            if (prices == null || prices.size() < 20) {
+                report.failedAt = "Insufficient price data";
+                return report;
+            }
+            
+            report.currentPrice = prices.get(prices.size() - 1);
+            
+            // Extract high/low prices and volumes
+            List<Double> highPrices = PriceJsonParser.extractHighPrices(json);
+            List<Double> lowPrices = PriceJsonParser.extractLowPrices(json);
+            List<Double> volumes = PriceJsonParser.extractVolumes(json);
+            
+            // Calculate RSI
+            List<Double> rsiList = RSI.calculateRSI(prices, 14);
+            report.rsi = (rsiList != null && !rsiList.isEmpty()) ? rsiList.get(rsiList.size() - 1) : 50.0;
+            report.rsiMin = getDoubleFilter(agent, "rsiMin", 30);
+            report.rsiMax = getDoubleFilter(agent, "rsiMax", 70);
+            report.rsiPassed = report.rsi >= report.rsiMin && report.rsi <= report.rsiMax;
+            
+            if (!report.rsiPassed) {
+                report.failedAt = "RSI out of range";
+                return report;
+            }
+            
+            // Calculate SMA20
+            List<Double> sma20List = TechnicalAnalysisModel.calculateSMA(prices, 20);
+            report.sma20 = (sma20List != null && !sma20List.isEmpty()) ? sma20List.get(sma20List.size() - 1) : report.currentPrice;
+            
+            if (report.currentPrice <= report.sma20) {
+                report.failedAt = "Price below SMA20";
+                return report;
+            }
+            
+            // Calculate RVOL
+            if (volumes != null && volumes.size() >= 20) {
+                double avgVolume = volumes.subList(Math.max(0, volumes.size() - 20), volumes.size() - 1)
+                        .stream().mapToDouble(v -> v != null ? v : 0).average().orElse(0);
+                double currentVolume = volumes.get(volumes.size() - 1) != null ? volumes.get(volumes.size() - 1) : 0;
+                report.rvol = avgVolume > 0 ? currentVolume / avgVolume : 0;
+            }
+            report.rvolMin = getDoubleFilter(agent, "rvolMin", 0);
+            report.rvolPassed = report.rvol >= report.rvolMin;
+            
+            if (hasFilter(agent, "rvolMin") && !report.rvolPassed) {
+                report.failedAt = "RVOL too low";
+                return report;
+            }
+            
+            // Calculate CMF
+            report.cmfPositiveRequired = getBooleanFilter(agent, "cmfPositiveRequired", false);
+            if (highPrices != null && lowPrices != null && volumes != null && 
+                highPrices.size() >= 20 && volumes.size() >= 20) {
+                List<Long> volumesLong = new ArrayList<>();
+                for (Double v : volumes) {
+                    volumesLong.add(v != null ? v.longValue() : 0L);
+                }
+                List<Double> cmfList = CMF.calculateCMF(highPrices, lowPrices, prices, volumesLong, 20);
+                if (cmfList != null && !cmfList.isEmpty()) {
+                    Double cmfVal = cmfList.get(cmfList.size() - 1);
+                    report.cmf = cmfVal != null ? cmfVal : 0;
+                }
+            }
+            report.cmfPassed = !report.cmfPositiveRequired || report.cmf > 0;
+            
+            if (report.cmfPositiveRequired && !report.cmfPassed) {
+                report.failedAt = "CMF negative (distribution)";
+                return report;
+            }
+            
+            // Calculate SMA200
+            report.sma200Required = getBooleanFilter(agent, "sma200Required", false);
+            if (report.sma200Required && prices.size() >= 200) {
+                List<Double> sma200List = TechnicalAnalysisModel.calculateSMA(prices, 200);
+                if (sma200List != null && !sma200List.isEmpty()) {
+                    report.sma200 = sma200List.get(sma200List.size() - 1);
+                }
+            }
+            report.sma200Passed = !report.sma200Required || report.currentPrice > report.sma200;
+            
+            if (report.sma200Required && !report.sma200Passed) {
+                report.failedAt = "Price below SMA200";
+                return report;
+            }
+            
+            // Calculate VWAP hold bars
+            report.vwapHoldBarsRequired = (int) getDoubleFilter(agent, "vwapHoldBars", 0);
+            if (report.vwapHoldBarsRequired > 0 && highPrices != null && lowPrices != null) {
+                int dataSize = Math.min(Math.min(highPrices.size(), lowPrices.size()), prices.size());
+                report.vwapHoldBars = 0;
+                for (int i = dataSize - 1; i >= 0 && i >= dataSize - 10; i--) {
+                    double barHigh = highPrices.get(i);
+                    double barLow = lowPrices.get(i);
+                    double barClose = prices.get(i);
+                    double barTypicalPrice = (barHigh + barLow + barClose) / 3.0;
+                    report.vwap = barTypicalPrice; // Last VWAP
+                    
+                    if (barClose > barTypicalPrice) {
+                        report.vwapHoldBars++;
+                    } else {
+                        break;
+                    }
+                }
+            }
+            report.vwapPassed = report.vwapHoldBarsRequired == 0 || report.vwapHoldBars >= report.vwapHoldBarsRequired;
+            
+            if (!report.vwapPassed) {
+                report.failedAt = "VWAP hold too short";
+                return report;
+            }
+            
+            // ALL PASSED!
+            report.passed = true;
+            report.failedAt = null;
+            report.action = "BUY";
+            
+            // Calculate stop loss and take profit
+            double stopLossPct = getDoubleRisk(agent, "stopLossPct", 3.0);
+            double takeProfitPct = getDoubleRisk(agent, "takeProfitPct", 6.0);
+            report.stopLoss = report.currentPrice * (1 - stopLossPct / 100);
+            report.takeProfit = report.currentPrice * (1 + takeProfitPct / 100);
+            report.riskPct = stopLossPct;
+            report.rewardPct = takeProfitPct;
+            report.riskReward = takeProfitPct / stopLossPct;
+            
+            return report;
+            
+        } catch (Exception e) {
+            report.failedAt = "Error: " + e.getMessage();
+            return report;
+        }
     }
 
     private static TradeDecision analyzeStock(String ticker, AgentConfig agent) {
@@ -1087,11 +1351,65 @@ public class AIToolAgent {
         }
     }
 
+    /**
+     * Send BUY ALERT notification BEFORE trade execution
+     * This alerts the user to a trading opportunity so they can act on it
+     */
+    private static void sendBuyAlertIfMonitored(AgentConfig agent, String ticker, TradeDecision decision) {
+        // Only send if this agent is monitored from Settings page
+        if (!ScoringConfig.isAgentMonitoredForDiscord(agent.id)) {
+            return;
+        }
+        
+        // Get current price for the alert
+        double currentPrice = decision.suggestedStopLoss / (1 - getDoubleRisk(agent, "stopLossPct", 3.0) / 100);
+        // Recalculate from decision values
+        double stopLossPrice = decision.suggestedStopLoss;
+        double takeProfitPrice = decision.suggestedTakeProfit;
+        double riskPct = ((currentPrice - stopLossPrice) / currentPrice) * 100;
+        double rewardPct = ((takeProfitPrice - currentPrice) / currentPrice) * 100;
+        double riskReward = rewardPct / riskPct;
+        
+        // Get agent performance for context
+        AgentPerformance perf = systemState.performance.get(agent.id);
+        String winRateStr = perf != null ? String.format("%.1f%%", perf.winRate) : "N/A";
+        int totalTrades = perf != null ? perf.totalTrades : 0;
+        
+        String message = String.format(
+            "🚨 **BUY ALERT** 🚨\n" +
+            "━━━━━━━━━━━━━━━━━━━━\n" +
+            "**Ticker: %s**\n" +
+            "**Action: %s NOW**\n" +
+            "━━━━━━━━━━━━━━━━━━━━\n" +
+            "📍 Entry Price: **$%.2f**\n" +
+            "🛑 Stop Loss: **$%.2f** (-%.1f%%)\n" +
+            "🎯 Take Profit: **$%.2f** (+%.1f%%)\n" +
+            "📊 Risk/Reward: **1:%.1f**\n" +
+            "━━━━━━━━━━━━━━━━━━━━\n" +
+            "🤖 Agent: %s\n" +
+            "📈 Win Rate: %s (%d trades)\n" +
+            "⏰ Time: %s",
+            ticker,
+            decision.action,
+            currentPrice,
+            stopLossPrice, riskPct,
+            takeProfitPrice, rewardPct,
+            riskReward,
+            agent.name != null ? agent.name : agent.id,
+            winRateStr, totalTrades,
+            ZonedDateTime.now(NY).format(DateTimeFormatter.ofPattern("HH:mm:ss z"))
+        );
+        
+        sendDiscord(message);
+        System.out.println("[AIToolAgent] BUY ALERT sent for " + ticker + " via agent " + agent.id);
+    }
+
     private static void notifyTradeIfEnabled(String agentId, Trade trade, AgentPerformance perf) {
         // Check if trade notifications are enabled for this agent (from tracked agents)
         boolean trackedNotify = ScoringConfig.isTradeNotificationEnabled(agentId);
-        // Check if this agent is monitored from Settings page
-        boolean monitoredNotify = ScoringConfig.isAgentMonitoredForDiscord(agentId);
+        // Check if this agent is monitored from Settings page - but don't send post-trade for monitored
+        // (monitored agents get BUY ALERT before trade, not result after)
+        boolean monitoredNotify = false; // Disabled post-trade for monitored agents
         
         if (!trackedNotify && !monitoredNotify) {
             return;
@@ -1099,10 +1417,10 @@ public class AIToolAgent {
         
         String winLoss = trade.status.equals("CLOSED_WIN") ? "✅ WIN" : "❌ LOSS";
         String emoji = trade.status.equals("CLOSED_WIN") ? "📈" : "📉";
-        String source = monitoredNotify ? "🔔 MONITORED" : "📊 TRACKED";
+        String source = "📊 TRACKED";
         
         String message = String.format(
-            "%s **Trade Alert: %s** [%s]\n" +
+            "%s **Trade Result: %s** [%s]\n" +
             "Agent: **%s** (%s)\n" +
             "Ticker: **%s** | %s\n" +
             "Entry: $%.2f → Exit: $%.2f\n" +
@@ -1617,27 +1935,30 @@ public class AIToolAgent {
 
     private static void autoTrackWinners() {
         try {
-            // Get all performances
-            List<AgentPerformance> perfs = getAllPerformances();
+            // IMPORTANT: Use raw systemState.performance values directly, NOT getAllPerformances()
+            // which may have been modified by getTop5Agents() with inflated tracker cumulative stats.
+            // This prevents a feedback loop where tracker stats get added to themselves.
             Map<String, ScoringConfig.SavedAgentTracker> existingTrackers = ScoringConfig.getSavedAgentTrackers();
             
-            for (AgentPerformance perf : perfs) {
-                if (perf.totalTrades < 5) continue; // Need at least 5 trades
-                
-                // Auto-track agents with >75% win rate
-                if (perf.winRate >= 75.0) {
-                    if (!existingTrackers.containsKey(perf.agentId)) {
-                        AgentConfig cfg = systemState.agents.get(perf.agentId);
-                        String name = cfg != null && cfg.name != null ? cfg.name : perf.agentId;
-                        String type = cfg != null && cfg.type != null ? cfg.type : "UNKNOWN";
-                        ScoringConfig.getOrCreateTracker(perf.agentId, name, type);
-                        System.out.println("[AIToolAgent] Auto-tracked winner: " + perf.agentId + " (" + String.format("%.1f%%", perf.winRate) + ")");
+            synchronized (LOCK) {
+                for (AgentPerformance perf : systemState.performance.values()) {
+                    if (perf.totalTrades < 5) continue; // Need at least 5 trades
+                    
+                    // Auto-track agents with >75% win rate
+                    if (perf.winRate >= 75.0) {
+                        if (!existingTrackers.containsKey(perf.agentId)) {
+                            AgentConfig cfg = systemState.agents.get(perf.agentId);
+                            String name = cfg != null && cfg.name != null ? cfg.name : perf.agentId;
+                            String type = cfg != null && cfg.type != null ? cfg.type : "UNKNOWN";
+                            ScoringConfig.getOrCreateTracker(perf.agentId, name, type);
+                            System.out.println("[AIToolAgent] Auto-tracked winner: " + perf.agentId + " (" + String.format("%.1f%%", perf.winRate) + ")");
+                        }
                     }
-                }
-                
-                // Update existing trackers with latest stats
-                if (existingTrackers.containsKey(perf.agentId)) {
-                    ScoringConfig.updateTrackerWithDailyStats(perf.agentId, perf.wins, perf.totalTrades, perf.totalProfitLoss);
+                    
+                    // Update existing trackers with latest stats from RAW performance (not inflated)
+                    if (existingTrackers.containsKey(perf.agentId)) {
+                        ScoringConfig.updateTrackerWithDailyStats(perf.agentId, perf.wins, perf.totalTrades, perf.totalProfitLoss);
+                    }
                 }
             }
         } catch (Exception e) {
@@ -1687,12 +2008,47 @@ public class AIToolAgent {
 
     /**
      * Get top 5 agents sorted by win rate and number of trades (combined score)
+     * Uses tracked agents cumulative stats when available (more accurate than agent-state.json)
+     * NOTE: Creates copies of performance objects to avoid mutating the original systemState.performance
      */
     public static List<AgentPerformance> getTop5Agents() {
         List<AgentPerformance> allPerfs = getAllPerformances();
         
+        // Get tracked agents for cumulative stats (more accurate)
+        Map<String, ScoringConfig.SavedAgentTracker> trackers = ScoringConfig.getSavedAgentTrackers();
+        
+        // Create copies with tracker stats to avoid mutating original performance objects
+        // This prevents feedback loops where inflated stats get written back to trackers
+        List<AgentPerformance> perfCopies = new ArrayList<>();
+        for (AgentPerformance perf : allPerfs) {
+            AgentPerformance copy = new AgentPerformance();
+            copy.agentId = perf.agentId;
+            copy.agentName = perf.agentName;
+            copy.type = perf.type;
+            copy.totalTrades = perf.totalTrades;
+            copy.wins = perf.wins;
+            copy.losses = perf.losses;
+            copy.winRate = perf.winRate;
+            copy.totalProfitLoss = perf.totalProfitLoss;
+            copy.avgDailyReturn = perf.avgDailyReturn;
+            copy.avgWeeklyReturn = perf.avgWeeklyReturn;
+            copy.avgMonthlyReturn = perf.avgMonthlyReturn;
+            copy.recentTrades = perf.recentTrades;
+            
+            // Use cumulative stats from tracker if available (more complete data)
+            ScoringConfig.SavedAgentTracker tracker = trackers.get(perf.agentId);
+            if (tracker != null && tracker.cumulativeTrades > copy.totalTrades) {
+                copy.totalTrades = tracker.cumulativeTrades;
+                copy.wins = tracker.cumulativeWins;
+                copy.losses = tracker.cumulativeTrades - tracker.cumulativeWins;
+                copy.winRate = tracker.cumulativeTrades > 0 ? (tracker.cumulativeWins * 100.0 / tracker.cumulativeTrades) : 0;
+                copy.totalProfitLoss = tracker.cumulativeProfitLoss;
+            }
+            perfCopies.add(copy);
+        }
+        
         // Filter agents with at least 3 trades
-        List<AgentPerformance> qualified = allPerfs.stream()
+        List<AgentPerformance> qualified = perfCopies.stream()
             .filter(p -> p.totalTrades >= 3)
             .collect(Collectors.toList());
         
@@ -1813,6 +2169,9 @@ public class AIToolAgent {
                         TradeDecision decision = analyzeStock(ticker, agent);
                         
                         if (decision != null && decision.shouldTrade) {
+                            // Send BUY ALERT notification BEFORE executing trade
+                            sendBuyAlertIfMonitored(agent, ticker, decision);
+                            
                             Trade trade = executeTrade(agent, ticker, decision);
                             if (trade != null) {
                                 synchronized (LOCK) {
@@ -2255,10 +2614,23 @@ public class AIToolAgent {
             if (systemState == null || systemState.evolutionLog == null) {
                 return new ArrayList<>();
             }
+            // Filter for last 2 days only
+            ZonedDateTime twoDaysAgo = ZonedDateTime.now(NY).minusDays(2).toLocalDate().atStartOfDay(NY);
+            List<EvolutionEvent> filtered = new ArrayList<>();
+            for (EvolutionEvent evt : systemState.evolutionLog) {
+                try {
+                    ZonedDateTime evtTime = ZonedDateTime.parse(evt.timestamp, DateTimeFormatter.ISO_ZONED_DATE_TIME);
+                    if (evtTime.isAfter(twoDaysAgo)) {
+                        filtered.add(evt);
+                    }
+                } catch (Exception e) {
+                    // If parsing fails, include the event anyway
+                    filtered.add(evt);
+                }
+            }
             // Return in reverse order (newest first)
-            List<EvolutionEvent> log = new ArrayList<>(systemState.evolutionLog);
-            Collections.reverse(log);
-            return log;
+            Collections.reverse(filtered);
+            return filtered;
         }
     }
 
