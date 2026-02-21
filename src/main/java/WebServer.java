@@ -7068,14 +7068,17 @@ public class WebServer {
                     boolean isWinner = p.winRate >= 75;
                     boolean isTracked = trackers != null && trackers.containsKey(p.agentId);
                     boolean notifyEnabled = ScoringConfig.isTradeNotificationEnabled(p.agentId);
+                    boolean isLocked = AIToolAgent.isAgentLocked(p.agentId);
+                    boolean codeVersionChanged = AIToolAgent.hasCodeVersionChanged(p.agentId);
                     String winColor = p.winRate >= 75 ? "#22c55e" : p.winRate >= 50 ? "#eab308" : "#ef4444";
-                    String borderColor = isTracked ? "#22c55e" : (isWinner ? "#eab308" : "#1f2a44");
+                    String borderColor = isLocked ? "#f59e0b" : (isTracked ? "#22c55e" : (isWinner ? "#eab308" : "#1f2a44"));
                     sb.append("<div style='position:relative;'>");
                     sb.append("<form method='post' action='/aitool-track-agent' style='margin:0;'>");
                     sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(p.agentId)).append("' />");
-                    sb.append("<button type='submit' style='width:100%;text-align:left;background:#0b1220;border:2px solid ").append(borderColor).append(";border-radius:8px;padding:12px;padding-right:").append(isTracked ? "48px" : "12px").append(";cursor:pointer;outline:none;'>");
+                    sb.append("<button type='submit' style='width:100%;text-align:left;background:#0b1220;border:2px solid ").append(borderColor).append(";border-radius:8px;padding:12px;padding-right:").append(isTracked ? "80px" : "44px").append(";cursor:pointer;outline:none;'>");
                     sb.append("<div style='display:flex;justify-content:space-between;align-items:center;'>");
                     sb.append("<div style='font-weight:600;color:#e5e7eb;'>");
+                    if (isLocked) sb.append("🔒 ");
                     if (isWinner) sb.append("🏆 ");
                     if (isTracked) sb.append("✓ ");
                     sb.append(escapeHtml(p.agentId)).append("</div>");
@@ -7084,8 +7087,22 @@ public class WebServer {
                     sb.append("</div>");
                     sb.append("</div>");
                     sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades | P/L: $").append(String.format("%.2f", p.totalProfitLoss)).append("</div>");
+                    // Show code version warning if locked and code changed
+                    if (isLocked && codeVersionChanged) {
+                        AIToolAgent.AgentConfig cfg = AIToolAgent.getAgentConfig(p.agentId);
+                        sb.append("<div style='color:#f59e0b;font-size:11px;margin-top:4px;'>⚠️ Code changed since lock (was: ").append(cfg != null && cfg.codeVersion != null ? cfg.codeVersion : "?").append(")</div>");
+                    }
                     sb.append("</button>");
                     sb.append("</form>");
+                    // Lock/Unlock toggle button (key icon) - show for agents with >70% win rate
+                    if (p.winRate >= 70) {
+                        sb.append("<form method='post' action='/aitool-toggle-lock' style='position:absolute;top:8px;right:").append(isTracked ? "44px" : "8px").append(";margin:0;z-index:10;' onclick='event.stopPropagation();'>");
+                        sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(p.agentId)).append("' />");
+                        sb.append("<button type='submit' title='").append(isLocked ? "Unlock agent (allow evolution)" : "Lock agent (prevent evolution)").append("' style='background:").append(isLocked ? "#f59e0b" : "#374151").append(";border:2px solid ").append(isLocked ? "#d97706" : "#4b5563").append(";border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 4px rgba(0,0,0,0.3);'>");
+                        sb.append(isLocked ? "🔐" : "🔑");
+                        sb.append("</button>");
+                        sb.append("</form>");
+                    }
                     // Notification toggle button (ring icon) - only show if tracked
                     if (isTracked) {
                         sb.append("<form method='post' action='/aitool-toggle-notify' style='position:absolute;top:8px;right:8px;margin:0;z-index:10;' onclick='event.stopPropagation();'>");
@@ -7242,6 +7259,31 @@ public class WebServer {
                 }
                 
                 ex.getResponseHeaders().add("Location", "/aitool?tracked=true#top-agents");
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // Toggle lock/unlock for an agent (protect from evolution)
+        server.createContext("/aitool-toggle-lock", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/aitool");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                String agentId = form.getOrDefault("agentId", "").trim();
+                
+                if (!agentId.isEmpty()) {
+                    if (AIToolAgent.isAgentLocked(agentId)) {
+                        AIToolAgent.unlockAgent(agentId);
+                    } else {
+                        AIToolAgent.lockAgent(agentId);
+                    }
+                }
+                
+                ex.getResponseHeaders().add("Location", "/aitool?lockToggled=true#top-agents");
                 ex.sendResponseHeaders(303, -1); ex.close();
             }
         });

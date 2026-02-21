@@ -93,6 +93,11 @@ public class AIToolAgent {
         public String parentId; // Original agent ID if evolved
         public String lastModified;
         public String aiSuggestion; // AI improvement suggestion from Ollama/ChatGPT
+        // Lock protection fields - prevents evolution/modification of winning agents
+        public boolean locked = false;
+        public String lockedAt; // ISO timestamp when locked
+        public String codeVersion; // Git commit SHA when locked
+        public String lockedByUser; // Who locked it
     }
 
     public static class Trade {
@@ -494,6 +499,12 @@ public class AIToolAgent {
                         agent.generation = root.path("generation").asInt(1);
                         agent.parentId = root.path("parentId").asText(null);
                         agent.lastModified = root.path("lastModified").asText(null);
+                        
+                        // Load lock protection fields
+                        agent.locked = root.path("locked").asBoolean(false);
+                        agent.lockedAt = root.path("lockedAt").asText(null);
+                        agent.codeVersion = root.path("codeVersion").asText(null);
+                        agent.lockedByUser = root.path("lockedByUser").asText(null);
                         
                         JsonNode ef = root.get("entryFilters");
                         if (ef != null) {
@@ -1454,14 +1465,21 @@ public class AIToolAgent {
                 // 1. Has at least 5 trades (enough data to judge)
                 // 2. Win rate is below 70% (underperforming)
                 // 3. Has not already evolved in this session
+                // 4. Agent is NOT locked (locked agents are protected from evolution)
+                
+                AgentConfig original = systemState.agents.get(perf.agentId);
+                if (original == null) continue;
+                
+                // Skip locked agents - they are protected from evolution
+                if (original.locked) {
+                    continue;
+                }
                 
                 boolean hasEnoughTrades = perf.totalTrades >= 5;
                 boolean isUnderperforming = perf.winRate < 70;
                 boolean hasNotEvolvedYet = !perf.configChanged;
                 
                 if (hasEnoughTrades && isUnderperforming && hasNotEvolvedYet) {
-                    AgentConfig original = systemState.agents.get(perf.agentId);
-                    if (original == null) continue;
                     
                     // Build evolution reason
                     String reason = String.format(
@@ -1834,6 +1852,18 @@ public class AIToolAgent {
                 root.put("aiSuggestion", agent.aiSuggestion);
             }
             
+            // Save lock protection fields
+            root.put("locked", agent.locked);
+            if (agent.lockedAt != null) {
+                root.put("lockedAt", agent.lockedAt);
+            }
+            if (agent.codeVersion != null) {
+                root.put("codeVersion", agent.codeVersion);
+            }
+            if (agent.lockedByUser != null) {
+                root.put("lockedByUser", agent.lockedByUser);
+            }
+            
             JSON.writeValue(path.toFile(), root);
         } catch (Exception e) {
             System.err.println("[AIToolAgent] Error saving evolved agent: " + e.getMessage());
@@ -1846,6 +1876,82 @@ public class AIToolAgent {
             JSON.writeValue(AGENT_STATE_FILE.toFile(), systemState);
         } catch (Exception e) {
             System.err.println("[AIToolAgent] Error saving state: " + e.getMessage());
+        }
+    }
+
+    // Get current git commit SHA for version tracking
+    public static String getCurrentCodeVersion() {
+        try {
+            ProcessBuilder pb = new ProcessBuilder("git", "rev-parse", "--short", "HEAD");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String result = new String(p.getInputStream().readAllBytes()).trim();
+            p.waitFor(5, TimeUnit.SECONDS);
+            return result.isEmpty() ? "unknown" : result;
+        } catch (Exception e) {
+            return "unknown";
+        }
+    }
+
+    // Lock an agent to prevent evolution/modification
+    public static boolean lockAgent(String agentId) {
+        synchronized (LOCK) {
+            AgentConfig agent = systemState.agents.get(agentId);
+            if (agent == null) return false;
+            
+            agent.locked = true;
+            agent.lockedAt = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
+            agent.codeVersion = getCurrentCodeVersion();
+            agent.lockedByUser = "user"; // Could be extended to track actual user
+            
+            // Save to file if it's an evolved agent
+            if (agent.sourceFile != null && agent.sourceFile.contains("newStrategies")) {
+                saveEvolvedAgent(agent);
+            }
+            saveState();
+            
+            System.out.println("[AIToolAgent] LOCKED agent: " + agentId + " at code version: " + agent.codeVersion);
+            return true;
+        }
+    }
+
+    // Unlock an agent to allow evolution/modification
+    public static boolean unlockAgent(String agentId) {
+        synchronized (LOCK) {
+            AgentConfig agent = systemState.agents.get(agentId);
+            if (agent == null) return false;
+            
+            agent.locked = false;
+            agent.lockedAt = null;
+            agent.codeVersion = null;
+            agent.lockedByUser = null;
+            
+            // Save to file if it's an evolved agent
+            if (agent.sourceFile != null && agent.sourceFile.contains("newStrategies")) {
+                saveEvolvedAgent(agent);
+            }
+            saveState();
+            
+            System.out.println("[AIToolAgent] UNLOCKED agent: " + agentId);
+            return true;
+        }
+    }
+
+    // Check if agent is locked
+    public static boolean isAgentLocked(String agentId) {
+        synchronized (LOCK) {
+            AgentConfig agent = systemState.agents.get(agentId);
+            return agent != null && agent.locked;
+        }
+    }
+
+    // Check if code version has changed since agent was locked
+    public static boolean hasCodeVersionChanged(String agentId) {
+        synchronized (LOCK) {
+            AgentConfig agent = systemState.agents.get(agentId);
+            if (agent == null || !agent.locked || agent.codeVersion == null) return false;
+            String currentVersion = getCurrentCodeVersion();
+            return !agent.codeVersion.equals(currentVersion) && !"unknown".equals(currentVersion);
         }
     }
 
