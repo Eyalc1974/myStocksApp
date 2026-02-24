@@ -658,6 +658,26 @@ public class DailyTradingSimulator {
         public boolean sma200Required = true;
         public boolean priceAboveVwapRequired = false;
         public boolean maCrossoverRequired = false;
+        
+        // ===== DELAY-AWARE FILTERS (15-minute safe bullish) =====
+        // VWAP duration filter - reject if just crossed, accept if held
+        public int timeAboveVwapMinutes = 0;        // 0 = disabled, 20-30 recommended
+        public boolean vwapSlopeFlatRequired = false; // VWAP slope must be >= flat (not falling)
+        
+        // Volume consistency filter - reject spikes, prefer persistence
+        public int volumeConsistencyBars = 0;       // 0 = disabled, 3 recommended (consecutive 5-min bars above avg)
+        
+        // RSI momentum persistence filter
+        public int rsiRisingBars = 0;               // 0 = disabled, 3 recommended (RSI rising for N bars)
+        
+        // Structure-based continuation filter
+        public boolean higherLowRequired = false;   // Higher low must be formed after first push
+        
+        // Candle close position filter
+        public double candleCloseUpperPct = 0;      // 0 = disabled, 30 = close in upper 30% of candle
+        
+        // Durability score threshold (0-100)
+        public int minDurabilityScore = 0;          // 0 = disabled, 75 recommended
     }
     
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -1653,6 +1673,58 @@ public class DailyTradingSimulator {
         // Check VWAP if required
         if (f.priceAboveVwapRequired && !c.result.aboveVwap) {
             log("[SwingFilter] " + c.ticker + " rejected by " + variant.id + ": Price above VWAP required but not met");
+            return false;
+        }
+
+        // ===== DELAY-AWARE FILTERS (15-minute safe bullish) =====
+        
+        // Check VWAP duration - reject if just crossed, accept if held
+        if (f.timeAboveVwapMinutes > 0 && c.result.minutesAboveVwap < f.timeAboveVwapMinutes) {
+            log("[SwingFilter] " + c.ticker + " rejected by " + variant.id + 
+                ": VWAP hold time " + c.result.minutesAboveVwap + "min < " + f.timeAboveVwapMinutes + "min (move too fresh)");
+            return false;
+        }
+        
+        // Check VWAP slope - must be flat or rising
+        if (f.vwapSlopeFlatRequired && c.result.vwapSlope < -0.05) {
+            log("[SwingFilter] " + c.ticker + " rejected by " + variant.id + 
+                ": VWAP slope " + String.format("%.2f%%", c.result.vwapSlope) + " is falling");
+            return false;
+        }
+        
+        // Check volume consistency - reject spikes, prefer persistence
+        if (f.volumeConsistencyBars > 0 && c.result.consecutiveVolumeBars < f.volumeConsistencyBars) {
+            log("[SwingFilter] " + c.ticker + " rejected by " + variant.id + 
+                ": Volume consistency " + c.result.consecutiveVolumeBars + " bars < " + f.volumeConsistencyBars + " (volume spike, not sustained)");
+            return false;
+        }
+        
+        // Check RSI momentum persistence - must be rising for N bars
+        if (f.rsiRisingBars > 0 && c.result.rsiRisingBars < f.rsiRisingBars) {
+            log("[SwingFilter] " + c.ticker + " rejected by " + variant.id + 
+                ": RSI rising " + c.result.rsiRisingBars + " bars < " + f.rsiRisingBars + " (momentum not sustained)");
+            return false;
+        }
+        
+        // Check higher low formation - structure-based continuation
+        if (f.higherLowRequired && !c.result.higherLowFormed) {
+            log("[SwingFilter] " + c.ticker + " rejected by " + variant.id + 
+                ": Higher low required but not formed (move is fragile)");
+            return false;
+        }
+        
+        // Check candle close position - must be in upper X% of candle
+        if (f.candleCloseUpperPct > 0 && c.result.candleClosePosition < (100 - f.candleCloseUpperPct)) {
+            log("[SwingFilter] " + c.ticker + " rejected by " + variant.id + 
+                ": Candle close at " + String.format("%.0f%%", c.result.candleClosePosition) + 
+                " not in upper " + String.format("%.0f%%", f.candleCloseUpperPct));
+            return false;
+        }
+        
+        // Check durability score threshold
+        if (f.minDurabilityScore > 0 && c.result.durabilityScore < f.minDurabilityScore) {
+            log("[SwingFilter] " + c.ticker + " rejected by " + variant.id + 
+                ": Durability score " + c.result.durabilityScore + " < " + f.minDurabilityScore + " (move not durable enough)");
             return false;
         }
 

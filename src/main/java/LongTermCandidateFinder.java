@@ -10,8 +10,180 @@ public class LongTermCandidateFinder {
         VERBOSE = verbose;
     }
 
+    // ======================= SECTOR-BASED TICKERS =======================
+    
+    public static final List<String> TECHNOLOGY_TICKERS = Arrays.asList(
+        "AAPL","MSFT","NVDA","GOOGL","GOOG","META","AVGO","ADBE","CRM","ORCL",
+        "AMD","INTC","QCOM","CSCO","IBM","NOW","SNOW","PANW","AMAT","MU",
+        "LRCX","KLAC","TXN","ADI","NXPI","ASML","MRVL","WDAY","FTNT","ANET",
+        "TEAM","ZS","OKTA","DDOG","MDB","NET","HPE","DELL","HPQ","STX",
+        "WDC","ON","MPWR","MCHP","SWKS","QRVO","TER","CDNS","SNPS"
+    );
+
+    public static final List<String> FINANCIALS_TICKERS = Arrays.asList(
+        "JPM","BAC","WFC","C","GS","MS","V","MA","AXP","BLK",
+        "SCHW","USB","PNC","TFC","COF","BK","STT","AIG","MET","PRU",
+        "CB","TRV","ALL","AON","MMC","SPGI","MCO","ICE","CME","NDAQ",
+        "MSCI","AMP","TROW","BKNG","DFS","SYF","FITB","HBAN","RF","CFG",
+        "KEY","ZION","CINF","WRB","RJF","LPLA","PGR","BRO","AFL","UNM"
+    );
+
+    public static final List<String> HEALTHCARE_TICKERS = Arrays.asList(
+        "JNJ","UNH","PFE","MRK","ABBV","LLY","AMGN","TMO","ABT","MDT",
+        "BMY","GILD","CVS","CI","HUM","ZTS","ISRG","SYK","VRTX","REGN",
+        "BSX","EW","BDX","IDXX","DXCM","BIIB","MRNA","ILMN","ALGN","RMD",
+        "COO","HCA","IQV","WAT","STE","HOLX","TECH","CRL","INCY","UTHR",
+        "NBIX","EXAS","VTRS","PODD","TFX","XRAY","DVA","DGX","LH","CTLT"
+    );
+
+    public static final List<String> ENERGY_TICKERS = Arrays.asList(
+        "XOM","CVX","COP","SLB","EOG","PXD","VLO","PSX","MPC","KMI",
+        "OXY","HES","DVN","FANG","APA","HAL","BKR","NOV","OKE","WMB",
+        "ET","EPD","MPLX","PAA","ENB","TRP","CNQ","SU","IMO","CVE",
+        "AR","RRC","SWN","CHK","SM","MTDR","CTRA","EQT","MRO","OVV"
+    );
+
+    public static final List<String> INDUSTRIALS_TICKERS = Arrays.asList(
+        "CAT","DE","HON","GE","BA","LMT","RTX","NOC","GD","EMR",
+        "UPS","FDX","ETN","PH","ITW","CSX","NSC","UNP","WM","RSG",
+        "ROK","DOV","XYL","PCAR","FAST","URI","ODFL","EXPD","CHRW","PAYX",
+        "AME","GWW","CARR","IR","JCI","TT","MAS","AOS","PNR","ALLE"
+    );
+
+    public static final List<String> CONSUMER_DISCRETIONARY_TICKERS = Arrays.asList(
+        "AMZN","TSLA","HD","LOW","MCD","NKE","SBUX","BKNG","TGT","TJX",
+        "ROST","MAR","HLT","YUM","CMG","EBAY","ETSY","EXPE","LULU","DG",
+        "DHI","LEN","PHM","NVR","POOL","TSCO","ULTA","BBY","DPZ","AZO"
+    );
+
+    public static final List<String> CONSUMER_STAPLES_TICKERS = Arrays.asList(
+        "PG","KO","PEP","WMT","CL","KMB","MO","PM","EL","MDLZ",
+        "COST","GIS","K","HSY","SJM","MKC","CHD","CLX","CPB","TSN",
+        "KR","WBA","TAP","BF.B","STZ","KDP","CAG","LW","HRL","BG"
+    );
+
+    public static final List<String> UTILITIES_TICKERS = Arrays.asList(
+        "NEE","DUK","SO","AEP","EXC","XEL","PEG","ED","D","PCG",
+        "SRE","WEC","EIX","ES","AWK","AEE","CMS","CNP","EVRG","NRG"
+    );
+
+    public static final List<String> MATERIALS_TICKERS = Arrays.asList(
+        "LIN","APD","SHW","FCX","NEM","DD","DOW","PPG","ECL","ALB",
+        "VMC","MLM","NUE","STLD","X","CF","MOS","FMC","IFF","CE"
+    );
+
+    public static final List<String> REAL_ESTATE_TICKERS = Arrays.asList(
+        "AMT","PLD","CCI","EQIX","SPG","O","PSA","WELL","DLR","VTR",
+        "AVB","EQR","ESS","MAA","UDR","CPT","BXP","ARE","HST","PEAK"
+    );
+
+    public static final List<String> COMMUNICATION_SERVICES_TICKERS = Arrays.asList(
+        "DIS","NFLX","CMCSA","TMUS","VZ","T","CHTR","EA","TTWO","ROKU",
+        "GOOGL","META","SNAP","PINS","MTCH","SPOT","WBD","PARA","FOX","FOXA"
+    );
+
+    // Sector enum for configuration
+    public enum Sector {
+        TECHNOLOGY, FINANCIALS, HEALTHCARE, ENERGY, INDUSTRIALS,
+        CONSUMER_DISCRETIONARY, CONSUMER_STAPLES, UTILITIES, MATERIALS,
+        REAL_ESTATE, COMMUNICATION_SERVICES, NASDAQ_100
+    }
+
+    // Sector configuration with percentages (default: 100% NASDAQ_100)
+    private static Map<Sector, Integer> sectorAllocation = new LinkedHashMap<>();
+    static {
+        sectorAllocation.put(Sector.NASDAQ_100, 100); // Default: use original NASDAQ_100
+    }
+
+    // Get tickers for a specific sector
+    public static List<String> getTickersForSector(Sector sector) {
+        switch (sector) {
+            case TECHNOLOGY: return TECHNOLOGY_TICKERS;
+            case FINANCIALS: return FINANCIALS_TICKERS;
+            case HEALTHCARE: return HEALTHCARE_TICKERS;
+            case ENERGY: return ENERGY_TICKERS;
+            case INDUSTRIALS: return INDUSTRIALS_TICKERS;
+            case CONSUMER_DISCRETIONARY: return CONSUMER_DISCRETIONARY_TICKERS;
+            case CONSUMER_STAPLES: return CONSUMER_STAPLES_TICKERS;
+            case UTILITIES: return UTILITIES_TICKERS;
+            case MATERIALS: return MATERIALS_TICKERS;
+            case REAL_ESTATE: return REAL_ESTATE_TICKERS;
+            case COMMUNICATION_SERVICES: return COMMUNICATION_SERVICES_TICKERS;
+            case NASDAQ_100:
+            default: return NASDAQ_100_TICKERS;
+        }
+    }
+
+    // Configure sector allocation (percentages should sum to 100)
+    public static void setSectorAllocation(Map<Sector, Integer> allocation) {
+        sectorAllocation = new LinkedHashMap<>(allocation);
+        System.out.println("[LongTermCandidateFinder] Sector allocation updated: " + sectorAllocation);
+    }
+
+    // Get current sector allocation
+    public static Map<Sector, Integer> getSectorAllocation() {
+        return new LinkedHashMap<>(sectorAllocation);
+    }
+
+    // Reset to default (100% NASDAQ_100)
+    public static void resetSectorAllocation() {
+        sectorAllocation.clear();
+        sectorAllocation.put(Sector.NASDAQ_100, 100);
+        System.out.println("[LongTermCandidateFinder] Sector allocation reset to default (100% NASDAQ_100)");
+    }
+
+    // Select tickers based on sector allocation and total count
+    public static List<String> selectTickersBySectorAllocation(int totalCount) {
+        LinkedHashSet<String> selected = new LinkedHashSet<>();
+        Random rand = new Random();
+        
+        int totalPct = sectorAllocation.values().stream().mapToInt(Integer::intValue).sum();
+        if (totalPct == 0) totalPct = 100;
+        
+        for (Map.Entry<Sector, Integer> entry : sectorAllocation.entrySet()) {
+            Sector sector = entry.getKey();
+            int pct = entry.getValue();
+            if (pct <= 0) continue;
+            
+            int countForSector = Math.max(1, (totalCount * pct) / totalPct);
+            List<String> sectorTickers = new ArrayList<>(getTickersForSector(sector));
+            Collections.shuffle(sectorTickers, rand);
+            
+            int added = 0;
+            for (String ticker : sectorTickers) {
+                if (added >= countForSector) break;
+                if (selected.add(ticker)) added++;
+            }
+            
+            if (VERBOSE) {
+                System.out.println("[Sector] " + sector + " (" + pct + "%) -> " + added + " tickers");
+            }
+        }
+        
+        return new ArrayList<>(selected);
+    }
+
+    // Get all sector tickers combined (for universe)
+    public static List<String> getAllSectorTickers() {
+        LinkedHashSet<String> all = new LinkedHashSet<>();
+        all.addAll(TECHNOLOGY_TICKERS);
+        all.addAll(FINANCIALS_TICKERS);
+        all.addAll(HEALTHCARE_TICKERS);
+        all.addAll(ENERGY_TICKERS);
+        all.addAll(INDUSTRIALS_TICKERS);
+        all.addAll(CONSUMER_DISCRETIONARY_TICKERS);
+        all.addAll(CONSUMER_STAPLES_TICKERS);
+        all.addAll(UTILITIES_TICKERS);
+        all.addAll(MATERIALS_TICKERS);
+        all.addAll(REAL_ESTATE_TICKERS);
+        all.addAll(COMMUNICATION_SERVICES_TICKERS);
+        return new ArrayList<>(all);
+    }
+
+    // ======================= ORIGINAL NASDAQ_100 TICKERS =======================
+    
     // רשימת מניות גדולה יותר לבחירה אקראית (מומלץ להגדיר רשימה משלך)
-// רשימת ה-100 סימולים של נאסדא"ק לשימוש ב-TickerListFetcher.java
+    // רשימת ה-100 סימולים של נאסדא"ק לשימוש ב-TickerListFetcher.java
     private static final List<String> NASDAQ_100_TICKERS = Arrays.asList(
             "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "AVGO", "COST", "PEP",
             "ADBE", "CSCO", "NFLX", "INTC", "AMD", "CMCSA", "TMUS", "AMGN", "QCOM", "TXN",
@@ -119,6 +291,16 @@ public class LongTermCandidateFinder {
      * בוחר 5 מניות רנדומלית מתוך הרשימה הנתונה.
      */
     private static List<String> selectRandomTickers(int count) {
+        // Check if custom sector allocation is set (not just NASDAQ_100 at 100%)
+        boolean useCustomSectors = !(sectorAllocation.size() == 1 && 
+            sectorAllocation.containsKey(Sector.NASDAQ_100) && 
+            sectorAllocation.get(Sector.NASDAQ_100) == 100);
+        
+        if (useCustomSectors) {
+            return selectTickersBySectorAllocation(count);
+        }
+        
+        // Original logic for NASDAQ_100
         LinkedHashSet<String> uniq = new LinkedHashSet<>();
         for (String t : ALL_NASDAQ_TICKERS) {
             if (t == null) continue;

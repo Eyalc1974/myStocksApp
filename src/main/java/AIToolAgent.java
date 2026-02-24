@@ -107,6 +107,8 @@ public class AIToolAgent {
         public String action; // BUY, SELL
         public double entryPrice;
         public double exitPrice;
+        public double stopLoss;      // Stop loss price
+        public double takeProfit;    // Take profit / limit price
         public double quantity;
         public String entryTime;
         public String exitTime;
@@ -1092,6 +1094,49 @@ public class AIToolAgent {
                 }
             }
             
+            // === OPTIONAL SMA WINDOWS FILTER (Multi-SMA Momentum) ===
+            // smaWindows: array of SMA periods, e.g. [50, 100]
+            // Logic: Short SMA must be above Long SMA (bullish crossover/momentum)
+            // AND price must be above both SMAs
+            if (hasFilter(agent, "smaWindows")) {
+                int[] smaWindows = getIntArrayFilter(agent, "smaWindows", new int[]{});
+                if (smaWindows.length >= 2) {
+                    // Sort windows to identify short and long periods
+                    java.util.Arrays.sort(smaWindows);
+                    int shortPeriod = smaWindows[0];  // e.g., 50
+                    int longPeriod = smaWindows[smaWindows.length - 1];  // e.g., 100
+                    
+                    if (prices.size() >= longPeriod) {
+                        List<Double> shortSmaList = TechnicalAnalysisModel.calculateSMA(prices, shortPeriod);
+                        List<Double> longSmaList = TechnicalAnalysisModel.calculateSMA(prices, longPeriod);
+                        
+                        if (shortSmaList != null && !shortSmaList.isEmpty() &&
+                            longSmaList != null && !longSmaList.isEmpty()) {
+                            
+                            Double shortSma = shortSmaList.get(shortSmaList.size() - 1);
+                            Double longSma = longSmaList.get(longSmaList.size() - 1);
+                            
+                            if (shortSma != null && longSma != null) {
+                                // Check 1: Short SMA must be above Long SMA (bullish momentum)
+                                if (shortSma <= longSma) {
+                                    return decision; // Bearish alignment, no trade
+                                }
+                                
+                                // Check 2: Price must be above both SMAs
+                                if (currentPrice <= shortSma || currentPrice <= longSma) {
+                                    return decision; // Price below SMAs, no trade
+                                }
+                                
+                                System.out.println("[AIToolAgent] " + ticker + " SMA WINDOWS PASSED: Price=" + 
+                                    String.format("%.2f", currentPrice) + " > SMA" + shortPeriod + "=" + 
+                                    String.format("%.2f", shortSma) + " > SMA" + longPeriod + "=" + 
+                                    String.format("%.2f", longSma));
+                            }
+                        }
+                    }
+                }
+            }
+            
             // === OPTIONAL PRICE ABOVE VWAP FILTER ===
             // For daily data, we approximate VWAP using typical price = (high + low + close) / 3
             if (hasFilter(agent, "priceAboveVwapPct") || hasFilter(agent, "priceAboveVwapRequired")) {
@@ -1184,6 +1229,32 @@ public class AIToolAgent {
         return defaultVal;
     }
 
+    @SuppressWarnings("unchecked")
+    private static int[] getIntArrayFilter(AgentConfig agent, String key, int[] defaultVal) {
+        Object val = agent.entryFilters.get(key);
+        if (val == null) return defaultVal;
+        
+        // Handle List<Integer> or List<Number> from JSON parsing
+        if (val instanceof java.util.List) {
+            java.util.List<?> list = (java.util.List<?>) val;
+            int[] result = new int[list.size()];
+            for (int i = 0; i < list.size(); i++) {
+                Object item = list.get(i);
+                if (item instanceof Number) {
+                    result[i] = ((Number) item).intValue();
+                }
+            }
+            return result;
+        }
+        
+        // Handle int[] directly
+        if (val instanceof int[]) {
+            return (int[]) val;
+        }
+        
+        return defaultVal;
+    }
+
     private static Trade executeTrade(AgentConfig agent, String ticker, TradeDecision decision) {
         try {
             DataFetcher.setTicker(ticker);
@@ -1220,6 +1291,10 @@ public class AIToolAgent {
             double priceChange = exitPrice - entryPrice;
             double stopLoss = decision.suggestedStopLoss;
             double takeProfit = decision.suggestedTakeProfit;
+            
+            // Store stop/limit in trade for notifications
+            trade.stopLoss = stopLoss;
+            trade.takeProfit = takeProfit;
             
             if (exitPrice <= stopLoss) {
                 trade.status = "CLOSED_LOSS";
@@ -1367,8 +1442,11 @@ public class AIToolAgent {
      * This alerts the user to a trading opportunity so they can act on it
      */
     private static void sendBuyAlertIfMonitored(AgentConfig agent, String ticker, TradeDecision decision) {
-        // Only send if this agent is monitored from Settings page
-        if (!ScoringConfig.isAgentMonitoredForDiscord(agent.id)) {
+        // Send if this agent is monitored OR tracked (both get immediate BUY alerts)
+        boolean isMonitored = ScoringConfig.isAgentMonitoredForDiscord(agent.id);
+        boolean isTracked = ScoringConfig.isTradeNotificationEnabled(agent.id);
+        
+        if (!isMonitored && !isTracked) {
             return;
         }
         
@@ -1416,45 +1494,24 @@ public class AIToolAgent {
     }
 
     private static void notifyTradeIfEnabled(String agentId, Trade trade, AgentPerformance perf) {
-        // Check if trade notifications are enabled for this agent (from tracked agents)
-        boolean trackedNotify = ScoringConfig.isTradeNotificationEnabled(agentId);
-        // Check if this agent is monitored from Settings page - but don't send post-trade for monitored
-        // (monitored agents get BUY ALERT before trade, not result after)
-        boolean monitoredNotify = false; // Disabled post-trade for monitored agents
+        // POST-TRADE notifications are now DISABLED
+        // Both monitored and tracked agents get IMMEDIATE BUY ALERT via sendBuyAlertIfMonitored()
+        // This function is kept for potential future use (e.g., trade result summaries)
         
-        if (!trackedNotify && !monitoredNotify) {
-            return;
-        }
+        // Uncomment below if you want post-trade result notifications in addition to BUY alerts:
+        /*
+        boolean trackedNotify = ScoringConfig.isTradeNotificationEnabled(agentId);
+        if (!trackedNotify) return;
         
         String winLoss = trade.status.equals("CLOSED_WIN") ? "✅ WIN" : "❌ LOSS";
-        String emoji = trade.status.equals("CLOSED_WIN") ? "📈" : "📉";
-        String source = "📊 TRACKED";
-        
         String message = String.format(
-            "%s **Trade Result: %s** [%s]\n" +
-            "Agent: **%s** (%s)\n" +
-            "Ticker: **%s** | %s\n" +
-            "Entry: $%.2f → Exit: $%.2f\n" +
-            "P/L: **$%.2f** (%+.2f%%)\n" +
-            "Agent Stats: %d/%d trades (%.1f%% win rate)",
-            emoji,
-            winLoss,
-            source,
-            perf.agentName != null ? perf.agentName : agentId,
-            perf.type != null ? perf.type : "UNKNOWN",
-            trade.ticker,
-            trade.action,
-            trade.entryPrice,
-            trade.exitPrice,
-            trade.profitLoss,
-            trade.profitLossPct,
-            perf.wins,
-            perf.totalTrades,
-            perf.winRate
+            "%s **Trade Closed**: %s | %s\n" +
+            "Entry: $%.2f → Exit: $%.2f | P/L: %+.2f%%",
+            winLoss, trade.ticker, perf.agentName,
+            trade.entryPrice, trade.exitPrice, trade.profitLossPct
         );
-        
         sendDiscord(message);
-        System.out.println("[AIToolAgent] Trade notification sent for agent: " + agentId + " ticker: " + trade.ticker + " (monitored=" + monitoredNotify + ", tracked=" + trackedNotify + ")");
+        */
     }
 
     private static void evolveUnderperformingAgents() {
@@ -2393,7 +2450,7 @@ public class AIToolAgent {
             prompt.append("  \"marketConditions\": \"description of ideal market conditions\"\n");
             prompt.append("}\n");
             prompt.append("```\n");
-            prompt.append("\nAvailable entry filter parameters: rsiMin, rsiMax, rsMin, rvolMin, cciMin, cciMax, atrMultiplier, sma200Required\n");
+            prompt.append("\nAvailable entry filter parameters: rsiMin, rsiMax, rsMin, rvolMin, cciMin, cciMax, atrMultiplier, sma200Required, smaWindows (array e.g. [50,100] for multi-SMA momentum)\n");
             prompt.append("Available risk management parameters: stopLossPct, takeProfitPct, maxPositionPct, trailingStopPct\n");
             prompt.append("You can suggest NEW filters in 'newFilters' that don't exist yet (e.g., cciStdDev, volumeThreshold, etc.)\n");
             prompt.append("\nAfter the JSON, briefly explain your reasoning (2-3 sentences).");

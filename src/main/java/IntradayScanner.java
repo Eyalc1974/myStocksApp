@@ -51,6 +51,15 @@ public class IntradayScanner {
         // Market context
         public double spyChangePct;        // S&P 500 change for market sentiment
         public boolean marketSupport;      // True if market is supportive
+        
+        // ===== DELAY-AWARE DATA (15-minute safe bullish) =====
+        public int minutesAboveVwap = 0;       // How long price has been above VWAP
+        public double vwapSlope = 0;           // VWAP slope (positive = rising, negative = falling)
+        public int consecutiveVolumeBars = 0; // Consecutive bars with volume above average
+        public int rsiRisingBars = 0;          // Consecutive bars with rising RSI
+        public boolean higherLowFormed = false; // Higher low detected after first push
+        public double candleClosePosition = 0; // 0-100, where 100 = close at high
+        public int durabilityScore = 0;        // 0-100 combined delay-safe score
     }
 
     /**
@@ -332,6 +341,241 @@ public class IntradayScanner {
         if (priceChangePct > MIN_PRICE_CHANGE_PCT) risk += 20;
         
         return Math.min(100, risk);
+    }
+
+    // ===== DELAY-AWARE INDICATOR CALCULATIONS =====
+    
+    /**
+     * Calculate how many minutes price has been above VWAP
+     * @param bars Intraday bars (newest first)
+     * @param barIntervalMinutes Minutes per bar (e.g., 5 for 5-min bars)
+     * @return Minutes above VWAP (0 if currently below)
+     */
+    public static int calculateMinutesAboveVwap(List<IntradayBar> bars, int barIntervalMinutes) {
+        if (bars == null || bars.size() < 2) return 0;
+        
+        int consecutiveBars = 0;
+        double runningVwap = 0;
+        double runningTPV = 0;
+        long runningVolume = 0;
+        
+        // Calculate VWAP progressively from oldest to newest, then count from newest
+        List<Double> vwapAtBar = new ArrayList<>();
+        for (int i = bars.size() - 1; i >= 0; i--) {
+            IntradayBar bar = bars.get(i);
+            double typicalPrice = (bar.high + bar.low + bar.close) / 3.0;
+            runningTPV += typicalPrice * bar.volume;
+            runningVolume += bar.volume;
+            runningVwap = runningVolume > 0 ? runningTPV / runningVolume : 0;
+            vwapAtBar.add(0, runningVwap); // Insert at beginning to maintain order
+        }
+        
+        // Count consecutive bars above VWAP from newest
+        for (int i = 0; i < bars.size() && i < vwapAtBar.size(); i++) {
+            if (bars.get(i).close > vwapAtBar.get(i)) {
+                consecutiveBars++;
+            } else {
+                break;
+            }
+        }
+        
+        return consecutiveBars * barIntervalMinutes;
+    }
+    
+    /**
+     * Calculate VWAP slope (rate of change over last N bars)
+     * @return Positive = rising, negative = falling, 0 = flat
+     */
+    public static double calculateVwapSlope(List<IntradayBar> bars, int lookbackBars) {
+        if (bars == null || bars.size() < lookbackBars + 1) return 0;
+        
+        // Calculate VWAP at current bar and N bars ago
+        double currentVwap = calculateVWAP(bars.subList(0, Math.min(bars.size(), bars.size())));
+        double pastVwap = calculateVWAP(bars.subList(lookbackBars, bars.size()));
+        
+        if (pastVwap <= 0) return 0;
+        return (currentVwap - pastVwap) / pastVwap * 100; // Percentage change
+    }
+    
+    /**
+     * Count consecutive bars with volume above average
+     * @param bars Intraday bars (newest first)
+     * @param avgVolume Average volume per bar
+     * @return Number of consecutive bars with volume above average
+     */
+    public static int calculateConsecutiveVolumeBars(List<IntradayBar> bars, double avgVolume) {
+        if (bars == null || bars.isEmpty() || avgVolume <= 0) return 0;
+        
+        int consecutive = 0;
+        for (IntradayBar bar : bars) {
+            if (bar.volume > avgVolume) {
+                consecutive++;
+            } else {
+                break;
+            }
+        }
+        return consecutive;
+    }
+    
+    /**
+     * Count consecutive bars with rising RSI
+     * @param bars Intraday bars (newest first)
+     * @param period RSI period
+     * @return Number of consecutive bars where RSI increased
+     */
+    public static int calculateRsiRisingBars(List<IntradayBar> bars, int period) {
+        if (bars == null || bars.size() < period + 3) return 0;
+        
+        int risingCount = 0;
+        double prevRsi = -1;
+        
+        // Calculate RSI for each bar position and check if rising
+        for (int i = 0; i < Math.min(10, bars.size() - period - 1); i++) {
+            List<IntradayBar> subBars = bars.subList(i, bars.size());
+            double rsi = calculateIntradayRSI(subBars, period);
+            
+            if (prevRsi >= 0) {
+                if (rsi > prevRsi) {
+                    risingCount++;
+                } else {
+                    break;
+                }
+            }
+            prevRsi = rsi;
+        }
+        
+        return risingCount;
+    }
+    
+    /**
+     * Detect if a higher low has formed after the first push
+     * A higher low means buyers defended price - the move is no longer fragile
+     * @param bars Intraday bars (newest first)
+     * @return true if higher low pattern detected
+     */
+    public static boolean detectHigherLow(List<IntradayBar> bars) {
+        if (bars == null || bars.size() < 6) return false;
+        
+        // Find local lows in the recent bars
+        List<Double> lows = new ArrayList<>();
+        List<Integer> lowIndices = new ArrayList<>();
+        
+        for (int i = 1; i < bars.size() - 1 && i < 20; i++) {
+            IntradayBar prev = bars.get(i + 1);
+            IntradayBar curr = bars.get(i);
+            IntradayBar next = bars.get(i - 1);
+            
+            // Local low: current low is lower than both neighbors
+            if (curr.low < prev.low && curr.low < next.low) {
+                lows.add(curr.low);
+                lowIndices.add(i);
+            }
+        }
+        
+        // Need at least 2 lows to compare
+        if (lows.size() < 2) return false;
+        
+        // Check if most recent low is higher than previous low
+        // lows[0] is most recent, lows[1] is previous
+        return lows.get(0) > lows.get(1);
+    }
+    
+    /**
+     * Calculate candle close position (0-100)
+     * 100 = close at high, 0 = close at low
+     * @param bar The candle bar
+     * @return Position 0-100
+     */
+    public static double calculateCandleClosePosition(IntradayBar bar) {
+        if (bar == null) return 50;
+        double range = bar.high - bar.low;
+        if (range <= 0) return 50;
+        return ((bar.close - bar.low) / range) * 100;
+    }
+    
+    /**
+     * Calculate durability score (0-100) for delay-safe trading
+     * Higher score = more durable move, safer for delayed data
+     * 
+     * Components:
+     * - VWAP hold duration (25 pts)
+     * - VWAP slope (15 pts)
+     * - Volume consistency (20 pts)
+     * - RSI momentum persistence (15 pts)
+     * - Higher low formation (15 pts)
+     * - Candle close position (10 pts)
+     */
+    public static int calculateDurabilityScore(ScanResult result) {
+        int score = 0;
+        
+        // VWAP hold duration (25 pts) - 20+ minutes = full points
+        if (result.minutesAboveVwap >= 30) {
+            score += 25;
+        } else if (result.minutesAboveVwap >= 20) {
+            score += 20;
+        } else if (result.minutesAboveVwap >= 10) {
+            score += 10;
+        }
+        
+        // VWAP slope (15 pts) - flat or rising
+        if (result.vwapSlope > 0.1) {
+            score += 15; // Rising VWAP
+        } else if (result.vwapSlope >= -0.05) {
+            score += 10; // Flat VWAP
+        }
+        
+        // Volume consistency (20 pts) - 3+ consecutive bars
+        if (result.consecutiveVolumeBars >= 4) {
+            score += 20;
+        } else if (result.consecutiveVolumeBars >= 3) {
+            score += 15;
+        } else if (result.consecutiveVolumeBars >= 2) {
+            score += 8;
+        }
+        
+        // RSI momentum persistence (15 pts) - 3+ rising bars
+        if (result.rsiRisingBars >= 4) {
+            score += 15;
+        } else if (result.rsiRisingBars >= 3) {
+            score += 12;
+        } else if (result.rsiRisingBars >= 2) {
+            score += 6;
+        }
+        
+        // Higher low formation (15 pts)
+        if (result.higherLowFormed) {
+            score += 15;
+        }
+        
+        // Candle close position (10 pts) - upper 30%
+        if (result.candleClosePosition >= 70) {
+            score += 10;
+        } else if (result.candleClosePosition >= 50) {
+            score += 5;
+        }
+        
+        return Math.min(100, score);
+    }
+    
+    /**
+     * Populate delay-aware data in ScanResult
+     * Call this after basic scan to add durability metrics
+     */
+    public static void populateDelayAwareData(ScanResult result, List<IntradayBar> bars, 
+                                               double avgVolumePerBar, int barIntervalMinutes) {
+        if (bars == null || bars.isEmpty()) return;
+        
+        result.minutesAboveVwap = calculateMinutesAboveVwap(bars, barIntervalMinutes);
+        result.vwapSlope = calculateVwapSlope(bars, 6); // 6 bars lookback
+        result.consecutiveVolumeBars = calculateConsecutiveVolumeBars(bars, avgVolumePerBar);
+        result.rsiRisingBars = calculateRsiRisingBars(bars, 14);
+        result.higherLowFormed = detectHigherLow(bars);
+        
+        if (!bars.isEmpty()) {
+            result.candleClosePosition = calculateCandleClosePosition(bars.get(0));
+        }
+        
+        result.durabilityScore = calculateDurabilityScore(result);
     }
 
     /**

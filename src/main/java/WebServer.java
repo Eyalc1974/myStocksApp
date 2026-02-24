@@ -7500,6 +7500,118 @@ public class WebServer {
                 }
                 sb.append("</div>");
 
+                // ===================== SECTOR ALLOCATION SECTION =====================
+                sb.append("<div style='background:#0b1220;border:2px solid #8b5cf6;border-radius:8px;padding:16px;margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:10px;color:#8b5cf6;'>📊 Sector Allocation | הקצאת סקטורים</div>");
+                sb.append("<div style='color:#9ca3af;font-size:13px;margin-bottom:12px;'>Configure which sectors to scan and their percentage allocation. Total should be 100%.<br/>הגדר אילו סקטורים לסרוק ואת אחוז ההקצאה שלהם. הסכום צריך להיות 100%.</div>");
+                
+                // Get current allocation
+                java.util.Map<LongTermCandidateFinder.Sector, Integer> currentAlloc = LongTermCandidateFinder.getSectorAllocation();
+                
+                sb.append("<form method='post' action='/settings-sector-allocation' id='sectorForm'>");
+                sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px;'>");
+                
+                // Sector checkboxes with percentage inputs
+                String[][] sectors = {
+                    {"NASDAQ_100", "📈 NASDAQ 100", "#3b82f6"},
+                    {"TECHNOLOGY", "💻 Technology", "#8b5cf6"},
+                    {"FINANCIALS", "🏦 Financials", "#22c55e"},
+                    {"HEALTHCARE", "🏥 Healthcare", "#ef4444"},
+                    {"ENERGY", "⚡ Energy", "#f59e0b"},
+                    {"INDUSTRIALS", "🏭 Industrials", "#6b7280"},
+                    {"CONSUMER_DISCRETIONARY", "🛍️ Consumer Disc.", "#ec4899"},
+                    {"CONSUMER_STAPLES", "🛒 Consumer Staples", "#14b8a6"},
+                    {"UTILITIES", "💡 Utilities", "#eab308"},
+                    {"MATERIALS", "🧱 Materials", "#78716c"},
+                    {"REAL_ESTATE", "🏠 Real Estate", "#0ea5e9"},
+                    {"COMMUNICATION_SERVICES", "📱 Communication", "#a855f7"}
+                };
+                
+                for (String[] sector : sectors) {
+                    String sectorKey = sector[0];
+                    String sectorLabel = sector[1];
+                    String sectorColor = sector[2];
+                    LongTermCandidateFinder.Sector sectorEnum = LongTermCandidateFinder.Sector.valueOf(sectorKey);
+                    int currentPct = currentAlloc.getOrDefault(sectorEnum, 0);
+                    boolean isChecked = currentPct > 0;
+                    
+                    sb.append("<div style='background:#1f2a44;border-radius:8px;padding:10px;border-left:3px solid ").append(sectorColor).append(";'>");
+                    sb.append("<label style='display:flex;align-items:center;gap:8px;cursor:pointer;'>");
+                    sb.append("<input type='checkbox' name='sector_").append(sectorKey).append("' value='1' ").append(isChecked ? "checked" : "").append(" onchange='updateSectorTotal()' style='width:18px;height:18px;'/>");
+                    sb.append("<span style='color:").append(sectorColor).append(";font-weight:600;'>").append(sectorLabel).append("</span>");
+                    sb.append("</label>");
+                    sb.append("<div style='margin-top:6px;display:flex;align-items:center;gap:6px;'>");
+                    sb.append("<input type='number' name='pct_").append(sectorKey).append("' value='").append(currentPct).append("' min='0' max='100' ");
+                    sb.append("onchange='updateSectorTotal()' style='width:60px;padding:4px 8px;border-radius:4px;border:1px solid #374151;background:#0b1220;color:#e5e7eb;text-align:center;'/>");
+                    sb.append("<span style='color:#9ca3af;font-size:12px;'>%</span>");
+                    sb.append("</div>");
+                    sb.append("</div>");
+                }
+                
+                sb.append("</div>");
+                
+                // Total and buttons
+                sb.append("<div style='display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'>");
+                sb.append("<div style='background:#1f2a44;padding:10px 16px;border-radius:8px;'>");
+                sb.append("<span style='color:#9ca3af;'>Total: </span>");
+                sb.append("<span id='sectorTotal' style='font-weight:600;color:#22c55e;font-size:18px;'>").append(currentAlloc.values().stream().mapToInt(Integer::intValue).sum()).append("%</span>");
+                sb.append("<span id='sectorWarning' style='color:#ef4444;margin-left:10px;display:none;'>⚠️ Should be 100%</span>");
+                sb.append("</div>");
+                sb.append("<div style='display:flex;gap:10px;'>");
+                sb.append("<button type='submit' style='background:#8b5cf6;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;'>💾 Save Allocation</button>");
+                sb.append("<button type='button' onclick='resetToNasdaq()' style='background:#6b7280;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;'>🔄 Reset to NASDAQ 100</button>");
+                sb.append("</div>");
+                sb.append("</div>");
+                sb.append("</form>");
+                
+                // JavaScript for sector allocation
+                sb.append("<script>");
+                sb.append("function updateSectorTotal() {");
+                sb.append("  var total = 0;");
+                sb.append("  var sectors = ['NASDAQ_100','TECHNOLOGY','FINANCIALS','HEALTHCARE','ENERGY','INDUSTRIALS','CONSUMER_DISCRETIONARY','CONSUMER_STAPLES','UTILITIES','MATERIALS','REAL_ESTATE','COMMUNICATION_SERVICES'];");
+                sb.append("  sectors.forEach(function(s) {");
+                sb.append("    var cb = document.querySelector('input[name=\"sector_'+s+'\"]');");
+                sb.append("    var pct = document.querySelector('input[name=\"pct_'+s+'\"]');");
+                sb.append("    if (cb && cb.checked && pct) total += parseInt(pct.value) || 0;");
+                sb.append("  });");
+                sb.append("  document.getElementById('sectorTotal').textContent = total + '%';");
+                sb.append("  var warning = document.getElementById('sectorWarning');");
+                sb.append("  var totalSpan = document.getElementById('sectorTotal');");
+                sb.append("  if (total === 100) { totalSpan.style.color = '#22c55e'; warning.style.display = 'none'; }");
+                sb.append("  else { totalSpan.style.color = '#ef4444'; warning.style.display = 'inline'; }");
+                sb.append("}");
+                sb.append("function resetToNasdaq() {");
+                sb.append("  var sectors = ['NASDAQ_100','TECHNOLOGY','FINANCIALS','HEALTHCARE','ENERGY','INDUSTRIALS','CONSUMER_DISCRETIONARY','CONSUMER_STAPLES','UTILITIES','MATERIALS','REAL_ESTATE','COMMUNICATION_SERVICES'];");
+                sb.append("  sectors.forEach(function(s) {");
+                sb.append("    var cb = document.querySelector('input[name=\"sector_'+s+'\"]');");
+                sb.append("    var pct = document.querySelector('input[name=\"pct_'+s+'\"]');");
+                sb.append("    if (s === 'NASDAQ_100') { cb.checked = true; pct.value = 100; }");
+                sb.append("    else { cb.checked = false; pct.value = 0; }");
+                sb.append("  });");
+                sb.append("  updateSectorTotal();");
+                sb.append("}");
+                sb.append("updateSectorTotal();");
+                sb.append("</script>");
+                
+                // Show current sector stats
+                sb.append("<div style='margin-top:12px;padding:10px;background:#1f2a44;border-radius:8px;'>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:6px;'>📊 Sector Ticker Counts:</div>");
+                sb.append("<div style='display:flex;flex-wrap:wrap;gap:8px;font-size:11px;'>");
+                sb.append("<span style='color:#8b5cf6;'>Tech: ").append(LongTermCandidateFinder.TECHNOLOGY_TICKERS.size()).append("</span>");
+                sb.append("<span style='color:#22c55e;'>Fin: ").append(LongTermCandidateFinder.FINANCIALS_TICKERS.size()).append("</span>");
+                sb.append("<span style='color:#ef4444;'>Health: ").append(LongTermCandidateFinder.HEALTHCARE_TICKERS.size()).append("</span>");
+                sb.append("<span style='color:#f59e0b;'>Energy: ").append(LongTermCandidateFinder.ENERGY_TICKERS.size()).append("</span>");
+                sb.append("<span style='color:#6b7280;'>Indust: ").append(LongTermCandidateFinder.INDUSTRIALS_TICKERS.size()).append("</span>");
+                sb.append("<span style='color:#ec4899;'>Cons.D: ").append(LongTermCandidateFinder.CONSUMER_DISCRETIONARY_TICKERS.size()).append("</span>");
+                sb.append("<span style='color:#14b8a6;'>Cons.S: ").append(LongTermCandidateFinder.CONSUMER_STAPLES_TICKERS.size()).append("</span>");
+                sb.append("<span style='color:#eab308;'>Util: ").append(LongTermCandidateFinder.UTILITIES_TICKERS.size()).append("</span>");
+                sb.append("<span style='color:#78716c;'>Mat: ").append(LongTermCandidateFinder.MATERIALS_TICKERS.size()).append("</span>");
+                sb.append("<span style='color:#0ea5e9;'>RE: ").append(LongTermCandidateFinder.REAL_ESTATE_TICKERS.size()).append("</span>");
+                sb.append("<span style='color:#a855f7;'>Comm: ").append(LongTermCandidateFinder.COMMUNICATION_SERVICES_TICKERS.size()).append("</span>");
+                sb.append("</div>");
+                sb.append("</div>");
+                sb.append("</div>");
+
                 // Weight visualization
                 sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:16px;margin-bottom:16px;'>");
                 sb.append("<div style='font-weight:600;margin-bottom:12px;color:#93c5fd;'>Current Weights | משקלים נוכחיים:</div>");
@@ -7785,6 +7897,50 @@ public class WebServer {
                 }
                 
                 ex.getResponseHeaders().add("Location", "/settings?monitor_saved=true");
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // Settings - Sector Allocation endpoint
+        server.createContext("/settings-sector-allocation", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/settings");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                
+                // Parse sector allocation from form
+                java.util.Map<LongTermCandidateFinder.Sector, Integer> allocation = new java.util.LinkedHashMap<>();
+                String[] sectorNames = {"NASDAQ_100", "TECHNOLOGY", "FINANCIALS", "HEALTHCARE", "ENERGY", 
+                    "INDUSTRIALS", "CONSUMER_DISCRETIONARY", "CONSUMER_STAPLES", "UTILITIES", 
+                    "MATERIALS", "REAL_ESTATE", "COMMUNICATION_SERVICES"};
+                
+                for (String sectorName : sectorNames) {
+                    boolean isChecked = "1".equals(form.get("sector_" + sectorName));
+                    if (isChecked) {
+                        int pct = 0;
+                        try {
+                            pct = Integer.parseInt(form.getOrDefault("pct_" + sectorName, "0"));
+                        } catch (NumberFormatException ignore) {}
+                        if (pct > 0) {
+                            LongTermCandidateFinder.Sector sector = LongTermCandidateFinder.Sector.valueOf(sectorName);
+                            allocation.put(sector, pct);
+                        }
+                    }
+                }
+                
+                // If no sectors selected, default to NASDAQ_100
+                if (allocation.isEmpty()) {
+                    allocation.put(LongTermCandidateFinder.Sector.NASDAQ_100, 100);
+                }
+                
+                LongTermCandidateFinder.setSectorAllocation(allocation);
+                System.out.println("[WebServer] Sector allocation updated: " + allocation);
+                
+                ex.getResponseHeaders().add("Location", "/settings?sector_saved=true");
                 ex.sendResponseHeaders(303, -1); ex.close();
             }
         });

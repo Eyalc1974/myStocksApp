@@ -265,18 +265,25 @@
     },
     {
       "id": "S5_SWING_AGGRESSIVE",
-      "name": "Aggressive Swing",
-      "nameHe": "סווינג אגרסיבי",
-      "description": "Higher risk swing trades with tighter stops and bigger targets.",
+      "name": "Aggressive Swing (15min Safe)",
+      "nameHe": "סווינג אגרסיבי (בטוח ל-15 דקות)",
+      "description": "Delay-aware swing trades - filters fragile moves, catches durable trend legs.",
       "stocksPerVariant": 2,
       "entryFilters": {
-        "rvolMin": 1.0,
-        "rsiMin": 35,
-        "rsiMax": 60,
+        "rvolMin": 1.35,
+        "rsiMin": 52,
+        "rsiMax": 65,
         "rsMin": 1.1,
-        "sma200Required": false,
+        "sma200Required": true,
         "priceAboveVwapRequired": true,
-        "maCrossoverRequired": false
+        "maCrossoverRequired": false,
+        "timeAboveVwapMinutes": 20,
+        "vwapSlopeFlatRequired": true,
+        "volumeConsistencyBars": 3,
+        "rsiRisingBars": 3,
+        "higherLowRequired": true,
+        "candleCloseUpperPct": 30,
+        "minDurabilityScore": 75
       },
       "riskManagement": {
         "stopLossPct": 3.5,
