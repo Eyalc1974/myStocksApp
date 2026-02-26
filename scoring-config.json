@@ -1,5 +1,5 @@
 {
-  "activeMode" : "CUSTOM",
+  "activeMode" : "LONG_TERM_INVESTOR",
   "activeAgentConfig" : "I6_AGGRESSIVE_INTRADAY",
   "monitoredAgentForDiscord" : "S5_SWING_AGGRESSIVE_GEN1",
   "presets" : {
@@ -551,11 +551,11 @@
       "agentId" : "I4_VOLUME_SURGE_GEN1",
       "agentName" : "Volume Surge + VWAP (Gen 1)",
       "type" : "INTRADAY",
-      "cumulativeWins" : 96,
-      "cumulativeTrades" : 140,
-      "cumulativeProfitLoss" : 21761.50162450962,
+      "cumulativeWins" : 144,
+      "cumulativeTrades" : 211,
+      "cumulativeProfitLoss" : 32512.25243676443,
       "firstSavedDate" : "2026-02-13",
-      "lastUpdatedDate" : "2026-02-23",
+      "lastUpdatedDate" : "2026-02-25",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-02-13",
@@ -587,17 +587,29 @@
         "trades" : 35,
         "winRate" : 68.57142857142857,
         "profitLoss" : 5440.375406127405
+      }, {
+        "date" : "2026-02-24",
+        "wins" : 24,
+        "trades" : 35,
+        "winRate" : 68.57142857142857,
+        "profitLoss" : 5440.375406127405
+      }, {
+        "date" : "2026-02-25",
+        "wins" : 24,
+        "trades" : 36,
+        "winRate" : 66.66666666666667,
+        "profitLoss" : 5310.375406127407
       } ]
     },
     "M4_VOLUME_SPIKE" : {
       "agentId" : "M4_VOLUME_SPIKE",
       "agentName" : "Volume Spike Hunter",
       "type" : "MOMENTUM",
-      "cumulativeWins" : 273,
-      "cumulativeTrades" : 373,
-      "cumulativeProfitLoss" : 61528.52593603239,
+      "cumulativeWins" : 441,
+      "cumulativeTrades" : 609,
+      "cumulativeProfitLoss" : 91583.60177106716,
       "firstSavedDate" : "2026-02-13",
-      "lastUpdatedDate" : "2026-02-23",
+      "lastUpdatedDate" : "2026-02-25",
       "notifyOnTrade" : true,
       "dailySnapshots" : [ {
         "date" : "2026-02-13",
@@ -629,17 +641,29 @@
         "trades" : 95,
         "winRate" : 73.6842105263158,
         "profitLoss" : 15447.087917517389
+      }, {
+        "date" : "2026-02-24",
+        "wins" : 84,
+        "trades" : 118,
+        "winRate" : 71.1864406779661,
+        "profitLoss" : 15027.537917517388
+      }, {
+        "date" : "2026-02-25",
+        "wins" : 84,
+        "trades" : 118,
+        "winRate" : 71.1864406779661,
+        "profitLoss" : 15027.537917517388
       } ]
     },
     "M3_RS_LEADER" : {
       "agentId" : "M3_RS_LEADER",
       "agentName" : "RS Leader Focus",
       "type" : "MOMENTUM",
-      "cumulativeWins" : 495,
-      "cumulativeTrades" : 665,
-      "cumulativeProfitLoss" : 137800.07977659162,
+      "cumulativeWins" : 811,
+      "cumulativeTrades" : 1073,
+      "cumulativeProfitLoss" : 210012.94966488742,
       "firstSavedDate" : "2026-02-13",
-      "lastUpdatedDate" : "2026-02-23",
+      "lastUpdatedDate" : "2026-02-25",
       "notifyOnTrade" : true,
       "dailySnapshots" : [ {
         "date" : "2026-02-13",
@@ -671,17 +695,29 @@
         "trades" : 188,
         "winRate" : 76.59574468085107,
         "profitLoss" : 34883.44494414791
+      }, {
+        "date" : "2026-02-24",
+        "wins" : 158,
+        "trades" : 204,
+        "winRate" : 77.45098039215686,
+        "profitLoss" : 36106.434944147906
+      }, {
+        "date" : "2026-02-25",
+        "wins" : 158,
+        "trades" : 204,
+        "winRate" : 77.45098039215686,
+        "profitLoss" : 36106.434944147906
       } ]
     },
     "S10_SWING_TIGHT_RANGE_GEN1" : {
       "agentId" : "S10_SWING_TIGHT_RANGE_GEN1",
       "agentName" : "Tight Range Breakout Swing (Gen 1)",
       "type" : "SWING",
-      "cumulativeWins" : 14,
-      "cumulativeTrades" : 14,
-      "cumulativeProfitLoss" : 1714.5137779594734,
+      "cumulativeWins" : 28,
+      "cumulativeTrades" : 30,
+      "cumulativeProfitLoss" : 3216.0075559189463,
       "firstSavedDate" : "2026-02-13",
-      "lastUpdatedDate" : "2026-02-23",
+      "lastUpdatedDate" : "2026-02-25",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-02-13",
@@ -701,17 +737,29 @@
         "trades" : 7,
         "winRate" : 100.0,
         "profitLoss" : 857.2568889797367
+      }, {
+        "date" : "2026-02-24",
+        "wins" : 7,
+        "trades" : 8,
+        "winRate" : 87.5,
+        "profitLoss" : 750.7468889797366
+      }, {
+        "date" : "2026-02-25",
+        "wins" : 7,
+        "trades" : 8,
+        "winRate" : 87.5,
+        "profitLoss" : 750.7468889797366
       } ]
     },
     "S5_SWING_AGGRESSIVE_GEN1" : {
       "agentId" : "S5_SWING_AGGRESSIVE_GEN1",
       "agentName" : "Aggressive Swing (Gen 1)",
       "type" : "SWING",
-      "cumulativeWins" : 100,
-      "cumulativeTrades" : 132,
-      "cumulativeProfitLoss" : 96990.53825043616,
+      "cumulativeWins" : 158,
+      "cumulativeTrades" : 211,
+      "cumulativeProfitLoss" : 145720.86737565426,
       "firstSavedDate" : "2026-02-18",
-      "lastUpdatedDate" : "2026-02-23",
+      "lastUpdatedDate" : "2026-02-25",
       "notifyOnTrade" : true,
       "dailySnapshots" : [ {
         "date" : "2026-02-18",
@@ -743,17 +791,29 @@
         "trades" : 33,
         "winRate" : 75.75757575757575,
         "profitLoss" : 24247.63456260904
+      }, {
+        "date" : "2026-02-24",
+        "wins" : 29,
+        "trades" : 39,
+        "winRate" : 74.35897435897436,
+        "profitLoss" : 24429.63456260904
+      }, {
+        "date" : "2026-02-25",
+        "wins" : 29,
+        "trades" : 40,
+        "winRate" : 72.5,
+        "profitLoss" : 24300.694562609042
       } ]
     },
     "S7_SWING_CONSERVATIVE_GEN1" : {
       "agentId" : "S7_SWING_CONSERVATIVE_GEN1",
       "agentName" : "Conservative Swing (Gen 1)",
       "type" : "SWING",
-      "cumulativeWins" : 40,
-      "cumulativeTrades" : 56,
-      "cumulativeProfitLoss" : 3016.7620237041915,
+      "cumulativeWins" : 60,
+      "cumulativeTrades" : 84,
+      "cumulativeProfitLoss" : 4525.143035556287,
       "firstSavedDate" : "2026-02-18",
-      "lastUpdatedDate" : "2026-02-23",
+      "lastUpdatedDate" : "2026-02-25",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-02-18",
@@ -785,17 +845,29 @@
         "trades" : 14,
         "winRate" : 71.42857142857143,
         "profitLoss" : 754.1905059260479
+      }, {
+        "date" : "2026-02-24",
+        "wins" : 10,
+        "trades" : 14,
+        "winRate" : 71.42857142857143,
+        "profitLoss" : 754.1905059260479
+      }, {
+        "date" : "2026-02-25",
+        "wins" : 10,
+        "trades" : 14,
+        "winRate" : 71.42857142857143,
+        "profitLoss" : 754.1905059260479
       } ]
     },
     "M5_BREAKOUT_FILTERED" : {
       "agentId" : "M5_BREAKOUT_FILTERED",
       "agentName" : "Filtered Breakout Momentum",
       "type" : "MOMENTUM",
-      "cumulativeWins" : 355,
-      "cumulativeTrades" : 507,
-      "cumulativeProfitLoss" : 84690.19095951712,
+      "cumulativeWins" : 547,
+      "cumulativeTrades" : 779,
+      "cumulativeProfitLoss" : 127234.78643927569,
       "firstSavedDate" : "2026-02-18",
-      "lastUpdatedDate" : "2026-02-23",
+      "lastUpdatedDate" : "2026-02-25",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-02-18",
@@ -827,17 +899,29 @@
         "trades" : 127,
         "winRate" : 70.07874015748031,
         "profitLoss" : 21173.29773987928
+      }, {
+        "date" : "2026-02-24",
+        "wins" : 96,
+        "trades" : 136,
+        "winRate" : 70.58823529411765,
+        "profitLoss" : 21272.29773987928
+      }, {
+        "date" : "2026-02-25",
+        "wins" : 96,
+        "trades" : 136,
+        "winRate" : 70.58823529411765,
+        "profitLoss" : 21272.29773987928
       } ]
     },
     "S6_SWING_MOMENTUM_BLEND_GEN1" : {
       "agentId" : "S6_SWING_MOMENTUM_BLEND_GEN1",
       "agentName" : "Swing Momentum Blend (Gen 1)",
       "type" : "SWING",
-      "cumulativeWins" : 21,
-      "cumulativeTrades" : 25,
-      "cumulativeProfitLoss" : 3110.6331223973575,
+      "cumulativeWins" : 35,
+      "cumulativeTrades" : 41,
+      "cumulativeProfitLoss" : 4810.449683596034,
       "firstSavedDate" : "2026-02-19",
-      "lastUpdatedDate" : "2026-02-23",
+      "lastUpdatedDate" : "2026-02-25",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-02-19",
@@ -863,20 +947,38 @@
         "trades" : 8,
         "winRate" : 87.5,
         "profitLoss" : 849.9082805993382
+      }, {
+        "date" : "2026-02-24",
+        "wins" : 7,
+        "trades" : 8,
+        "winRate" : 87.5,
+        "profitLoss" : 849.9082805993382
+      }, {
+        "date" : "2026-02-25",
+        "wins" : 7,
+        "trades" : 8,
+        "winRate" : 87.5,
+        "profitLoss" : 849.9082805993382
       } ]
     },
     "I6_AGGRESSIVE_INTRADAY" : {
       "agentId" : "I6_AGGRESSIVE_INTRADAY",
       "agentName" : "Aggressive Intraday (High Risk)",
       "type" : "INTRADAY",
-      "cumulativeWins" : 69,
-      "cumulativeTrades" : 99,
-      "cumulativeProfitLoss" : 12728.842897243863,
+      "cumulativeWins" : 138,
+      "cumulativeTrades" : 198,
+      "cumulativeProfitLoss" : 25457.685794487727,
       "firstSavedDate" : "2026-02-24",
-      "lastUpdatedDate" : "2026-02-24",
+      "lastUpdatedDate" : "2026-02-25",
       "notifyOnTrade" : true,
       "dailySnapshots" : [ {
         "date" : "2026-02-24",
+        "wins" : 69,
+        "trades" : 99,
+        "winRate" : 69.6969696969697,
+        "profitLoss" : 12728.842897243863
+      }, {
+        "date" : "2026-02-25",
         "wins" : 69,
         "trades" : 99,
         "winRate" : 69.6969696969697,

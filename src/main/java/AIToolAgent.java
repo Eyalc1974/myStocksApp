@@ -22,7 +22,9 @@ public class AIToolAgent {
     private static final Path NEW_STRATEGIES_DIR = Paths.get("newStrategies");
     private static final Path HISTORY_FILE = Paths.get("newStrategies", "agent-history.json");
     private static final Path AGENT_STATE_FILE = Paths.get("newStrategies", "agent-state.json");
+    private static final Path TRADE_LOG_FILE = Paths.get("newStrategies", "full-scan-trade-log.txt");
     private static final ZoneId NY = ZoneId.of("America/New_York");
+    private static final DateTimeFormatter LOG_TIMESTAMP_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
     
     // Discord webhook for notifications
     private static final String DISCORD_WEBHOOK_URL = System.getenv("DAILY_SIM_DISCORD_WEBHOOK_URL");
@@ -300,7 +302,12 @@ public class AIToolAgent {
         
         scheduler.schedule(() -> {
             try {
-                System.out.println("[AIToolAgent] END OF DAY - Running cleanup of underperforming agents...");
+                System.out.println("[AIToolAgent] END OF DAY - Closing open positions and running cleanup...");
+                
+                // First, close all open positions
+                closeOpenPositions();
+                
+                // Then delete underperforming agents
                 deleteUnderperformingAgents();
                 
                 // Reschedule for next day
@@ -309,6 +316,150 @@ public class AIToolAgent {
                 System.err.println("[AIToolAgent] End-of-day cleanup error: " + e.getMessage());
             }
         }, delayMinutes, TimeUnit.MINUTES);
+    }
+    
+    /**
+     * Close all OPEN positions at end of day.
+     * Fetches current price and determines win/loss based on stop loss and take profit.
+     */
+    public static void closeOpenPositions() {
+        System.out.println("[AIToolAgent] Closing all OPEN positions at end of day...");
+        
+        int closedCount = 0;
+        int winCount = 0;
+        int lossCount = 0;
+        double totalPL = 0;
+        
+        synchronized (LOCK) {
+            for (Map.Entry<String, List<Trade>> entry : systemState.tradeHistory.entrySet()) {
+                String agentId = entry.getKey();
+                List<Trade> trades = entry.getValue();
+                
+                for (Trade trade : trades) {
+                    if (!"OPEN".equals(trade.status)) {
+                        continue; // Skip already closed trades
+                    }
+                    
+                    try {
+                        // Fetch current price for this ticker
+                        DataFetcher.setTicker(trade.ticker);
+                        String json = DataFetcher.fetchStockData();
+                        List<Double> prices = PriceJsonParser.extractClosingPrices(json);
+                        
+                        if (prices == null || prices.isEmpty()) {
+                            System.err.println("[AIToolAgent] Could not fetch price for " + trade.ticker + ", skipping close");
+                            continue;
+                        }
+                        
+                        double currentPrice = prices.get(prices.size() - 1);
+                        
+                        // Set exit price and time
+                        trade.exitPrice = currentPrice;
+                        trade.exitTime = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
+                        
+                        // Determine win/loss based on stop loss and take profit
+                        if (currentPrice <= trade.stopLoss) {
+                            trade.status = "CLOSED_LOSS";
+                            trade.exitPrice = trade.stopLoss; // Stopped out at stop loss
+                        } else if (currentPrice >= trade.takeProfit) {
+                            trade.status = "CLOSED_WIN";
+                            trade.exitPrice = trade.takeProfit; // Hit take profit
+                        } else {
+                            // Neither stop nor limit hit - close at current price
+                            double priceChange = currentPrice - trade.entryPrice;
+                            trade.status = priceChange > 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
+                        }
+                        
+                        // Calculate P/L
+                        double priceChange = trade.exitPrice - trade.entryPrice;
+                        trade.profitLoss = priceChange * trade.quantity;
+                        trade.profitLossPct = (priceChange / trade.entryPrice) * 100;
+                        
+                        // Log the trade close
+                        logTradeClosed(trade);
+                        
+                        // Update performance stats now that trade is closed
+                        updatePerformance(agentId, trade);
+                        
+                        closedCount++;
+                        totalPL += trade.profitLoss;
+                        if (trade.status.equals("CLOSED_WIN")) {
+                            winCount++;
+                        } else {
+                            lossCount++;
+                        }
+                        
+                        System.out.println("[AIToolAgent] CLOSED: " + trade.ticker + " @ $" + 
+                            String.format("%.2f", trade.exitPrice) + " P/L: $" + 
+                            String.format("%.2f", trade.profitLoss) + " (" + trade.status + ")");
+                        
+                        // Rate limit for API calls
+                        Thread.sleep(12500);
+                        
+                    } catch (Exception e) {
+                        System.err.println("[AIToolAgent] Error closing position for " + trade.ticker + ": " + e.getMessage());
+                    }
+                }
+            }
+            
+            // Save state after closing all positions
+            saveState();
+        }
+        
+        // Log summary
+        if (closedCount > 0) {
+            String summary = String.format("EOD_SUMMARY: Closed %d positions, %d wins, %d losses, Total P/L: $%.2f",
+                closedCount, winCount, lossCount, totalPL);
+            logTradeEvent("EOD_CLOSE", "SYSTEM", "---", summary);
+            
+            // Send Discord notification
+            String discordMsg = String.format(
+                "🌙 **End of Day Position Close**\n" +
+                "Closed: **%d** positions\n" +
+                "✅ Wins: **%d** | ❌ Losses: **%d**\n" +
+                "💰 Total P/L: **$%.2f**",
+                closedCount, winCount, lossCount, totalPL
+            );
+            sendDiscord(discordMsg);
+        }
+        
+        System.out.println("[AIToolAgent] End of day close complete: " + closedCount + " positions closed");
+    }
+    
+    /**
+     * Get count of currently OPEN positions
+     */
+    public static int getOpenPositionsCount() {
+        int count = 0;
+        synchronized (LOCK) {
+            if (systemState == null || systemState.tradeHistory == null) return 0;
+            for (List<Trade> trades : systemState.tradeHistory.values()) {
+                for (Trade trade : trades) {
+                    if ("OPEN".equals(trade.status)) {
+                        count++;
+                    }
+                }
+            }
+        }
+        return count;
+    }
+    
+    /**
+     * Get list of all OPEN positions
+     */
+    public static List<Trade> getOpenPositions() {
+        List<Trade> openPositions = new ArrayList<>();
+        synchronized (LOCK) {
+            if (systemState == null || systemState.tradeHistory == null) return openPositions;
+            for (List<Trade> trades : systemState.tradeHistory.values()) {
+                for (Trade trade : trades) {
+                    if ("OPEN".equals(trade.status)) {
+                        openPositions.add(trade);
+                    }
+                }
+            }
+        }
+        return openPositions;
     }
 
     private static void deleteUnderperformingAgents() {
@@ -1260,13 +1411,10 @@ public class AIToolAgent {
             DataFetcher.setTicker(ticker);
             String json = DataFetcher.fetchStockData();
             List<Double> prices = PriceJsonParser.extractClosingPrices(json);
-            if (prices == null || prices.size() < 2) return null;
+            if (prices == null || prices.size() < 1) return null;
             
-            // Use REAL market prices from historical data
-            // prices[0] = oldest, prices[size-1] = most recent
-            // Entry = previous day's close, Exit = most recent close (today)
-            double entryPrice = prices.get(prices.size() - 2);  // Previous day close
-            double exitPrice = prices.get(prices.size() - 1);   // Current/latest close (REAL price)
+            // Use current/latest price as entry price
+            double entryPrice = prices.get(prices.size() - 1);
             
             Trade trade = new Trade();
             trade.id = UUID.randomUUID().toString().substring(0, 8);
@@ -1276,40 +1424,27 @@ public class AIToolAgent {
             trade.entryPrice = entryPrice;
             trade.quantity = 100; // Simulated quantity
             
-            // Use actual timestamps based on market data
+            // Entry time is NOW
             ZonedDateTime now = ZonedDateTime.now(NY);
-            ZonedDateTime entryTime = now.minusDays(1).withHour(9).withMinute(30); // Previous day market open
-            ZonedDateTime exitTime = now.withHour(16).withMinute(0); // Today market close
+            trade.entryTime = now.format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
             
-            trade.entryTime = entryTime.format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
-            trade.exitTime = exitTime.format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
+            // Exit time is NOT SET yet - position is OPEN
+            trade.exitTime = null;
+            trade.exitPrice = 0;
             
-            // Use REAL exit price from market data
-            trade.exitPrice = exitPrice;
+            // Store stop/limit in trade
+            trade.stopLoss = decision.suggestedStopLoss;
+            trade.takeProfit = decision.suggestedTakeProfit;
             
-            // Determine win/loss based on actual price movement
-            double priceChange = exitPrice - entryPrice;
-            double stopLoss = decision.suggestedStopLoss;
-            double takeProfit = decision.suggestedTakeProfit;
+            // Position is OPEN - will be closed at end of day or when stop/limit hit
+            trade.status = "OPEN";
             
-            // Store stop/limit in trade for notifications
-            trade.stopLoss = stopLoss;
-            trade.takeProfit = takeProfit;
+            // P/L is 0 until position is closed
+            trade.profitLoss = 0;
+            trade.profitLossPct = 0;
             
-            if (exitPrice <= stopLoss) {
-                trade.status = "CLOSED_LOSS";
-            } else if (exitPrice >= takeProfit) {
-                trade.status = "CLOSED_WIN";
-            } else {
-                trade.status = priceChange > 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
-            }
-            
-            // Calculate P/L based on REAL prices
-            trade.profitLoss = priceChange * trade.quantity;
-            trade.profitLossPct = (priceChange / entryPrice) * 100;
-            
-            System.out.println("[AIToolAgent] REAL TRADE: " + ticker + " Entry=$" + String.format("%.2f", entryPrice) + 
-                " Exit=$" + String.format("%.2f", exitPrice) + " P/L=" + String.format("%.2f%%", trade.profitLossPct));
+            System.out.println("[AIToolAgent] OPEN POSITION: " + ticker + " Entry=$" + String.format("%.2f", entryPrice) + 
+                " SL=$" + String.format("%.2f", trade.stopLoss) + " TP=$" + String.format("%.2f", trade.takeProfit));
             
             return trade;
         } catch (Exception e) {
@@ -1325,12 +1460,22 @@ public class AIToolAgent {
                 return p;
             });
             
+            // Only update win/loss stats when trade is CLOSED
+            if (trade.status.equals("OPEN")) {
+                // For OPEN trades, just add to recent trades for display
+                perf.recentTrades.add(0, trade);
+                if (perf.recentTrades.size() > 3) {
+                    perf.recentTrades = new ArrayList<>(perf.recentTrades.subList(0, 3));
+                }
+                return; // Don't update P/L stats yet
+            }
+            
             perf.totalTrades++;
             perf.totalProfitLoss += trade.profitLoss;
             
             if (trade.status.equals("CLOSED_WIN")) {
                 perf.wins++;
-            } else {
+            } else if (trade.status.equals("CLOSED_LOSS")) {
                 perf.losses++;
             }
             
@@ -1437,6 +1582,83 @@ public class AIToolAgent {
         }
     }
 
+    // ==================== TRADE LOG TRACING ====================
+    
+    /**
+     * Log a trade event to the full-scan-trade-log.txt file
+     * Format: [TIMESTAMP] | EVENT | AGENT | TICKER | DETAILS
+     */
+    private static void logTradeEvent(String event, String agentId, String ticker, String details) {
+        try {
+            String timestamp = ZonedDateTime.now(NY).format(LOG_TIMESTAMP_FMT);
+            String logLine = String.format("[%s] | %-15s | %-20s | %-6s | %s%n",
+                timestamp, event, agentId, ticker, details);
+            
+            // Ensure directory exists
+            Files.createDirectories(TRADE_LOG_FILE.getParent());
+            
+            // Append to log file
+            Files.writeString(TRADE_LOG_FILE, logLine, 
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            
+        } catch (IOException e) {
+            System.err.println("[AIToolAgent] Failed to write trade log: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Log BUY signal detected (before Discord/trade)
+     */
+    public static void logBuySignal(String agentId, String ticker, double entryPrice, double stopLoss, double takeProfit) {
+        String details = String.format("Entry=$%.2f, SL=$%.2f, TP=$%.2f", entryPrice, stopLoss, takeProfit);
+        logTradeEvent("BUY_SIGNAL", agentId, ticker, details);
+    }
+    
+    /**
+     * Log Discord notification sent
+     */
+    public static void logDiscordSent(String agentId, String ticker, String alertType) {
+        logTradeEvent("DISCORD_SENT", agentId, ticker, alertType);
+    }
+    
+    /**
+     * Log trade execution (BUY order placed)
+     */
+    public static void logTradeExecuted(String agentId, String ticker, double entryPrice, double quantity) {
+        String details = String.format("BUY executed: %.0f shares @ $%.2f = $%.2f", 
+            quantity, entryPrice, entryPrice * quantity);
+        logTradeEvent("TRADE_EXECUTED", agentId, ticker, details);
+    }
+    
+    /**
+     * Log trade closed (SELL - position closed)
+     */
+    public static void logTradeClosed(Trade trade) {
+        String status = trade.status.contains("WIN") ? "WIN" : "LOSS";
+        String details = String.format("SELL: Entry=$%.2f, Exit=$%.2f, P/L=$%.2f (%.2f%%) [%s]",
+            trade.entryPrice, trade.exitPrice, trade.profitLoss, trade.profitLossPct, status);
+        logTradeEvent("TRADE_CLOSED", trade.agentId, trade.ticker, details);
+    }
+    
+    /**
+     * Log scan start
+     */
+    public static void logScanStart(List<String> agentIds, int tickerCount) {
+        String agents = String.join(", ", agentIds);
+        logTradeEvent("SCAN_START", "SYSTEM", "---", 
+            String.format("Agents: [%s], Tickers: %d", agents, tickerCount));
+    }
+    
+    /**
+     * Log scan complete
+     */
+    public static void logScanComplete(int analyzed, int trades) {
+        logTradeEvent("SCAN_COMPLETE", "SYSTEM", "---", 
+            String.format("Analyzed: %d, Trades: %d", analyzed, trades));
+    }
+    
+    // ==================== END TRADE LOG TRACING ====================
+
     /**
      * Send BUY ALERT notification BEFORE trade execution
      * This alerts the user to a trading opportunity so they can act on it
@@ -1490,6 +1712,7 @@ public class AIToolAgent {
         );
         
         sendDiscord(message);
+        logDiscordSent(agent.id, ticker, "BUY_ALERT");
         System.out.println("[AIToolAgent] BUY ALERT sent for " + ticker + " via agent " + agent.id);
     }
 
@@ -2311,6 +2534,10 @@ public class AIToolAgent {
             );
             sendDiscord(startMsg);
             
+            // Log scan start to trade log
+            List<String> agentIdList = agentsToRun.stream().map(p -> p.agentId).collect(Collectors.toList());
+            logScanStart(agentIdList, allTickers.size());
+            
             topAgentsFullScanStatus = "Running: 0/" + topAgentsFullScanTotal + " analyzed";
             System.out.println("[AIToolAgent] Starting full scan with " + agentsToRun.size() + " agents and " + allTickers.size() + " tickers");
             
@@ -2332,16 +2559,26 @@ public class AIToolAgent {
                         TradeDecision decision = analyzeStock(ticker, agent);
                         
                         if (decision != null && decision.shouldTrade) {
+                            // Log BUY signal detected
+                            logBuySignal(agent.id, ticker, decision.suggestedStopLoss / (1 - 0.03), 
+                                decision.suggestedStopLoss, decision.suggestedTakeProfit);
+                            
                             // Send BUY ALERT notification BEFORE executing trade
                             sendBuyAlertIfMonitored(agent, ticker, decision);
                             
                             Trade trade = executeTrade(agent, ticker, decision);
                             if (trade != null) {
+                                // Log trade execution (position is now OPEN)
+                                logTradeExecuted(agent.id, ticker, trade.entryPrice, trade.quantity);
+                                
                                 synchronized (LOCK) {
                                     systemState.tradeHistory.computeIfAbsent(agent.id, k -> new ArrayList<>()).add(trade);
                                 }
                                 updatePerformance(agent.id, trade);
                                 totalTrades++;
+                                
+                                // Position is OPEN - will be closed at end of day by closeOpenPositions()
+                                // DO NOT log TRADE_CLOSED here - it happens at EOD
                                 
                                 // Add to recent full scan trades (keep last 20)
                                 synchronized (recentFullScanTrades) {
@@ -2351,7 +2588,10 @@ public class AIToolAgent {
                                     }
                                 }
                                 
-                                System.out.println("[AIToolAgent] Full scan trade: " + agent.id + " " + trade.action + " " + ticker + " P/L: $" + String.format("%.2f", trade.profitLoss));
+                                System.out.println("[AIToolAgent] OPEN POSITION: " + agent.id + " " + trade.action + " " + ticker + 
+                                    " Entry=$" + String.format("%.2f", trade.entryPrice) + 
+                                    " SL=$" + String.format("%.2f", trade.stopLoss) + 
+                                    " TP=$" + String.format("%.2f", trade.takeProfit));
                             }
                         }
                         
@@ -2385,6 +2625,9 @@ public class AIToolAgent {
                 totalTrades
             );
             sendDiscord(completeMsg);
+            
+            // Log scan complete
+            logScanComplete(totalAnalyzed, totalTrades);
             
             topAgentsFullScanStatus = "Complete: " + totalAnalyzed + " analyzed, " + totalTrades + " trades";
             System.out.println("[AIToolAgent] Top 5 agents full scan complete: " + totalAnalyzed + " analyzed, " + totalTrades + " trades");

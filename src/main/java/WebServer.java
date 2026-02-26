@@ -2395,15 +2395,26 @@ public class WebServer {
             PrintStream originalErr = System.err;
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             PrintStream capture = new PrintStream(bos, true, StandardCharsets.UTF_8);
+            Throwable caught = null;
             try {
                 System.setOut(capture);
                 System.setErr(capture);
                 r.run();
+            } catch (Throwable t) {
+                caught = t;
             } finally {
                 System.setOut(originalOut);
                 System.setErr(originalErr);
             }
-            return bos.toString(StandardCharsets.UTF_8);
+            String output = bos.toString(StandardCharsets.UTF_8);
+            if (caught != null) {
+                // Append exception info to captured output so partial results are preserved
+                output += "\n\n❌ Exception during analysis: " + caught.getClass().getSimpleName() + ": " + caught.getMessage();
+                java.io.StringWriter sw = new java.io.StringWriter();
+                caught.printStackTrace(new java.io.PrintWriter(sw));
+                output += "\n" + sw.toString();
+            }
+            return output;
         }
     }
 
@@ -6641,12 +6652,12 @@ public class WebServer {
                     sb.append("<div style='color:#c4b5fd;font-size:12px;margin-bottom:8px;'>Selected agents (by win rate × trades score):</div>");
                     sb.append("<form method='post' action='/aitool-full-scan' style='margin:0;'>");
                     
-                    // Show checkboxes for top 5 agents (can uncheck up to 2)
+                    // Show checkboxes for top 5 agents (select which ones to run)
                     int agentIdx = 0;
                     for (AIToolAgent.AgentPerformance p : top5Agents) {
                         String bgColor = agentIdx % 2 == 0 ? "#2d2a5e" : "#1e1b4b";
                         sb.append("<div style='display:flex;align-items:center;gap:8px;padding:6px 8px;background:").append(bgColor).append(";border-radius:4px;margin-bottom:4px;'>");
-                        sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(p.agentId)).append("' checked style='width:16px;height:16px;' />");
+                        sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(p.agentId)).append("' style='width:16px;height:16px;' />");
                         sb.append("<span style='color:#e5e7eb;font-weight:500;flex:1;'>").append(escapeHtml(p.agentId)).append("</span>");
                         sb.append("<span style='color:#a78bfa;font-size:11px;'>").append(p.type != null ? p.type : "").append("</span>");
                         sb.append("<span style='color:#22c55e;font-weight:600;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
@@ -6655,7 +6666,7 @@ public class WebServer {
                         agentIdx++;
                     }
                     
-                    sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:8px;margin-bottom:8px;'>💡 Uncheck up to 2 agents to exclude them from the scan</div>");
+                    sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:8px;margin-bottom:8px;'>💡 Select the agent(s) you want to run (leave empty for all top 5)</div>");
                     sb.append("<button type='submit' style='background:#7c3aed;margin-top:4px;'>🚀 Start Full Scan with Selected Agents</button>");
                     sb.append("</form>");
                 }
@@ -6699,6 +6710,46 @@ public class WebServer {
                     sb.append("</div>");
                 }
                 sb.append("</div>");
+                sb.append("</div>");
+
+                // Open Positions Section
+                List<AIToolAgent.Trade> openPositions = AIToolAgent.getOpenPositions();
+                sb.append("<div style='background:#1e1b4b;border-radius:8px;padding:16px;margin-bottom:20px;border:1px solid #7c3aed;'>");
+                sb.append("<div style='font-size:16px;font-weight:600;color:#a78bfa;margin-bottom:12px;'>📊 Open Positions (").append(openPositions.size()).append(")</div>");
+                
+                if (openPositions.isEmpty()) {
+                    sb.append("<div style='color:#9ca3af;font-size:13px;'>No open positions. Positions will appear here after running a Full Scan.</div>");
+                } else {
+                    sb.append("<div style='overflow-x:auto;'>");
+                    sb.append("<table style='width:100%;border-collapse:collapse;font-size:12px;'>");
+                    sb.append("<thead><tr style='background:#0b1220;'>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Ticker</th>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Agent</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Entry Price</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Stop Loss</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Take Profit</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Qty</th>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Entry Time</th>");
+                    sb.append("</tr></thead><tbody>");
+                    
+                    for (AIToolAgent.Trade pos : openPositions) {
+                        sb.append("<tr style='background:#2d2a5e;'>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;font-weight:600;color:#e5e7eb;'>").append(escapeHtml(pos.ticker)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;color:#a78bfa;'>").append(escapeHtml(pos.agentId)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#22c55e;'>$").append(String.format("%.2f", pos.entryPrice)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#ef4444;'>$").append(String.format("%.2f", pos.stopLoss)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#22c55e;'>$").append(String.format("%.2f", pos.takeProfit)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;'>").append(String.format("%.0f", pos.quantity)).append("</td>");
+                        // Format entry time nicely
+                        String entryTimeDisplay = pos.entryTime != null ? pos.entryTime.substring(0, Math.min(19, pos.entryTime.length())).replace("T", " ") : "N/A";
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;color:#9ca3af;font-size:11px;'>").append(entryTimeDisplay).append("</td>");
+                        sb.append("</tr>");
+                    }
+                    
+                    sb.append("</tbody></table>");
+                    sb.append("</div>");
+                    sb.append("<div style='margin-top:12px;color:#9ca3af;font-size:11px;'>💡 Positions will be closed automatically at 4:00 PM ET (market close)</div>");
+                }
                 sb.append("</div>");
 
                 // Agent performance table
@@ -7533,17 +7584,15 @@ public class WebServer {
                     String sectorColor = sector[2];
                     LongTermCandidateFinder.Sector sectorEnum = LongTermCandidateFinder.Sector.valueOf(sectorKey);
                     int currentPct = currentAlloc.getOrDefault(sectorEnum, 0);
-                    boolean isChecked = currentPct > 0;
                     
                     sb.append("<div style='background:#1f2a44;border-radius:8px;padding:10px;border-left:3px solid ").append(sectorColor).append(";'>");
-                    sb.append("<label style='display:flex;align-items:center;gap:8px;cursor:pointer;'>");
-                    sb.append("<input type='checkbox' name='sector_").append(sectorKey).append("' value='1' ").append(isChecked ? "checked" : "").append(" onchange='updateSectorTotal()' style='width:18px;height:18px;'/>");
+                    sb.append("<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;'>");
                     sb.append("<span style='color:").append(sectorColor).append(";font-weight:600;'>").append(sectorLabel).append("</span>");
-                    sb.append("</label>");
-                    sb.append("<div style='margin-top:6px;display:flex;align-items:center;gap:6px;'>");
+                    sb.append("<div style='display:flex;align-items:center;gap:6px;'>");
                     sb.append("<input type='number' name='pct_").append(sectorKey).append("' value='").append(currentPct).append("' min='0' max='100' ");
-                    sb.append("onchange='updateSectorTotal()' style='width:60px;padding:4px 8px;border-radius:4px;border:1px solid #374151;background:#0b1220;color:#e5e7eb;text-align:center;'/>");
-                    sb.append("<span style='color:#9ca3af;font-size:12px;'>%</span>");
+                    sb.append("oninput='updateSectorTotal()' style='width:70px;padding:6px 8px;border-radius:4px;border:1px solid #374151;background:#0b1220;color:#e5e7eb;text-align:center;font-size:14px;'/>");
+                    sb.append("<span style='color:#9ca3af;font-size:13px;'>%</span>");
+                    sb.append("</div>");
                     sb.append("</div>");
                     sb.append("</div>");
                 }
@@ -7570,9 +7619,8 @@ public class WebServer {
                 sb.append("  var total = 0;");
                 sb.append("  var sectors = ['NASDAQ_100','TECHNOLOGY','FINANCIALS','HEALTHCARE','ENERGY','INDUSTRIALS','CONSUMER_DISCRETIONARY','CONSUMER_STAPLES','UTILITIES','MATERIALS','REAL_ESTATE','COMMUNICATION_SERVICES'];");
                 sb.append("  sectors.forEach(function(s) {");
-                sb.append("    var cb = document.querySelector('input[name=\"sector_'+s+'\"]');");
                 sb.append("    var pct = document.querySelector('input[name=\"pct_'+s+'\"]');");
-                sb.append("    if (cb && cb.checked && pct) total += parseInt(pct.value) || 0;");
+                sb.append("    if (pct) total += parseInt(pct.value) || 0;");
                 sb.append("  });");
                 sb.append("  document.getElementById('sectorTotal').textContent = total + '%';");
                 sb.append("  var warning = document.getElementById('sectorWarning');");
@@ -7583,10 +7631,9 @@ public class WebServer {
                 sb.append("function resetToNasdaq() {");
                 sb.append("  var sectors = ['NASDAQ_100','TECHNOLOGY','FINANCIALS','HEALTHCARE','ENERGY','INDUSTRIALS','CONSUMER_DISCRETIONARY','CONSUMER_STAPLES','UTILITIES','MATERIALS','REAL_ESTATE','COMMUNICATION_SERVICES'];");
                 sb.append("  sectors.forEach(function(s) {");
-                sb.append("    var cb = document.querySelector('input[name=\"sector_'+s+'\"]');");
                 sb.append("    var pct = document.querySelector('input[name=\"pct_'+s+'\"]');");
-                sb.append("    if (s === 'NASDAQ_100') { cb.checked = true; pct.value = 100; }");
-                sb.append("    else { cb.checked = false; pct.value = 0; }");
+                sb.append("    if (s === 'NASDAQ_100') { pct.value = 100; }");
+                sb.append("    else { pct.value = 0; }");
                 sb.append("  });");
                 sb.append("  updateSectorTotal();");
                 sb.append("}");
@@ -7919,16 +7966,16 @@ public class WebServer {
                     "MATERIALS", "REAL_ESTATE", "COMMUNICATION_SERVICES"};
                 
                 for (String sectorName : sectorNames) {
-                    boolean isChecked = "1".equals(form.get("sector_" + sectorName));
-                    if (isChecked) {
-                        int pct = 0;
-                        try {
-                            pct = Integer.parseInt(form.getOrDefault("pct_" + sectorName, "0"));
-                        } catch (NumberFormatException ignore) {}
-                        if (pct > 0) {
-                            LongTermCandidateFinder.Sector sector = LongTermCandidateFinder.Sector.valueOf(sectorName);
-                            allocation.put(sector, pct);
-                        }
+                    String pctVal = form.get("pct_" + sectorName);
+                    System.out.println("[DEBUG] Sector " + sectorName + ": pct=" + pctVal);
+                    
+                    int pct = 0;
+                    try {
+                        pct = Integer.parseInt(pctVal != null ? pctVal : "0");
+                    } catch (NumberFormatException ignore) {}
+                    if (pct > 0) {
+                        LongTermCandidateFinder.Sector sector = LongTermCandidateFinder.Sector.valueOf(sectorName);
+                        allocation.put(sector, pct);
                     }
                 }
                 

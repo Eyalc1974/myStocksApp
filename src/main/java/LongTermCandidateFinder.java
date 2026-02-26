@@ -253,11 +253,31 @@ public class LongTermCandidateFinder {
     private static final List<String> ALL_NASDAQ_TICKERS = NASDAQ_100_TICKERS;
 
     public static List<String> getUniverseTickers() {
+        // Check if custom sector allocation is set (not just NASDAQ_100 at 100%)
+        boolean useCustomSectors = !(sectorAllocation.size() == 1 && 
+            sectorAllocation.containsKey(Sector.NASDAQ_100) && 
+            sectorAllocation.get(Sector.NASDAQ_100) == 100);
+        
         LinkedHashSet<String> uniq = new LinkedHashSet<>();
-        for (String t : ALL_NASDAQ_TICKERS) {
-            if (t == null) continue;
-            String v = t.trim().toUpperCase();
-            if (!v.isBlank()) uniq.add(v);
+        
+        if (useCustomSectors) {
+            // Use only tickers from selected sectors
+            for (Sector sector : sectorAllocation.keySet()) {
+                List<String> sectorTickers = getTickersForSector(sector);
+                for (String t : sectorTickers) {
+                    if (t == null) continue;
+                    String v = t.trim().toUpperCase();
+                    if (!v.isBlank()) uniq.add(v);
+                }
+            }
+            System.out.println("[LongTermCandidateFinder] Using custom sector allocation: " + sectorAllocation.keySet() + " -> " + uniq.size() + " tickers");
+        } else {
+            // Default: use NASDAQ_100
+            for (String t : ALL_NASDAQ_TICKERS) {
+                if (t == null) continue;
+                String v = t.trim().toUpperCase();
+                if (!v.isBlank()) uniq.add(v);
+            }
         }
         return new ArrayList<>(uniq);
     }
