@@ -112,8 +112,9 @@ public class Main {
                         if (fhVol != null && !fhVol.isEmpty()) volumeData = fhVol;
                     }
                 }
-            } catch (Exception ignore) {
-                // if Finnhub fallback fails, we keep the original lists
+            } catch (Exception e) {
+                // if Finnhub fallback fails, log it and keep the original lists
+                System.err.println("[DEBUG] Finnhub fallback failed: " + e.getMessage());
             }
 
             if (historicalPrices == null || historicalPrices.size() < 10) {
