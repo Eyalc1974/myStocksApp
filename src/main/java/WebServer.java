@@ -4071,6 +4071,113 @@ public class WebServer {
                 sb.append("<div class='card'><div class='title'>MomentumAiAgent - Strategy Tools</div>");
                 sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>כלים לבדיקת אסטרטגיות מסחר על נתונים היסטוריים</div>");
                 sb.append(modelsUsedNamesOnlyHtml());
+
+                // ---- Active Config Info: from momentum JSON files (read-only) ----
+                try {
+                    // momentum-success-2026.json
+                    DailyTradingSimulator.Success2026Config successCfg = DailyTradingSimulator.Success2026Config.load();
+                    // momentum-variants.json
+                    DailyTradingSimulator.MomentumVariantsConfig variantsCfg = DailyTradingSimulator.MomentumVariantsConfig.load();
+                    // intraday-variants.json
+                    DailyTradingSimulator.IntradayVariantsConfig intradayCfg = DailyTradingSimulator.IntradayVariantsConfig.load();
+
+                    sb.append("<div style='background:#0d1b30;border:1px solid #1e3a5f;border-radius:10px;padding:14px;margin-top:10px;'>");
+                    sb.append("<div style='font-weight:600;color:#93c5fd;margin-bottom:4px;'>📋 Active Momentum Configs</div>");
+                    sb.append("<div style='font-size:11px;color:#6b7280;margin-bottom:12px;'>These configs are loaded from their own JSON files – independent of the global scoring mode.</div>");
+
+                    // momentum-success-2026.json
+                    sb.append("<div style='margin-bottom:12px;'>");
+                    sb.append("<div style='font-size:12px;font-weight:600;color:#f59e0b;margin-bottom:6px;'>🏆 momentum-success-2026.json");
+                    if (successCfg != null && successCfg.description != null) {
+                        sb.append(" <span style='color:#6b7280;font-weight:400;'>— ").append(escapeHtml(successCfg.description)).append("</span>");
+                    }
+                    sb.append("</div>");
+                    if (successCfg != null && successCfg.variants != null) {
+                        sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px;'>");
+                        for (DailyTradingSimulator.VariantConfig v : successCfg.variants) {
+                            sb.append("<div style='background:#1f2a44;padding:8px;border-radius:6px;'>");
+                            sb.append("<div style='font-weight:600;color:#fcd34d;font-size:12px;'>").append(escapeHtml(v.name)).append("</div>");
+                            if (v.nameHe != null) sb.append("<div style='font-size:10px;color:#9ca3af;'>").append(escapeHtml(v.nameHe)).append("</div>");
+                            if (v.entryFilters != null) {
+                                sb.append("<div style='font-size:11px;color:#6b7280;margin-top:4px;'>");
+                                sb.append("RSI: ").append((int)v.entryFilters.rsiMin).append("–").append((int)v.entryFilters.rsiMax);
+                                sb.append(" | RS≥").append(String.format("%.2f", v.entryFilters.rsMin));
+                                sb.append(" | RVOL≥").append(String.format("%.1f", v.entryFilters.rvolMin));
+                                if (v.riskManagement != null) {
+                                    sb.append(" | SL:").append(String.format("%.1f%%", v.riskManagement.stopLossPct));
+                                    sb.append(" | TP:").append(String.format("%.1f%%", v.riskManagement.takeProfitPct));
+                                }
+                                sb.append("</div>");
+                            }
+                            sb.append("</div>");
+                        }
+                        sb.append("</div>");
+                    }
+                    sb.append("</div>");
+
+                    // momentum-variants.json
+                    sb.append("<div style='margin-bottom:12px;'>");
+                    sb.append("<div style='font-size:12px;font-weight:600;color:#8b5cf6;margin-bottom:6px;'>🔀 momentum-variants.json");
+                    if (variantsCfg != null && variantsCfg.description != null) {
+                        sb.append(" <span style='color:#6b7280;font-weight:400;'>— ").append(escapeHtml(variantsCfg.description)).append("</span>");
+                    }
+                    sb.append("</div>");
+                    if (variantsCfg != null && variantsCfg.variants != null) {
+                        sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px;'>");
+                        for (DailyTradingSimulator.VariantConfig v : variantsCfg.variants) {
+                            sb.append("<div style='background:#1f2a44;padding:8px;border-radius:6px;'>");
+                            sb.append("<div style='font-weight:600;color:#c4b5fd;font-size:12px;'>").append(escapeHtml(v.name)).append("</div>");
+                            if (v.nameHe != null) sb.append("<div style='font-size:10px;color:#9ca3af;'>").append(escapeHtml(v.nameHe)).append("</div>");
+                            if (v.entryFilters != null) {
+                                sb.append("<div style='font-size:11px;color:#6b7280;margin-top:4px;'>");
+                                sb.append("RSI: ").append((int)v.entryFilters.rsiMin).append("–").append((int)v.entryFilters.rsiMax);
+                                sb.append(" | RS≥").append(String.format("%.2f", v.entryFilters.rsMin));
+                                sb.append(" | RVOL≥").append(String.format("%.1f", v.entryFilters.rvolMin));
+                                if (v.riskManagement != null) {
+                                    sb.append(" | SL:").append(String.format("%.1f%%", v.riskManagement.stopLossPct));
+                                    sb.append(" | TP:").append(String.format("%.1f%%", v.riskManagement.takeProfitPct));
+                                }
+                                sb.append("</div>");
+                            }
+                            sb.append("</div>");
+                        }
+                        sb.append("</div>");
+                    }
+                    sb.append("</div>");
+
+                    // intraday-variants.json — uses IntradayVariantConfig with its own filter/risk classes
+                    sb.append("<div>");
+                    sb.append("<div style='font-size:12px;font-weight:600;color:#22c55e;margin-bottom:6px;'>⚡ intraday-variants.json");
+                    if (intradayCfg != null) {
+                        sb.append(" <span style='color:#6b7280;font-weight:400;'>— 15-min delay, VWAP-based</span>");
+                    }
+                    sb.append("</div>");
+                    if (intradayCfg != null && intradayCfg.variants != null) {
+                        sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px;'>");
+                        for (DailyTradingSimulator.IntradayVariantConfig v : intradayCfg.variants) {
+                            sb.append("<div style='background:#1f2a44;padding:8px;border-radius:6px;'>");
+                            sb.append("<div style='font-weight:600;color:#86efac;font-size:12px;'>").append(escapeHtml(v.name)).append("</div>");
+                            if (v.nameHe != null) sb.append("<div style='font-size:10px;color:#9ca3af;'>").append(escapeHtml(v.nameHe)).append("</div>");
+                            if (v.entryFilters != null) {
+                                sb.append("<div style='font-size:11px;color:#6b7280;margin-top:4px;'>");
+                                sb.append("RSI: ").append((int)v.entryFilters.rsiMin).append("–").append((int)v.entryFilters.rsiMax);
+                                sb.append(" | RS≥").append(String.format("%.2f", v.entryFilters.rsMin));
+                                sb.append(" | RVOL≥").append(String.format("%.1f", v.entryFilters.rvolMin));
+                                if (v.riskManagement != null) {
+                                    sb.append(" | SL:").append(String.format("%.1f%%", v.riskManagement.stopLossMaxPct));
+                                    sb.append(" | TP:").append(String.format("%.1f%%", v.riskManagement.takeProfitPct));
+                                }
+                                sb.append("</div>");
+                            }
+                            sb.append("</div>");
+                        }
+                        sb.append("</div>");
+                    }
+                    sb.append("</div>");
+
+                    sb.append("</div>"); // end config info panel
+                } catch (Exception ignore) {}
+
                 sb.append("</div>");
 
                 // Daily Trading Simulator Section
@@ -4093,6 +4200,7 @@ public class WebServer {
                 
                 // Performance Summary
                 sb.append("<div id='dtsSummary' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:16px;'></div>");
+                sb.append("<div id='dtsRegimePanel' style='margin-bottom:16px;padding:14px 16px;background:#111827;border:1px solid #1f2a44;border-radius:10px;'></div>");
                 
                 // Open Positions Table
                 sb.append("<div style='margin-bottom:16px;'>");
@@ -4387,6 +4495,15 @@ public class WebServer {
                         "    renderDailyTrades(d);"+
                         "  }catch(e){console.error('Refresh error:',e);}"+
                         "}"+
+                        "async function toggleRegimeOverride(cb){"+
+                        "  try{"+
+                        "    var enabled=cb.checked;"+
+                        "    var r=await fetch('/api/daily-sim/regime-override?enabled='+enabled,{method:'POST'});"+
+                        "    var d=await r.json();"+
+                        "    if(d.error){cb.checked=!enabled;alert('Error: '+d.error);}"+
+                        "    else{refreshDailyTrades();}"+
+                        "  }catch(e){cb.checked=!cb.checked;alert('Error: '+e);}"+
+                        "}"+
                         "async function clearDailyTrades(){"+
                         "  if(!confirm('Clear all trades?'))return;"+
                         "  try{"+
@@ -4419,10 +4536,56 @@ public class WebServer {
                         "    '<div style=\"color:#9ca3af;font-size:11px;\">Total P/L</div></div>'+"+
                         "  '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;border:2px solid '+mrColor+';\">'+"+
                         "    '<div style=\"font-size:18px;font-weight:800;color:'+mrColor+';\">'+mrLabel+'</div>'+"+
-                        "    '<div style=\"color:#9ca3af;font-size:11px;\">Market Regime</div>'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:11px;\">Market Guard</div>'+"+
                         "    '<div style=\"color:#9ca3af;font-size:10px;margin-top:4px;\">'+spyLine+'</div>'+"+
                         "    (mrReason?'<div style=\"color:#9ca3af;font-size:10px;margin-top:2px;\">'+mrReason+'</div>':'')+"+
                         "  '</div>';"+
+                        "  // --- Regime Panel ---"+
+                        "  var rpEl=document.getElementById('dtsRegimePanel');"+
+                        "  if(rpEl){"+
+                        "    var regime=d.dailyRegime||'UNKNOWN';"+
+                        "    var override=!!d.regimeOverride;"+
+                        "    var explanation=d.regimeExplanation||'';"+
+                        "    var checkedAt=d.regimeCheckedAt||'';"+
+                        "    var openCount=(d.open||[]).length;"+
+                        "    var closedCount=(d.closed||[]).length;"+
+                        "    var hasTradestoday=openCount>0||closedCount>0;"+
+                        "    var rejSummary=s.lastScanRejectionSummary||'';"+
+                        "    var isTrending=regime==='TRENDING';"+
+                        "    var isChoppy=regime==='CHOPPY';"+
+                        "    var noTradesBlocked=isChoppy&&!override&&!hasTradestoday;"+
+                        "    var regimeFlagColor=override?'#f59e0b':(isTrending?'#22c55e':'#ef4444');"+
+                        "    var regimeFlag=override?'🟡':(isTrending?'🟢':'🔴');"+
+                        "    var regimeFlagLabel=override?'OVERRIDE':(isTrending?'GREEN – TRENDING':'RED – CHOPPY');"+
+                        "    rpEl.innerHTML="+
+                        "      '<div style=\"display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;\">'+"+
+                        "        '<div style=\"display:flex;align-items:center;gap:14px;\">'+"+
+                        "          '<div style=\"font-size:32px;line-height:1;\">'+regimeFlag+'</div>'+"+
+                        "          '<div>'+"+
+                        "            '<div style=\"font-size:15px;font-weight:800;color:'+regimeFlagColor+';\">'+regimeFlagLabel+'</div>'+"+
+                        "            '<div style=\"font-size:11px;color:#9ca3af;margin-top:3px;\">'+explanation+'</div>'+"+
+                        "            (checkedAt?'<div style=\"font-size:10px;color:#6b7280;margin-top:2px;\">Checked: '+checkedAt+'</div>':'')+"+
+                        "          '</div>'+"+
+                        "        '</div>'+"+
+                        "        '<div style=\"display:flex;align-items:center;gap:10px;background:#0b1220;padding:10px 16px;border-radius:8px;border:1px solid #374151;\">'+"+
+                        "          '<label style=\"display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#e5e7eb;\">'+"+
+                        "            '<input type=\"checkbox\" id=\"regimeOverrideCb\" '+(override?'checked':'')+' onchange=\"toggleRegimeOverride(this)\" style=\"width:16px;height:16px;cursor:pointer;\">'+"+
+                        "            '<span>Regime info-only (uncheck to enforce blocking)</span>'+"+
+                        "          '</label>'+"+
+                        "        '</div>'+"+
+                        "      '</div>'+"+
+                        "      (noTradesBlocked?"+
+                        "        '<div style=\"margin-top:12px;padding:10px 14px;background:#1f0a0a;border:1px solid #7f1d1d;border-radius:8px;color:#fca5a5;font-size:13px;\">'+"+
+                        "          '<b>🔴 No trades today</b> – Regime is CHOPPY. Trend-following &amp; RS agents are blocked. '+"+
+                        "          'Only pullback/mean-reversion agents may trade in this regime. '+"+
+                        "          '<b>Check the override box above to force entries.</b>'+"+
+                        "        '</div>' : '')+"+
+                        "      (rejSummary?"+
+                        "        '<div style=\"margin-top:10px;padding:10px 14px;background:#0f1a0f;border:1px solid #1f4d1f;border-radius:8px;\">'+"+
+                        "          '<div style=\"color:#86efac;font-size:12px;font-weight:700;margin-bottom:6px;\">🔍 Why no new trades?</div>'+"+
+                        "          '<div style=\"color:#d1fae5;font-size:12px;line-height:1.7;\">'+rejSummary+'</div>'+"+
+                        "        '</div>' : '');"+
+                        "  }"+
                         "  var openTb=document.getElementById('dtsOpenTbody');"+
                         "  var open=d.open||[];"+
                         "  if(open.length===0){openTb.innerHTML='<tr><td colspan=\"8\" style=\"padding:10px;color:#9ca3af;text-align:center;\">No open positions</td></tr>'; }"+
@@ -4812,6 +4975,17 @@ public class WebServer {
                     out.put("lastScanDate", store.lastScanDate);
                     out.put("lastScanTime", store.lastScanTime);
                     out.put("lastUpdateTime", store.lastUpdateTime);
+                    // Daily Regime data
+                    out.put("dailyRegime", store.dailyRegime != null ? store.dailyRegime : "UNKNOWN");
+                    out.put("regimeAdx", store.regimeAdx);
+                    out.put("regimeSpyAboveVwap", store.regimeSpyAboveVwap);
+                    out.put("regimeAtrToday", store.regimeAtrToday);
+                    out.put("regimeAtr20Avg", store.regimeAtr20Avg);
+                    out.put("regimeExplanation", store.regimeExplanation);
+                    out.put("regimeOverride", store.regimeOverride);
+                    out.put("regimeCheckedAt", store.regimeCheckedAt);
+                    out.put("marketGuardEnabled", store.marketGuardEnabled);
+                    out.put("success2026GuardEnabled", store.success2026GuardEnabled);
                     
                     // Daily scheduler status
                     out.put("dailySchedulerRunning", DailyTradingSimulator.isDailySchedulerRunning());
@@ -4887,6 +5061,48 @@ public class WebServer {
                     DailyTradingSimulator.stopDailyScheduler();
                     DailyTradingSimulator.stopMonitoring();
                     respondJson(ex, Map.of("status", "Daily scheduler stopped", "running", false), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage()), 500);
+                }
+            }
+        });
+
+        server.createContext("/api/daily-sim/regime-override", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                try {
+                    Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                    boolean override = "true".equalsIgnoreCase(qp.getOrDefault("enabled", "false"));
+                    DailyTradingSimulator.setRegimeOverride(override);
+                    respondJson(ex, Map.of("status", "ok", "regimeOverride", override), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage()), 500);
+                }
+            }
+        });
+
+        server.createContext("/api/daily-sim/market-guard", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                try {
+                    Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                    boolean enabled = "true".equalsIgnoreCase(qp.getOrDefault("enabled", "true"));
+                    DailyTradingSimulator.setMarketGuardEnabled(enabled);
+                    respondJson(ex, Map.of("status", "ok", "marketGuardEnabled", enabled), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage()), 500);
+                }
+            }
+        });
+
+        server.createContext("/api/daily-sim/success2026-guard", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                try {
+                    Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                    boolean enabled = "true".equalsIgnoreCase(qp.getOrDefault("enabled", "true"));
+                    DailyTradingSimulator.setSuccess2026GuardEnabled(enabled);
+                    respondJson(ex, Map.of("status", "ok", "success2026GuardEnabled", enabled), 200);
                 } catch (Exception e) {
                     respondJson(ex, Map.of("error", e.getMessage()), 500);
                 }
@@ -6159,6 +6375,7 @@ public class WebServer {
                 }
                 Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
                 String syncStatus = qp.getOrDefault("syncStatus", "");
+                String savedParam = qp.getOrDefault("saved", "");
 
                 StringBuilder sb = new StringBuilder();
                 sb.append("<div class='card'><div class='title'>SwingLongAiAgent</div>");
@@ -6168,6 +6385,11 @@ public class WebServer {
                     sb.append("<div style='background:#0b1220;border:1px solid #22c55e;border-radius:8px;padding:10px;margin-bottom:12px;color:#22c55e;'>")
                             .append("✅ Added ").append(escapeHtml(count)).append(" stock(s) to Monitoring. <a href='/monitoring' style='color:#93c5fd;'>View Monitoring →</a>")
                             .append("</div>");
+                }
+                if ("mode".equals(savedParam)) {
+                    sb.append("<div style='background:#0b1220;border:1px solid #22c55e;border-radius:8px;padding:10px;margin-bottom:12px;color:#22c55e;'>✅ Strategy mode saved.</div>");
+                } else if ("agent".equals(savedParam)) {
+                    sb.append("<div style='background:#0b1220;border:1px solid #8b5cf6;border-radius:8px;padding:10px;margin-bottom:12px;color:#c4b5fd;'>✅ Agent config saved.</div>");
                 }
 
                 // Daily GREEN recommendations table
@@ -6186,15 +6408,55 @@ public class WebServer {
                     }
 
                     sb.append("<div style='margin-bottom:14px;padding:12px;border-radius:12px;border:1px solid #1f2a44;background:#0b1220;'>");
-                    sb.append("<div style='font-weight:600;margin-bottom:6px;'>Daily Recommendations (GREEN)</div>");
+                    sb.append("<div style='font-weight:600;margin-bottom:10px;'>Daily Recommendations (GREEN)</div>");
+
+                    // ---- Inline Settings Panel: Daily Recommendations ----
                     try {
+                        ScoringConfig.ConfigData swingCfgData = ScoringConfig.load();
+                        String favMode = swingCfgData.activeMode;
                         ScoringConfig.ModeConfig favCfg = ScoringConfig.getActiveModeConfig();
-                        String favMode = ScoringConfig.getActiveMode();
                         String favModeName = favCfg.name != null ? favCfg.name : favMode;
                         String favModeHe = favCfg.nameHe != null ? favCfg.nameHe : "";
-                        sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:8px;'>Strategy: <b style='color:#22c55e;'>").append(escapeHtml(favModeName)).append("</b>");
-                        if (!favModeHe.isEmpty()) sb.append(" <span style='color:#9ca3af;'>| ").append(escapeHtml(favModeHe)).append("</span>");
-                        sb.append(" <a href='/settings' style='margin-left:8px;color:#93c5fd;text-decoration:none;font-size:12px;'>Change →</a></div>");
+                        String currentAgentCfg = ScoringConfig.getActiveAgentConfig();
+
+                        sb.append("<div style='background:#0d1b30;border:1px solid #1e3a5f;border-radius:10px;padding:14px;margin-bottom:14px;'>");
+                        sb.append("<div style='font-weight:600;color:#93c5fd;margin-bottom:10px;'>⚙️ Settings – Daily Recommendations</div>");
+
+                        // Strategy mode selector
+                        sb.append("<form method='post' action='/favorites-settings-mode' style='margin-bottom:10px;'>");
+                        sb.append("<div style='font-size:12px;color:#9ca3af;margin-bottom:6px;'>Scoring strategy used when running the daily GREEN scan:</div>");
+                        sb.append("<div style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;'>");
+                        for (String mk : new String[]{"LONG_TERM_INVESTOR", "SWING_TRADER", "CUSTOM"}) {
+                            ScoringConfig.ModeConfig m = swingCfgData.presets.get(mk);
+                            if (m == null) continue;
+                            String mName = m.name != null ? m.name : mk;
+                            boolean sel = mk.equals(favMode);
+                            String bg = sel ? "#22c55e" : "#1f2a44";
+                            String clr = sel ? "#000" : "#e5e7eb";
+                            sb.append("<button type='submit' name='mode' value='").append(mk).append("' ");
+                            sb.append("style='padding:8px 16px;border-radius:6px;background:").append(bg).append(";color:").append(clr).append(";border:none;cursor:pointer;font-size:13px;font-weight:").append(sel ? "700" : "400").append(";'>");
+                            sb.append(escapeHtml(mName)).append("</button>");
+                        }
+                        sb.append("</div></form>");
+
+                        // Active mode display
+                        sb.append("<div style='font-size:12px;color:#9ca3af;margin-bottom:10px;'>Current: <b style='color:#22c55e;'>").append(escapeHtml(favModeName)).append("</b>");
+                        if (!favModeHe.isEmpty()) sb.append(" <span style='color:#6b7280;'>| ").append(escapeHtml(favModeHe)).append("</span>");
+                        sb.append("</div>");
+
+                        // Agent config override
+                        sb.append("<form method='post' action='/favorites-settings-agent-config' style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;'>");
+                        sb.append("<div style='font-size:12px;color:#9ca3af;width:100%;margin-bottom:4px;'>🤖 AITool agent config override <span style='color:#6b7280;'>(optional – leave blank to use strategy mode)</span>:</div>");
+                        sb.append("<input type='text' name='agentId' placeholder='e.g. M2_CONSERVATIVE_V2' ");
+                        sb.append("value='").append(escapeHtml(currentAgentCfg != null ? currentAgentCfg : "")).append("' ");
+                        sb.append("style='padding:8px 10px;border-radius:6px;border:1px solid #1f2a44;background:#1f2a44;color:#e5e7eb;min-width:240px;font-size:13px;' />");
+                        sb.append("<button type='submit' style='background:#8b5cf6;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:13px;'>Apply</button>");
+                        sb.append("<button type='submit' name='clear' value='true' style='background:#374151;color:#e5e7eb;border:none;padding:8px 14px;border-radius:6px;font-size:13px;'>Clear</button>");
+                        sb.append("</form>");
+                        if (currentAgentCfg != null && !currentAgentCfg.isBlank()) {
+                            sb.append("<div style='margin-top:6px;font-size:12px;color:#c4b5fd;'>Active agent override: <b>").append(escapeHtml(currentAgentCfg)).append("</b></div>");
+                        }
+                        sb.append("</div>"); // end settings panel
                     } catch (Exception ignore) {}
                     sb.append("<div style='color:#9ca3af'>Status: ");
                     if (snap.running) {
@@ -6412,29 +6674,34 @@ public class WebServer {
                 sb.append("<div class='card' style='border:2px solid #f59e0b;'>");
                 sb.append("<div class='title'>🎯 Swing Trading Simulator - סימולציית סווינג</div>");
                 sb.append("<div style='color:#9ca3af;margin-bottom:12px;' dir='rtl'>סורק מניות מועדפות לאיתור הזדמנויות סווינג - נסיגה איכותית, פריצה, ומעקב מגמה. מבוסס על swing-variants.json</div>");
-                
-                // Load swing variants config for display
+
+                // ---- Active Config Panel: Swing Simulator (swing-variants.json only) ----
                 try {
                     DailyTradingSimulator.SwingVariantsConfig swingConfig = DailyTradingSimulator.SwingVariantsConfig.load();
+
+                    sb.append("<div style='background:#0d1b30;border:1px solid #7c4e00;border-radius:10px;padding:14px;margin-bottom:14px;'>");
+                    sb.append("<div style='font-weight:600;color:#fcd34d;margin-bottom:4px;'>📋 Active Swing Variants</div>");
+                    sb.append("<div style='font-size:11px;color:#6b7280;margin-bottom:10px;'>Loaded from <code>swing-variants.json</code> — each variant has its own independent entry filters and risk management.</div>");
+
                     if (swingConfig.enabled && swingConfig.variants != null && !swingConfig.variants.isEmpty()) {
-                        sb.append("<div style='background:#0b1220;border-radius:8px;padding:12px;margin-bottom:12px;'>");
-                        sb.append("<div style='font-weight:600;color:#f59e0b;margin-bottom:8px;'>📋 Active Swing Variants (A/B Testing)</div>");
-                        sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;'>");
+                        sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;'>");
                         for (DailyTradingSimulator.SwingVariantConfig v : swingConfig.variants) {
-                            sb.append("<div style='background:#1f2a44;padding:8px;border-radius:6px;'>");
-                            sb.append("<div style='font-weight:600;color:#fcd34d;'>").append(escapeHtml(v.name)).append("</div>");
-                            if (v.nameHe != null) sb.append("<div style='font-size:11px;color:#9ca3af;'>").append(escapeHtml(v.nameHe)).append("</div>");
-                            sb.append("<div style='font-size:11px;color:#6b7280;margin-top:4px;'>");
-                            sb.append("RSI: ").append((int)v.entryFilters.rsiMin).append("-").append((int)v.entryFilters.rsiMax);
-                            sb.append(" | RS≥").append(String.format("%.2f", v.entryFilters.rsMin));
-                            sb.append(" | SL:").append(String.format("%.0f%%", v.riskManagement.stopLossPct));
-                            sb.append(" | TP:").append(String.format("%.0f%%", v.riskManagement.takeProfitPct));
+                            sb.append("<div style='background:#1f2a44;padding:10px;border-radius:8px;'>");
+                            sb.append("<div style='font-weight:600;color:#fcd34d;font-size:13px;'>").append(escapeHtml(v.name)).append("</div>");
+                            if (v.nameHe != null) sb.append("<div style='font-size:11px;color:#9ca3af;margin-bottom:4px;'>").append(escapeHtml(v.nameHe)).append("</div>");
+                            sb.append("<div style='font-size:11px;color:#6b7280;line-height:1.6;'>");
+                            sb.append("RSI: ").append((int)v.entryFilters.rsiMin).append("–").append((int)v.entryFilters.rsiMax).append("<br/>");
+                            sb.append("RS ≥ ").append(String.format("%.2f", v.entryFilters.rsMin)).append("<br/>");
+                            sb.append("Stop: ").append(String.format("%.0f%%", v.riskManagement.stopLossPct));
+                            sb.append(" | Target: ").append(String.format("%.0f%%", v.riskManagement.takeProfitPct));
                             sb.append("</div>");
                             sb.append("</div>");
                         }
                         sb.append("</div>");
-                        sb.append("</div>");
+                    } else {
+                        sb.append("<div style='color:#9ca3af;font-size:12px;'>No variants loaded (check swing-variants.json).</div>");
                     }
+                    sb.append("</div>"); // end swing config panel
                 } catch (Exception ignore) {}
                 
                 sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;align-items:center;'>");
@@ -6617,31 +6884,81 @@ public class WebServer {
                 sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>בדיקת אסטרטגיות מסחר מרובות (סוכנים) כדי למצוא את הנוסחה הטובה ביותר לרווח.</div>");
 
                 // Status panel
-                sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:12px;padding:14px;margin-bottom:16px;'>");
+                boolean isRunningNow = AIToolAgent.isRunning();
+                int initProgress = AIToolAgent.getRunProgress();
+                int initTotal    = AIToolAgent.getRunTotal();
+                String initAgent  = AIToolAgent.getCurrentAgent();
+                String initTicker = AIToolAgent.getRunCurrentTicker();
+                double initPct = (initTotal > 0) ? (initProgress * 100.0 / initTotal) : 0;
+
+                sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:12px;padding:14px;margin-bottom:16px;' id='runStatusPanel'>");
                 sb.append("<div style='display:flex;gap:20px;flex-wrap:wrap;align-items:center;'>");
-                sb.append("<div><span style='color:#9ca3af;'>Status:</span> ");
-                if (AIToolAgent.isRunning()) {
-                    sb.append("<span style='color:#22c55e;font-weight:700;'>RUNNING</span>");
-                    String current = AIToolAgent.getCurrentAgent();
-                    if (current != null) sb.append(" · Agent: <b>").append(escapeHtml(current)).append("</b>");
-                } else {
-                    sb.append("<span style='color:#93c5fd;font-weight:700;'>IDLE</span>");
-                }
-                sb.append("</div>");
+                sb.append("<div><span style='color:#9ca3af;'>Status:</span> <span id='runStatusLabel' style='font-weight:700;color:").append(isRunningNow ? "#22c55e" : "#93c5fd").append(";'>").append(isRunningNow ? "RUNNING" : "IDLE").append("</span></div>");
                 sb.append("<div><span style='color:#9ca3af;'>Agents:</span> <b>").append(AIToolAgent.getAgentCount()).append("</b></div>");
                 if (state != null && state.lastRunTime != null) {
                     sb.append("<div><span style='color:#9ca3af;'>Last Run:</span> ").append(escapeHtml(state.lastRunTime.substring(0, Math.min(19, state.lastRunTime.length())))).append("</div>");
                 }
                 sb.append("<div><span style='color:#9ca3af;'>Run Count:</span> ").append(state != null ? state.runCount : 0).append("</div>");
                 sb.append("</div>");
+
+                // Progress bar (hidden when idle)
+                sb.append("<div id='runProgressSection' style='margin-top:12px;display:").append(isRunningNow ? "block" : "none").append(";'>");
+                sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;'>");
+                sb.append("<span style='font-size:12px;color:#9ca3af;'>Tickers scanned: <span id='runProgressText'>").append(initProgress).append(" / ").append(initTotal).append("</span></span>");
+                sb.append("<span style='font-size:12px;color:#22c55e;font-weight:600;'><span id='runPct'>").append(String.format("%.0f", initPct)).append("</span>%</span>");
+                sb.append("</div>");
+                sb.append("<div style='background:#1f2a44;border-radius:6px;height:10px;overflow:hidden;'>");
+                sb.append("<div id='runProgressBar' style='background:linear-gradient(90deg,#22c55e,#16a34a);height:100%;width:").append(String.format("%.1f", initPct)).append("%;transition:width 0.4s ease;'></div>");
+                sb.append("</div>");
+                sb.append("<div style='margin-top:6px;font-size:11px;color:#6b7280;'>");
+                sb.append("Ticker: <span id='runCurrentTicker' style='color:#fcd34d;'>").append(escapeHtml(initTicker != null ? initTicker : "—")).append("</span>");
+                sb.append(" &nbsp;·&nbsp; Agent: <span id='runCurrentAgent' style='color:#93c5fd;'>").append(escapeHtml(initAgent != null ? initAgent : "—")).append("</span>");
+                sb.append("</div>");
+                sb.append("</div>");
+
                 sb.append("<div style='margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;'>");
-                sb.append("<form method='post' action='/aitool-run' style='margin:0;'><button type='submit'>▶️ Run All Agents Now</button></form>");
+                sb.append("<form method='post' action='/aitool-run' style='margin:0;'><button type='submit' id='runBtn'>▶️ Run All Agents Now</button></form>");
                 sb.append("<a href='/aitool' style='padding:10px 14px;background:#1f2a44;border-radius:8px;'>🔄 Refresh</a>");
                 sb.append("</div>");
+
+                // JS poller — polls /aitool-run-status every 3s while running
+                sb.append("<script>");
+                sb.append("(function(){");
+                sb.append("var polling=false;");
+                sb.append("function updateBar(d){");
+                sb.append("  var total=d.total||0, prog=d.progress||0;");
+                sb.append("  var pct=total>0?Math.round(prog*100/total):0;");
+                sb.append("  document.getElementById('runProgressText').textContent=prog+' / '+total;");
+                sb.append("  document.getElementById('runPct').textContent=pct;");
+                sb.append("  document.getElementById('runProgressBar').style.width=pct+'%';");
+                sb.append("  document.getElementById('runCurrentAgent').textContent=d.currentAgent||'—';");
+                sb.append("  document.getElementById('runCurrentTicker').textContent=d.currentTicker||'—';");
+                sb.append("  document.getElementById('runStatusLabel').textContent=d.running?'RUNNING':'IDLE';");
+                sb.append("  document.getElementById('runStatusLabel').style.color=d.running?'#22c55e':'#93c5fd';");
+                sb.append("  document.getElementById('runProgressSection').style.display=d.running?'block':'none';");
+                sb.append("  document.getElementById('runBtn').disabled=d.running;");
+                sb.append("}");
+                sb.append("function poll(){");
+                sb.append("  fetch('/aitool-run-status').then(function(r){return r.json();}).then(function(d){");
+                sb.append("    updateBar(d);");
+                sb.append("    if(d.running){setTimeout(poll,3000);}else{polling=false;}");
+                sb.append("  }).catch(function(){if(polling)setTimeout(poll,5000);});");
+                sb.append("}");
+                // Auto-start poller if already running on page load, or when run button clicked
+                if (isRunningNow) {
+                    sb.append("polling=true;poll();");
+                }
+                sb.append("document.getElementById('runBtn').closest('form').addEventListener('submit',function(){");
+                sb.append("  if(!polling){polling=true;setTimeout(poll,2000);}");
+                sb.append("});");
+                sb.append("})();");
+                sb.append("</script>");
                 
                 // Top 5 Agents Full Scan Section
                 sb.append("<div style='margin-top:16px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:12px;'>");
-                sb.append("<div style='font-weight:600;color:#a78bfa;margin-bottom:8px;'>🚀 Top 5 Agents Full Scan (500+ tickers)</div>");
+                int sectorTickerCount = LongTermCandidateFinder.getAllSectorTickers().size();
+                sb.append("<div style='font-weight:600;color:#a78bfa;margin-bottom:8px;'>🚀 Start Full Scan with Selected Agents (").append(sectorTickerCount).append(" tickers across 11 sectors)</div>");
+                sb.append("<div style='font-size:11px;color:#6b7280;margin-bottom:8px;'>Technology · Financials · Healthcare · Energy · Industrials · Consumer Disc. · Consumer Staples · Utilities · Materials · Real Estate · Communication Services</div>");
                 
                 // Get top 5 agents to display
                 List<AIToolAgent.AgentPerformance> top5Agents = AIToolAgent.getTop5Agents();
@@ -6712,47 +7029,67 @@ public class WebServer {
                 sb.append("</div>");
                 sb.append("</div>");
 
-                // Open Positions Section
-                List<AIToolAgent.Trade> openPositions = AIToolAgent.getOpenPositions();
+                // Open Positions Section — top 20, deduplicated by ticker
+                List<AIToolAgent.OpenPositionSummary> openPosSummaries = AIToolAgent.getTop20OpenPositionsDeduped();
+                int totalOpenRaw = AIToolAgent.getOpenPositionsCount();
                 sb.append("<div style='background:#1e1b4b;border-radius:8px;padding:16px;margin-bottom:20px;border:1px solid #7c3aed;'>");
-                sb.append("<div style='font-size:16px;font-weight:600;color:#a78bfa;margin-bottom:12px;'>📊 Open Positions (").append(openPositions.size()).append(")</div>");
-                
-                if (openPositions.isEmpty()) {
+                sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;'>");
+                sb.append("<div style='font-size:16px;font-weight:600;color:#a78bfa;'>📊 Open Positions — Top 20 Unique Stocks");
+                if (totalOpenRaw > 0) {
+                    sb.append(" <span style='color:#6b7280;font-size:12px;font-weight:400;'>(").append(totalOpenRaw).append(" total across all agents)</span>");
+                }
+                sb.append("</div>");
+                sb.append("</div>");
+
+                if (openPosSummaries.isEmpty()) {
                     sb.append("<div style='color:#9ca3af;font-size:13px;'>No open positions. Positions will appear here after running a Full Scan.</div>");
                 } else {
                     sb.append("<div style='overflow-x:auto;'>");
                     sb.append("<table style='width:100%;border-collapse:collapse;font-size:12px;'>");
                     sb.append("<thead><tr style='background:#0b1220;'>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>#</th>");
                     sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Ticker</th>");
-                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Agent</th>");
-                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Entry Price</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Entry $</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Stop Loss</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Take Profit</th>");
-                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Qty</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>SL %</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>TP %</th>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Agents Holding</th>");
                     sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Entry Time</th>");
                     sb.append("</tr></thead><tbody>");
-                    
-                    for (AIToolAgent.Trade pos : openPositions) {
-                        sb.append("<tr style='background:#2d2a5e;'>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;font-weight:600;color:#e5e7eb;'>").append(escapeHtml(pos.ticker)).append("</td>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;color:#a78bfa;'>").append(escapeHtml(pos.agentId)).append("</td>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#22c55e;'>$").append(String.format("%.2f", pos.entryPrice)).append("</td>");
+
+                    int rowNum = 0;
+                    for (AIToolAgent.OpenPositionSummary pos : openPosSummaries) {
+                        rowNum++;
+                        String rowBg = rowNum % 2 == 0 ? "#24215a" : "#2d2a5e";
+                        double slPct = pos.entryPrice > 0 ? ((pos.stopLoss - pos.entryPrice) / pos.entryPrice * 100) : 0;
+                        double tpPct = pos.entryPrice > 0 ? ((pos.takeProfit - pos.entryPrice) / pos.entryPrice * 100) : 0;
+                        String entryTimeDisplay = pos.entryTime != null ? pos.entryTime.substring(0, Math.min(19, pos.entryTime.length())).replace("T", " ") : "N/A";
+                        String agentList = String.join(", ", pos.agentIds);
+
+                        sb.append("<tr style='background:").append(rowBg).append(";'>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;color:#6b7280;'>").append(rowNum).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;font-weight:700;color:#e5e7eb;font-size:13px;'>").append(escapeHtml(pos.ticker)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#22c55e;font-weight:600;'>$").append(String.format("%.2f", pos.entryPrice)).append("</td>");
                         sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#ef4444;'>$").append(String.format("%.2f", pos.stopLoss)).append("</td>");
                         sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#22c55e;'>$").append(String.format("%.2f", pos.takeProfit)).append("</td>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;'>").append(String.format("%.0f", pos.quantity)).append("</td>");
-                        // Format entry time nicely
-                        String entryTimeDisplay = pos.entryTime != null ? pos.entryTime.substring(0, Math.min(19, pos.entryTime.length())).replace("T", " ") : "N/A";
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#ef4444;'>").append(String.format("%.1f%%", slPct)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#22c55e;'>+").append(String.format("%.1f%%", tpPct)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;color:#a78bfa;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' title='").append(escapeHtml(agentList)).append("'>").append(escapeHtml(agentList)).append("</td>");
                         sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;color:#9ca3af;font-size:11px;'>").append(entryTimeDisplay).append("</td>");
                         sb.append("</tr>");
                     }
-                    
+
                     sb.append("</tbody></table>");
                     sb.append("</div>");
-                    sb.append("<div style='margin-top:12px;color:#9ca3af;font-size:11px;'>💡 Positions will be closed automatically at 4:00 PM ET (market close)</div>");
+                    sb.append("<div style='margin-top:10px;color:#9ca3af;font-size:11px;'>💡 Each row = one unique stock. Positions are held open and closed at EOD (4:30 PM ET) or when stop-loss / take-profit is triggered.</div>");
                 }
                 sb.append("</div>");
+                sb.append("</div>"); // close main AITool card
 
-                // Agent performance table
+                // Agent Win/Loss Leaderboard — separate card
+                sb.append("<div class='card'><div class='title'>📊 Agent Win/Loss Leaderboard &mdash; Top 10 Agents</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;font-size:13px;'>Top 10 agents sorted by win rate. 🏆 = winning agent (P/L &gt; 0 &amp; win rate &gt; 50%). Agents below <b style='color:#ef4444;'>70%</b> win rate automatically trigger LLM/Ollama-guided evolution.</div>");
                 sb.append("<div style='overflow-x:auto;'>");
                 sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
                 sb.append("<thead><tr style='background:#0b1220;'>");
@@ -7023,29 +7360,87 @@ public class WebServer {
                 }
                 sb.append("</div>");
 
-                // Evolution Decision Logic explanation
+                // Evolution Decision Logic — LLM decision history + static explanation
                 sb.append("<div class='card'><div class='title'>🧠 Evolution Decision Logic</div>");
-                sb.append("<div style='color:#9ca3af;font-size:13px;'>");
-                sb.append("<div style='margin-bottom:8px;'><b>When does an agent ABANDON its strategy?</b></div>");
+
+                // LLM decision history (newest first, only events with AI suggestions)
+                List<AIToolAgent.EvolutionEvent> allEvoLog = AIToolAgent.getEvolutionLog();
+                List<AIToolAgent.EvolutionEvent> aiDecisions = new ArrayList<>();
+                for (int i = allEvoLog.size() - 1; i >= 0; i--) {
+                    AIToolAgent.EvolutionEvent e = allEvoLog.get(i);
+                    if (e.aiSuggestion != null && !e.aiSuggestion.isEmpty()) {
+                        aiDecisions.add(e);
+                    }
+                }
+
+                sb.append("<div style='margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;color:#a78bfa;margin-bottom:10px;'>🤖 LLM/Ollama Decision History (").append(aiDecisions.size()).append(" decisions)</div>");
+                if (aiDecisions.isEmpty()) {
+                    sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;color:#6b7280;'>");
+                    sb.append("No LLM decisions recorded yet. When an agent's win rate drops below 70% after 5+ trades, Ollama (or OpenAI if configured) is consulted for parameter improvements. Each AI recommendation and the resulting config changes will appear here.");
+                    sb.append("</div>");
+                } else {
+                    sb.append("<div style='max-height:520px;overflow-y:auto;'>");
+                    for (AIToolAgent.EvolutionEvent aiEvt : aiDecisions) {
+                        String aiTs = aiEvt.timestamp != null ? aiEvt.timestamp.substring(0, Math.min(19, aiEvt.timestamp.length())).replace("T", " ") : "";
+                        sb.append("<div style='background:#0b1220;border:1px solid #4f46e5;border-radius:8px;padding:12px;margin-bottom:10px;'>");
+                        sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:4px;'>");
+                        sb.append("<span style='color:#a78bfa;font-weight:600;font-size:13px;'>🧬 ").append(escapeHtml(aiEvt.originalAgentId)).append(" &rarr; ").append(escapeHtml(aiEvt.newAgentId)).append("</span>");
+                        sb.append("<span style='color:#6b7280;font-size:11px;'>").append(escapeHtml(aiTs)).append("</span>");
+                        sb.append("</div>");
+                        sb.append("<div style='color:#ef4444;font-size:12px;margin-bottom:8px;'>⚠️ ").append(escapeHtml(aiEvt.reason != null ? aiEvt.reason : "")).append("</div>");
+                        sb.append("<div style='background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #4f46e5;border-radius:6px;padding:10px;margin-bottom:8px;'>");
+                        sb.append("<div style='color:#a78bfa;font-weight:600;margin-bottom:6px;font-size:12px;'>🤖 LLM Recommendation:</div>");
+                        sb.append("<div style='color:#e5e7eb;font-size:12px;white-space:pre-wrap;max-height:220px;overflow-y:auto;line-height:1.5;'>").append(escapeHtml(aiEvt.aiSuggestion)).append("</div>");
+                        sb.append("</div>");
+                        if (aiEvt.parameterChanges != null && !aiEvt.parameterChanges.isEmpty()) {
+                            sb.append("<div style='background:#1f2a44;border-radius:6px;padding:8px;font-size:11px;'>");
+                            sb.append("<div style='color:#22c55e;margin-bottom:4px;font-weight:600;'>✅ Applied Parameter Changes:</div>");
+                            for (Map.Entry<String, String> chg : aiEvt.parameterChanges.entrySet()) {
+                                sb.append("<div style='color:#e5e7eb;'>• <b>").append(escapeHtml(chg.getKey())).append("</b>: ").append(escapeHtml(chg.getValue())).append("</div>");
+                            }
+                            sb.append("</div>");
+                        } else {
+                            sb.append("<div style='color:#6b7280;font-size:11px;font-style:italic;'>⚡ Random mutation fallback (no parseable JSON from LLM)</div>");
+                        }
+                        sb.append("</div>");
+                    }
+                    sb.append("</div>");
+                }
+                sb.append("</div>");
+
+                // Collapsible static explanation
+                sb.append("<details style='margin-top:4px;'>");
+                sb.append("<summary style='color:#6b7280;font-size:12px;cursor:pointer;padding:4px 0;'>📖 How evolution works (click to expand)</summary>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:10px;'>");
+                sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;margin-bottom:8px;'>");
+                sb.append("<div style='margin-bottom:6px;'>Agent abandons its strategy when <b>all</b> conditions are met:</div>");
+                sb.append("<div style='color:#ef4444;'>1. ≥ <b>5 trades</b> completed (enough data)</div>");
+                sb.append("<div style='color:#ef4444;'>2. Win rate &lt; <b>70%</b> (underperforming threshold)</div>");
+                sb.append("<div style='color:#ef4444;'>3. Not yet evolved this session</div>");
+                sb.append("<div style='color:#ef4444;'>4. Agent is <b>not locked</b></div>");
+                sb.append("</div>");
                 sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;'>");
-                sb.append("<div style='margin-bottom:6px;'>An agent will create a new evolved version when ALL conditions are met:</div>");
-                sb.append("<div style='color:#ef4444;'>1. Has completed at least <b>5 trades</b> (enough data to judge)</div>");
-                sb.append("<div style='color:#ef4444;'>2. Win rate is below <b>70%</b> (underperforming threshold)</div>");
-                sb.append("<div style='color:#ef4444;'>3. Has not already evolved in this session</div>");
-                sb.append("</div>");
-                sb.append("<div style='margin-top:12px;margin-bottom:8px;'><b>What parameters are mutated?</b></div>");
-                sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;'>");
-                sb.append("<div>• <b>rsiMin/rsiMax</b> - RSI entry range (±10)</div>");
-                sb.append("<div>• <b>rsMin</b> - Relative Strength threshold (±0.05)</div>");
-                sb.append("<div>• <b>rvolMin</b> - Volume ratio threshold (±0.25)</div>");
-                sb.append("<div>• <b>stopLossPct</b> - Stop loss percentage (±1%)</div>");
-                sb.append("<div>• <b>takeProfitPct</b> - Take profit percentage (±2%)</div>");
+                sb.append("<div style='margin-bottom:4px;font-weight:600;color:#e5e7eb;'>Parameters mutated by LLM/Ollama:</div>");
+                sb.append("<div>• <b>rsiMin/rsiMax</b> — RSI entry range</div>");
+                sb.append("<div>• <b>rsMin</b> — Relative Strength threshold</div>");
+                sb.append("<div>• <b>rvolMin</b> — Volume ratio threshold</div>");
+                sb.append("<div>• <b>stopLossPct</b> — Stop loss %</div>");
+                sb.append("<div>• <b>takeProfitPct</b> — Take profit %</div>");
+                sb.append("<div>• <b>+ new filters</b> if LLM suggests them (e.g. cciMin, atrMultiplier)</div>");
                 sb.append("</div>");
                 sb.append("</div>");
+                sb.append("</details>");
                 sb.append("</div>");
 
                 // Saved Configurations with Cumulative Tracking Section
-                sb.append("<div class='card'><div class='title'>💾 Saved Configurations & Cumulative Tracking</div>");
+                sb.append("<div class='card'>");
+                sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;'>");
+                sb.append("<div class='title' style='margin-bottom:0;'>💾 Saved Configurations & Cumulative Tracking</div>");
+                sb.append("<form method='post' action='/aitool-clear-trackers' style='margin:0;' onsubmit=\"return confirm('Clear ALL tracked agents? This cannot be undone.')\">");
+                sb.append("<button type='submit' style='background:#7f1d1d;border:1px solid #ef4444;color:#fca5a5;padding:5px 12px;font-size:12px;border-radius:6px;cursor:pointer;'>🗑️ Clear All</button>");
+                sb.append("</form>");
+                sb.append("</div>");
                 sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>Track your best performing agents over time. Agents with >75% win rate are auto-saved daily.</div>");
                 
                 // Show saved trackers with cumulative stats
@@ -7189,6 +7584,28 @@ public class WebServer {
             }
         });
 
+        // Live status polling for Run All Agents progress bar
+        server.createContext("/aitool-run-status", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Content-Type", "application/json");
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+                boolean running = AIToolAgent.isRunning();
+                int prog = AIToolAgent.getRunProgress();
+                int tot  = AIToolAgent.getRunTotal();
+                String ca = AIToolAgent.getCurrentAgent();
+                String ct = AIToolAgent.getRunCurrentTicker();
+                String body = "{\"running\":" + running
+                    + ",\"progress\":" + prog
+                    + ",\"total\":" + tot
+                    + ",\"currentAgent\":\"" + (ca != null ? ca.replace("\"","\\\"") : "") + "\""
+                    + ",\"currentTicker\":\"" + (ct != null ? ct.replace("\"","\\\"") : "") + "\"}";
+                byte[] bytes = body.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                ex.sendResponseHeaders(200, bytes.length);
+                ex.getResponseBody().write(bytes);
+                ex.close();
+            }
+        });
+
         // Full scan with selected agents against all 500+ tickers
         server.createContext("/aitool-full-scan", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
@@ -7267,6 +7684,26 @@ public class WebServer {
                 }
                 
                 ex.getResponseHeaders().add("Location", "/aitool?deleted=true");
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // Clear all trackers endpoint
+        server.createContext("/aitool-clear-trackers", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/aitool");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                Map<String, ScoringConfig.SavedAgentTracker> trackers = ScoringConfig.getSavedAgentTrackers();
+                if (trackers != null) {
+                    for (String agentId : new ArrayList<>(trackers.keySet())) {
+                        ScoringConfig.deleteTracker(agentId);
+                    }
+                }
+                ScoringConfig.setActiveAgentConfig(null);
+                ex.getResponseHeaders().add("Location", "/aitool?cleared=true");
                 ex.sendResponseHeaders(303, -1); ex.close();
             }
         });
@@ -7400,6 +7837,16 @@ public class WebServer {
                 sb.append("<div class='card'><div class='title'>⚙️ Scoring Settings | הגדרות ציון</div>");
                 sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>Configure how stocks are scored. Choose a preset or customize weights.</div>");
                 sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>הגדר איך מניות מקבלות ציון. בחר פריסט או התאם משקלים.</div>");
+
+                // Per-page settings notice
+                sb.append("<div style='background:#0d1b30;border:1px solid #1e3a5f;border-radius:10px;padding:14px;margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;color:#93c5fd;margin-bottom:8px;'>💡 Settings are now also available directly on each agent page:</div>");
+                sb.append("<div style='display:flex;gap:10px;flex-wrap:wrap;'>");
+                sb.append("<a href='/favorites' style='display:inline-block;padding:8px 16px;background:#1f2a44;border-radius:6px;color:#22c55e;text-decoration:none;font-size:13px;'>🟢 SwingLongAiAgent → /favorites</a>");
+                sb.append("<a href='/alpha-agent' style='display:inline-block;padding:8px 16px;background:#1f2a44;border-radius:6px;color:#8b5cf6;text-decoration:none;font-size:13px;'>🚀 MomentumAiAgent → /alpha-agent</a>");
+                sb.append("</div>");
+                sb.append("<div style='font-size:11px;color:#6b7280;margin-top:8px;'>Each page lets you set the strategy mode and agent config inline, without leaving the page. Changes here apply globally (same underlying config).</div>");
+                sb.append("</div>");
 
                 // Current mode display
                 String modeName = activeCfg.name != null ? activeCfg.name : activeMode;
@@ -7878,7 +8325,121 @@ public class WebServer {
                 sb.append("</div>");
 
                 sb.append("</div>");
+
+                // ===================== DTS REGIME GATES SECTION =====================
+                DailyTradingSimulator.SimulatorStore dtsStore = DailyTradingSimulator.getStore();
+                sb.append("<div style='margin-top:20px;background:#0b1220;border:2px solid #f59e0b;border-radius:8px;padding:16px;margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:6px;color:#f59e0b;'>🛡️ DTS Regime Gates | שערי משמר שוק</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:14px;'>Controls which market regime checks block the AI agent scanner from opening new trades. Applies to Daily Trading Simulator &amp; AI Agent tool.</div>");
+
+                // Gate 1 – Market Guard
+                String g1On  = dtsStore.marketGuardEnabled ? "background:#22c55e;color:#000;" : "background:#1f2a44;color:#9ca3af;";
+                String g1Off = !dtsStore.marketGuardEnabled ? "background:#ef4444;color:#fff;" : "background:#1f2a44;color:#9ca3af;";
+                sb.append("<div style='display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px;background:#111827;border-radius:8px;margin-bottom:10px;'>");
+                sb.append("<div style='flex:1;'>");
+                sb.append("<div style='font-weight:600;color:#e5e7eb;'>Gate 1 – Market Guard (SPY Intraday)</div>");
+                sb.append("<div style='font-size:12px;color:#9ca3af;margin-top:3px;'>Blocks ALL agents when SPY drops &gt; 0.5%, falls below VWAP, or breaks SMA20. Re-checked every 15 min.</div>");
+                sb.append("</div>");
+                sb.append("<div style='display:flex;gap:6px;align-items:center;flex-shrink:0;'>");
+                sb.append("<button onclick=\"setDtsGate('market-guard', true)\" style='padding:7px 14px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;").append(g1On).append("'>ON</button>");
+                sb.append("<button onclick=\"setDtsGate('market-guard', false)\" style='padding:7px 14px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;").append(g1Off).append("'>OFF</button>");
+                sb.append("</div></div>");
+
+                // Gate 2 – Daily Regime (regimeOverride: true=OFF, false=ON)
+                boolean g2Active = !dtsStore.regimeOverride;
+                String g2On  = g2Active ? "background:#22c55e;color:#000;" : "background:#1f2a44;color:#9ca3af;";
+                String g2Off = !g2Active ? "background:#ef4444;color:#fff;" : "background:#1f2a44;color:#9ca3af;";
+                sb.append("<div style='display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px;background:#111827;border-radius:8px;margin-bottom:10px;'>");
+                sb.append("<div style='flex:1;'>");
+                sb.append("<div style='font-weight:600;color:#e5e7eb;'>Gate 2 – Daily Regime (TRENDING / CHOPPY)</div>");
+                sb.append("<div style='font-size:12px;color:#9ca3af;margin-top:3px;'>Blocks trend agents (Momentum, Intraday) in CHOPPY markets, and pullback agents in TRENDING markets. Detected via ADX(14), SPY&gt;VWAP, and ATR expansion.</div>");
+                sb.append("</div>");
+                sb.append("<div style='display:flex;gap:6px;align-items:center;flex-shrink:0;'>");
+                sb.append("<button onclick=\"setDtsGate('regime-override', true)\" style='padding:7px 14px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;").append(g2On).append("'>ON</button>");
+                sb.append("<button onclick=\"setDtsGate('regime-override', false)\" style='padding:7px 14px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;").append(g2Off).append("'>OFF</button>");
+                sb.append("</div></div>");
+
+                // Gate 3 – SUCCESS_2026 stricter guard
+                String g3On  = dtsStore.success2026GuardEnabled ? "background:#22c55e;color:#000;" : "background:#1f2a44;color:#9ca3af;";
+                String g3Off = !dtsStore.success2026GuardEnabled ? "background:#ef4444;color:#fff;" : "background:#1f2a44;color:#9ca3af;";
+                sb.append("<div style='display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px;background:#111827;border-radius:8px;'>");
+                sb.append("<div style='flex:1;'>");
+                sb.append("<div style='font-weight:600;color:#e5e7eb;'>Gate 3 – SUCCESS_2026 Stricter Guard</div>");
+                sb.append("<div style='font-size:12px;color:#9ca3af;margin-top:3px;'>Applies additional SPY filters (SMA20 + max drop -0.7%) specifically to SUCCESS_2026 momentum variants before they can open positions.</div>");
+                sb.append("</div>");
+                sb.append("<div style='display:flex;gap:6px;align-items:center;flex-shrink:0;'>");
+                sb.append("<button onclick=\"setDtsGate('success2026-guard', true)\" style='padding:7px 14px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;").append(g3On).append("'>ON</button>");
+                sb.append("<button onclick=\"setDtsGate('success2026-guard', false)\" style='padding:7px 14px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;").append(g3Off).append("'>OFF</button>");
+                sb.append("</div></div>");
+
+                // Current regime status badge
+                String curRegime = dtsStore.dailyRegime != null ? dtsStore.dailyRegime : "UNKNOWN";
+                String regimeColor = "TRENDING".equals(curRegime) ? "#22c55e" : ("CHOPPY".equals(curRegime) ? "#ef4444" : "#9ca3af");
+                sb.append("<div style='margin-top:12px;padding:10px 14px;background:#1f2a44;border-radius:8px;display:flex;align-items:center;gap:10px;font-size:12px;'>");
+                sb.append("<span style='color:#9ca3af;'>Current regime:</span>");
+                sb.append("<span style='font-weight:700;color:").append(regimeColor).append(";'>").append(escapeHtml(curRegime)).append("</span>");
+                if (dtsStore.regimeExplanation != null) {
+                    sb.append("<span style='color:#6b7280;'>|</span><span style='color:#9ca3af;'>").append(escapeHtml(dtsStore.regimeExplanation)).append("</span>");
+                }
+                sb.append("</div>");
+
+                sb.append("<script>");
+                sb.append("async function setDtsGate(gate, enabled) {");
+                sb.append("  var url;");
+                sb.append("  if (gate === 'regime-override') {");
+                sb.append("    url = '/api/daily-sim/regime-override?enabled=' + !enabled;");
+                sb.append("  } else {");
+                sb.append("    url = '/api/daily-sim/' + gate + '?enabled=' + enabled;");
+                sb.append("  }");
+                sb.append("  try {");
+                sb.append("    var r = await fetch(url, {method:'POST'});");
+                sb.append("    var d = await r.json();");
+                sb.append("    if (d.error) { alert('Error: ' + d.error); }");
+                sb.append("    else { location.reload(); }");
+                sb.append("  } catch(e) { alert('Request failed: ' + e); }");
+                sb.append("}");
+                sb.append("</script>");
+
+                sb.append("</div>");
+
                 respondHtml(ex, htmlPage(sb.toString()), 200);
+            }
+        });
+
+        // Per-page settings endpoints for SwingLongAiAgent (/favorites)
+        server.createContext("/favorites-settings-mode", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/favorites");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                String mode = form.getOrDefault("mode", "LONG_TERM_INVESTOR");
+                ScoringConfig.setActiveMode(mode);
+                ex.getResponseHeaders().add("Location", "/favorites?saved=mode");
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        server.createContext("/favorites-settings-agent-config", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/favorites");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                if ("true".equals(form.get("clear"))) {
+                    ScoringConfig.setActiveAgentConfig(null);
+                } else {
+                    String agentId = form.getOrDefault("agentId", "").trim();
+                    ScoringConfig.setActiveAgentConfig(agentId.isEmpty() ? null : agentId);
+                }
+                ex.getResponseHeaders().add("Location", "/favorites?saved=agent");
+                ex.sendResponseHeaders(303, -1); ex.close();
             }
         });
 
@@ -9073,8 +9634,12 @@ public class WebServer {
 
         dailyGreenExec.submit(() -> {
             try {
-                // Force reload scoring config to get latest settings
+                // Force reload and snapshot config ONCE at run start for thread-safety.
+                // Any mode change made on another page while this scan runs will NOT
+                // affect the in-flight scan because we captured an immutable snapshot here.
                 ScoringConfig.forceReload();
+                final ScoringConfig.ModeConfig runModeConfig = ScoringConfig.getActiveModeConfig();
+                final String runMode = ScoringConfig.getActiveMode();
                 
                 try { StockScannerRunner.setPrintGrahamDetails(false); } catch (Exception ignore) {}
                 List<String> universe = LongTermCandidateFinder.getUniverseTickers();

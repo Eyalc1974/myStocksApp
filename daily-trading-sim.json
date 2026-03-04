@@ -16,5 +16,17 @@
   "spyAbovePrevClose" : false,
   "spyAboveSma20" : null,
   "marketWaitMode" : true,
-  "marketWaitReason" : "WAIT: SPY below prev close"
+  "marketWaitReason" : "WAIT: SPY below prev close",
+  "dailyRegime" : null,
+  "regimeAdx" : null,
+  "regimeSpyAboveVwap" : null,
+  "regimeAtrToday" : null,
+  "regimeAtr20Avg" : null,
+  "regimeExplanation" : null,
+  "regimeOverride" : true,
+  "regimeCheckedAt" : null,
+  "marketGuardEnabled" : false,
+  "success2026GuardEnabled" : false,
+  "lastScanRejectionSummary" : null,
+  "lastScanCandidatesFound" : 0
 }

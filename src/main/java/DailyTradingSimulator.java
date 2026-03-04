@@ -221,6 +221,36 @@ public class DailyTradingSimulator {
         public Boolean spyAboveSma20;
         public Boolean marketWaitMode;
         public String marketWaitReason;
+
+        // Daily Regime Detection (ADX / VWAP / ATR)
+        public String dailyRegime;         // "TRENDING" or "CHOPPY"
+        public Double regimeAdx;
+        public Boolean regimeSpyAboveVwap;
+        public Double regimeAtrToday;
+        public Double regimeAtr20Avg;
+        public String regimeExplanation;
+        public boolean regimeOverride = true;  // default: info-only, never blocks trades
+        public String regimeCheckedAt;
+
+        // Regime Gate toggles (persisted from Settings page)
+        public boolean marketGuardEnabled = true;       // Gate 1: SPY intraday guard (waitMode)
+        public boolean success2026GuardEnabled = true;  // Gate 3: SUCCESS_2026 stricter market guard
+
+        // Scan rejection diagnostics
+        public String lastScanRejectionSummary;  // why no trades were found
+        public int lastScanCandidatesFound;       // how many passed base gate
+    }
+
+    public static class DailyRegimeResult {
+        public String regime = "TRENDING"; // "TRENDING" or "CHOPPY"
+        public double adx;
+        public boolean adxOk;              // adx >= 25
+        public boolean spyAboveVwap;       // close > (H+L+C)/3
+        public double atrToday;
+        public double atr20DayAvg;
+        public boolean atrOk;              // atrToday >= atr20DayAvg
+        public String explanation = "";
+        public boolean computed;
     }
 
     private static class SpyMarketRegime {
@@ -232,6 +262,7 @@ public class DailyTradingSimulator {
         Boolean aboveSma20;
         boolean waitMode;
         String reason;
+        DailyRegimeResult dailyRegime;
     }
 
     private static SpyMarketRegime computeSpyMarketRegime(MonitoringAlphaVantageClient av) {
@@ -256,8 +287,10 @@ public class DailyTradingSimulator {
         r.abovePrevClose = r.price > r.prevClose;
 
         // SMA20 from daily closes
+        final JsonNode[] dailyNodeHolder = new JsonNode[1];
         try {
             JsonNode daily = av.timeSeriesDaily("SPY");
+            dailyNodeHolder[0] = daily;
             if (daily != null) {
                 JsonNode ts = daily.path("Time Series (Daily)");
                 if (ts != null && !ts.isMissingNode() && ts.fields().hasNext()) {
@@ -302,7 +335,94 @@ public class DailyTradingSimulator {
         } else {
             r.reason = "GO: Market OK";
         }
+        // Compute daily regime (TRENDING vs CHOPPY) from the already-fetched daily data
+        r.dailyRegime = computeDailyRegimeFromData(dailyNodeHolder[0]);
         return r;
+    }
+
+    // ---- Rejection counters (reset each scan run, accessed single-threaded per scan) ----
+    private static final Map<String, int[]> scanRejections = new LinkedHashMap<>();
+
+    private static void countRej(String reason) {
+        scanRejections.computeIfAbsent(reason, k -> new int[]{0})[0]++;
+    }
+
+    private static DailyRegimeResult computeDailyRegimeFromData(JsonNode daily) {
+        DailyRegimeResult res = new DailyRegimeResult();
+        res.regime = "TRENDING";
+        res.explanation = "No SPY daily data";
+        if (daily == null) return res;
+        try {
+            JsonNode ts = daily.path("Time Series (Daily)");
+            if (ts == null || ts.isMissingNode()) return res;
+            List<String> keys = new ArrayList<>();
+            ts.fieldNames().forEachRemaining(keys::add);
+            Collections.sort(keys, Collections.reverseOrder()); // newest first
+            if (keys.size() < 30) {
+                res.explanation = "Not enough SPY data for regime detection";
+                return res;
+            }
+            int dataSize = Math.min(keys.size(), 55);
+            List<String> recentKeys = new ArrayList<>(keys.subList(0, dataSize));
+            Collections.reverse(recentKeys); // oldest-to-newest for indicator calculations
+            List<Double> highs = new ArrayList<>();
+            List<Double> lows = new ArrayList<>();
+            List<Double> closes = new ArrayList<>();
+            for (String k : recentKeys) {
+                JsonNode day = ts.path(k);
+                double h = parseDouble(day.path("2. high").asText(""));
+                double l = parseDouble(day.path("3. low").asText(""));
+                double c = parseDouble(day.path("4. close").asText(""));
+                if (h > 0 && l > 0 && c > 0) { highs.add(h); lows.add(l); closes.add(c); }
+            }
+            if (closes.size() < 28) {
+                res.explanation = "Insufficient OHLCV data (" + closes.size() + " days)";
+                return res;
+            }
+            // 1. ADX(14)
+            List<Double[]> adxData = ADX.calculateADX(highs, lows, closes, 14);
+            for (int i = adxData.size() - 1; i >= 0; i--) {
+                Double[] row = adxData.get(i);
+                if (row[0] != null) { res.adx = row[0]; break; }
+            }
+            res.adxOk = res.adx >= 25.0;
+            // 2. SPY price > daily VWAP approx: close > (H+L+C)/3
+            double todayH = highs.get(highs.size() - 1);
+            double todayL = lows.get(lows.size() - 1);
+            double todayC = closes.get(closes.size() - 1);
+            double dailyVwap = (todayH + todayL + todayC) / 3.0;
+            res.spyAboveVwap = todayC > dailyVwap;
+            // 3. ATR(14) today >= ATR(14) 20-day average
+            List<Double> atrValues = ATR.calculateATR(highs, lows, closes, 14);
+            List<Double> recentAtrs = new ArrayList<>();
+            for (int i = atrValues.size() - 1; i >= 0 && recentAtrs.size() < 20; i--) {
+                if (atrValues.get(i) != null) recentAtrs.add(atrValues.get(i));
+            }
+            if (!recentAtrs.isEmpty()) {
+                res.atrToday = recentAtrs.get(0);
+                double sum = 0; for (Double a : recentAtrs) sum += a;
+                res.atr20DayAvg = sum / recentAtrs.size();
+                res.atrOk = res.atrToday >= res.atr20DayAvg;
+            } else {
+                res.atrToday = 0; res.atr20DayAvg = 0; res.atrOk = true;
+            }
+            // Regime decision
+            boolean trending = res.adxOk && res.spyAboveVwap && res.atrOk;
+            res.regime = trending ? "TRENDING" : "CHOPPY";
+            res.computed = true;
+            StringBuilder sb = new StringBuilder();
+            sb.append(trending ? "TRENDING" : "CHOPPY");
+            sb.append(" | ADX=").append(String.format("%.1f", res.adx)).append(res.adxOk ? " ✓" : " ✗ (<25)");
+            sb.append(" | SPY>VWAP:").append(res.spyAboveVwap ? "✓" : "✗");
+            if (res.atrToday > 0) {
+                sb.append(" | ATR=").append(String.format("%.2f", res.atrToday))
+                  .append(res.atrOk ? "≥" : "<").append(String.format("%.2f", res.atr20DayAvg)).append(" avg").append(res.atrOk ? " ✓" : " ✗");
+            }
+            res.explanation = sb.toString();
+        } catch (Exception e) {
+            res.explanation = "Regime error: " + e.getMessage();
+        }
+        return res;
     }
     
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -722,6 +842,9 @@ public class DailyTradingSimulator {
                     if (store.trades == null) store.trades = new ArrayList<>();
                     if (store.scannedTickers == null) store.scannedTickers = new ArrayList<>();
                     if (store.variantPerformance == null) store.variantPerformance = new LinkedHashMap<>();
+                    // Migration: regime gate defaults to info-only (override=true)
+                    // Old stores may have regimeOverride=false; force it to true on first load
+                    store.regimeOverride = true;
                 }
             } catch (Exception e) {
                 logErr("[DailyTradingSimulator] Error loading store: " + e.getMessage());
@@ -918,9 +1041,23 @@ public class DailyTradingSimulator {
                         store.spyAboveSma20 = spyRegimeHolder[0].aboveSma20;
                         store.marketWaitMode = spyRegimeHolder[0].waitMode;
                         store.marketWaitReason = spyRegimeHolder[0].reason;
+                        // Daily Regime (TRENDING / CHOPPY)
+                        DailyRegimeResult dr = spyRegimeHolder[0].dailyRegime;
+                        if (dr != null) {
+                            store.dailyRegime = dr.regime;
+                            store.regimeAdx = dr.adx;
+                            store.regimeSpyAboveVwap = dr.spyAboveVwap;
+                            store.regimeAtrToday = dr.atrToday > 0 ? dr.atrToday : null;
+                            store.regimeAtr20Avg = dr.atr20DayAvg > 0 ? dr.atr20DayAvg : null;
+                            store.regimeExplanation = dr.explanation;
+                        }
+                        store.regimeCheckedAt = ZonedDateTime.now(NY_ZONE).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
                         saveStore();
                     }
                 }
+
+                // Reset rejection counters for this scan run
+                scanRejections.clear();
 
                 List<ScanCandidate> momentumCandidates = new ArrayList<>();
                 List<ScanCandidate> swingCandidates = new ArrayList<>();
@@ -952,6 +1089,7 @@ public class DailyTradingSimulator {
                         String sig = result.signal;
                         boolean isBuySignal = sig != null && (sig.contains("BUY") || sig.contains("BULLISH") || sig.contains("BREAKOUT"));
                         if (!isBuySignal) {
+                            countRej("No BUY signal (" + (sig != null ? sig : "null") + ")");
                             log("[DailyTradingSimulator] ⏭️ " + symbol + " skipped: " + sig + " (not a BUY signal)");
                             continue;
                         }
@@ -982,6 +1120,9 @@ public class DailyTradingSimulator {
                                 ", RS=" + String.format("%.2f", candidate.rsRatio) +
                                 ", RVOL=" + String.format("%.1f", result.rvol) +
                                 ", RSI=" + String.format("%.0f", result.rsi));
+                        } else {
+                            if (result.rvol < 1.0) countRej("Base RVOL<1.0");
+                            else countRej("Base RSI out of [30-90]");
                         }
                         
                         // Add to swing candidates too
@@ -1076,8 +1217,14 @@ public class DailyTradingSimulator {
                             String key = c.ticker + "_" + variant.id;
                             if (variantTradeCount.containsKey(key)) continue;
 
-                            if (spyRegimeHolder[0].waitMode) {
+                            if (store.marketGuardEnabled && spyRegimeHolder[0].waitMode) {
+                                countRej("WAIT MODE");
                                 log("[DailyTradingSimulator] WAIT MODE (" + spyRegimeHolder[0].reason + ") - skipping new MOMENTUM position for " + c.ticker);
+                                continue;
+                            }
+                            if (!store.regimeOverride && "CHOPPY".equals(store.dailyRegime)) {
+                                countRej("REGIME=CHOPPY (trend blocked)");
+                                log("[DailyTradingSimulator] REGIME=CHOPPY - skipping MOMENTUM (trend agent) for " + c.ticker);
                                 continue;
                             }
 
@@ -1103,9 +1250,22 @@ public class DailyTradingSimulator {
                             String key = c.ticker + "_" + variant.id;
                             if (variantTradeCount.containsKey(key)) continue;
 
-                            if (spyRegimeHolder[0].waitMode) {
+                            if (store.marketGuardEnabled && spyRegimeHolder[0].waitMode) {
+                                countRej("WAIT MODE");
                                 log("[DailyTradingSimulator] WAIT MODE (" + spyRegimeHolder[0].reason + ") - skipping new SWING position for " + c.ticker);
                                 continue;
+                            }
+                            boolean swingTrending = variant.entryFilters.rsiMax > 55.0;
+                            if (!store.regimeOverride) {
+                                if (swingTrending && "CHOPPY".equals(store.dailyRegime)) {
+                                    countRej("REGIME=CHOPPY (swing trend blocked)");
+                                    log("[DailyTradingSimulator] REGIME=CHOPPY - skipping SWING trend variant " + variant.id + " for " + c.ticker);
+                                    continue;
+                                } else if (!swingTrending && "TRENDING".equals(store.dailyRegime)) {
+                                    countRej("REGIME=TRENDING (swing pullback blocked)");
+                                    log("[DailyTradingSimulator] REGIME=TRENDING - skipping SWING pullback variant " + variant.id + " for " + c.ticker);
+                                    continue;
+                                }
                             }
 
                             SimulatedTrade trade = createEnhancedTrade(c, Strategy.SWING, variant);
@@ -1130,8 +1290,14 @@ public class DailyTradingSimulator {
                             String key = c.ticker + "_" + variant.id;
                             if (variantTradeCount.containsKey(key)) continue;
 
-                            if (spyRegimeHolder[0].waitMode) {
+                            if (store.marketGuardEnabled && spyRegimeHolder[0].waitMode) {
+                                countRej("WAIT MODE");
                                 log("[DailyTradingSimulator] WAIT MODE (" + spyRegimeHolder[0].reason + ") - skipping new INTRADAY position for " + c.ticker);
+                                continue;
+                            }
+                            if (!store.regimeOverride && "CHOPPY".equals(store.dailyRegime)) {
+                                countRej("REGIME=CHOPPY (trend blocked)");
+                                log("[DailyTradingSimulator] REGIME=CHOPPY - skipping INTRADAY (trend agent) for " + c.ticker);
                                 continue;
                             }
 
@@ -1151,8 +1317,8 @@ public class DailyTradingSimulator {
 
                 // Process SUCCESS 2026 variants (with enhanced market guard)
                 if (success2026Config.enabled) {
-                    // Check market guard from config (uses stricter thresholds)
-                    boolean marketSafe = success2026Config.marketGuard.isMarketSafe(
+                    // Check market guard from config (uses stricter thresholds); skipped if Gate 3 is disabled
+                    boolean marketSafe = !store.success2026GuardEnabled || success2026Config.marketGuard.isMarketSafe(
                         spyRegimeHolder[0].price, 
                         0, // VWAP not available from daily data
                         spyRegimeHolder[0].sma20 != null ? spyRegimeHolder[0].sma20 : 0,
@@ -1170,8 +1336,12 @@ public class DailyTradingSimulator {
                                 String key = c.ticker + "_" + variant.id;
                                 if (variantTradeCount.containsKey(key)) continue;
 
-                                if (spyRegimeHolder[0].waitMode) {
+                                if (store.marketGuardEnabled && spyRegimeHolder[0].waitMode) {
                                     log("[DailyTradingSimulator] WAIT MODE (" + spyRegimeHolder[0].reason + ") - skipping SUCCESS_2026 position for " + c.ticker);
+                                    continue;
+                                }
+                                if (!store.regimeOverride && "CHOPPY".equals(store.dailyRegime)) {
+                                    log("[DailyTradingSimulator] REGIME=CHOPPY - skipping SUCCESS_2026 (trend agent) for " + c.ticker);
                                     continue;
                                 }
 
@@ -1194,9 +1364,24 @@ public class DailyTradingSimulator {
                     store.lastScanTime = now.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"));
                     store.scannerRunning = false;
                     String waitSuffix = (store.marketWaitMode != null && store.marketWaitMode) ? (" | " + (store.marketWaitReason == null ? "WAIT" : store.marketWaitReason)) : "";
+                    int totalNewTrades = totalMomentumTrades + totalSwingTrades + totalIntradayTrades + totalSuccess2026Trades;
                     store.scannerStatus = "Completed. " + totalMomentumTrades + " Momentum + " +
                         totalSwingTrades + " Swing + " + totalIntradayTrades + " Intraday VWAP + " +
                         totalSuccess2026Trades + " Success2026 trades" + waitSuffix;
+                    store.lastScanCandidatesFound = momentumCandidates.size();
+                    // Build rejection summary
+                    if (totalNewTrades == 0 && !scanRejections.isEmpty()) {
+                        StringBuilder rejSb = new StringBuilder();
+                        rejSb.append("No trades found. Candidates passed base gate: ").append(momentumCandidates.size()).append(". ");
+                        rejSb.append("Top rejection reasons: ");
+                        scanRejections.entrySet().stream()
+                            .sorted((a, b) -> b.getValue()[0] - a.getValue()[0])
+                            .forEach(e -> rejSb.append(e.getKey()).append(" x").append(e.getValue()[0]).append("  "));
+                        store.lastScanRejectionSummary = rejSb.toString().trim();
+                        log("[DailyTradingSimulator] " + store.lastScanRejectionSummary);
+                    } else if (totalNewTrades > 0) {
+                        store.lastScanRejectionSummary = null;
+                    }
                     saveStore();
                 }
 
@@ -1600,29 +1785,34 @@ public class DailyTradingSimulator {
         if (f == null) return true;
 
         if (c.result.rvol < f.rvolMin) {
+            countRej("RVOL<" + f.rvolMin);
             log("[VariantFilter] " + c.ticker + " rejected by " + variant.id + ": RVOL " + String.format("%.1f", c.result.rvol) + " < " + f.rvolMin);
             return false;
         }
 
         if (c.result.rsi < f.rsiMin || c.result.rsi > f.rsiMax) {
+            countRej("RSI out of [" + (int)f.rsiMin + "-" + (int)f.rsiMax + "]");
             log("[VariantFilter] " + c.ticker + " rejected by " + variant.id +
                 ": RSI " + String.format("%.0f", c.result.rsi) + " not in [" + f.rsiMin + "-" + f.rsiMax + "]");
             return false;
         }
 
         if (c.cci < f.cciMin || c.cci > f.cciMax) {
+            countRej("CCI out of [" + (int)f.cciMin + "-" + (int)f.cciMax + "]");
             log("[VariantFilter] " + c.ticker + " rejected by " + variant.id +
                 ": CCI " + String.format("%.0f", c.cci) + " not in [" + f.cciMin + "-" + f.cciMax + "]");
             return false;
         }
 
         if (c.rsRatio < f.rsMin) {
+            countRej("RS<" + f.rsMin);
             log("[VariantFilter] " + c.ticker + " rejected by " + variant.id +
                 ": RS " + String.format("%.2f", c.rsRatio) + " < " + f.rsMin);
             return false;
         }
 
         if (f.maCrossoverRequired && !c.maCrossover) {
+            countRej("MA Crossover required");
             log("[VariantFilter] " + c.ticker + " rejected by " + variant.id + ": MA crossover required");
             return false;
         }
@@ -2067,9 +2257,54 @@ public class DailyTradingSimulator {
             summary.put("spyAboveSma20", store.spyAboveSma20);
             summary.put("marketWaitMode", store.marketWaitMode != null && store.marketWaitMode);
             summary.put("marketWaitReason", store.marketWaitReason);
+            summary.put("dailyRegime", store.dailyRegime != null ? store.dailyRegime : "UNKNOWN");
+            summary.put("regimeAdx", store.regimeAdx);
+            summary.put("regimeSpyAboveVwap", store.regimeSpyAboveVwap);
+            summary.put("regimeAtrToday", store.regimeAtrToday);
+            summary.put("regimeAtr20Avg", store.regimeAtr20Avg);
+            summary.put("regimeExplanation", store.regimeExplanation);
+            summary.put("regimeOverride", store.regimeOverride);
+            summary.put("regimeCheckedAt", store.regimeCheckedAt);
+            summary.put("marketGuardEnabled", store.marketGuardEnabled);
+            summary.put("success2026GuardEnabled", store.success2026GuardEnabled);
+            summary.put("lastScanRejectionSummary", store.lastScanRejectionSummary);
+            summary.put("lastScanCandidatesFound", store.lastScanCandidatesFound);
         }
         
         return summary;
+    }
+
+    /**
+     * Set the daily regime override - allows trading regardless of TRENDING/CHOPPY classification.
+     */
+    public static void setRegimeOverride(boolean override) {
+        synchronized (lock) {
+            store.regimeOverride = override;
+            saveStore();
+        }
+        log("[DailyTradingSimulator] Regime override set to: " + override);
+    }
+
+    /**
+     * Gate 1: Enable or disable the SPY intraday Market Guard (waitMode blocking).
+     */
+    public static void setMarketGuardEnabled(boolean enabled) {
+        synchronized (lock) {
+            store.marketGuardEnabled = enabled;
+            saveStore();
+        }
+        log("[DailyTradingSimulator] Market Guard (Gate 1) enabled: " + enabled);
+    }
+
+    /**
+     * Gate 3: Enable or disable the SUCCESS_2026 stricter market guard.
+     */
+    public static void setSuccess2026GuardEnabled(boolean enabled) {
+        synchronized (lock) {
+            store.success2026GuardEnabled = enabled;
+            saveStore();
+        }
+        log("[DailyTradingSimulator] SUCCESS_2026 Guard (Gate 3) enabled: " + enabled);
     }
 
     /**

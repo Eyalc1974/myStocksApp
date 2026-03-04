@@ -117,6 +117,7 @@ public class AIToolAgent {
         public double profitLoss;
         public double profitLossPct;
         public String status; // OPEN, CLOSED_WIN, CLOSED_LOSS
+        public String closeReason; // STOP_LOSS, TAKE_PROFIT, EOD_CLOSE
     }
 
     // Daily statistics record for historical tracking
@@ -361,13 +362,16 @@ public class AIToolAgent {
                         if (currentPrice <= trade.stopLoss) {
                             trade.status = "CLOSED_LOSS";
                             trade.exitPrice = trade.stopLoss; // Stopped out at stop loss
+                            trade.closeReason = "STOP_LOSS";
                         } else if (currentPrice >= trade.takeProfit) {
                             trade.status = "CLOSED_WIN";
                             trade.exitPrice = trade.takeProfit; // Hit take profit
+                            trade.closeReason = "TAKE_PROFIT";
                         } else {
                             // Neither stop nor limit hit - close at current price
                             double priceChange = currentPrice - trade.entryPrice;
                             trade.status = priceChange > 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
+                            trade.closeReason = "EOD_CLOSE";
                         }
                         
                         // Calculate P/L
@@ -460,6 +464,48 @@ public class AIToolAgent {
             }
         }
         return openPositions;
+    }
+
+    /**
+     * Returns top 20 open positions deduplicated by ticker.
+     * For each unique ticker, picks the most recent entry; collects the agent IDs holding it.
+     */
+    public static class OpenPositionSummary {
+        public String ticker;
+        public double entryPrice;
+        public double stopLoss;
+        public double takeProfit;
+        public String entryTime;
+        public List<String> agentIds = new ArrayList<>();
+    }
+
+    public static List<OpenPositionSummary> getTop20OpenPositionsDeduped() {
+        Map<String, OpenPositionSummary> byTicker = new LinkedHashMap<>();
+        List<Trade> all = getOpenPositions();
+        // Sort newest first
+        all.sort((a, b) -> {
+            if (a.entryTime == null) return 1;
+            if (b.entryTime == null) return -1;
+            return b.entryTime.compareTo(a.entryTime);
+        });
+        for (Trade t : all) {
+            if (t.ticker == null) continue;
+            OpenPositionSummary summary = byTicker.computeIfAbsent(t.ticker, k -> {
+                OpenPositionSummary s = new OpenPositionSummary();
+                s.ticker = t.ticker;
+                s.entryPrice = t.entryPrice;
+                s.stopLoss = t.stopLoss;
+                s.takeProfit = t.takeProfit;
+                s.entryTime = t.entryTime;
+                return s;
+            });
+            if (t.agentId != null && !summary.agentIds.contains(t.agentId)) {
+                summary.agentIds.add(t.agentId);
+            }
+        }
+        List<OpenPositionSummary> result = new ArrayList<>(byTicker.values());
+        if (result.size() > 20) result = result.subList(0, 20);
+        return result;
     }
 
     private static void deleteUnderperformingAgents() {
@@ -714,37 +760,100 @@ public class AIToolAgent {
             systemState.running = true;
             systemState.runCount++;
         }
-        
+
         try {
-            System.out.println("[AIToolAgent] Starting run #" + systemState.runCount + " with " + systemState.agents.size() + " agents");
-            
-            for (AgentConfig agent : systemState.agents.values()) {
+            // Ticker-centric scan: fetch each ticker ONCE, then test ALL agents against it.
+            // This uses 1 API call per ticker instead of (agentCount x tickerCount) calls.
+            List<String> allTickers = LongTermCandidateFinder.getAllSectorTickers();
+            List<AgentConfig> allAgents;
+            synchronized (LOCK) {
+                allAgents = new ArrayList<>(systemState.agents.values());
+            }
+
+            int total = allTickers.size();
+            System.out.println("[AIToolAgent] Run #" + systemState.runCount +
+                " | Scanning " + total + " tickers with " + allAgents.size() + " agents");
+            runProgress = 0;
+            runTotal = total;
+            runStockProgress = 0;
+            runCurrentTicker = null;
+
+            int totalSignals = 0;
+
+            for (int i = 0; i < allTickers.size(); i++) {
+                String ticker = allTickers.get(i);
+                runCurrentTicker = ticker;
+                runProgress = i;
+
                 try {
-                    synchronized (LOCK) {
-                        systemState.currentAgent = agent.id;
+                    // Fetch ticker data ONCE — reused by every agent (no redundant API calls)
+                    DataFetcher.setTicker(ticker);
+                    String json = DataFetcher.fetchStockData();
+                    if (json == null || json.isBlank()) {
+                        Thread.sleep(12500);
+                        continue;
                     }
-                    runSingleAgent(agent);
+
+                    // Test ALL agents against this ticker (zero extra API calls per agent)
+                    for (AgentConfig agent : allAgents) {
+                        try {
+                            synchronized (LOCK) { systemState.currentAgent = agent.id; }
+                            // Do not re-enter a position already open today for this agent+ticker
+                            if (hasOpenPositionToday(agent.id, ticker)) continue;
+
+                            TradeDecision decision = analyzeStock(ticker, agent, json);
+                            if (decision != null && decision.shouldTrade) {
+                                sendBuyAlertIfMonitored(agent, ticker, decision);
+                                Trade trade = executeTrade(agent, ticker, decision);
+                                if (trade != null) {
+                                    logBuySignal(agent.id, ticker, trade.entryPrice, trade.stopLoss, trade.takeProfit);
+                                    logTradeExecuted(agent.id, ticker, trade.entryPrice, trade.quantity);
+                                    synchronized (LOCK) {
+                                        systemState.tradeHistory
+                                            .computeIfAbsent(agent.id, k -> new ArrayList<>())
+                                            .add(trade);
+                                    }
+                                    updatePerformance(agent.id, trade);
+                                    totalSignals++;
+                                }
+                            }
+                        } catch (Exception e) {
+                            System.err.println("[AIToolAgent] Agent " + agent.id +
+                                " error on " + ticker + ": " + e.getMessage());
+                        }
+                    }
+
+                    // Rate limit: 1 API call per ticker (Alpha Vantage free tier = 5 calls/min)
+                    Thread.sleep(12500);
+
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
                 } catch (Exception e) {
-                    System.err.println("[AIToolAgent] Error running agent " + agent.id + ": " + e.getMessage());
+                    System.err.println("[AIToolAgent] Error fetching " + ticker + ": " + e.getMessage());
                 }
             }
-            
-            // After running all agents, check for evolution opportunities
+
+            runProgress = total;
+            System.out.println("[AIToolAgent] Scan complete — signals: " + totalSignals +
+                ", tickers: " + total + ", agents: " + allAgents.size());
+
             evolveUnderperformingAgents();
-            
-            // Auto-track winners (>75% win rate) and update existing trackers
             autoTrackWinners();
-            
+
             synchronized (LOCK) {
                 systemState.lastRunTime = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
                 systemState.running = false;
                 systemState.currentAgent = null;
             }
-            
+            runProgress = 0;
+            runTotal = 0;
+            runCurrentTicker = null;
+
             saveState();
             saveHistory();
-            
-            System.out.println("[AIToolAgent] Run completed");
+
+            System.out.println("[AIToolAgent] Run #" + systemState.runCount + " completed.");
         } catch (Exception e) {
             System.err.println("[AIToolAgent] Run error: " + e.getMessage());
             synchronized (LOCK) {
@@ -759,6 +868,7 @@ public class AIToolAgent {
         System.out.println("[AIToolAgent] Agent " + agent.id + " analyzing " + selectedStocks.size() + " stocks: " + selectedStocks);
         
         for (String ticker : selectedStocks) {
+            runCurrentTicker = ticker;
             try {
                 // Simulate analysis and trading decision
                 TradeDecision decision = analyzeStock(ticker, agent);
@@ -788,9 +898,26 @@ public class AIToolAgent {
     }
 
     private static List<String> selectRandomStocks(int count) {
-        List<String> shuffled = new ArrayList<>(NASDAQ_100_TICKERS);
+        List<String> shuffled = new ArrayList<>(LongTermCandidateFinder.getAllSectorTickers());
         Collections.shuffle(shuffled);
         return shuffled.subList(0, Math.min(count, shuffled.size()));
+    }
+
+    // Returns true if this agent already has an OPEN position on the given ticker opened today.
+    // Prevents the same agent from entering the same stock multiple times in one trading day.
+    private static boolean hasOpenPositionToday(String agentId, String ticker) {
+        String today = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_LOCAL_DATE);
+        synchronized (LOCK) {
+            List<Trade> trades = systemState.tradeHistory.get(agentId);
+            if (trades == null) return false;
+            for (Trade t : trades) {
+                if (ticker.equals(t.ticker) && "OPEN".equals(t.status)
+                        && t.entryTime != null && t.entryTime.startsWith(today)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     // Made public for testing/debugging
@@ -800,6 +927,7 @@ public class AIToolAgent {
         public double confidence;
         public double suggestedStopLoss;
         public double suggestedTakeProfit;
+        public double entryPrice; // set during analysis; avoids redundant API call in executeTrade
     }
 
     // Public wrapper for debugging - calls the private analyzeStock
@@ -1075,14 +1203,22 @@ public class AIToolAgent {
 
     private static TradeDecision analyzeStock(String ticker, AgentConfig agent) {
         try {
-            // Fetch current price data
             DataFetcher.setTicker(ticker);
             String json = DataFetcher.fetchStockData();
             if (json == null || json.isBlank()) return null;
-            
+            return analyzeStock(ticker, agent, json);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // Overload that accepts pre-fetched JSON — used by runAllAgents() ticker-centric loop
+    // to avoid making 65x redundant API calls for the same ticker.
+    private static TradeDecision analyzeStock(String ticker, AgentConfig agent, String json) {
+        try {
             List<Double> prices = PriceJsonParser.extractClosingPrices(json);
             if (prices == null || prices.size() < 20) return null;
-            
+
             double currentPrice = prices.get(prices.size() - 1);
             
             // Extract high/low prices if available (for CCI, ATR calculations)
@@ -1320,6 +1456,7 @@ public class AIToolAgent {
             // === ALL FILTERS PASSED - TRADE SIGNAL ===
             decision.shouldTrade = true;
             decision.action = "BUY";
+            decision.entryPrice = currentPrice; // cache for executeTrade — no 2nd API call needed
             decision.confidence = Math.min(1.0, (rsi - rsiMin) / (rsiMax - rsiMin));
             
             // Calculate stop loss and take profit from risk management
@@ -1408,13 +1545,18 @@ public class AIToolAgent {
 
     private static Trade executeTrade(AgentConfig agent, String ticker, TradeDecision decision) {
         try {
-            DataFetcher.setTicker(ticker);
-            String json = DataFetcher.fetchStockData();
-            List<Double> prices = PriceJsonParser.extractClosingPrices(json);
-            if (prices == null || prices.size() < 1) return null;
-            
-            // Use current/latest price as entry price
-            double entryPrice = prices.get(prices.size() - 1);
+            // Reuse the entry price captured during analysis (avoids a redundant API call).
+            // Falls back to fetching only when called outside the normal ticker-centric loop.
+            double entryPrice;
+            if (decision.entryPrice > 0) {
+                entryPrice = decision.entryPrice;
+            } else {
+                DataFetcher.setTicker(ticker);
+                String json = DataFetcher.fetchStockData();
+                List<Double> prices = PriceJsonParser.extractClosingPrices(json);
+                if (prices == null || prices.size() < 1) return null;
+                entryPrice = prices.get(prices.size() - 1);
+            }
             
             Trade trade = new Trade();
             trade.id = UUID.randomUUID().toString().substring(0, 8);
@@ -1635,8 +1777,9 @@ public class AIToolAgent {
      */
     public static void logTradeClosed(Trade trade) {
         String status = trade.status.contains("WIN") ? "WIN" : "LOSS";
-        String details = String.format("SELL: Entry=$%.2f, Exit=$%.2f, P/L=$%.2f (%.2f%%) [%s]",
-            trade.entryPrice, trade.exitPrice, trade.profitLoss, trade.profitLossPct, status);
+        String reason = trade.closeReason != null ? trade.closeReason : "EOD_CLOSE";
+        String details = String.format("SELL[%s]: Entry=$%.2f, Exit=$%.2f, P/L=$%.2f (%.2f%%) [%s]",
+            reason, trade.entryPrice, trade.exitPrice, trade.profitLoss, trade.profitLossPct, status);
         logTradeEvent("TRADE_CLOSED", trade.agentId, trade.ticker, details);
     }
     
@@ -1913,6 +2056,16 @@ public class AIToolAgent {
                     System.out.println("[AIToolAgent] Added new filter from AI: " + key + " = " + newVal);
                 }
                 
+                // Apply boolean entry filter changes from AI
+                for (Map.Entry<String, Boolean> change : aiSuggestion.booleanFilterChanges.entrySet()) {
+                    String key = change.getKey();
+                    boolean newVal = change.getValue();
+                    Object oldVal = evolved.entryFilters.get(key);
+                    result.changes.put(key, String.format("%s -> %s (AI)", oldVal != null ? oldVal.toString() : "null", newVal));
+                    evolved.entryFilters.put(key, newVal);
+                    System.out.println("[AIToolAgent] Applied boolean filter from AI: " + key + " = " + newVal);
+                }
+                
             } else {
                 // Fall back to random mutations if AI is unavailable
                 System.out.println("[AIToolAgent] AI unavailable, using random mutations...");
@@ -1948,13 +2101,17 @@ public class AIToolAgent {
         if (lowerName.contains("min") && !lowerName.contains("rsi")) {
             return Math.max(0, Math.min(10, value));
         }
-        // Max thresholds
-        if (lowerName.contains("max") && !lowerName.contains("rsi")) {
-            return Math.max(0, Math.min(1000, value));
+        // Volume thresholds (allow large values up to 100M)
+        if (lowerName.contains("volume")) {
+            return Math.max(0, Math.min(100_000_000, value));
         }
         // CCI bounds (-200 to 200)
         if (lowerName.contains("cci")) {
             return Math.max(-200, Math.min(200, value));
+        }
+        // Max thresholds (allow negative for indicators like CCI-based max)
+        if (lowerName.contains("max") && !lowerName.contains("rsi")) {
+            return Math.max(-1000, Math.min(1000, value));
         }
         // Default: allow reasonable range
         return Math.max(-1000, Math.min(1000, value));
@@ -2362,6 +2519,17 @@ public class AIToolAgent {
         });
     }
 
+    // Progress tracking for "Run All Agents Now"
+    private static volatile int runProgress = 0;   // agents completed
+    private static volatile int runTotal = 0;       // total agents in run
+    private static volatile int runStockProgress = 0; // stocks analyzed this agent
+    private static volatile String runCurrentTicker = null;
+
+    public static int getRunProgress() { return runProgress; }
+    public static int getRunTotal() { return runTotal; }
+    public static int getRunStockProgress() { return runStockProgress; }
+    public static String getRunCurrentTicker() { return runCurrentTicker; }
+
     // Status tracking for top agents full scan
     private static volatile boolean topAgentsFullScanRunning = false;
     private static volatile String topAgentsFullScanStatus = "";
@@ -2512,8 +2680,8 @@ public class AIToolAgent {
                 return;
             }
             
-            // Get all tickers from LongTermCandidateFinder
-            List<String> allTickers = LongTermCandidateFinder.getUniverseTickers();
+            // Get all tickers from sector banks (all sectors combined)
+            List<String> allTickers = LongTermCandidateFinder.getAllSectorTickers();
             topAgentsFullScanTotal = allTickers.size() * agentsToRun.size();
             
             // Build agent names for notification
@@ -2642,6 +2810,7 @@ public class AIToolAgent {
         public Map<String, Double> entryFilterChanges = new HashMap<>();
         public Map<String, Double> riskManagementChanges = new HashMap<>();
         public Map<String, Double> newFilters = new HashMap<>(); // New filters to add
+        public Map<String, Boolean> booleanFilterChanges = new HashMap<>(); // Boolean entry filter changes
         public String marketConditions;
         public String rawSuggestion; // Original text for display
         public boolean parsed = false;
@@ -2757,6 +2926,8 @@ public class AIToolAgent {
                     JsonNode val = entryFilters.get(field);
                     if (val.isNumber()) {
                         suggestion.entryFilterChanges.put(field, val.doubleValue());
+                    } else if (val.isBoolean()) {
+                        suggestion.booleanFilterChanges.put(field, val.booleanValue());
                     }
                 }
             }
