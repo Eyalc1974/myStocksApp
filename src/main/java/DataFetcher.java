@@ -162,6 +162,27 @@ public class DataFetcher {
         TICKER = ticker;
     }
 
+    // Fetch live current price + today's high/low/open via GLOBAL_QUOTE endpoint.
+    // Use this during market hours for real-time price monitoring.
+    public static String fetchGlobalQuote(String ticker) {
+        String url = String.format(
+                "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=%s%s&apikey=%s",
+                ticker, entitlementQueryParam(), API_KEY
+        );
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(REQUEST_TIMEOUT)
+                .build();
+        try {
+            ApiUsageTracker.track("GLOBAL_QUOTE");
+            HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) return response.body();
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public static String fetchStockData() {
         // בניית כתובת ה-URL לבקשה (למשל, מחירי סגירה יומיים)
         String url = String.format(

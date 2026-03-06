@@ -6918,6 +6918,7 @@ public class WebServer {
 
                 sb.append("<div style='margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;'>");
                 sb.append("<form method='post' action='/aitool-run' style='margin:0;'><button type='submit' id='runBtn'>▶️ Run All Agents Now</button></form>");
+                sb.append("<form method='post' action='/aitool-monitor' style='margin:0;'><button type='submit' id='monitorBtn' style='background:#0e7490;border-color:#0891b2;'>📡 Monitor Open Positions Now</button></form>");
                 sb.append("<a href='/aitool' style='padding:10px 14px;background:#1f2a44;border-radius:8px;'>🔄 Refresh</a>");
                 sb.append("</div>");
 
@@ -7217,9 +7218,62 @@ public class WebServer {
                 sb.append("</div>");
                 sb.append("</div>");
 
+                // Open Positions Section - Live monitoring table
+                sb.append("<div class='card'><div class='title'>🟢 Open Positions — Live Monitoring</div>");
+                AIToolAgent.AgentSystemState agentState = AIToolAgent.getSystemState();
+                {
+                    List<AIToolAgent.Trade> openTrades = new ArrayList<>();
+                    if (agentState.tradeHistory != null) {
+                        for (List<AIToolAgent.Trade> tlist : agentState.tradeHistory.values()) {
+                            for (AIToolAgent.Trade t : tlist) {
+                                if ("OPEN".equals(t.status)) openTrades.add(t);
+                            }
+                        }
+                    }
+                    openTrades.sort((a, b) -> {
+                        if (a.entryTime == null) return 1;
+                        if (b.entryTime == null) return -1;
+                        return b.entryTime.compareTo(a.entryTime);
+                    });
+                    if (openTrades.isEmpty()) {
+                        sb.append("<div style='color:#6b7280;padding:20px;text-align:center;'>No open positions right now.</div>");
+                    } else {
+                        sb.append("<div style='margin-bottom:8px;color:#9ca3af;'>Open: <b style='color:#22c55e;'>").append(openTrades.size()).append("</b> position(s)</div>");
+                        sb.append("<div style='overflow-x:auto;'><table style='width:100%;border-collapse:collapse;font-size:12px;'>");
+                        sb.append("<thead><tr style='background:#1f2a44;'>");
+                        sb.append("<th style='padding:8px;text-align:left;'>Entry Time</th>");
+                        sb.append("<th style='padding:8px;text-align:left;'>Agent</th>");
+                        sb.append("<th style='padding:8px;text-align:left;'>Ticker</th>");
+                        sb.append("<th style='padding:8px;text-align:right;'>Entry $</th>");
+                        sb.append("<th style='padding:8px;text-align:right;'>Stop $</th>");
+                        sb.append("<th style='padding:8px;text-align:right;'>Target $</th>");
+                        sb.append("<th style='padding:8px;text-align:center;'>1R Partial</th>");
+                        sb.append("<th style='padding:8px;text-align:center;'>Status</th>");
+                        sb.append("</tr></thead><tbody>");
+                        for (AIToolAgent.Trade t : openTrades) {
+                            sb.append("<tr style='border-bottom:1px solid #1f2a44;'>");
+                            String entryTimeStr = t.entryTime != null && t.entryTime.length() > 16 ? t.entryTime.substring(11, 16) : (t.entryTime != null ? t.entryTime : "");
+                            sb.append("<td style='padding:6px;color:#9ca3af;'>").append(escapeHtml(entryTimeStr)).append("</td>");
+                            sb.append("<td style='padding:6px;'>").append(escapeHtml(t.agentId != null ? t.agentId : "")).append("</td>");
+                            sb.append("<td style='padding:6px;font-weight:600;color:#93c5fd;'>").append(escapeHtml(t.ticker != null ? t.ticker : "")).append("</td>");
+                            sb.append("<td style='padding:6px;text-align:right;'>$").append(String.format("%.2f", t.entryPrice)).append("</td>");
+                            sb.append("<td style='padding:6px;text-align:right;color:#ef4444;'>$").append(String.format("%.2f", t.stopLoss)).append("</td>");
+                            sb.append("<td style='padding:6px;text-align:right;color:#22c55e;'>$").append(String.format("%.2f", t.takeProfit)).append("</td>");
+                            if (t.partialExitDone) {
+                                sb.append("<td style='padding:6px;text-align:center;color:#a78bfa;font-weight:600;'>💰 $").append(String.format("%.2f", t.partialExitPrice)).append("</td>");
+                            } else {
+                                sb.append("<td style='padding:6px;text-align:center;color:#6b7280;'>—</td>");
+                            }
+                            sb.append("<td style='padding:6px;text-align:center;'><span style='background:#1f4f2e;color:#22c55e;padding:2px 8px;border-radius:10px;font-size:11px;'>OPEN</span></td>");
+                            sb.append("</tr>");
+                        }
+                        sb.append("</tbody></table></div>");
+                    }
+                }
+                sb.append("</div>");
+
                 // Trade History Section - All Buy/Sell transactions
                 sb.append("<div class='card'><div class='title'>📜 Trade History - All Buy/Sell Transactions</div>");
-                AIToolAgent.AgentSystemState agentState = AIToolAgent.getSystemState();
                 if (agentState.tradeHistory == null || agentState.tradeHistory.isEmpty()) {
                     sb.append("<div style='color:#6b7280;padding:20px;text-align:center;'>No trades recorded yet. Run agents to see trade history.</div>");
                 } else {
@@ -7299,6 +7353,40 @@ public class WebServer {
                         sb.append("<div style='color:#6b7280;padding:10px;text-align:center;'>Showing 100 of ").append(allTrades.size()).append(" trades. Full history in newStrategies/agent-state.json</div>");
                     }
                     sb.append("</div>");
+                }
+                sb.append("</div>");
+
+                // Scan Detail Log Viewer
+                sb.append("<div class='card'><div class='title'>🔍 Scan Detail Log — Operations Trace</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:8px;'>Live log from <code>newStrategies/scan-detail.log</code> — auto-cleaned every 48h. Shows every agent decision: PASS, REJECT (with reason), MONITOR checks, EOD closes.</div>");
+                java.nio.file.Path scanLogPath = java.nio.file.Paths.get("newStrategies", "scan-detail.log");
+                if (!java.nio.file.Files.exists(scanLogPath)) {
+                    sb.append("<div style='color:#6b7280;padding:16px;text-align:center;'>No scan log yet — will appear after the first agent run.</div>");
+                } else {
+                    try {
+                        java.util.List<String> logLines = java.nio.file.Files.readAllLines(scanLogPath, java.nio.charset.StandardCharsets.UTF_8);
+                        // Show last 500 lines (newest at top)
+                        int start = Math.max(0, logLines.size() - 500);
+                        java.util.List<String> recent = logLines.subList(start, logLines.size());
+                        sb.append("<div style='margin-bottom:8px;color:#9ca3af;font-size:12px;'>Showing last ")
+                          .append(recent.size()).append(" of ").append(logLines.size()).append(" lines</div>");
+                        sb.append("<div style='background:#0d1117;border-radius:6px;padding:12px;max-height:500px;overflow-y:auto;font-family:monospace;font-size:11px;line-height:1.6;'>");
+                        for (int li = recent.size() - 1; li >= 0; li--) {
+                            String line = escapeHtml(recent.get(li));
+                            String color = "#e5e7eb";
+                            if (line.contains("✅ BUY SIGNAL") || line.contains("PARTIAL") || line.contains("TAKE_PROFIT")) color = "#22c55e";
+                            else if (line.contains("❌ REJECT") || line.contains("STOP") || line.contains("FETCH FAIL") || line.contains("ERROR")) color = "#ef4444";
+                            else if (line.contains("MONITOR") && line.contains("HOLD")) color = "#60a5fa";
+                            else if (line.contains("MONITOR")) color = "#f59e0b";
+                            else if (line.contains("SCAN START") || line.contains("SCAN END") || line.contains("EOD")) color = "#a78bfa";
+                            else if (line.contains("═") || line.contains("─")) color = "#374151";
+                            else if (line.contains("SKIP")) color = "#6b7280";
+                            sb.append("<div style='color:").append(color).append(";'>").append(line).append("</div>");
+                        }
+                        sb.append("</div>");
+                    } catch (Exception e) {
+                        sb.append("<div style='color:#ef4444;'>Error reading log: ").append(escapeHtml(e.getMessage())).append("</div>");
+                    }
                 }
                 sb.append("</div>");
 
@@ -7565,6 +7653,22 @@ public class WebServer {
                 sb.append("</div>");
 
                 respondHtml(ex, htmlPage(sb.toString()), 200);
+            }
+        });
+
+        server.createContext("/aitool-monitor", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/aitool");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                new Thread(() -> {
+                    try { AIToolAgent.monitorOpenPositions(); }
+                    catch (Exception e) { System.err.println("[Monitor] Error: " + e.getMessage()); }
+                }, "manual-monitor").start();
+                ex.getResponseHeaders().add("Location", "/aitool?monitored=true");
+                ex.sendResponseHeaders(303, -1); ex.close();
             }
         });
 

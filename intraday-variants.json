@@ -36,7 +36,10 @@
         "takeProfitPct": 4.0,
         "trailingStopPct": 1.5,
         "riskRewardRatio": 2.0,
-        "maxPositionPct": 5.0
+        "maxPositionPct": 5.0,
+        "partialExitAt1R": true,
+        "partialExitPct": 50.0,
+        "breakEvenAfterPartial": true
       },
       "timing": {
         "entryWindowStart": "09:45",
@@ -79,7 +82,10 @@
         "takeProfitPct": 3.0,
         "trailingStopPct": 1.0,
         "riskRewardRatio": 2.0,
-        "maxPositionPct": 5.0
+        "maxPositionPct": 5.0,
+        "partialExitAt1R": true,
+        "partialExitPct": 50.0,
+        "breakEvenAfterPartial": true
       },
       "timing": {
         "entryWindowStart": "10:00",
