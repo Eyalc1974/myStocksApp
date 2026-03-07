@@ -33,6 +33,12 @@ public class AIToolAgent {
     // Win rate threshold for Discord notification (notify when agent reaches this)
     private static final double WIN_RATE_NOTIFICATION_THRESHOLD = 60.0;
     private static final int MIN_TRADES_FOR_NOTIFICATION = 5;
+
+    private static final int SCORE_THRESHOLD = 8;
+    private static final int CONFLUENCE_SCORE_THRESHOLD = 6;
+    private static final int CONFLUENCE_BONUS = 2;
+    private static final int MAX_TRADES_PER_SCAN = 5;
+    private static final double RISK_PER_TRADE = 500.0; // $ risk per trade for position sizing
     
     // Number of random stocks each agent analyzes per run
     // Note: Alpha Vantage free tier = 5 calls/minute, so keep this low
@@ -101,6 +107,8 @@ public class AIToolAgent {
         public String lockedAt; // ISO timestamp when locked
         public String codeVersion; // Git commit SHA when locked
         public String lockedByUser; // Who locked it
+        public boolean masterStrategy = false;
+        public String strategyType; // MOMENTUM_BREAKOUT, PULLBACK, TREND_CONTINUATION
     }
 
     public static class Trade {
@@ -121,6 +129,14 @@ public class AIToolAgent {
         public String closeReason; // STOP_LOSS, TAKE_PROFIT, EOD_CLOSE, PARTIAL_1R
         public boolean partialExitDone = false; // true after 1R partial exit fires intraday
         public double partialExitPrice = 0;     // price at which partial exit was executed
+        // Strategy attribution — stored for post-trade performance analysis
+        public int entryScore;           // total score at entry (out of 12)
+        public int entryVolumeScore;
+        public int entryTrendScore;
+        public int entryMomentumScore;
+        public int entrySetupScore;
+        public int entryConfluenceCount; // how many strategies agreed at entry
+        public String strategyType;      // MOMENTUM_BREAKOUT | PULLBACK | TREND_CONTINUATION
     }
 
     // Daily statistics record for historical tracking
@@ -682,21 +698,83 @@ public class AIToolAgent {
 
     // ==================== END SCAN DETAIL LOG ====================
 
+    private static void sendRankedScanSummary(List<RankedSignal> all, List<RankedSignal> top) {
+        if (all.isEmpty()) {
+            sendDiscord("📊 **Scan Complete** — No signals above threshold (" + SCORE_THRESHOLD + "/12) this run.");
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("📊 **Scan Complete — Top Signals**\n");
+        sb.append("━━━━━━━━━━━━━━━━━━━━\n");
+        String[] medals = {"🥇", "🥈", "🥉", "4️⃣", "5️⃣"};
+        for (int i = 0; i < top.size(); i++) {
+            RankedSignal sig = top.get(i);
+            String m        = (i < medals.length) ? medals[i] : (i + 1) + ".";
+            String cf        = sig.confluence ? " 🔥" : "";
+            double entry     = sig.decision.entryPrice;
+            double sl        = sig.decision.suggestedStopLoss;
+            double tp        = sig.decision.suggestedTakeProfit;
+            double slPct     = entry > 0 ? ((entry - sl) / entry) * 100  : 0;
+            double tpPct     = entry > 0 ? ((tp - entry) / entry) * 100  : 0;
+            double rr        = slPct > 0 ? tpPct / slPct : 0;
+            int    shares    = (entry > sl && sl > 0)
+                ? (int) Math.max(1, Math.round(RISK_PER_TRADE / (entry - sl))) : 0;
+            double posValue  = shares * entry;
+            String holdTime  = holdDuration(sig.strategy.strategyType);
+            // Line 1 — signal identity
+            sb.append(String.format("%s **%s** | %s | Score **%d/12**%s | Vol:%d Trend:%d Mom:%d Setup:%d%n",
+                m, sig.ticker, sig.strategy.strategyType, sig.decision.totalScore, cf,
+                sig.decision.volumeScore, sig.decision.trendScore,
+                sig.decision.momentumScore, sig.decision.setupScore));
+            // Line 2 — trade execution details
+            sb.append(String.format(
+                "   📈 Entry **$%.2f**  🛑 SL **$%.2f** (-%.1f%%)  🎯 TP **$%.2f** (+%.1f%%)%n",
+                entry, sl, slPct, tp, tpPct));
+            sb.append(String.format(
+                "   📦 ~%d shares ($%,.0f at risk $%.0f)  ⏱ %s  R:R %.1f:1%n",
+                shares, posValue, RISK_PER_TRADE, holdTime, rr));
+        }
+        int filtered = all.size() - top.size();
+        if (filtered > 0) {
+            sb.append("❌ Filtered out: **").append(filtered).append("** lower-scored signal(s)");
+        }
+        sendDiscord(sb.toString());
+    }
+
+    private static String holdDuration(String strategyType) {
+        if (strategyType == null) return "Intraday";
+        switch (strategyType) {
+            case "MOMENTUM_BREAKOUT":    return "Intraday";
+            case "PULLBACK":             return "Intraday→2d";
+            case "TREND_CONTINUATION":  return "Swing 2–5d";
+            default:                     return "Intraday";
+        }
+    }
+
     /**
      * Send a SELL / close notification to Discord for any closed trade.
      */
     private static void sendSellDiscord(Trade trade, String reason) {
         String icon  = trade.profitLoss >= 0 ? "✅" : "❌";
         String plStr = String.format("%+.2f%%  ($%+.2f)", trade.profitLossPct, trade.profitLoss);
+        String scoreStr = trade.entryScore > 0
+            ? String.format("Score: **%d/12** (V:%d T:%d M:%d S:%d)",
+                trade.entryScore, trade.entryVolumeScore, trade.entryTrendScore,
+                trade.entryMomentumScore, trade.entrySetupScore)
+            : "";
+        String cfStr = trade.entryConfluenceCount >= 2
+            ? "  🔥 Confluence(" + trade.entryConfluenceCount + " strategies)" : "";
         String msg = String.format(
             "%s **SELL — %s**\n" +
             "━━━━━━━━━━━━━━━━━━━━\n" +
             "**%s**  Entry: $%.2f → Exit: $%.2f\n" +
             "P/L: **%s**\n" +
-            "🤖 Agent: %s  |  ⏰ %s",
+            "%s%s\n" +
+            "🤖 %s  |  ⏰ %s",
             icon, reason,
             trade.ticker, trade.entryPrice, trade.exitPrice,
             plStr,
+            scoreStr, cfStr,
             trade.agentId,
             ZonedDateTime.now(NY).format(DateTimeFormatter.ofPattern("HH:mm z"))
         );
@@ -977,6 +1055,8 @@ public class AIToolAgent {
                         agent.lockedAt = root.path("lockedAt").asText(null);
                         agent.codeVersion = root.path("codeVersion").asText(null);
                         agent.lockedByUser = root.path("lockedByUser").asText(null);
+                        agent.masterStrategy = root.path("masterStrategy").asBoolean(false);
+                        agent.strategyType = root.path("strategyType").asText(null);
                         
                         JsonNode ef = root.get("entryFilters");
                         if (ef != null) {
@@ -1056,13 +1136,28 @@ public class AIToolAgent {
 
             int totalSignals = 0;
 
+            // Separate master strategies (scoring-based) from legacy agents (binary pass/fail)
+            List<AgentConfig> masterStrategies = allAgents.stream()
+                .filter(a -> a.masterStrategy && a.strategyType != null)
+                .sorted(Comparator.comparing((AgentConfig a) -> a.id))
+                .collect(Collectors.toList());
+            List<AgentConfig> legacyAgents = allAgents.stream()
+                .filter(a -> !a.masterStrategy)
+                .collect(Collectors.toList());
+            boolean useMasters = !masterStrategies.isEmpty();
+            List<RankedSignal> allSignals = new ArrayList<>();
+
+            writeScanLog("[SCAN MODE] " + (useMasters
+                ? "MASTER STRATEGY scoring — " + masterStrategies.size() + " strategies (threshold=" + SCORE_THRESHOLD + "/12)"
+                : "LEGACY AGENTS binary — " + legacyAgents.size() + " agents"));
+
             for (int i = 0; i < allTickers.size(); i++) {
                 String ticker = allTickers.get(i);
                 runCurrentTicker = ticker;
                 runProgress = i;
 
                 try {
-                    // Fetch ticker data ONCE — reused by every agent (no redundant API calls)
+                    // Fetch ticker data ONCE — reused by every agent/strategy (no redundant API calls)
                     DataFetcher.setTicker(ticker);
                     String json = DataFetcher.fetchStockData();
                     if (json == null || json.isBlank()) {
@@ -1071,46 +1166,111 @@ public class AIToolAgent {
                         continue;
                     }
 
-                    // Test ALL agents against this ticker (zero extra API calls per agent)
-                    for (AgentConfig agent : allAgents) {
-                        try {
-                            synchronized (LOCK) { systemState.currentAgent = agent.id; }
-                            // Do not re-enter a position already open today for this agent+ticker
-                            if (hasOpenPositionToday(agent.id, ticker)) {
-                                writeScanLog("[SKIP] " + ticker + " | " + agent.id + " — already has open position today");
+                    if (useMasters) {
+                        // ── MASTER STRATEGY PATH: score-based with confluence detection ──
+                        IndicatorData data = computeIndicators(ticker, json);
+                        // Update RS ranking cache (used to pre-filter universe on next scan)
+                        double rsScore = data.momentum20d
+                            + (data.priceAboveSMA50  ? 4.0 : -4.0)
+                            + (data.priceAboveSMA200 ? 5.0 : -5.0)
+                            + (data.rvol > 2.0       ? 2.0 :  0.0);
+                        LongTermCandidateFinder.updateRSScore(ticker, data.valid ? rsScore : -99.0);
+                        if (!data.valid) {
+                            writeScanLog("[NULL] " + ticker + " — insufficient data for scoring");
+                            Thread.sleep(12500);
+                            continue;
+                        }
+
+                        // Score each master strategy against this ticker
+                        Map<String, TradeDecision> scoreMap = new LinkedHashMap<>();
+                        for (AgentConfig strategy : masterStrategies) {
+                            synchronized (LOCK) { systemState.currentAgent = strategy.id; }
+                            if (hasOpenPositionToday(strategy.id, ticker)) {
+                                writeScanLog("[SKIP] " + ticker + " | " + strategy.id + " — already has open position today");
                                 continue;
                             }
+                            TradeDecision d = scoreStrategyForTicker(ticker, strategy, data);
+                            scoreMap.put(strategy.id, d);
+                        }
 
-                            TradeDecision decision = analyzeStock(ticker, agent, json);
-                            if (decision == null) {
-                                writeScanLog("[NULL] " + ticker + " | " + agent.id + " — insufficient data");
-                            } else if (decision.shouldTrade) {
-                                writeScanLog("[✅ BUY SIGNAL] " + ticker + " | " + agent.id +
-                                    " | Entry=$" + String.format("%.2f", decision.entryPrice) +
-                                    " SL=$" + String.format("%.2f", decision.suggestedStopLoss) +
-                                    " TP=$" + String.format("%.2f", decision.suggestedTakeProfit) +
-                                    " conf=" + String.format("%.2f", decision.confidence));
-                                sendBuyAlertIfMonitored(agent, ticker, decision);
-                                Trade trade = executeTrade(agent, ticker, decision);
-                                if (trade != null) {
-                                    logBuySignal(agent.id, ticker, trade.entryPrice, trade.stopLoss, trade.takeProfit);
-                                    logTradeExecuted(agent.id, ticker, trade.entryPrice, trade.quantity);
-                                    synchronized (LOCK) {
-                                        systemState.tradeHistory
-                                            .computeIfAbsent(agent.id, k -> new ArrayList<>())
-                                            .add(trade);
-                                    }
-                                    updatePerformance(agent.id, trade);
-                                    totalSignals++;
-                                }
-                            } else {
-                                writeScanLog("[❌ REJECT] " + ticker + " | " + agent.id +
-                                    " — " + (decision.rejectReason != null ? decision.rejectReason : "unknown"));
+                        // Confluence: count strategies that score >= CONFLUENCE_SCORE_THRESHOLD
+                        long confluenceCount = scoreMap.values().stream()
+                            .filter(d -> d.totalScore >= CONFLUENCE_SCORE_THRESHOLD)
+                            .count();
+
+                        // Apply confluence bonus, then decide to trade
+                        for (AgentConfig strategy : masterStrategies) {
+                            TradeDecision d = scoreMap.get(strategy.id);
+                            if (d == null) continue;
+
+                            if (confluenceCount >= 2) {
+                                d.confluenceBonus = CONFLUENCE_BONUS;
+                                d.totalScore += CONFLUENCE_BONUS;
                             }
-                        } catch (Exception e) {
-                            System.err.println("[AIToolAgent] Agent " + agent.id +
-                                " error on " + ticker + ": " + e.getMessage());
-                            writeScanLog("[ERROR] " + ticker + " | " + agent.id + " — " + e.getMessage());
+                            d.confluenceCount = (int) confluenceCount;
+
+                            d.shouldTrade = d.totalScore >= SCORE_THRESHOLD;
+
+                            if (d.shouldTrade) {
+                                String confluenceTag = confluenceCount >= 2
+                                    ? " 🔥CONFLUENCE(+" + CONFLUENCE_BONUS + ")" : "";
+                                writeScanLog("[✅ SIGNAL] " + ticker + " | " + strategy.id +
+                                    " | Score=" + d.totalScore + "/12" + confluenceTag +
+                                    " (V=" + d.volumeScore + " T=" + d.trendScore +
+                                    " M=" + d.momentumScore + " S=" + d.setupScore + ")" +
+                                    " | Entry=$" + String.format("%.2f", d.entryPrice) +
+                                    " SL=$" + String.format("%.2f", d.suggestedStopLoss) +
+                                    " TP=$" + String.format("%.2f", d.suggestedTakeProfit));
+                                allSignals.add(new RankedSignal(strategy, ticker, d, confluenceCount >= 2));
+                            } else {
+                                writeScanLog("[❌ SCORE] " + ticker + " | " + strategy.id +
+                                    " — Score=" + d.totalScore + "/12 < " + SCORE_THRESHOLD +
+                                    " (V=" + d.volumeScore + " T=" + d.trendScore +
+                                    " M=" + d.momentumScore + " S=" + d.setupScore + ")");
+                            }
+                        }
+
+                    } else {
+                        // ── LEGACY AGENT PATH: binary pass/fail (unchanged) ──
+                        for (AgentConfig agent : legacyAgents) {
+                            try {
+                                synchronized (LOCK) { systemState.currentAgent = agent.id; }
+                                if (hasOpenPositionToday(agent.id, ticker)) {
+                                    writeScanLog("[SKIP] " + ticker + " | " + agent.id + " — already has open position today");
+                                    continue;
+                                }
+
+                                TradeDecision decision = analyzeStock(ticker, agent, json);
+                                if (decision == null) {
+                                    writeScanLog("[NULL] " + ticker + " | " + agent.id + " — insufficient data");
+                                } else if (decision.shouldTrade) {
+                                    writeScanLog("[✅ BUY SIGNAL] " + ticker + " | " + agent.id +
+                                        " | Entry=$" + String.format("%.2f", decision.entryPrice) +
+                                        " SL=$" + String.format("%.2f", decision.suggestedStopLoss) +
+                                        " TP=$" + String.format("%.2f", decision.suggestedTakeProfit) +
+                                        " conf=" + String.format("%.2f", decision.confidence));
+                                    sendBuyAlertIfMonitored(agent, ticker, decision);
+                                    Trade trade = executeTrade(agent, ticker, decision);
+                                    if (trade != null) {
+                                        logBuySignal(agent.id, ticker, trade.entryPrice, trade.stopLoss, trade.takeProfit);
+                                        logTradeExecuted(agent.id, ticker, trade.entryPrice, trade.quantity);
+                                        synchronized (LOCK) {
+                                            systemState.tradeHistory
+                                                .computeIfAbsent(agent.id, k -> new ArrayList<>())
+                                                .add(trade);
+                                        }
+                                        updatePerformance(agent.id, trade);
+                                        totalSignals++;
+                                    }
+                                } else {
+                                    writeScanLog("[❌ REJECT] " + ticker + " | " + agent.id +
+                                        " — " + (decision.rejectReason != null ? decision.rejectReason : "unknown"));
+                                }
+                            } catch (Exception e) {
+                                System.err.println("[AIToolAgent] Agent " + agent.id +
+                                    " error on " + ticker + ": " + e.getMessage());
+                                writeScanLog("[ERROR] " + ticker + " | " + agent.id + " — " + e.getMessage());
+                            }
                         }
                     }
 
@@ -1123,6 +1283,39 @@ public class AIToolAgent {
                 } catch (Exception e) {
                     System.err.println("[AIToolAgent] Error fetching " + ticker + ": " + e.getMessage());
                 }
+            }
+
+            // ── RANK & EXECUTE: sort all collected signals by score, execute top MAX_TRADES_PER_SCAN only ──
+            if (useMasters && !allSignals.isEmpty()) {
+                allSignals.sort((a, b) -> Integer.compare(b.decision.totalScore, a.decision.totalScore));
+                List<RankedSignal> topSignals = allSignals.subList(0, Math.min(MAX_TRADES_PER_SCAN, allSignals.size()));
+                sendRankedScanSummary(allSignals, topSignals);
+                boolean regimeOk = checkMarketRegime();
+                if (!regimeOk) {
+                    writeScanLog("[REGIME] ⛔ Trade execution blocked — market in crash mode");
+                    sendDiscord("⛔ **Market Regime Filter**\nSPY is below 20MA or down >2% today.\n"
+                        + allSignals.size() + " signal(s) found but **no trades executed** to protect capital.");
+                } else {
+                    writeScanLog("[RANK] " + allSignals.size() + " signal(s) found → executing top " + topSignals.size());
+                    for (RankedSignal sig : topSignals) {
+                        if (hasOpenPositionToday(sig.strategy.id, sig.ticker)) continue;
+                        sendBuyAlertIfMonitored(sig.strategy, sig.ticker, sig.decision);
+                        Trade trade = executeTrade(sig.strategy, sig.ticker, sig.decision);
+                        if (trade != null) {
+                            logBuySignal(sig.strategy.id, sig.ticker, trade.entryPrice, trade.stopLoss, trade.takeProfit);
+                            logTradeExecuted(sig.strategy.id, sig.ticker, trade.entryPrice, trade.quantity);
+                            synchronized (LOCK) {
+                                systemState.tradeHistory
+                                    .computeIfAbsent(sig.strategy.id, k -> new ArrayList<>())
+                                    .add(trade);
+                            }
+                            updatePerformance(sig.strategy.id, trade);
+                            totalSignals++;
+                        }
+                    }
+                }
+            } else if (useMasters) {
+                sendDiscord("📊 **Scan Complete** — No signals above threshold (" + SCORE_THRESHOLD + "/12) this run.");
             }
 
             runProgress = total;
@@ -1223,6 +1416,310 @@ public class AIToolAgent {
         public double suggestedTakeProfit;
         public double entryPrice; // set during analysis; avoids redundant API call in executeTrade
         public String rejectReason; // set when shouldTrade=false, describes which filter rejected
+        public int totalScore;
+        public int volumeScore;
+        public int trendScore;
+        public int momentumScore;
+        public int setupScore;
+        public int confluenceBonus;
+        public int confluenceCount; // how many strategies scored >= CONFLUENCE_SCORE_THRESHOLD
+    }
+
+    private static class RankedSignal {
+        AgentConfig strategy;
+        String ticker;
+        TradeDecision decision;
+        boolean confluence;
+        RankedSignal(AgentConfig strategy, String ticker, TradeDecision decision, boolean confluence) {
+            this.strategy = strategy; this.ticker = ticker;
+            this.decision = decision; this.confluence = confluence;
+        }
+    }
+
+    public static class IndicatorData {
+        String ticker;
+        double currentPrice;
+        double prevClose;
+        double todayChangePct;
+        double sma20;
+        double sma50;
+        double sma200;
+        double rsi;
+        double cci;
+        double rvol;
+        double typicalPrice;
+        double vwapPct;
+        double momentum20d;  // % return over last 20 trading days (RS proxy)
+        boolean priceAboveSMA20;
+        boolean priceAboveSMA50;
+        boolean priceAboveSMA200;
+        boolean maCrossoverUp;
+        boolean hasSMA50;
+        boolean hasSMA200;
+        boolean valid = false;
+    }
+
+    /**
+     * Market regime filter: SPY must be above its 20-day SMA and not down more than 2% today.
+     * Fail-open: returns true (allow trading) if SPY data cannot be fetched.
+     */
+    private static boolean checkMarketRegime() {
+        try {
+            DataFetcher.setTicker("SPY");
+            String json = DataFetcher.fetchStockData();
+            Thread.sleep(12500);
+            if (json == null || json.isBlank()) {
+                writeScanLog("[REGIME] SPY data unavailable — proceeding (fail-open)");
+                return true;
+            }
+            IndicatorData spy = computeIndicators("SPY", json);
+            if (!spy.valid) {
+                writeScanLog("[REGIME] SPY indicators invalid — proceeding (fail-open)");
+                return true;
+            }
+            boolean healthy = spy.priceAboveSMA20 && spy.todayChangePct > -2.0;
+            writeScanLog(String.format("[REGIME] SPY $%.2f | SMA20=$%.2f | Change=%.2f%% | Above20=%s → %s",
+                spy.currentPrice, spy.sma20, spy.todayChangePct,
+                spy.priceAboveSMA20 ? "YES" : "NO",
+                healthy ? "✅ HEALTHY" : "⛔ CRASH MODE"));
+            return healthy;
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            return true;
+        } catch (Exception e) {
+            writeScanLog("[REGIME] SPY check error: " + e.getMessage() + " — proceeding (fail-open)");
+            return true;
+        }
+    }
+
+    private static IndicatorData computeIndicators(String ticker, String json) {
+        IndicatorData d = new IndicatorData();
+        d.ticker = ticker;
+        try {
+            List<Double> prices = PriceJsonParser.extractClosingPrices(json);
+            if (prices == null || prices.size() < 20) return d;
+
+            List<Double> highPrices = PriceJsonParser.extractHighPrices(json);
+            List<Double> lowPrices  = PriceJsonParser.extractLowPrices(json);
+            List<Double> volumes    = PriceJsonParser.extractVolumes(json);
+
+            d.currentPrice   = prices.get(prices.size() - 1);
+            d.prevClose      = prices.size() >= 2 ? prices.get(prices.size() - 2) : d.currentPrice;
+            d.todayChangePct = d.prevClose > 0 ? ((d.currentPrice - d.prevClose) / d.prevClose) * 100 : 0;
+            d.momentum20d    = prices.size() >= 21
+                ? ((d.currentPrice - prices.get(prices.size() - 21)) / prices.get(prices.size() - 21)) * 100
+                : d.todayChangePct;
+
+            List<Double> rsiList = RSI.calculateRSI(prices, 14);
+            d.rsi = (rsiList != null && !rsiList.isEmpty()) ? rsiList.get(rsiList.size() - 1) : 50.0;
+
+            List<Double> sma20List = TechnicalAnalysisModel.calculateSMA(prices, 20);
+            d.sma20 = (sma20List != null && !sma20List.isEmpty()) ? sma20List.get(sma20List.size() - 1) : d.currentPrice;
+            d.priceAboveSMA20 = d.currentPrice > d.sma20;
+
+            if (prices.size() >= 50) {
+                List<Double> sma50List = TechnicalAnalysisModel.calculateSMA(prices, 50);
+                if (sma50List != null && !sma50List.isEmpty()) {
+                    d.sma50 = sma50List.get(sma50List.size() - 1);
+                    d.hasSMA50 = true;
+                    d.priceAboveSMA50 = d.currentPrice > d.sma50;
+                    d.maCrossoverUp   = d.sma20 > d.sma50;
+                }
+            }
+
+            if (prices.size() >= 200) {
+                List<Double> sma200List = TechnicalAnalysisModel.calculateSMA(prices, 200);
+                if (sma200List != null && !sma200List.isEmpty()) {
+                    d.sma200 = sma200List.get(sma200List.size() - 1);
+                    d.hasSMA200 = true;
+                    d.priceAboveSMA200 = d.currentPrice > d.sma200;
+                }
+            }
+
+            if (volumes != null && volumes.size() >= 20) {
+                double avgVol = volumes.subList(Math.max(0, volumes.size() - 20), volumes.size() - 1)
+                        .stream().mapToDouble(v -> v != null ? v : 0).average().orElse(0);
+                double curVol = volumes.get(volumes.size() - 1) != null ? volumes.get(volumes.size() - 1) : 0;
+                d.rvol = avgVol > 0 ? curVol / avgVol : 0;
+            }
+
+            if (highPrices != null && lowPrices != null && highPrices.size() >= 20) {
+                List<Double> cciList = CCI.calculateCCI(highPrices, lowPrices, prices, 20);
+                if (cciList != null && !cciList.isEmpty() && cciList.get(cciList.size() - 1) != null) {
+                    d.cci = cciList.get(cciList.size() - 1);
+                }
+            }
+
+            if (highPrices != null && lowPrices != null && !highPrices.isEmpty()) {
+                double high = highPrices.get(highPrices.size() - 1);
+                double low  = lowPrices.get(lowPrices.size() - 1);
+                d.typicalPrice = (high + low + d.currentPrice) / 3.0;
+                d.vwapPct = d.typicalPrice > 0 ? ((d.currentPrice - d.typicalPrice) / d.typicalPrice) * 100 : 0;
+            }
+
+            d.valid = true;
+        } catch (Exception e) {
+            System.err.println("[AIToolAgent] computeIndicators error for " + ticker + ": " + e.getMessage());
+        }
+        return d;
+    }
+
+    private static TradeDecision scoreStrategyForTicker(String ticker, AgentConfig strategy, IndicatorData data) {
+        if ("MOMENTUM_BREAKOUT".equals(strategy.strategyType)) {
+            return scoreMomentumBreakout(ticker, strategy, data);
+        } else if ("PULLBACK".equals(strategy.strategyType)) {
+            return scorePullback(ticker, strategy, data);
+        } else if ("TREND_CONTINUATION".equals(strategy.strategyType)) {
+            return scoreTrendContinuation(ticker, strategy, data);
+        }
+        TradeDecision dec = new TradeDecision();
+        dec.rejectReason = "Unknown strategyType: " + strategy.strategyType;
+        return dec;
+    }
+
+    private static TradeDecision scoreMomentumBreakout(String ticker, AgentConfig strategy, IndicatorData d) {
+        TradeDecision dec = new TradeDecision();
+        dec.action = "BUY";
+
+        // Volume score (max 3): high volume confirms the breakout
+        if      (d.rvol >= 3.0) dec.volumeScore = 3;
+        else if (d.rvol >= 2.0) dec.volumeScore = 2;
+        else if (d.rvol >= 1.5) dec.volumeScore = 1;
+
+        // Trend score (max 3): stock must be in an established uptrend
+        if (d.hasSMA200 && d.priceAboveSMA200) dec.trendScore += 2;
+        if (d.hasSMA50  && d.maCrossoverUp)    dec.trendScore += 1;
+
+        // Momentum score (max 3): RSI in breakout zone + price above VWAP
+        if (d.rsi >= 55 && d.rsi <= 80) dec.momentumScore += 2;
+        if (d.vwapPct >= 0.0)            dec.momentumScore += 1;
+
+        // Setup score (max 3): today's price action confirms the breakout
+        if      (d.todayChangePct >= 2.0) dec.setupScore += 2;
+        else if (d.todayChangePct >= 1.0) dec.setupScore += 1;
+        if      (d.cci >= 50)             dec.setupScore += 1;
+
+        dec.totalScore = dec.volumeScore + dec.trendScore + dec.momentumScore + dec.setupScore;
+        dec.entryPrice = d.currentPrice;
+        double slPct = getDoubleRisk(strategy, "stopLossPct", 3.0);
+        double tpPct = getDoubleRisk(strategy, "takeProfitPct", 9.0);
+        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
+        dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
+
+        writeScanLog("[SCORE|BREAKOUT] " + ticker + " | " + strategy.id +
+            " | Volume=" + dec.volumeScore + "(RVOL=" + String.format("%.1f", d.rvol) + "x)" +
+            " Trend=" + dec.trendScore +
+                "(" + (d.hasSMA200 && d.priceAboveSMA200 ? "abvSMA200" : "blwSMA200") +
+                (d.hasSMA50  && d.maCrossoverUp    ? ",cross↑" : "") + ")" +
+            " Momentum=" + dec.momentumScore +
+                "(RSI=" + String.format("%.0f", d.rsi) +
+                (d.vwapPct >= 0.0 ? ",abvVWAP" : ",blwVWAP") + ")" +
+            " Setup=" + dec.setupScore +
+                "(chg=" + String.format("%+.1f%%", d.todayChangePct) +
+                ",CCI=" + String.format("%.0f", d.cci) + ")" +
+            " total=" + dec.totalScore + "/12");
+        return dec;
+    }
+
+    private static TradeDecision scorePullback(String ticker, AgentConfig strategy, IndicatorData d) {
+        TradeDecision dec = new TradeDecision();
+        dec.action = "BUY";
+
+        // Trend score (max 3): uptrend must be intact for pullback to be valid
+        if (d.hasSMA200 && d.priceAboveSMA200) dec.trendScore += 2;
+        if (d.hasSMA50  && d.maCrossoverUp)    dec.trendScore += 1;
+
+        // Setup score (max 3): price closeness to VWAP = quality of pullback level
+        double absVwapPct = Math.abs(d.vwapPct);
+        if      (absVwapPct <= 0.3) dec.setupScore = 3;
+        else if (absVwapPct <= 0.8) dec.setupScore = 2;
+        else if (absVwapPct <= 2.0) dec.setupScore = 1;
+
+        // Momentum score (max 3): RSI cooling off + CCI not overextended
+        if      (d.rsi >= 40 && d.rsi <= 62) dec.momentumScore += 2;
+        else if (d.rsi >= 35 && d.rsi <= 68) dec.momentumScore += 1;
+        if      (d.cci >= 20 && d.cci <= 120) dec.momentumScore += 1;
+
+        // Volume score (max 3): drying volume confirms a healthy pullback
+        if      (d.rvol >= 0.7 && d.rvol <= 1.5) dec.volumeScore = 3;
+        else if (d.rvol >= 0.5 && d.rvol <  2.0) dec.volumeScore = 2;
+        else if (d.rvol >  0)                     dec.volumeScore = 1;
+
+        dec.totalScore = dec.volumeScore + dec.trendScore + dec.momentumScore + dec.setupScore;
+        dec.entryPrice = d.currentPrice;
+        double slPct = getDoubleRisk(strategy, "stopLossPct", 1.5);
+        double tpPct = getDoubleRisk(strategy, "takeProfitPct", 4.5);
+        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
+        dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
+
+        writeScanLog("[SCORE|PULLBACK] " + ticker + " | " + strategy.id +
+            " | Volume=" + dec.volumeScore + "(RVOL=" + String.format("%.1f", d.rvol) + "x,drying=" + (d.rvol >= 0.7 && d.rvol <= 1.5 ? "YES" : "no") + ")" +
+            " Trend=" + dec.trendScore +
+                "(" + (d.hasSMA200 && d.priceAboveSMA200 ? "abvSMA200" : "blwSMA200") +
+                (d.hasSMA50  && d.maCrossoverUp    ? ",cross↑" : "") + ")" +
+            " Momentum=" + dec.momentumScore +
+                "(RSI=" + String.format("%.0f", d.rsi) +
+                ",CCI=" + String.format("%.0f", d.cci) + ")" +
+            " Setup=" + dec.setupScore +
+                "(VWAP=" + String.format("%.2f%%", Math.abs(d.vwapPct)) + "away)" +
+            " total=" + dec.totalScore + "/12");
+        return dec;
+    }
+
+    private static TradeDecision scoreTrendContinuation(String ticker, AgentConfig strategy, IndicatorData d) {
+        TradeDecision dec = new TradeDecision();
+        dec.action = "BUY";
+
+        // Trend score (max 3): full SMA alignment = strongest signal
+        if (d.hasSMA200 && d.priceAboveSMA200 && d.hasSMA50 && d.maCrossoverUp && d.priceAboveSMA50) {
+            dec.trendScore = 3;
+        } else if (d.hasSMA50 && d.maCrossoverUp && d.priceAboveSMA50) {
+            dec.trendScore = 2;
+        } else if (d.hasSMA200 && d.priceAboveSMA200) {
+            dec.trendScore = 1;
+        }
+
+        // Momentum score (max 3): RSI in healthy trend zone, not overbought
+        if      (d.rsi >= 58 && d.rsi <= 72) dec.momentumScore += 2;
+        else if (d.rsi >= 50 && d.rsi <= 78) dec.momentumScore += 1;
+        if      (d.cci >= 50 && d.cci <= 200) dec.momentumScore += 1;
+
+        // Volume score (max 3): confirms trend participation
+        if      (d.rvol >= 2.0) dec.volumeScore = 3;
+        else if (d.rvol >= 1.5) dec.volumeScore = 2;
+        else if (d.rvol >= 1.1) dec.volumeScore = 1;
+
+        // Setup score (max 3): trend strength + moderate daily momentum (not blowoff)
+        if (d.hasSMA50 && d.sma50 > 0) {
+            double aboveSMA50Pct = ((d.currentPrice - d.sma50) / d.sma50) * 100;
+            if      (aboveSMA50Pct >= 5.0) dec.setupScore += 2;
+            else if (aboveSMA50Pct >= 2.0) dec.setupScore += 1;
+        }
+        if (d.todayChangePct >= 0.5 && d.todayChangePct <= 3.0) dec.setupScore += 1;
+
+        dec.totalScore = dec.volumeScore + dec.trendScore + dec.momentumScore + dec.setupScore;
+        dec.entryPrice = d.currentPrice;
+        double slPct = getDoubleRisk(strategy, "stopLossPct", 3.5);
+        double tpPct = getDoubleRisk(strategy, "takeProfitPct", 13.0);
+        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
+        dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
+
+        double abvSMA50Pct = (d.hasSMA50 && d.sma50 > 0)
+            ? ((d.currentPrice - d.sma50) / d.sma50) * 100 : 0;
+        writeScanLog("[SCORE|TREND] " + ticker + " | " + strategy.id +
+            " | Volume=" + dec.volumeScore + "(RVOL=" + String.format("%.1f", d.rvol) + "x)" +
+            " Trend=" + dec.trendScore +
+                "(" + (d.hasSMA200 && d.priceAboveSMA200 ? "abvSMA200" : "blwSMA200") +
+                (d.hasSMA50  && d.maCrossoverUp    ? ",cross↑"  : "") +
+                (d.hasSMA50  && d.currentPrice > d.sma50 ? ",abvSMA50" : "") + ")" +
+            " Momentum=" + dec.momentumScore +
+                "(RSI=" + String.format("%.0f", d.rsi) +
+                ",CCI=" + String.format("%.0f", d.cci) + ")" +
+            " Setup=" + dec.setupScore +
+                "(chg=" + String.format("%+.1f%%", d.todayChangePct) +
+                ",above50=" + String.format("%.1f%%", abvSMA50Pct) + ")" +
+            " total=" + dec.totalScore + "/12");
+        return dec;
     }
 
     // Public wrapper for debugging - calls the private analyzeStock
@@ -1904,6 +2401,13 @@ public class AIToolAgent {
             
             // Position is OPEN - will be closed at end of day or when stop/limit hit
             trade.status = "OPEN";
+            trade.entryScore          = decision.totalScore;
+            trade.entryVolumeScore    = decision.volumeScore;
+            trade.entryTrendScore     = decision.trendScore;
+            trade.entryMomentumScore  = decision.momentumScore;
+            trade.entrySetupScore     = decision.setupScore;
+            trade.entryConfluenceCount = decision.confluenceCount;
+            trade.strategyType        = agent.strategyType;
             
             // P/L is 0 until position is closed
             trade.profitLoss = 0;
@@ -2146,6 +2650,14 @@ public class AIToolAgent {
         String winRateStr = perf != null ? String.format("%.1f%%", perf.winRate) : "N/A";
         int totalTrades = perf != null ? perf.totalTrades : 0;
         
+        String scoreInfo = decision.totalScore > 0 ? String.format(
+            "━━━━━━━━━━━━━━━━━━━━\n" +
+            "📊 Score: **%d/12** (V:%d T:%d M:%d S:%d%s)\n",
+            decision.totalScore, decision.volumeScore, decision.trendScore,
+            decision.momentumScore, decision.setupScore,
+            decision.confluenceBonus > 0 ? " 🔥+" + decision.confluenceBonus + " CONFLUENCE" : ""
+        ) : "";
+
         String message = String.format(
             "🚨 **BUY ALERT** 🚨\n" +
             "━━━━━━━━━━━━━━━━━━━━\n" +
@@ -2156,8 +2668,9 @@ public class AIToolAgent {
             "🛑 Stop Loss: **$%.2f** (-%.1f%%)\n" +
             "🎯 Take Profit: **$%.2f** (+%.1f%%)\n" +
             "📊 Risk/Reward: **1:%.1f**\n" +
+            "%s" +
             "━━━━━━━━━━━━━━━━━━━━\n" +
-            "🤖 Agent: %s\n" +
+            "🤖 Strategy: %s\n" +
             "📈 Win Rate: %s (%d trades)\n" +
             "⏰ Time: %s",
             ticker,
@@ -2166,6 +2679,7 @@ public class AIToolAgent {
             stopLossPrice, riskPct,
             takeProfitPrice, rewardPct,
             riskReward,
+            scoreInfo,
             agent.name != null ? agent.name : agent.id,
             winRateStr, totalTrades,
             ZonedDateTime.now(NY).format(DateTimeFormatter.ofPattern("HH:mm:ss z"))
@@ -2603,6 +3117,10 @@ public class AIToolAgent {
             }
             if (agent.lockedByUser != null) {
                 root.put("lockedByUser", agent.lockedByUser);
+            }
+            root.put("masterStrategy", agent.masterStrategy);
+            if (agent.strategyType != null) {
+                root.put("strategyType", agent.strategyType);
             }
             
             JSON.writeValue(path.toFile(), root);

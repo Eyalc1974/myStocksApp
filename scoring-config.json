@@ -551,11 +551,11 @@
       "agentId" : "M3_RS_LEADER",
       "agentName" : "RS Leader Focus",
       "type" : "MOMENTUM",
-      "cumulativeWins" : 490,
-      "cumulativeTrades" : 634,
-      "cumulativeProfitLoss" : 109189.7048324437,
+      "cumulativeWins" : 493,
+      "cumulativeTrades" : 642,
+      "cumulativeProfitLoss" : 107669.7048324437,
       "firstSavedDate" : "2026-02-27",
-      "lastUpdatedDate" : "2026-03-03",
+      "lastUpdatedDate" : "2026-03-04",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-02-27",
@@ -575,6 +575,12 @@
         "trades" : 215,
         "winRate" : 77.20930232558139,
         "profitLoss" : 36541.634944147896
+      }, {
+        "date" : "2026-03-04",
+        "wins" : 3,
+        "trades" : 8,
+        "winRate" : 37.5,
+        "profitLoss" : -1519.9999999999989
       } ]
     },
     "S10_SWING_TIGHT_RANGE_GEN1" : {
@@ -635,6 +641,78 @@
         "trades" : 8,
         "winRate" : 87.5,
         "profitLoss" : 849.9082805993382
+      } ]
+    },
+    "M5_MA_CROSS" : {
+      "agentId" : "M5_MA_CROSS",
+      "agentName" : "MA Crossover Momentum",
+      "type" : "MOMENTUM",
+      "cumulativeWins" : 7,
+      "cumulativeTrades" : 9,
+      "cumulativeProfitLoss" : 691.7564999999988,
+      "firstSavedDate" : "2026-03-06",
+      "lastUpdatedDate" : "2026-03-06",
+      "notifyOnTrade" : false,
+      "dailySnapshots" : [ {
+        "date" : "2026-03-06",
+        "wins" : 7,
+        "trades" : 9,
+        "winRate" : 77.77777777777777,
+        "profitLoss" : 691.7564999999988
+      } ]
+    },
+    "M2_CONSERVATIVE_GEN1" : {
+      "agentId" : "M2_CONSERVATIVE_GEN1",
+      "agentName" : "Conservative Momentum (Gen 1)",
+      "type" : "MOMENTUM",
+      "cumulativeWins" : 6,
+      "cumulativeTrades" : 7,
+      "cumulativeProfitLoss" : 295.2799999999978,
+      "firstSavedDate" : "2026-03-06",
+      "lastUpdatedDate" : "2026-03-06",
+      "notifyOnTrade" : false,
+      "dailySnapshots" : [ {
+        "date" : "2026-03-06",
+        "wins" : 6,
+        "trades" : 7,
+        "winRate" : 85.71428571428571,
+        "profitLoss" : 295.2799999999978
+      } ]
+    },
+    "S2_SWING_BREAKOUT" : {
+      "agentId" : "S2_SWING_BREAKOUT",
+      "agentName" : "Swing Breakout",
+      "type" : "SWING",
+      "cumulativeWins" : 9,
+      "cumulativeTrades" : 12,
+      "cumulativeProfitLoss" : 405.49000000000177,
+      "firstSavedDate" : "2026-03-06",
+      "lastUpdatedDate" : "2026-03-06",
+      "notifyOnTrade" : false,
+      "dailySnapshots" : [ {
+        "date" : "2026-03-06",
+        "wins" : 9,
+        "trades" : 12,
+        "winRate" : 75.0,
+        "profitLoss" : 405.49000000000177
+      } ]
+    },
+    "M6_LOW_NOISE" : {
+      "agentId" : "M6_LOW_NOISE",
+      "agentName" : "Low Noise Momentum",
+      "type" : "MOMENTUM",
+      "cumulativeWins" : 4,
+      "cumulativeTrades" : 5,
+      "cumulativeProfitLoss" : 417.99999999999926,
+      "firstSavedDate" : "2026-03-06",
+      "lastUpdatedDate" : "2026-03-06",
+      "notifyOnTrade" : false,
+      "dailySnapshots" : [ {
+        "date" : "2026-03-06",
+        "wins" : 4,
+        "trades" : 5,
+        "winRate" : 80.0,
+        "profitLoss" : 417.99999999999926
       } ]
     }
   }

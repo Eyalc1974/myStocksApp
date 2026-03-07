@@ -163,8 +163,27 @@ public class LongTermCandidateFinder {
         return new ArrayList<>(selected);
     }
 
-    // Get all sector tickers combined (for universe)
-    public static List<String> getAllSectorTickers() {
+    // ======================= RS RANKING CACHE =======================
+    static final int TOP_RS_COUNT = 200;
+    private static final java.util.concurrent.ConcurrentHashMap<String, Double> rsScoreCache =
+        new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Called by AIToolAgent after computing IndicatorData for each ticker.
+     * Builds a Relative Strength ranking used to pre-filter the scan universe.
+     * RS score = 20-day momentum + SMA position bonus + RVOL bonus.
+     */
+    public static void updateRSScore(String ticker, double score) {
+        rsScoreCache.put(ticker, score);
+    }
+
+    /** Returns the number of tickers currently in the RS cache. */
+    public static int getRSCacheSize() {
+        return rsScoreCache.size();
+    }
+
+    /** Full universe — all sectors combined, no RS filter. */
+    private static List<String> getAllSectorTickersRaw() {
         LinkedHashSet<String> all = new LinkedHashSet<>();
         all.addAll(TECHNOLOGY_TICKERS);
         all.addAll(FINANCIALS_TICKERS);
@@ -178,6 +197,24 @@ public class LongTermCandidateFinder {
         all.addAll(REAL_ESTATE_TICKERS);
         all.addAll(COMMUNICATION_SERVICES_TICKERS);
         return new ArrayList<>(all);
+    }
+
+    /**
+     * Get scan universe: top TOP_RS_COUNT tickers by Relative Strength score when
+     * cache is warm (>= 50 entries from prior scan), otherwise full universe.
+     * First scan always processes all tickers to build the cache.
+     */
+    public static List<String> getAllSectorTickers() {
+        List<String> all = getAllSectorTickersRaw();
+        if (rsScoreCache.size() < 50) {
+            return all;
+        }
+        return all.stream()
+            .sorted((a, b) -> Double.compare(
+                rsScoreCache.getOrDefault(b, -99.0),
+                rsScoreCache.getOrDefault(a, -99.0)))
+            .limit(TOP_RS_COUNT)
+            .collect(Collectors.toList());
     }
 
     // ======================= ORIGINAL NASDAQ_100 TICKERS =======================
