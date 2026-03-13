@@ -34,10 +34,10 @@ public class AIToolAgent {
     private static final double WIN_RATE_NOTIFICATION_THRESHOLD = 60.0;
     private static final int MIN_TRADES_FOR_NOTIFICATION = 5;
 
-    private static final int SCORE_THRESHOLD = 8;
-    private static final int CONFLUENCE_SCORE_THRESHOLD = 6;
+    private static final int SCORE_THRESHOLD = 10;
+    private static final int CONFLUENCE_SCORE_THRESHOLD = 7;
     private static final int CONFLUENCE_BONUS = 2;
-    private static final int MAX_TRADES_PER_SCAN = 5;
+    private static final int MAX_TRADES_PER_SCAN = 2;
     private static final double RISK_PER_TRADE = 500.0; // $ risk per trade for position sizing
     
     // Number of random stocks each agent analyzes per run
@@ -109,6 +109,7 @@ public class AIToolAgent {
         public String lockedByUser; // Who locked it
         public boolean masterStrategy = false;
         public String strategyType; // MOMENTUM_BREAKOUT, PULLBACK, TREND_CONTINUATION
+        public boolean disabled = false; // true = skip this strategy (e.g. intraday strategies disabled for swing mode)
     }
 
     public static class Trade {
@@ -700,11 +701,12 @@ public class AIToolAgent {
 
     private static void sendRankedScanSummary(List<RankedSignal> all, List<RankedSignal> top) {
         if (all.isEmpty()) {
-            sendDiscord("📊 **Scan Complete** — No signals above threshold (" + SCORE_THRESHOLD + "/12) this run.");
+            sendDiscord("📊 **Swing Scan Complete** — No signals above threshold (" + SCORE_THRESHOLD + "/12) this run.");
             return;
         }
         StringBuilder sb = new StringBuilder();
-        sb.append("📊 **Scan Complete — Top Signals**\n");
+        sb.append("📊 **Swing Scan — Top " + top.size() + " Signal(s)**\n");
+        sb.append("🔔 Check once before open & once after close\n");
         sb.append("━━━━━━━━━━━━━━━━━━━━\n");
         String[] medals = {"🥇", "🥈", "🥉", "4️⃣", "5️⃣"};
         for (int i = 0; i < top.size(); i++) {
@@ -712,42 +714,59 @@ public class AIToolAgent {
             String m        = (i < medals.length) ? medals[i] : (i + 1) + ".";
             String cf        = sig.confluence ? " 🔥" : "";
             double entry     = sig.decision.entryPrice;
+            double trigger   = sig.decision.entryTriggerPrice > 0 ? sig.decision.entryTriggerPrice : entry;
             double sl        = sig.decision.suggestedStopLoss;
             double tp        = sig.decision.suggestedTakeProfit;
-            double slPct     = entry > 0 ? ((entry - sl) / entry) * 100  : 0;
-            double tpPct     = entry > 0 ? ((tp - entry) / entry) * 100  : 0;
+            double slPct     = trigger > 0 ? ((trigger - sl) / trigger) * 100  : 0;
+            double tpPct     = trigger > 0 ? ((tp - trigger) / trigger) * 100  : 0;
             double rr        = slPct > 0 ? tpPct / slPct : 0;
-            int    shares    = (entry > sl && sl > 0)
-                ? (int) Math.max(1, Math.round(RISK_PER_TRADE / (entry - sl))) : 0;
-            double posValue  = shares * entry;
+            int    shares    = (trigger > sl && sl > 0)
+                ? (int) Math.max(1, Math.round(RISK_PER_TRADE / (trigger - sl))) : 0;
+            double posValue  = shares * trigger;
             String holdTime  = holdDuration(sig.strategy.strategyType);
+            String setupLabel = setupTypeLabel(sig.strategy.strategyType);
             // Line 1 — signal identity
-            sb.append(String.format("%s **%s** | %s | Score **%d/12**%s | Vol:%d Trend:%d Mom:%d Setup:%d%n",
-                m, sig.ticker, sig.strategy.strategyType, sig.decision.totalScore, cf,
+            sb.append(String.format("%s **%s** — %s | Score **%d/12**%s%n",
+                m, sig.ticker, setupLabel, sig.decision.totalScore, cf));
+            sb.append(String.format("   📊 V:%d T:%d M:%d S:%d%n",
                 sig.decision.volumeScore, sig.decision.trendScore,
                 sig.decision.momentumScore, sig.decision.setupScore));
-            // Line 2 — trade execution details
+            // Line 2 — entry trigger (the most important line)
             sb.append(String.format(
-                "   📈 Entry **$%.2f**  🛑 SL **$%.2f** (-%.1f%%)  🎯 TP **$%.2f** (+%.1f%%)%n",
-                entry, sl, slPct, tp, tpPct));
+                "   ⚡ **BUY ONLY IF breaks $%.2f** (current $%.2f)%n", trigger, entry));
+            // Line 3 — risk management
             sb.append(String.format(
-                "   📦 ~%d shares ($%,.0f at risk $%.0f)  ⏱ %s  R:R %.1f:1%n",
-                shares, posValue, RISK_PER_TRADE, holdTime, rr));
+                "   🛑 SL **$%.2f** (-%.1f%%)  🎯 TP **$%.2f** (+%.1f%%)  R:R %.1f:1%n",
+                sl, slPct, tp, tpPct, rr));
+            // Line 4 — position size + hold time
+            sb.append(String.format(
+                "   📦 ~%d shares ($%,.0f | $%.0f at risk)  ⏱ %s%n",
+                shares, posValue, RISK_PER_TRADE, holdTime));
         }
         int filtered = all.size() - top.size();
         if (filtered > 0) {
-            sb.append("❌ Filtered out: **").append(filtered).append("** lower-scored signal(s)");
+            sb.append("\n❌ Filtered out: **").append(filtered).append("** lower-scored signal(s)");
         }
         sendDiscord(sb.toString());
     }
 
-    private static String holdDuration(String strategyType) {
-        if (strategyType == null) return "Intraday";
+    private static String setupTypeLabel(String strategyType) {
+        if (strategyType == null) return "Unknown";
         switch (strategyType) {
-            case "MOMENTUM_BREAKOUT":    return "Intraday";
-            case "PULLBACK":             return "Intraday→2d";
-            case "TREND_CONTINUATION":  return "Swing 2–5d";
-            default:                     return "Intraday";
+            case "MOMENTUM_BREAKOUT":   return "⚡ Momentum Breakout";
+            case "PULLBACK":            return "↩️ Pullback to Support";
+            case "TREND_CONTINUATION": return "📈 Trend Continuation";
+            default:                    return strategyType;
+        }
+    }
+
+    private static String holdDuration(String strategyType) {
+        if (strategyType == null) return "Swing";
+        switch (strategyType) {
+            case "MOMENTUM_BREAKOUT":    return "⚠️ Intraday (disabled)";
+            case "PULLBACK":             return "Swing 2–4 days";
+            case "TREND_CONTINUATION":  return "Swing 3–5 days";
+            default:                     return "Swing";
         }
     }
 
@@ -1138,7 +1157,7 @@ public class AIToolAgent {
 
             // Separate master strategies (scoring-based) from legacy agents (binary pass/fail)
             List<AgentConfig> masterStrategies = allAgents.stream()
-                .filter(a -> a.masterStrategy && a.strategyType != null)
+                .filter(a -> a.masterStrategy && a.strategyType != null && !a.disabled)
                 .sorted(Comparator.comparing((AgentConfig a) -> a.id))
                 .collect(Collectors.toList());
             List<AgentConfig> legacyAgents = allAgents.stream()
@@ -1423,6 +1442,7 @@ public class AIToolAgent {
         public int setupScore;
         public int confluenceBonus;
         public int confluenceCount; // how many strategies scored >= CONFLUENCE_SCORE_THRESHOLD
+        public double entryTriggerPrice; // BUY ONLY IF price breaks above this level (swing confirmation)
     }
 
     private static class RankedSignal {
@@ -1640,20 +1660,31 @@ public class AIToolAgent {
         else if (d.rsi >= 35 && d.rsi <= 68) dec.momentumScore += 1;
         if      (d.cci >= 20 && d.cci <= 120) dec.momentumScore += 1;
 
-        // Volume score (max 3): drying volume confirms a healthy pullback
-        if      (d.rvol >= 0.7 && d.rvol <= 1.5) dec.volumeScore = 3;
-        else if (d.rvol >= 0.5 && d.rvol <  2.0) dec.volumeScore = 2;
+        // Volume score (max 3): drying volume confirms a healthy pullback (not panic selling)
+        if      (d.rvol >= 0.5 && d.rvol <= 1.3) dec.volumeScore = 3;
+        else if (d.rvol >= 0.3 && d.rvol <  1.8) dec.volumeScore = 2;
         else if (d.rvol >  0)                     dec.volumeScore = 1;
+
+        // Swing tightener: penalise stocks that are NOT actually pulling back (up strongly = not a pullback)
+        if (d.todayChangePct > 1.5) {
+            dec.setupScore = Math.max(0, dec.setupScore - 1);
+        }
 
         dec.totalScore = dec.volumeScore + dec.trendScore + dec.momentumScore + dec.setupScore;
         dec.entryPrice = d.currentPrice;
-        double slPct = getDoubleRisk(strategy, "stopLossPct", 1.5);
-        double tpPct = getDoubleRisk(strategy, "takeProfitPct", 4.5);
+        double slPct = getDoubleRisk(strategy, "stopLossPct", 3.5);
+        double tpPct = getDoubleRisk(strategy, "takeProfitPct", 10.5);
         dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
         dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
 
+        // Entry trigger: buy only when price reclaims VWAP/typical-price support
+        double vwapLevel = d.typicalPrice > 0 ? d.typicalPrice : d.currentPrice;
+        dec.entryTriggerPrice = (d.currentPrice <= vwapLevel)
+            ? vwapLevel * 1.003   // price at/below VWAP: wait for 0.3% reclaim
+            : d.currentPrice * 1.002; // price near VWAP: small 0.2% confirmation buffer
+
         writeScanLog("[SCORE|PULLBACK] " + ticker + " | " + strategy.id +
-            " | Volume=" + dec.volumeScore + "(RVOL=" + String.format("%.1f", d.rvol) + "x,drying=" + (d.rvol >= 0.7 && d.rvol <= 1.5 ? "YES" : "no") + ")" +
+            " | Volume=" + dec.volumeScore + "(RVOL=" + String.format("%.1f", d.rvol) + "x,drying=" + (d.rvol >= 0.5 && d.rvol <= 1.3 ? "YES" : "no") + ")" +
             " Trend=" + dec.trendScore +
                 "(" + (d.hasSMA200 && d.priceAboveSMA200 ? "abvSMA200" : "blwSMA200") +
                 (d.hasSMA50  && d.maCrossoverUp    ? ",cross↑" : "") + ")" +
@@ -1661,7 +1692,8 @@ public class AIToolAgent {
                 "(RSI=" + String.format("%.0f", d.rsi) +
                 ",CCI=" + String.format("%.0f", d.cci) + ")" +
             " Setup=" + dec.setupScore +
-                "(VWAP=" + String.format("%.2f%%", Math.abs(d.vwapPct)) + "away)" +
+                "(VWAP=" + String.format("%.2f%%", Math.abs(d.vwapPct)) + "away,chg=" + String.format("%+.1f%%", d.todayChangePct) + ")" +
+            " Trigger=$" + String.format("%.2f", dec.entryTriggerPrice) +
             " total=" + dec.totalScore + "/12");
         return dec;
     }
@@ -1704,6 +1736,9 @@ public class AIToolAgent {
         dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
         dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
 
+        // Entry trigger: buy only if price pushes 0.5% above last close — confirms momentum is real
+        dec.entryTriggerPrice = d.currentPrice * 1.005;
+
         double abvSMA50Pct = (d.hasSMA50 && d.sma50 > 0)
             ? ((d.currentPrice - d.sma50) / d.sma50) * 100 : 0;
         writeScanLog("[SCORE|TREND] " + ticker + " | " + strategy.id +
@@ -1718,6 +1753,7 @@ public class AIToolAgent {
             " Setup=" + dec.setupScore +
                 "(chg=" + String.format("%+.1f%%", d.todayChangePct) +
                 ",above50=" + String.format("%.1f%%", abvSMA50Pct) + ")" +
+            " Trigger=$" + String.format("%.2f", dec.entryTriggerPrice) +
             " total=" + dec.totalScore + "/12");
         return dec;
     }
@@ -2636,10 +2672,10 @@ public class AIToolAgent {
      */
     private static void sendBuyAlertIfMonitored(AgentConfig agent, String ticker, TradeDecision decision) {
         // Send BUY alert for ALL agents — every green-pass stock gets notified
-        // Get current price for the alert
-        double currentPrice = decision.suggestedStopLoss / (1 - getDoubleRisk(agent, "stopLossPct", 3.0) / 100);
-        // Recalculate from decision values
-        double stopLossPrice = decision.suggestedStopLoss;
+        double currentPrice = decision.entryPrice > 0
+            ? decision.entryPrice
+            : decision.suggestedStopLoss / (1 - getDoubleRisk(agent, "stopLossPct", 3.5) / 100);
+        double stopLossPrice   = decision.suggestedStopLoss;
         double takeProfitPrice = decision.suggestedTakeProfit;
         double riskPct = ((currentPrice - stopLossPrice) / currentPrice) * 100;
         double rewardPct = ((takeProfitPrice - currentPrice) / currentPrice) * 100;
@@ -2658,29 +2694,39 @@ public class AIToolAgent {
             decision.confluenceBonus > 0 ? " 🔥+" + decision.confluenceBonus + " CONFLUENCE" : ""
         ) : "";
 
+        double triggerPrice = decision.entryTriggerPrice > 0 ? decision.entryTriggerPrice : currentPrice;
+        double triggerPct   = currentPrice > 0 ? ((triggerPrice - currentPrice) / currentPrice) * 100 : 0;
+        String setupLabel   = setupTypeLabel(agent.strategyType);
+        String holdLabel    = holdDuration(agent.strategyType);
+        String triggerLine  = String.format(
+            "⚡ **BUY ONLY IF breaks $%.2f** (+%.2f%%)\n" +
+            "   (Current close: $%.2f — wait for confirmation)\n",
+            triggerPrice, triggerPct, currentPrice);
+
         String message = String.format(
-            "🚨 **BUY ALERT** 🚨\n" +
+            "🚨 **SWING SIGNAL** — %s\n" +
             "━━━━━━━━━━━━━━━━━━━━\n" +
-            "**Ticker: %s**\n" +
-            "**Action: %s NOW**\n" +
+            "**%s**\n" +
             "━━━━━━━━━━━━━━━━━━━━\n" +
-            "📍 Entry Price: **$%.2f**\n" +
+            "%s" +
             "🛑 Stop Loss: **$%.2f** (-%.1f%%)\n" +
             "🎯 Take Profit: **$%.2f** (+%.1f%%)\n" +
             "📊 Risk/Reward: **1:%.1f**\n" +
             "%s" +
             "━━━━━━━━━━━━━━━━━━━━\n" +
             "🤖 Strategy: %s\n" +
+            "⏱ Expected hold: %s\n" +
             "📈 Win Rate: %s (%d trades)\n" +
-            "⏰ Time: %s",
+            "⏰ Signal time: %s",
+            setupLabel,
             ticker,
-            decision.action,
-            currentPrice,
+            triggerLine,
             stopLossPrice, riskPct,
             takeProfitPrice, rewardPct,
             riskReward,
             scoreInfo,
             agent.name != null ? agent.name : agent.id,
+            holdLabel,
             winRateStr, totalTrades,
             ZonedDateTime.now(NY).format(DateTimeFormatter.ofPattern("HH:mm:ss z"))
         );
