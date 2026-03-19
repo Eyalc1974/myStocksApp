@@ -324,6 +324,35 @@ public class AIToolAgentDebugTest {
     }
     
     /**
+     * Sends a test message to Discord via the configured webhook.
+     * Requires env var: DAILY_SIM_DISCORD_WEBHOOK_URL
+     */
+    @Test
+    void testSendDiscordMessage() {
+        System.out.println("========================================");
+        System.out.println("Discord Notification Test");
+        System.out.println("========================================");
+
+        String webhookUrl = System.getenv("DAILY_SIM_DISCORD_WEBHOOK_URL");
+        if (webhookUrl == null || webhookUrl.isBlank()) {
+            System.out.println("⚠️  DAILY_SIM_DISCORD_WEBHOOK_URL is not set — skipping send.");
+            System.out.println("   Set the env var and re-run to actually post to Discord.");
+            return;
+        }
+
+        String message = "🧪 **Test Message from AIToolAgentDebugTest**\n"
+                + "Sent at: " + java.time.LocalDateTime.now()
+                + "\nThis is an automated test — you can ignore it.";
+
+        System.out.println("Sending message:\n" + message);
+
+        boolean success = AIToolAgent.sendDiscordPublic(message);
+
+        System.out.println(success ? "✅ Discord message sent successfully!" : "❌ Failed to send Discord message.");
+        System.out.println("========================================");
+    }
+
+    /**
      * Full Analysis Report with StockScannerRunner (Model Summary)
      * Includes DCF, CCC, ROIC vs WACC, ADX, Technical/Fundamental signals
      */

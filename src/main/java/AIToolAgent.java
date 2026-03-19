@@ -37,8 +37,14 @@ public class AIToolAgent {
     private static final int SCORE_THRESHOLD = 10;
     private static final int CONFLUENCE_SCORE_THRESHOLD = 7;
     private static final int CONFLUENCE_BONUS = 2;
-    private static final int MAX_TRADES_PER_SCAN = 2;
+    private static final int MAX_TRADES_PER_SCAN = 5;
     private static final double RISK_PER_TRADE = 500.0; // $ risk per trade for position sizing
+
+    enum RegimeLevel {
+        HEALTHY,    // SPY above 20MA and change > -1%  → full position (100%)
+        WEAK,       // Mixed signals                    → half position (50%)
+        VERY_WEAK   // SPY below 20MA and change ≤ -2% → no trades
+    }
     
     // Number of random stocks each agent analyzes per run
     // Note: Alpha Vantage free tier = 5 calls/minute, so keep this low
@@ -699,7 +705,8 @@ public class AIToolAgent {
 
     // ==================== END SCAN DETAIL LOG ====================
 
-    private static void sendRankedScanSummary(List<RankedSignal> all, List<RankedSignal> top) {
+    private static void sendRankedScanSummary(List<RankedSignal> all, List<RankedSignal> top,
+                                               RegimeLevel regime, double posMultiplier) {
         if (all.isEmpty()) {
             sendDiscord("📊 **Swing Scan Complete** — No signals above threshold (" + SCORE_THRESHOLD + "/12) this run.");
             return;
@@ -707,6 +714,12 @@ public class AIToolAgent {
         StringBuilder sb = new StringBuilder();
         sb.append("📊 **Swing Scan — Top " + top.size() + " Signal(s)**\n");
         sb.append("🔔 Check once before open & once after close\n");
+        // Regime banner
+        if (regime == RegimeLevel.VERY_WEAK) {
+            sb.append("⛔ **Market regime: very weak** — No trades executed to protect capital\n");
+        } else if (regime == RegimeLevel.WEAK) {
+            sb.append("⚠️ **Market regime: weak** — Position size reduced to 50%\n");
+        }
         sb.append("━━━━━━━━━━━━━━━━━━━━\n");
         String[] medals = {"🥇", "🥈", "🥉", "4️⃣", "5️⃣"};
         for (int i = 0; i < top.size(); i++) {
@@ -720,8 +733,9 @@ public class AIToolAgent {
             double slPct     = trigger > 0 ? ((trigger - sl) / trigger) * 100  : 0;
             double tpPct     = trigger > 0 ? ((tp - trigger) / trigger) * 100  : 0;
             double rr        = slPct > 0 ? tpPct / slPct : 0;
+            double effectiveRisk = RISK_PER_TRADE * posMultiplier;
             int    shares    = (trigger > sl && sl > 0)
-                ? (int) Math.max(1, Math.round(RISK_PER_TRADE / (trigger - sl))) : 0;
+                ? (int) Math.max(1, Math.round(effectiveRisk / (trigger - sl))) : 0;
             double posValue  = shares * trigger;
             String holdTime  = holdDuration(sig.strategy.strategyType);
             String setupLabel = setupTypeLabel(sig.strategy.strategyType);
@@ -741,7 +755,7 @@ public class AIToolAgent {
             // Line 4 — position size + hold time
             sb.append(String.format(
                 "   📦 ~%d shares ($%,.0f | $%.0f at risk)  ⏱ %s%n",
-                shares, posValue, RISK_PER_TRADE, holdTime));
+                shares, posValue, effectiveRisk, holdTime));
         }
         int filtered = all.size() - top.size();
         if (filtered > 0) {
@@ -753,10 +767,13 @@ public class AIToolAgent {
     private static String setupTypeLabel(String strategyType) {
         if (strategyType == null) return "Unknown";
         switch (strategyType) {
-            case "MOMENTUM_BREAKOUT":   return "⚡ Momentum Breakout";
-            case "PULLBACK":            return "↩️ Pullback to Support";
-            case "TREND_CONTINUATION": return "📈 Trend Continuation";
-            default:                    return strategyType;
+            case "MOMENTUM_BREAKOUT":    return "⚡ Momentum Breakout";
+            case "PULLBACK":             return "↩️ Pullback to Support";
+            case "TREND_CONTINUATION":  return "📈 Trend Continuation";
+            case "WEEK52_HIGH_MOMENTUM": return "🏔️ 52W High Momentum";
+            case "PULLBACK_MA20":        return "↩️ Pullback to MA20";
+            case "VOLUME_BREAKOUT":      return "💥 Volume Breakout";
+            default:                     return strategyType;
         }
     }
 
@@ -766,6 +783,9 @@ public class AIToolAgent {
             case "MOMENTUM_BREAKOUT":    return "⚠️ Intraday (disabled)";
             case "PULLBACK":             return "Swing 2–4 days";
             case "TREND_CONTINUATION":  return "Swing 3–5 days";
+            case "WEEK52_HIGH_MOMENTUM": return "Swing 2–6 weeks";
+            case "PULLBACK_MA20":        return "Swing 3–10 days";
+            case "VOLUME_BREAKOUT":      return "Swing 3–10 days";
             default:                     return "Swing";
         }
     }
@@ -1155,13 +1175,23 @@ public class AIToolAgent {
 
             int totalSignals = 0;
 
+            // Comparator: top-performing agents first (win rate desc, min 3 trades), rest at end
+            Comparator<AgentConfig> byWinRateDesc = (a, b) -> {
+                AgentPerformance pa = systemState.performance.get(a.id);
+                AgentPerformance pb = systemState.performance.get(b.id);
+                double wa = (pa != null && pa.totalTrades >= 3) ? pa.winRate : -1;
+                double wb = (pb != null && pb.totalTrades >= 3) ? pb.winRate : -1;
+                return Double.compare(wb, wa); // descending
+            };
+
             // Separate master strategies (scoring-based) from legacy agents (binary pass/fail)
             List<AgentConfig> masterStrategies = allAgents.stream()
                 .filter(a -> a.masterStrategy && a.strategyType != null && !a.disabled)
-                .sorted(Comparator.comparing((AgentConfig a) -> a.id))
+                .sorted(byWinRateDesc)
                 .collect(Collectors.toList());
             List<AgentConfig> legacyAgents = allAgents.stream()
                 .filter(a -> !a.masterStrategy)
+                .sorted(byWinRateDesc)
                 .collect(Collectors.toList());
             boolean useMasters = !masterStrategies.isEmpty();
             List<RankedSignal> allSignals = new ArrayList<>();
@@ -1308,14 +1338,16 @@ public class AIToolAgent {
             if (useMasters && !allSignals.isEmpty()) {
                 allSignals.sort((a, b) -> Integer.compare(b.decision.totalScore, a.decision.totalScore));
                 List<RankedSignal> topSignals = allSignals.subList(0, Math.min(MAX_TRADES_PER_SCAN, allSignals.size()));
-                sendRankedScanSummary(allSignals, topSignals);
-                boolean regimeOk = checkMarketRegime();
-                if (!regimeOk) {
+                RegimeLevel regime = checkMarketRegime();
+                double posMultiplier = (regime == RegimeLevel.HEALTHY) ? 1.0
+                                     : (regime == RegimeLevel.WEAK)    ? 0.5 : 0.0;
+                sendRankedScanSummary(allSignals, topSignals, regime, posMultiplier);
+                if (regime == RegimeLevel.VERY_WEAK) {
                     writeScanLog("[REGIME] ⛔ Trade execution blocked — market in crash mode");
-                    sendDiscord("⛔ **Market Regime Filter**\nSPY is below 20MA or down >2% today.\n"
-                        + allSignals.size() + " signal(s) found but **no trades executed** to protect capital.");
                 } else {
-                    writeScanLog("[RANK] " + allSignals.size() + " signal(s) found → executing top " + topSignals.size());
+                    String regimeNote = (regime == RegimeLevel.WEAK) ? " [WEAK regime — 50% size]" : "";
+                    writeScanLog("[RANK] " + allSignals.size() + " signal(s) found → executing top "
+                        + topSignals.size() + regimeNote);
                     for (RankedSignal sig : topSignals) {
                         if (hasOpenPositionToday(sig.strategy.id, sig.ticker)) continue;
                         sendBuyAlertIfMonitored(sig.strategy, sig.ticker, sig.decision);
@@ -1470,6 +1502,9 @@ public class AIToolAgent {
         double typicalPrice;
         double vwapPct;
         double momentum20d;  // % return over last 20 trading days (RS proxy)
+        double week52High;        // highest high over available data (up to 252 bars)
+        double pctFromWeek52High; // how far below the 52W high (negative = below, 0 = at high)
+        double resistance30d;     // highest close over last 30 trading days (excl. today) = resistance level
         boolean priceAboveSMA20;
         boolean priceAboveSMA50;
         boolean priceAboveSMA200;
@@ -1483,32 +1518,43 @@ public class AIToolAgent {
      * Market regime filter: SPY must be above its 20-day SMA and not down more than 2% today.
      * Fail-open: returns true (allow trading) if SPY data cannot be fetched.
      */
-    private static boolean checkMarketRegime() {
+    private static RegimeLevel checkMarketRegime() {
         try {
             DataFetcher.setTicker("SPY");
             String json = DataFetcher.fetchStockData();
             Thread.sleep(12500);
             if (json == null || json.isBlank()) {
                 writeScanLog("[REGIME] SPY data unavailable — proceeding (fail-open)");
-                return true;
+                return RegimeLevel.HEALTHY;
             }
             IndicatorData spy = computeIndicators("SPY", json);
             if (!spy.valid) {
                 writeScanLog("[REGIME] SPY indicators invalid — proceeding (fail-open)");
-                return true;
+                return RegimeLevel.HEALTHY;
             }
-            boolean healthy = spy.priceAboveSMA20 && spy.todayChangePct > -2.0;
-            writeScanLog(String.format("[REGIME] SPY $%.2f | SMA20=$%.2f | Change=%.2f%% | Above20=%s → %s",
-                spy.currentPrice, spy.sma20, spy.todayChangePct,
-                spy.priceAboveSMA20 ? "YES" : "NO",
-                healthy ? "✅ HEALTHY" : "⛔ CRASH MODE"));
-            return healthy;
+            double pctBelowSMA20 = (spy.sma20 > 0 && !spy.priceAboveSMA20)
+                ? ((spy.sma20 - spy.currentPrice) / spy.sma20) * 100 : 0;
+            RegimeLevel level;
+            if (spy.priceAboveSMA20 && spy.todayChangePct > -1.0) {
+                level = RegimeLevel.HEALTHY;    // strong: above 20MA and less than -1% today
+            } else if (!spy.priceAboveSMA20 && (spy.todayChangePct <= -2.0 || pctBelowSMA20 >= 2.0)) {
+                level = RegimeLevel.VERY_WEAK;  // crash: below 20MA by 2%+ OR down >2% today
+            } else {
+                level = RegimeLevel.WEAK;       // mixed: reduced size
+            }
+            String label = level == RegimeLevel.HEALTHY   ? "✅ HEALTHY (full size)"
+                         : level == RegimeLevel.WEAK      ? "⚠️ WEAK (50% size)"
+                                                          : "⛔ VERY WEAK (no trades)";
+            writeScanLog(String.format("[REGIME] SPY $%.2f | SMA20=$%.2f | Change=%.2f%% | BelowSMA20=%.1f%% | Above20=%s → %s",
+                spy.currentPrice, spy.sma20, spy.todayChangePct, pctBelowSMA20,
+                spy.priceAboveSMA20 ? "YES" : "NO", label));
+            return level;
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-            return true;
+            return RegimeLevel.HEALTHY;
         } catch (Exception e) {
             writeScanLog("[REGIME] SPY check error: " + e.getMessage() + " — proceeding (fail-open)");
-            return true;
+            return RegimeLevel.HEALTHY;
         }
     }
 
@@ -1557,9 +1603,14 @@ public class AIToolAgent {
             }
 
             if (volumes != null && volumes.size() >= 20) {
+                double curVol = volumes.get(volumes.size() - 1) != null ? volumes.get(volumes.size() - 1) : 0;
+                // If today's bar has 0 volume (Alpha Vantage includes partial intraday bar),
+                // fall back to the previous fully-closed session's volume
+                if (curVol == 0 && volumes.size() >= 2) {
+                    curVol = volumes.get(volumes.size() - 2) != null ? volumes.get(volumes.size() - 2) : 0;
+                }
                 double avgVol = volumes.subList(Math.max(0, volumes.size() - 20), volumes.size() - 1)
                         .stream().mapToDouble(v -> v != null ? v : 0).average().orElse(0);
-                double curVol = volumes.get(volumes.size() - 1) != null ? volumes.get(volumes.size() - 1) : 0;
                 d.rvol = avgVol > 0 ? curVol / avgVol : 0;
             }
 
@@ -1575,6 +1626,20 @@ public class AIToolAgent {
                 double low  = lowPrices.get(lowPrices.size() - 1);
                 d.typicalPrice = (high + low + d.currentPrice) / 3.0;
                 d.vwapPct = d.typicalPrice > 0 ? ((d.currentPrice - d.typicalPrice) / d.typicalPrice) * 100 : 0;
+
+                // 52-week high: max of all available high prices (up to 252 bars)
+                int lookback52 = Math.min(highPrices.size(), 252);
+                d.week52High = highPrices.subList(highPrices.size() - lookback52, highPrices.size())
+                    .stream().mapToDouble(v -> v != null ? v : 0).max().orElse(0);
+                d.pctFromWeek52High = d.week52High > 0
+                    ? ((d.currentPrice - d.week52High) / d.week52High) * 100 : 0;
+            }
+
+            // 30-day resistance: highest close over prior 30 sessions (excluding today)
+            if (prices.size() >= 31) {
+                int n = prices.size();
+                d.resistance30d = prices.subList(n - 31, n - 1)
+                    .stream().mapToDouble(v -> v != null ? v : 0).max().orElse(0);
             }
 
             d.valid = true;
@@ -1591,6 +1656,12 @@ public class AIToolAgent {
             return scorePullback(ticker, strategy, data);
         } else if ("TREND_CONTINUATION".equals(strategy.strategyType)) {
             return scoreTrendContinuation(ticker, strategy, data);
+        } else if ("WEEK52_HIGH_MOMENTUM".equals(strategy.strategyType)) {
+            return score52WeekHighMomentum(ticker, strategy, data);
+        } else if ("PULLBACK_MA20".equals(strategy.strategyType)) {
+            return scorePullbackMA20(ticker, strategy, data);
+        } else if ("VOLUME_BREAKOUT".equals(strategy.strategyType)) {
+            return scoreVolumeBreakout(ticker, strategy, data);
         }
         TradeDecision dec = new TradeDecision();
         dec.rejectReason = "Unknown strategyType: " + strategy.strategyType;
@@ -1753,6 +1824,164 @@ public class AIToolAgent {
             " Setup=" + dec.setupScore +
                 "(chg=" + String.format("%+.1f%%", d.todayChangePct) +
                 ",above50=" + String.format("%.1f%%", abvSMA50Pct) + ")" +
+            " Trigger=$" + String.format("%.2f", dec.entryTriggerPrice) +
+            " total=" + dec.totalScore + "/12");
+        return dec;
+    }
+
+    private static TradeDecision score52WeekHighMomentum(String ticker, AgentConfig strategy, IndicatorData d) {
+        TradeDecision dec = new TradeDecision();
+        dec.action = "BUY";
+
+        // Trend score (max 3): price must be in an established uptrend
+        if (d.hasSMA200 && d.priceAboveSMA200) dec.trendScore += 2;
+        if (d.hasSMA50  && d.priceAboveSMA50)  dec.trendScore += 1;
+
+        // Setup score (max 3): how close to the 52W high — the closer, the stronger
+        // pctFromWeek52High is negative when below the high (e.g. -3.0 = 3% below)
+        if      (d.week52High > 0 && d.pctFromWeek52High >= -1.0) dec.setupScore = 3;
+        else if (d.week52High > 0 && d.pctFromWeek52High >= -3.0) dec.setupScore = 2;
+        else if (d.week52High > 0 && d.pctFromWeek52High >= -5.0) dec.setupScore = 1;
+
+        // Volume score (max 3): rising volume confirms institutional accumulation near highs
+        if      (d.rvol >= 2.0) dec.volumeScore = 3;
+        else if (d.rvol >= 1.3) dec.volumeScore = 2;
+        else if (d.rvol >= 0.8) dec.volumeScore = 1;
+
+        // Momentum score (max 3): RSI in breakout zone + positive 20-day price momentum
+        if      (d.rsi >= 55 && d.rsi <= 75) dec.momentumScore += 2;
+        else if (d.rsi >= 50 && d.rsi <= 78) dec.momentumScore += 1;
+        if      (d.momentum20d >= 10.0)      dec.momentumScore += 1;
+
+        dec.totalScore = dec.volumeScore + dec.trendScore + dec.momentumScore + dec.setupScore;
+        dec.entryPrice = d.currentPrice;
+        double slPct = getDoubleRisk(strategy, "stopLossPct", 6.0);
+        double tpPct = getDoubleRisk(strategy, "takeProfitPct", 18.0);
+        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
+        dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
+
+        // Entry trigger: buy only on confirmed break above the 52W high
+        dec.entryTriggerPrice = d.week52High > 0 ? d.week52High * 1.002 : d.currentPrice * 1.005;
+
+        writeScanLog("[SCORE|52W-HIGH] " + ticker + " | " + strategy.id +
+            " | Volume=" + dec.volumeScore + "(RVOL=" + String.format("%.1f", d.rvol) + "x)" +
+            " Trend=" + dec.trendScore +
+                "(" + (d.hasSMA200 && d.priceAboveSMA200 ? "abvSMA200" : "blwSMA200") +
+                (d.hasSMA50  && d.priceAboveSMA50  ? ",abvSMA50" : "") + ")" +
+            " Setup=" + dec.setupScore +
+                "(52Whi=$" + String.format("%.2f", d.week52High) +
+                ",dist=" + String.format("%+.1f%%", d.pctFromWeek52High) + ")" +
+            " Momentum=" + dec.momentumScore +
+                "(RSI=" + String.format("%.0f", d.rsi) +
+                ",mom20d=" + String.format("%+.1f%%", d.momentum20d) + ")" +
+            " Trigger=$" + String.format("%.2f", dec.entryTriggerPrice) +
+            " total=" + dec.totalScore + "/12");
+        return dec;
+    }
+
+    private static TradeDecision scorePullbackMA20(String ticker, AgentConfig strategy, IndicatorData d) {
+        TradeDecision dec = new TradeDecision();
+        dec.action = "BUY";
+
+        // Trend score (max 3): uptrend must be confirmed before a MA20 pullback is valid
+        if (d.hasSMA200 && d.priceAboveSMA200) dec.trendScore += 2;
+        if (d.hasSMA50  && d.priceAboveSMA50)  dec.trendScore += 1;
+
+        // Setup score (max 3): closeness to MA20 — tighter pullback = better entry quality
+        double absSMA20Pct = d.sma20 > 0 ? Math.abs(((d.currentPrice - d.sma20) / d.sma20) * 100) : 99;
+        if      (absSMA20Pct <= 0.5) dec.setupScore = 3;
+        else if (absSMA20Pct <= 1.5) dec.setupScore = 2;
+        else if (absSMA20Pct <= 3.0) dec.setupScore = 1;
+
+        // Momentum score (max 3): RSI cooling off into 40-55 zone = healthy reset
+        if      (d.rsi >= 40 && d.rsi <= 55) dec.momentumScore += 2;
+        else if (d.rsi >= 35 && d.rsi <= 60) dec.momentumScore += 1;
+        if      (d.cci >= -50 && d.cci <= 100) dec.momentumScore += 1;
+
+        // Volume score (max 3): drying volume on the pullback = sellers exhausted
+        if      (d.rvol >= 0.5 && d.rvol <= 1.3) dec.volumeScore = 3;
+        else if (d.rvol >= 0.3 && d.rvol <  1.8) dec.volumeScore = 2;
+        else if (d.rvol >  0)                     dec.volumeScore = 1;
+
+        // Penalise stocks that are up strongly today — not a real pullback to MA20
+        if (d.todayChangePct > 2.0) {
+            dec.setupScore = Math.max(0, dec.setupScore - 1);
+        }
+
+        dec.totalScore = dec.volumeScore + dec.trendScore + dec.momentumScore + dec.setupScore;
+        dec.entryPrice = d.currentPrice;
+        double slPct = getDoubleRisk(strategy, "stopLossPct", 4.0);
+        double tpPct = getDoubleRisk(strategy, "takeProfitPct", 12.0);
+        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
+        dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
+
+        // Entry trigger: buy only when price closes back above MA20 with a small buffer
+        dec.entryTriggerPrice = d.sma20 > 0 ? d.sma20 * 1.003 : d.currentPrice * 1.003;
+
+        writeScanLog("[SCORE|PULLBACK-MA20] " + ticker + " | " + strategy.id +
+            " | Volume=" + dec.volumeScore + "(RVOL=" + String.format("%.1f", d.rvol) + "x,drying=" + (d.rvol >= 0.5 && d.rvol <= 1.3 ? "YES" : "no") + ")" +
+            " Trend=" + dec.trendScore +
+                "(" + (d.hasSMA200 && d.priceAboveSMA200 ? "abvSMA200" : "blwSMA200") +
+                (d.hasSMA50  && d.priceAboveSMA50  ? ",abvSMA50" : "") + ")" +
+            " Setup=" + dec.setupScore +
+                "(SMA20=$" + String.format("%.2f", d.sma20) +
+                ",dist=" + String.format("%.2f%%", absSMA20Pct) + ",chg=" + String.format("%+.1f%%", d.todayChangePct) + ")" +
+            " Momentum=" + dec.momentumScore +
+                "(RSI=" + String.format("%.0f", d.rsi) +
+                ",CCI=" + String.format("%.0f", d.cci) + ")" +
+            " Trigger=$" + String.format("%.2f", dec.entryTriggerPrice) +
+            " total=" + dec.totalScore + "/12");
+        return dec;
+    }
+
+    private static TradeDecision scoreVolumeBreakout(String ticker, AgentConfig strategy, IndicatorData d) {
+        TradeDecision dec = new TradeDecision();
+        dec.action = "BUY";
+
+        // Volume score (max 3): must be a genuine volume surge to confirm the breakout
+        if      (d.rvol >= 3.0) dec.volumeScore = 3;
+        else if (d.rvol >= 2.0) dec.volumeScore = 2;
+        else if (d.rvol >= 1.5) dec.volumeScore = 1;
+
+        // Breakout score (max 3): price relative to 30-day resistance level
+        if (d.resistance30d > 0) {
+            double breakPct = ((d.currentPrice - d.resistance30d) / d.resistance30d) * 100;
+            if      (breakPct >= 0 && breakPct <= 3.0) dec.setupScore = 3; // clean break, not overextended
+            else if (breakPct >= -0.5)                 dec.setupScore = 2; // right at resistance
+            else if (breakPct >= -1.5)                 dec.setupScore = 1; // approaching resistance
+        }
+
+        // Trend score (max 3): base trend must support the breakout
+        if (d.hasSMA200 && d.priceAboveSMA200) dec.trendScore += 2;
+        if (d.hasSMA50  && d.priceAboveSMA50)  dec.trendScore += 1;
+
+        // Momentum score (max 3): RSI with energy but not overbought + strong day
+        if      (d.rsi >= 50 && d.rsi <= 70) dec.momentumScore += 2;
+        else if (d.rsi >= 45 && d.rsi <= 75) dec.momentumScore += 1;
+        if      (d.todayChangePct >= 1.0)    dec.momentumScore += 1;
+
+        dec.totalScore = dec.volumeScore + dec.trendScore + dec.momentumScore + dec.setupScore;
+        dec.entryPrice = d.currentPrice;
+        double slPct = getDoubleRisk(strategy, "stopLossPct", 5.0);
+        double tpPct = getDoubleRisk(strategy, "takeProfitPct", 15.0);
+        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
+        dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
+
+        // Entry trigger: buy only on confirmed break above the 30-day resistance
+        dec.entryTriggerPrice = d.resistance30d > 0 ? d.resistance30d * 1.005 : d.currentPrice * 1.005;
+
+        double breakPct = d.resistance30d > 0 ? ((d.currentPrice - d.resistance30d) / d.resistance30d) * 100 : 0;
+        writeScanLog("[SCORE|VOL-BREAKOUT] " + ticker + " | " + strategy.id +
+            " | Volume=" + dec.volumeScore + "(RVOL=" + String.format("%.1f", d.rvol) + "x)" +
+            " Breakout=" + dec.setupScore +
+                "(R30=$" + String.format("%.2f", d.resistance30d) +
+                ",breakPct=" + String.format("%+.1f%%", breakPct) + ")" +
+            " Trend=" + dec.trendScore +
+                "(" + (d.hasSMA200 && d.priceAboveSMA200 ? "abvSMA200" : "blwSMA200") +
+                (d.hasSMA50  && d.priceAboveSMA50  ? ",abvSMA50" : "") + ")" +
+            " Momentum=" + dec.momentumScore +
+                "(RSI=" + String.format("%.0f", d.rsi) +
+                ",chg=" + String.format("%+.1f%%", d.todayChangePct) + ")" +
             " Trigger=$" + String.format("%.2f", dec.entryTriggerPrice) +
             " total=" + dec.totalScore + "/12");
         return dec;

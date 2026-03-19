@@ -186,7 +186,7 @@ public class DataFetcher {
     public static String fetchStockData() {
         // בניית כתובת ה-URL לבקשה (למשל, מחירי סגירה יומיים)
         String url = String.format(
-                "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=%s%s&apikey=%s",
+                "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=%s%s&outputsize=full&apikey=%s",
                 TICKER, entitlementQueryParam(), API_KEY
         );
 

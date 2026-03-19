@@ -1,0 +1,31 @@
+{
+  "id" : "MASTER_6_VOLUME_BREAKOUT",
+  "name" : "Volume Breakout (Master)",
+  "type" : "MASTER",
+  "strategyType" : "VOLUME_BREAKOUT",
+  "masterStrategy" : true,
+  "generation" : 0,
+  "lastModified" : "2026-03-13T00:00:00.000000-05:00[America/New_York]",
+  "entryFilters" : {
+    "rvolMin" : 1.5,
+    "rsiMin" : 45.0,
+    "rsiMax" : 75.0,
+    "sma50Required" : true
+  },
+  "riskManagement" : {
+    "stopLossPct" : 5.0,
+    "takeProfitPct" : 15.0,
+    "riskRewardRatio" : 3.0,
+    "trailingStopPct" : 3.0,
+    "atrMultiplier" : 3.0,
+    "maxPositionPct" : 0.08
+  },
+  "scoring" : {
+    "scoreThreshold" : 8,
+    "confluenceThreshold" : 6,
+    "confluenceBonus" : 2,
+    "description" : "Volume-surge(3)+Breakout/30d-resistance(3)+Trend/SMA-alignment(3)+Momentum/RSI+dailyChg(3)=12 max. Buy on break of 30-day resistance. Hold 3-10 days."
+  },
+  "locked" : true,
+  "disabled" : false
+}

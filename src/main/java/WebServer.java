@@ -7042,6 +7042,14 @@ public class WebServer {
                 sb.append("</div>");
                 sb.append("</div>");
 
+                // Build set of high-performing agent IDs (>=75% win rate, >=3 trades) — used by both open position tables
+                java.util.Set<String> highPerfAgents = new java.util.HashSet<>();
+                for (AIToolAgent.AgentPerformance hp : performances) {
+                    if (hp.totalTrades >= 3 && hp.winRate >= 75.0) {
+                        highPerfAgents.add(hp.agentId);
+                    }
+                }
+
                 if (openPosSummaries.isEmpty()) {
                     sb.append("<div style='color:#9ca3af;font-size:13px;'>No open positions. Positions will appear here after running a Full Scan.</div>");
                 } else {
@@ -7068,6 +7076,18 @@ public class WebServer {
                         String entryTimeDisplay = pos.entryTime != null ? pos.entryTime.substring(0, Math.min(19, pos.entryTime.length())).replace("T", " ") : "N/A";
                         String agentList = String.join(", ", pos.agentIds);
 
+                        // Build agent chips — yellow highlight for high performers
+                        StringBuilder agentChips = new StringBuilder();
+                        for (String agentId : pos.agentIds) {
+                            if (agentChips.length() > 0) agentChips.append(" ");
+                            if (highPerfAgents.contains(agentId)) {
+                                agentChips.append("<span style='background:#854d0e;color:#fef08a;border:1px solid #ca8a04;border-radius:4px;padding:1px 5px;font-weight:700;' title='🏆 High performer (≥75% win rate)'>")
+                                    .append(escapeHtml(agentId)).append("</span>");
+                            } else {
+                                agentChips.append("<span style='color:#a78bfa;'>").append(escapeHtml(agentId)).append("</span>");
+                            }
+                        }
+
                         sb.append("<tr style='background:").append(rowBg).append(";'>");
                         sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;color:#6b7280;'>").append(rowNum).append("</td>");
                         sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;font-weight:700;color:#e5e7eb;font-size:13px;'>").append(escapeHtml(pos.ticker)).append("</td>");
@@ -7076,14 +7096,15 @@ public class WebServer {
                         sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#22c55e;'>$").append(String.format("%.2f", pos.takeProfit)).append("</td>");
                         sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#ef4444;'>").append(String.format("%.1f%%", slPct)).append("</td>");
                         sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#22c55e;'>+").append(String.format("%.1f%%", tpPct)).append("</td>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;color:#a78bfa;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' title='").append(escapeHtml(agentList)).append("'>").append(escapeHtml(agentList)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;font-size:11px;max-width:220px;' title='").append(escapeHtml(agentList)).append("'>").append(agentChips).append("</td>");
                         sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;color:#9ca3af;font-size:11px;'>").append(entryTimeDisplay).append("</td>");
                         sb.append("</tr>");
                     }
 
                     sb.append("</tbody></table>");
                     sb.append("</div>");
-                    sb.append("<div style='margin-top:10px;color:#9ca3af;font-size:11px;'>💡 Each row = one unique stock. Positions are held open and closed at EOD (4:30 PM ET) or when stop-loss / take-profit is triggered.</div>");
+                    sb.append("<div style='margin-top:10px;color:#9ca3af;font-size:11px;'>💡 Each row = one unique stock. Positions are held open and closed at EOD (4:30 PM ET) or when stop-loss / take-profit is triggered. &nbsp;");
+                    sb.append("<span style='background:#854d0e;color:#fef08a;border:1px solid #ca8a04;border-radius:4px;padding:1px 5px;font-weight:700;'>Agent</span> = 🏆 High performer (≥75% win rate, ≥3 trades)</div>");
                 }
                 sb.append("</div>");
                 sb.append("</div>"); // close main AITool card
@@ -7254,7 +7275,12 @@ public class WebServer {
                             sb.append("<tr style='border-bottom:1px solid #1f2a44;'>");
                             String entryTimeStr = t.entryTime != null && t.entryTime.length() > 16 ? t.entryTime.substring(11, 16) : (t.entryTime != null ? t.entryTime : "");
                             sb.append("<td style='padding:6px;color:#9ca3af;'>").append(escapeHtml(entryTimeStr)).append("</td>");
-                            sb.append("<td style='padding:6px;'>").append(escapeHtml(t.agentId != null ? t.agentId : "")).append("</td>");
+                            String agentIdVal = t.agentId != null ? t.agentId : "";
+                            if (highPerfAgents.contains(agentIdVal)) {
+                                sb.append("<td style='padding:6px;'><span style='background:#854d0e;color:#fef08a;border:1px solid #ca8a04;border-radius:4px;padding:1px 5px;font-weight:700;' title='🏆 High performer (≥75% win rate)'>").append(escapeHtml(agentIdVal)).append("</span></td>");
+                            } else {
+                                sb.append("<td style='padding:6px;color:#a78bfa;'>").append(escapeHtml(agentIdVal)).append("</td>");
+                            }
                             sb.append("<td style='padding:6px;font-weight:600;color:#93c5fd;'>").append(escapeHtml(t.ticker != null ? t.ticker : "")).append("</td>");
                             sb.append("<td style='padding:6px;text-align:right;'>$").append(String.format("%.2f", t.entryPrice)).append("</td>");
                             sb.append("<td style='padding:6px;text-align:right;color:#ef4444;'>$").append(String.format("%.2f", t.stopLoss)).append("</td>");
@@ -7374,10 +7400,13 @@ public class WebServer {
                         for (int li = recent.size() - 1; li >= 0; li--) {
                             String line = escapeHtml(recent.get(li));
                             String color = "#e5e7eb";
-                            if (line.contains("✅ BUY SIGNAL") || line.contains("PARTIAL") || line.contains("TAKE_PROFIT")) color = "#22c55e";
+                            if (line.contains("✅ SIGNAL") || line.contains("PARTIAL") || line.contains("TAKE_PROFIT")) color = "#22c55e";
                             else if (line.contains("❌ REJECT") || line.contains("STOP") || line.contains("FETCH FAIL") || line.contains("ERROR")) color = "#ef4444";
                             else if (line.contains("MONITOR") && line.contains("HOLD")) color = "#60a5fa";
                             else if (line.contains("MONITOR")) color = "#f59e0b";
+                            else if (line.contains("REGIME") && line.contains("VERY WEAK")) color = "#ef4444";
+                            else if (line.contains("REGIME") && line.contains("WEAK")) color = "#f59e0b";
+                            else if (line.contains("REGIME") && line.contains("HEALTHY")) color = "#22c55e";
                             else if (line.contains("SCAN START") || line.contains("SCAN END") || line.contains("EOD")) color = "#a78bfa";
                             else if (line.contains("═") || line.contains("─")) color = "#374151";
                             else if (line.contains("SKIP")) color = "#6b7280";
