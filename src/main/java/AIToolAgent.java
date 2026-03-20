@@ -56,6 +56,12 @@ public class AIToolAgent {
     private static final Object LOCK = new Object();
     private static volatile AgentSystemState systemState = null;
     private static volatile boolean initialized = false;
+
+    // Market regime state — updated by checkMarketRegime() on every scan and every 30-min standalone check
+    static volatile RegimeLevel lastKnownRegime    = RegimeLevel.HEALTHY;
+    static volatile String      lastRegimeDetail   = "";      // e.g. "SPY $540.00 | SMA20=$548.00 | Change=-2.3%"
+    static volatile int         lastScanSignalCount = 0;      // signals found in the last scan (before regime filter)
+    static volatile String      lastRegimeCheckTime = null;   // formatted HH:mm z of last check
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2, r -> {
         Thread t = new Thread(r);
         t.setDaemon(true);
@@ -260,6 +266,37 @@ public class AIToolAgent {
             // Schedule 48h log rotation for scan-detail.log
             rotateScanLogIfNeeded(); // check immediately on startup
             scheduleLogRotation();
+
+            // Schedule 30-minute standalone SPY regime check (only during market hours, only when no scan is running)
+            // Sends Discord notification if the regime level changes (e.g. HEALTHY → VERY_WEAK)
+            scheduler.scheduleAtFixedRate(() -> {
+                try {
+                    if (!isMarketHours()) return;
+                    if (systemState != null && (systemState.running || topAgentsFullScanRunning)) return;
+                    System.out.println("[AIToolAgent] 30-min regime check: fetching SPY...");
+                    RegimeLevel prevRegime = lastKnownRegime;
+                    checkMarketRegime();
+                    RegimeLevel newRegime = lastKnownRegime;
+                    if (prevRegime != newRegime) {
+                        String detail = lastRegimeDetail;
+                        if (newRegime == RegimeLevel.VERY_WEAK) {
+                            sendDiscord("⛔ **Market Regime Changed: VERY WEAK**\n" +
+                                "SPY is below 20-day MA or down >2% today. **No new trades will be executed** to protect capital.\n" +
+                                (detail.isEmpty() ? "" : detail));
+                        } else if (newRegime == RegimeLevel.WEAK) {
+                            sendDiscord("⚠️ **Market Regime Changed: WEAK**\n" +
+                                "SPY shows mixed signals. Position sizes reduced to 50%.\n" +
+                                (detail.isEmpty() ? "" : detail));
+                        } else {
+                            sendDiscord("✅ **Market Regime Recovered: HEALTHY**\n" +
+                                "SPY is back above 20-day MA. Normal trading resumed.\n" +
+                                (detail.isEmpty() ? "" : detail));
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("[AIToolAgent] Standalone regime check error: " + e.getMessage());
+                }
+            }, 30, 30, TimeUnit.MINUTES);
             
             // AUTO-RUN ON STARTUP: If market is currently open, run immediately
             if (isMarketHours()) {
@@ -1141,16 +1178,22 @@ public class AIToolAgent {
     }
 
     public static void runAllAgents() {
+        boolean alreadyRunning = false;
         synchronized (LOCK) {
             if (systemState == null) {
                 initialize();
             }
             if (systemState.running) {
-                System.out.println("[AIToolAgent] Already running, skipping...");
-                return;
+                alreadyRunning = true;
+            } else {
+                systemState.running = true;
+                systemState.runCount++;
             }
-            systemState.running = true;
-            systemState.runCount++;
+        }
+        if (alreadyRunning) {
+            System.out.println("[AIToolAgent] Already running, skipping...");
+            sendDiscord("⏳ **Scan Already Running** — A scan is currently in progress, skipping this request.");
+            return;
         }
 
         try {
@@ -1168,6 +1211,10 @@ public class AIToolAgent {
             writeScanLog("════════════════════════════════════════");
             writeScanLog("[SCAN START] Run #" + systemState.runCount +
                 " | Tickers: " + total + " | Agents: " + allAgents.size());
+            sendDiscord("🔍 **Scan Started** — Run #" + systemState.runCount
+                + "\nScanning **" + total + "** tickers"
+                + " | ETA ~" + (int) Math.ceil(total * 12.5 / 60) + " min"
+                + "\n⏰ " + ZonedDateTime.now(NY).format(DateTimeFormatter.ofPattern("HH:mm:ss z")));
             runProgress = 0;
             runTotal = total;
             runStockProgress = 0;
@@ -1343,7 +1390,8 @@ public class AIToolAgent {
                                      : (regime == RegimeLevel.WEAK)    ? 0.5 : 0.0;
                 sendRankedScanSummary(allSignals, topSignals, regime, posMultiplier);
                 if (regime == RegimeLevel.VERY_WEAK) {
-                    writeScanLog("[REGIME] ⛔ Trade execution blocked — market in crash mode");
+                    lastScanSignalCount = allSignals.size();
+                    writeScanLog("[REGIME] ⛔ Trade execution blocked — market in crash mode (" + allSignals.size() + " signal(s) suppressed)");
                 } else {
                     String regimeNote = (regime == RegimeLevel.WEAK) ? " [WEAK regime — 50% size]" : "";
                     writeScanLog("[RANK] " + allSignals.size() + " signal(s) found → executing top "
@@ -1548,6 +1596,11 @@ public class AIToolAgent {
             writeScanLog(String.format("[REGIME] SPY $%.2f | SMA20=$%.2f | Change=%.2f%% | BelowSMA20=%.1f%% | Above20=%s → %s",
                 spy.currentPrice, spy.sma20, spy.todayChangePct, pctBelowSMA20,
                 spy.priceAboveSMA20 ? "YES" : "NO", label));
+            // Persist for UI banner
+            lastKnownRegime    = level;
+            lastRegimeDetail   = String.format("SPY $%.2f | SMA20=$%.2f | Change=%.2f%%",
+                spy.currentPrice, spy.sma20, spy.todayChangePct);
+            lastRegimeCheckTime = ZonedDateTime.now(NY).format(DateTimeFormatter.ofPattern("HH:mm z"));
             return level;
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
@@ -2896,11 +2949,23 @@ public class AIToolAgent {
     // ==================== END TRADE LOG TRACING ====================
 
     /**
-     * Send BUY ALERT notification BEFORE trade execution
-     * This alerts the user to a trading opportunity so they can act on it
+     * Send BUY ALERT notification BEFORE trade execution.
+     * Master strategies always notify (they are the best by design).
+     * Legacy agents only notify if saved in Saved Configurations & Cumulative Tracking
+     * with either notifyOnTrade=true or a proven cumulative record (≥3 trades, ≥55% win rate).
      */
     private static void sendBuyAlertIfMonitored(AgentConfig agent, String ticker, TradeDecision decision) {
-        // Send BUY alert for ALL agents — every green-pass stock gets notified
+        // --- Filter: only notify from master strategies or tracked/successful legacy agents ---
+        ScoringConfig.SavedAgentTracker tracker = null;
+        if (!agent.masterStrategy) {
+            Map<String, ScoringConfig.SavedAgentTracker> trackers = ScoringConfig.getSavedAgentTrackers();
+            tracker = trackers != null ? trackers.get(agent.id) : null;
+            if (tracker == null) return; // Not in Saved Configurations → skip
+            boolean hasGoodPerformance = tracker.cumulativeTrades >= 3
+                && (double) tracker.cumulativeWins / tracker.cumulativeTrades >= 0.55;
+            if (!tracker.notifyOnTrade && !hasGoodPerformance) return;
+        }
+
         double currentPrice = decision.entryPrice > 0
             ? decision.entryPrice
             : decision.suggestedStopLoss / (1 - getDoubleRisk(agent, "stopLossPct", 3.5) / 100);
@@ -2909,12 +2974,12 @@ public class AIToolAgent {
         double riskPct = ((currentPrice - stopLossPrice) / currentPrice) * 100;
         double rewardPct = ((takeProfitPrice - currentPrice) / currentPrice) * 100;
         double riskReward = rewardPct / riskPct;
-        
+
         // Get agent performance for context
         AgentPerformance perf = systemState.performance.get(agent.id);
         String winRateStr = perf != null ? String.format("%.1f%%", perf.winRate) : "N/A";
         int totalTrades = perf != null ? perf.totalTrades : 0;
-        
+
         String scoreInfo = decision.totalScore > 0 ? String.format(
             "━━━━━━━━━━━━━━━━━━━━\n" +
             "📊 Score: **%d/12** (V:%d T:%d M:%d S:%d%s)\n",
@@ -2923,9 +2988,21 @@ public class AIToolAgent {
             decision.confluenceBonus > 0 ? " 🔥+" + decision.confluenceBonus + " CONFLUENCE" : ""
         ) : "";
 
+        // Cumulative tracker stats for legacy agents saved in Saved Configurations
+        String trackerInfo = "";
+        if (tracker != null && tracker.cumulativeTrades > 0) {
+            double cumWinRate = (double) tracker.cumulativeWins / tracker.cumulativeTrades * 100;
+            trackerInfo = String.format(
+                "━━━━━━━━━━━━━━━━━━━━\n" +
+                "📋 Tracker: **%d/%d** wins (%.1f%%) | Cumulative P/L: $%+.0f\n",
+                tracker.cumulativeWins, tracker.cumulativeTrades, cumWinRate, tracker.cumulativeProfitLoss
+            );
+        }
+
         double triggerPrice = decision.entryTriggerPrice > 0 ? decision.entryTriggerPrice : currentPrice;
         double triggerPct   = currentPrice > 0 ? ((triggerPrice - currentPrice) / currentPrice) * 100 : 0;
         String setupLabel   = setupTypeLabel(agent.strategyType);
+        if (setupLabel.equals("Unknown") && agent.name != null) setupLabel = "🤖 " + agent.name;
         String holdLabel    = holdDuration(agent.strategyType);
         String triggerLine  = String.format(
             "⚡ **BUY ONLY IF breaks $%.2f** (+%.2f%%)\n" +
@@ -2942,6 +3019,7 @@ public class AIToolAgent {
             "🎯 Take Profit: **$%.2f** (+%.1f%%)\n" +
             "📊 Risk/Reward: **1:%.1f**\n" +
             "%s" +
+            "%s" +
             "━━━━━━━━━━━━━━━━━━━━\n" +
             "🤖 Strategy: %s\n" +
             "⏱ Expected hold: %s\n" +
@@ -2954,12 +3032,13 @@ public class AIToolAgent {
             takeProfitPrice, rewardPct,
             riskReward,
             scoreInfo,
+            trackerInfo,
             agent.name != null ? agent.name : agent.id,
             holdLabel,
             winRateStr, totalTrades,
             ZonedDateTime.now(NY).format(DateTimeFormatter.ofPattern("HH:mm:ss z"))
         );
-        
+
         sendDiscord(message);
         logDiscordSent(agent.id, ticker, "BUY_ALERT");
         System.out.println("[AIToolAgent] BUY ALERT sent for " + ticker + " via agent " + agent.id);
@@ -3627,6 +3706,11 @@ public class AIToolAgent {
     public static int getRunStockProgress() { return runStockProgress; }
     public static String getRunCurrentTicker() { return runCurrentTicker; }
 
+    public static RegimeLevel getLastKnownRegime()    { return lastKnownRegime; }
+    public static String      getLastRegimeDetail()   { return lastRegimeDetail; }
+    public static int         getLastScanSignalCount(){ return lastScanSignalCount; }
+    public static String      getLastRegimeCheckTime(){ return lastRegimeCheckTime; }
+
     // Status tracking for top agents full scan
     private static volatile boolean topAgentsFullScanRunning = false;
     private static volatile String topAgentsFullScanStatus = "";
@@ -3721,6 +3805,7 @@ public class AIToolAgent {
     public static void runFullScanWithAgentsAsync(List<String> agentIds) {
         if (topAgentsFullScanRunning) {
             System.out.println("[AIToolAgent] Top agents full scan already running, skipping...");
+            sendDiscord("⏳ **Scan Already Running** — A full scan is currently in progress, skipping this request.");
             return;
         }
         
@@ -3774,6 +3859,7 @@ public class AIToolAgent {
             if (agentsToRun.isEmpty()) {
                 topAgentsFullScanStatus = "No qualified agents found (need at least 3 trades)";
                 topAgentsFullScanRunning = false;
+                sendDiscord("⚠️ **Full Scan Skipped** — No qualified agents found (each agent needs at least 3 trades).");
                 return;
             }
             
@@ -4313,28 +4399,41 @@ public class AIToolAgent {
         return sendDiscord(text);
     }
 
-    // Discord notification
+    // Discord notification — uses curl via ProcessBuilder to bypass JVM network restrictions
     private static boolean sendDiscord(String text) {
         try {
             if (DISCORD_WEBHOOK_URL == null || DISCORD_WEBHOOK_URL.isBlank()) {
                 System.out.println("[AIToolAgent] Discord webhook not configured (DAILY_SIM_DISCORD_WEBHOOK_URL env var)");
+                writeScanLog("[DISCORD] ❌ Not configured — DAILY_SIM_DISCORD_WEBHOOK_URL env var missing");
                 return false;
             }
             if (text == null || text.isBlank()) return false;
-            
-            // Discord webhook expects JSON with "content" field
+
+            String preview = text.length() > 60 ? text.substring(0, 60).replace('\n', ' ') + "..." : text.replace('\n', ' ');
             String jsonBody = "{\"content\": " + escapeJsonString(text) + "}";
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(DISCORD_WEBHOOK_URL))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                    .build();
-            HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
-            System.out.println("[AIToolAgent][Discord] Sent notification, status: " + resp.statusCode());
-            return resp.statusCode() == 200 || resp.statusCode() == 204;
+
+            ProcessBuilder pb = new ProcessBuilder(
+                "curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
+                "-X", "POST", DISCORD_WEBHOOK_URL,
+                "-H", "Content-Type: application/json",
+                "-d", jsonBody
+            );
+            pb.redirectErrorStream(true);
+            Process proc = pb.start();
+            String statusCode = new String(proc.getInputStream().readAllBytes()).trim();
+            proc.waitFor();
+
+            boolean ok = "200".equals(statusCode) || "204".equals(statusCode);
+            System.out.println("[AIToolAgent][Discord] Sent notification, status: " + statusCode);
+            if (ok) {
+                writeScanLog("[DISCORD] ✅ Sent (HTTP " + statusCode + "): " + preview);
+            } else {
+                writeScanLog("[DISCORD] ❌ Failed (HTTP " + statusCode + "): " + preview);
+            }
+            return ok;
         } catch (Exception e) {
             System.err.println("[AIToolAgent][Discord] Failed to send: " + e.getMessage());
+            writeScanLog("[DISCORD] ❌ Exception: " + e.getMessage());
             return false;
         }
     }

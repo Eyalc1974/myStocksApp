@@ -1,0 +1,64 @@
+{
+  "id" : "MASTER_7_VIX_MARKET_FILTER",
+  "name" : "VIX + SPY Market Filter (Master)",
+  "type" : "MARKET_FILTER",
+  "strategyType" : "VIX_MARKET_FILTER",
+  "masterStrategy" : false,
+  "generation" : 0,
+  "lastModified" : "2026-03-20T00:00:00.000000-05:00[America/New_York]",
+  "description" : "Global market regime filter combining VIX fear index with SPY trend. Applied before every scan to gate trade execution. NOT a per-stock entry strategy.",
+  "marketRegime" : {
+    "HEALTHY" : {
+      "label" : "✅ STRONG — full position size (100%)",
+      "conditions" : [
+        "SPY > SMA20",
+        "SPY daily change > -1%",
+        "VIX < 20"
+      ],
+      "action" : "Trade normally at full position size"
+    },
+    "WEAK" : {
+      "label" : "⚠️ NEUTRAL — reduced position size (50%)",
+      "conditions" : [
+        "SPY mixed signals (not clearly above/below SMA20)",
+        "OR VIX between 20 and 22"
+      ],
+      "action" : "Trade at half position size"
+    },
+    "VERY_WEAK" : {
+      "label" : "⛔ WEAK — no new trades",
+      "conditions" : [
+        "SPY < SMA20 by 2%+ OR SPY daily change ≤ -2%",
+        "OR VIX > 22"
+      ],
+      "action" : "Block all new trade entries to protect capital"
+    }
+  },
+  "vixThresholds" : {
+    "calm" : 18,
+    "neutral_low" : 18,
+    "neutral_high" : 22,
+    "danger" : 22,
+    "healthy_max" : 20
+  },
+  "spyThresholds" : {
+    "safeChangeMin" : -1.0,
+    "crashChangeMax" : -2.0,
+    "crashBelowSMA20Pct" : 2.0
+  },
+  "combinedLogic" : {
+    "HEALTHY" : "SPY_above_SMA20 AND SPY_change > -1% AND VIX < 20",
+    "VERY_WEAK" : "SPY_crash_conditions OR VIX > 22",
+    "WEAK" : "everything else (mixed signals)"
+  },
+  "vixSymbol" : "^VIX",
+  "spySymbol" : "SPY",
+  "notes" : [
+    "VIX alone is not sufficient — combine with SPY trend",
+    "Example: VIX low but SPY falling → still WEAK",
+    "Fail-open: if VIX data unavailable, SPY-only logic applies",
+    "Each VIX + SPY fetch costs 1 API call (12.5s sleep between them on free tier)"
+  ],
+  "locked" : true,
+  "disabled" : false
+}

@@ -6922,6 +6922,37 @@ public class WebServer {
                 sb.append("<a href='/aitool' style='padding:10px 14px;background:#1f2a44;border-radius:8px;'>🔄 Refresh</a>");
                 sb.append("</div>");
 
+                // Market Regime Filter Banner — always visible
+                AIToolAgent.RegimeLevel regime    = AIToolAgent.getLastKnownRegime();
+                String regimeDetail               = AIToolAgent.getLastRegimeDetail();
+                String regimeCheckTime            = AIToolAgent.getLastRegimeCheckTime();
+                int    signalCount                = AIToolAgent.getLastScanSignalCount();
+                String checkedStr = (regimeCheckTime != null)
+                    ? " &nbsp;·&nbsp; checked " + escapeHtml(regimeCheckTime)
+                    : " &nbsp;·&nbsp; <i>pending first check (runs at next scan or in ≤30 min)</i>";
+                if (regime == AIToolAgent.RegimeLevel.VERY_WEAK) {
+                    sb.append("<div style='margin-top:14px;background:#1a0a0a;border:2px solid #ef4444;border-radius:10px;padding:14px 16px;'>");
+                    sb.append("<div style='font-size:15px;font-weight:700;color:#ef4444;margin-bottom:6px;'>⛔ Market Regime Filter Active — Capital Protection Mode</div>");
+                    sb.append("<div style='color:#fca5a5;font-size:13px;'>SPY is below its 20-day MA or down &gt;2% today.");
+                    if (signalCount > 0) {
+                        sb.append(" <b>").append(signalCount).append(" signal(s)</b> found but <b>no trades executed</b> to protect capital.");
+                    }
+                    sb.append("</div>");
+                    sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:6px;'>").append(escapeHtml(regimeDetail)).append(checkedStr).append("</div>");
+                    sb.append("</div>");
+                } else if (regime == AIToolAgent.RegimeLevel.WEAK) {
+                    sb.append("<div style='margin-top:14px;background:#1a1200;border:2px solid #f59e0b;border-radius:10px;padding:14px 16px;'>");
+                    sb.append("<div style='font-size:15px;font-weight:700;color:#f59e0b;margin-bottom:6px;'>⚠️ Market Regime: Weak — Reduced Position Size (50%)</div>");
+                    sb.append("<div style='color:#fde68a;font-size:13px;'>SPY shows mixed signals. Trades are executing at half size.</div>");
+                    sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:6px;'>").append(escapeHtml(regimeDetail)).append(checkedStr).append("</div>");
+                    sb.append("</div>");
+                } else {
+                    sb.append("<div style='margin-top:14px;background:#0a1a0a;border:1px solid #22c55e;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;'>");
+                    sb.append("<span style='color:#22c55e;font-weight:700;'>✅ Market Regime: Healthy — Full position size</span>");
+                    sb.append("<span style='color:#9ca3af;font-size:12px;'>").append(escapeHtml(regimeDetail)).append(checkedStr).append("</span>");
+                    sb.append("</div>");
+                }
+
                 // JS poller — polls /aitool-run-status every 3s while running
                 sb.append("<script>");
                 sb.append("(function(){");
