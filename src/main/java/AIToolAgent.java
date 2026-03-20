@@ -478,24 +478,35 @@ public class AIToolAgent {
                         }
                         
                         if (!partialExit1RUsed) {
-                            // Normal stop/TP/EOD close
+                            AgentConfig agentCfgEod = systemState.agents.get(agentId);
+                            int maxHold  = agentCfgEod != null ? (int) getDoubleRisk(agentCfgEod, "maxHoldDays", 10.0) : 10;
+                            int holdDays = calcHoldDays(trade.entryTime);
+
                             if (currentPrice <= trade.stopLoss) {
-                                trade.status = "CLOSED_LOSS";
-                                trade.exitPrice = trade.stopLoss; // Stopped out at stop loss
+                                trade.status    = "CLOSED_LOSS";
+                                trade.exitPrice = trade.stopLoss;
                                 trade.closeReason = "STOP_LOSS";
-                            } else if (currentPrice >= trade.takeProfit) {
-                                trade.status = "CLOSED_WIN";
-                                trade.exitPrice = trade.takeProfit; // Hit take profit
+                            } else if (todayHigh >= trade.takeProfit) {
+                                trade.status    = "CLOSED_WIN";
+                                trade.exitPrice = trade.takeProfit;
                                 trade.closeReason = "TAKE_PROFIT";
-                            } else {
-                                // Neither stop nor limit hit - close at current price
+                            } else if (holdDays >= maxHold) {
                                 double priceChange = currentPrice - trade.entryPrice;
-                                trade.status = priceChange > 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
-                                trade.closeReason = "EOD_CLOSE";
+                                trade.status    = priceChange >= 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
+                                trade.exitPrice = currentPrice;
+                                trade.closeReason = "MAX_HOLD_DAYS";
+                            } else {
+                                // Within hold window — carry trade over to the next trading day
+                                writeScanLog(String.format(
+                                    "[EOD CARRY ⏳] %s | %s | day %d/%d | $%.2f | SL=$%.2f | TP=$%.2f",
+                                    trade.ticker, agentId, holdDays, maxHold,
+                                    currentPrice, trade.stopLoss, trade.takeProfit));
+                                Thread.sleep(12500);
+                                continue;
                             }
-                            // Calculate P/L
+                            // Calculate P/L for closed trade
                             double priceChange = trade.exitPrice - trade.entryPrice;
-                            trade.profitLoss = priceChange * trade.quantity;
+                            trade.profitLoss    = priceChange * trade.quantity;
                             trade.profitLossPct = (priceChange / trade.entryPrice) * 100;
                         }
                         
@@ -625,6 +636,27 @@ public class AIToolAgent {
                         " | P/L=$" + String.format("%+.2f", trade.profitLoss));
                     System.out.println("[AIToolAgent] MONITOR STOP: " + trade.ticker + " @ $" + String.format("%.2f", trade.exitPrice));
 
+                // === TAKE PROFIT HIT (intraday) ===
+                } else if (todayHigh >= trade.takeProfit) {
+                    synchronized (LOCK) {
+                        if (!"OPEN".equals(trade.status)) continue;
+                        trade.exitPrice = trade.takeProfit;
+                        trade.exitTime  = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
+                        trade.status    = "CLOSED_WIN";
+                        trade.closeReason = "TAKE_PROFIT";
+                        double priceChange = trade.exitPrice - trade.entryPrice;
+                        trade.profitLoss    = priceChange * trade.quantity;
+                        trade.profitLossPct = (priceChange / trade.entryPrice) * 100;
+                    }
+                    logTradeClosed(trade);
+                    updatePerformance(trade.agentId, trade);
+                    sendSellDiscord(trade, "🎯 TAKE PROFIT HIT");
+                    writeScanLog("[MONITOR 🎯 TP] " + trade.ticker + " | " + trade.agentId +
+                        " | high=$" + String.format("%.2f", todayHigh) +
+                        " >= TP=$" + String.format("%.2f", trade.takeProfit) +
+                        " | P/L=$" + String.format("%+.2f", trade.profitLoss));
+                    System.out.println("[AIToolAgent] MONITOR TP: " + trade.ticker + " @ $" + String.format("%.2f", trade.exitPrice));
+
                 // === PARTIAL EXIT AT 1R (not yet done) ===
                 } else if (partialAt1R && !trade.partialExitDone) {
                     double stopDistance = trade.entryPrice - trade.stopLoss;
@@ -657,6 +689,20 @@ public class AIToolAgent {
                         System.out.println("[AIToolAgent] MONITOR PARTIAL_1R: " + trade.ticker + " @ $" + String.format("%.2f", oneRTarget));
                     }
                 } else {
+                    // === TOP-AGENT SMART EXIT: lock profit if reversed after $25 gain ===
+                    double unrealizedProfit = (currentPrice - trade.entryPrice) * trade.quantity;
+                    if (isTopAgent(trade.agentId) && unrealizedProfit >= 25.0) {
+                        // Move stop to break-even once profit >= $25 (protect the gain)
+                        double newStop = trade.entryPrice;
+                        if (trade.stopLoss < newStop) {
+                            synchronized (LOCK) {
+                                trade.stopLoss = newStop;
+                            }
+                            writeScanLog("[MONITOR 🏆 BREAK-EVEN] " + trade.ticker + " | " + trade.agentId +
+                                " | profit=$" + String.format("%+.2f", unrealizedProfit) +
+                                " >= $25 → stop raised to break-even $" + String.format("%.2f", newStop));
+                        }
+                    }
                     writeScanLog("[MONITOR ⏳ HOLD] " + trade.ticker + " | " + trade.agentId +
                         " | live=$" + String.format("%.2f", currentPrice) +
                         " | SL=$" + String.format("%.2f", trade.stopLoss) +
@@ -676,6 +722,21 @@ public class AIToolAgent {
         writeScanLog("[MONITOR END] Done checking " + openTrades.size() + " position(s)");
         writeScanLog("────────────────────────────────────────");
         saveState();
+    }
+
+    /**
+     * Returns the number of calendar days since the trade was entered.
+     * Uses the ISO-formatted entryTime stored on the trade.
+     */
+    private static int calcHoldDays(String entryTime) {
+        try {
+            ZonedDateTime entry = ZonedDateTime.parse(entryTime);
+            long days = java.time.temporal.ChronoUnit.DAYS.between(
+                entry.toLocalDate(), ZonedDateTime.now(NY).toLocalDate());
+            return (int) Math.max(0, days);
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     /**
@@ -823,6 +884,7 @@ public class AIToolAgent {
             case "WEEK52_HIGH_MOMENTUM": return "Swing 2–6 weeks";
             case "PULLBACK_MA20":        return "Swing 3–10 days";
             case "VOLUME_BREAKOUT":      return "Swing 3–10 days";
+            case "STRONG_TREND":          return "Swing 5–15 days";
             default:                     return "Swing";
         }
     }
@@ -1553,6 +1615,9 @@ public class AIToolAgent {
         double week52High;        // highest high over available data (up to 252 bars)
         double pctFromWeek52High; // how far below the 52W high (negative = below, 0 = at high)
         double resistance30d;     // highest close over last 30 trading days (excl. today) = resistance level
+        double atrPct;            // ATR(14) as % of price — volatility check (0 if unavailable)
+        double prevHigh;          // yesterday's high price (for entry trigger: break above prev high)
+        double high20d;           // highest high over last 20 sessions (near 20-day high check)
         boolean priceAboveSMA20;
         boolean priceAboveSMA50;
         boolean priceAboveSMA200;
@@ -1695,6 +1760,28 @@ public class AIToolAgent {
                     .stream().mapToDouble(v -> v != null ? v : 0).max().orElse(0);
             }
 
+            // Yesterday's high (entry trigger for STRONG_TREND)
+            if (highPrices != null && highPrices.size() >= 2) {
+                d.prevHigh = highPrices.get(highPrices.size() - 2);
+            }
+            // 20-day high ("near 20-day high" momentum check)
+            if (highPrices != null && highPrices.size() >= 20) {
+                int sz = highPrices.size();
+                d.high20d = highPrices.subList(sz - 20, sz)
+                    .stream().mapToDouble(v -> v != null ? v : 0).max().orElse(0);
+            }
+
+            // ATR(14) as % of price — volatility filter
+            if (highPrices != null && lowPrices != null && highPrices.size() >= 14) {
+                List<Double> atrList = ATR.calculateATR(highPrices, lowPrices, prices, 14);
+                if (atrList != null && !atrList.isEmpty()) {
+                    Double atrVal = atrList.get(atrList.size() - 1);
+                    if (atrVal != null && atrVal > 0 && d.currentPrice > 0) {
+                        d.atrPct = (atrVal / d.currentPrice) * 100.0;
+                    }
+                }
+            }
+
             d.valid = true;
         } catch (Exception e) {
             System.err.println("[AIToolAgent] computeIndicators error for " + ticker + ": " + e.getMessage());
@@ -1703,6 +1790,15 @@ public class AIToolAgent {
     }
 
     private static TradeDecision scoreStrategyForTicker(String ticker, AgentConfig strategy, IndicatorData data) {
+        // Universal ATR volatility filter — skips stocks that are too slow to reach TP
+        double atrMinPct = getDoubleFilter(strategy, "atrMinPct", 0.0);
+        if (atrMinPct > 0 && data.atrPct < atrMinPct) {
+            TradeDecision skip = new TradeDecision();
+            skip.rejectReason = String.format("ATR%%=%.1f%% < min=%.1f%% (too slow)", data.atrPct, atrMinPct);
+            writeScanLog("[❌ ATR] " + ticker + " | " + strategy.id +
+                String.format(" | ATR%%=%.1f%% < required %.1f%%", data.atrPct, atrMinPct));
+            return skip;
+        }
         if ("MOMENTUM_BREAKOUT".equals(strategy.strategyType)) {
             return scoreMomentumBreakout(ticker, strategy, data);
         } else if ("PULLBACK".equals(strategy.strategyType)) {
@@ -1715,6 +1811,8 @@ public class AIToolAgent {
             return scorePullbackMA20(ticker, strategy, data);
         } else if ("VOLUME_BREAKOUT".equals(strategy.strategyType)) {
             return scoreVolumeBreakout(ticker, strategy, data);
+        } else if ("STRONG_TREND".equals(strategy.strategyType)) {
+            return scoreStrongTrend(ticker, strategy, data);
         }
         TradeDecision dec = new TradeDecision();
         dec.rejectReason = "Unknown strategyType: " + strategy.strategyType;
@@ -1748,7 +1846,7 @@ public class AIToolAgent {
         double slPct = getDoubleRisk(strategy, "stopLossPct", 3.0);
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 9.0);
         dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
-        dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
 
         writeScanLog("[SCORE|BREAKOUT] " + ticker + " | " + strategy.id +
             " | Volume=" + dec.volumeScore + "(RVOL=" + String.format("%.1f", d.rvol) + "x)" +
@@ -1799,7 +1897,7 @@ public class AIToolAgent {
         double slPct = getDoubleRisk(strategy, "stopLossPct", 3.5);
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 10.5);
         dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
-        dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
 
         // Entry trigger: buy only when price reclaims VWAP/typical-price support
         double vwapLevel = d.typicalPrice > 0 ? d.typicalPrice : d.currentPrice;
@@ -1858,7 +1956,7 @@ public class AIToolAgent {
         double slPct = getDoubleRisk(strategy, "stopLossPct", 3.5);
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 13.0);
         dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
-        dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
 
         // Entry trigger: buy only if price pushes 0.5% above last close — confirms momentum is real
         dec.entryTriggerPrice = d.currentPrice * 1.005;
@@ -1911,7 +2009,7 @@ public class AIToolAgent {
         double slPct = getDoubleRisk(strategy, "stopLossPct", 6.0);
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 18.0);
         dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
-        dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
 
         // Entry trigger: buy only on confirmed break above the 52W high
         dec.entryTriggerPrice = d.week52High > 0 ? d.week52High * 1.002 : d.currentPrice * 1.005;
@@ -1966,7 +2064,7 @@ public class AIToolAgent {
         double slPct = getDoubleRisk(strategy, "stopLossPct", 4.0);
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 12.0);
         dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
-        dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
 
         // Entry trigger: buy only when price closes back above MA20 with a small buffer
         dec.entryTriggerPrice = d.sma20 > 0 ? d.sma20 * 1.003 : d.currentPrice * 1.003;
@@ -2018,7 +2116,7 @@ public class AIToolAgent {
         double slPct = getDoubleRisk(strategy, "stopLossPct", 5.0);
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 15.0);
         dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
-        dec.suggestedTakeProfit = d.currentPrice * (1 + tpPct / 100);
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
 
         // Entry trigger: buy only on confirmed break above the 30-day resistance
         dec.entryTriggerPrice = d.resistance30d > 0 ? d.resistance30d * 1.005 : d.currentPrice * 1.005;
@@ -2035,6 +2133,60 @@ public class AIToolAgent {
             " Momentum=" + dec.momentumScore +
                 "(RSI=" + String.format("%.0f", d.rsi) +
                 ",chg=" + String.format("%+.1f%%", d.todayChangePct) + ")" +
+            " Trigger=$" + String.format("%.2f", dec.entryTriggerPrice) +
+            " total=" + dec.totalScore + "/12");
+        return dec;
+    }
+
+    private static TradeDecision scoreStrongTrend(String ticker, AgentConfig strategy, IndicatorData d) {
+        TradeDecision dec = new TradeDecision();
+        dec.action = "BUY";
+
+        // Trend score (max 3): stock must already be in a confirmed uptrend above SMA50
+        if (d.hasSMA50 && d.priceAboveSMA50) dec.trendScore += 2;
+        if (d.maCrossoverUp)                  dec.trendScore += 1; // SMA20 > SMA50 = golden alignment
+
+        // Volume score (max 3): must confirm trend with real volume — tightest filter
+        if      (d.rvol >= 2.5) dec.volumeScore = 3;
+        else if (d.rvol >= 1.5) dec.volumeScore = 2;
+        else if (d.rvol >= 1.0) dec.volumeScore = 1;
+
+        // Momentum score (max 3): price near its 20-day high + RSI in healthy zone
+        if (d.high20d > 0) {
+            double pctFromHigh20 = ((d.currentPrice - d.high20d) / d.high20d) * 100;
+            if      (pctFromHigh20 >= -3.0) dec.momentumScore += 2; // within 3% of 20d high
+            else if (pctFromHigh20 >= -7.0) dec.momentumScore += 1; // within 7%
+        }
+        if (d.rsi >= 50 && d.rsi <= 72) dec.momentumScore += 1;
+
+        // Setup score (max 3): room to run before hitting resistance ceiling
+        double upsideToResistance = (d.resistance30d > 0 && d.currentPrice > 0)
+            ? ((d.resistance30d - d.currentPrice) / d.currentPrice) * 100 : 0;
+        if      (upsideToResistance >= 8.0) dec.setupScore = 3;
+        else if (upsideToResistance >= 5.0) dec.setupScore = 2;
+        else if (upsideToResistance >= 3.0) dec.setupScore = 1;
+
+        dec.totalScore = dec.volumeScore + dec.trendScore + dec.momentumScore + dec.setupScore;
+        dec.entryPrice = d.currentPrice;
+        double slPct = getDoubleRisk(strategy, "stopLossPct", 5.0);
+        double tpPct = getDoubleRisk(strategy, "takeProfitPct", 15.0);
+        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
+
+        // Entry trigger: buy ONLY if price breaks above yesterday's high (momentum confirmation)
+        dec.entryTriggerPrice = d.prevHigh > 0 ? d.prevHigh * 1.001 : d.currentPrice * 1.005;
+
+        double pctFromHigh20 = d.high20d > 0 ? ((d.currentPrice - d.high20d) / d.high20d) * 100 : 0;
+        writeScanLog("[SCORE|STRONG-TREND] " + ticker + " | " + strategy.id +
+            " | Trend=" + dec.trendScore +
+                "(abvSMA50=" + (d.hasSMA50 && d.priceAboveSMA50 ? "Y" : "N") +
+                ",SMA20>50=" + (d.maCrossoverUp ? "Y" : "N") + ")" +
+            " Volume=" + dec.volumeScore + "(RVOL=" + String.format("%.1f", d.rvol) + "x)" +
+            " Momentum=" + dec.momentumScore +
+                "(near20dHi=" + String.format("%+.1f%%", pctFromHigh20) +
+                ",RSI=" + String.format("%.0f", d.rsi) + ")" +
+            " Setup=" + dec.setupScore +
+                "(upside=" + String.format("%.1f%%", upsideToResistance) + ")" +
             " Trigger=$" + String.format("%.2f", dec.entryTriggerPrice) +
             " total=" + dec.totalScore + "/12");
         return dec;
@@ -2642,6 +2794,15 @@ public class AIToolAgent {
         Object val = agent.entryFilters.get(key);
         if (val instanceof Boolean) return (Boolean) val;
         return defaultVal;
+    }
+
+    /**
+     * Enforce a minimum $25 absolute profit floor on any take-profit price.
+     * If the percentage-based TP yields less than $25 profit, raise it to entry+$25.
+     */
+    private static double applyMinTakeProfit(double entryPrice, double rawTP) {
+        double minTP = entryPrice + 25.0;
+        return Math.max(rawTP, minTP);
     }
 
     private static double getDoubleRisk(AgentConfig agent, String key, double defaultVal) {
@@ -3652,6 +3813,69 @@ public class AIToolAgent {
         }
     }
 
+    /**
+     * Returns all trades (open + closed) for a specific agent, newest first.
+     */
+    public static List<Trade> getAgentTradeHistory(String agentId) {
+        synchronized (LOCK) {
+            if (systemState == null) initialize();
+            List<Trade> trades = systemState.tradeHistory.get(agentId);
+            if (trades == null) return new ArrayList<>();
+            List<Trade> copy = new ArrayList<>(trades);
+            copy.sort((a, b) -> {
+                String ta = a.entryTime != null ? a.entryTime : "";
+                String tb = b.entryTime != null ? b.entryTime : "";
+                return tb.compareTo(ta); // newest first
+            });
+            return copy;
+        }
+    }
+
+    /**
+     * Returns agents with >= minTrades trades AND winRate >= 70% ("top agents").
+     * Sorted by win rate descending, capped at maxResults.
+     */
+    public static List<AgentPerformance> getTopPerformingAgents(int minTrades, int maxResults) {
+        List<AgentPerformance> all = getAllPerformances();
+        Map<String, ScoringConfig.SavedAgentTracker> trackers = ScoringConfig.getSavedAgentTrackers();
+        List<AgentPerformance> result = new ArrayList<>();
+        for (AgentPerformance perf : all) {
+            AgentPerformance copy = new AgentPerformance();
+            copy.agentId = perf.agentId;
+            copy.agentName = perf.agentName;
+            copy.type = perf.type;
+            copy.totalTrades = perf.totalTrades;
+            copy.wins = perf.wins;
+            copy.losses = perf.losses;
+            copy.winRate = perf.winRate;
+            copy.totalProfitLoss = perf.totalProfitLoss;
+            copy.recentTrades = perf.recentTrades;
+            ScoringConfig.SavedAgentTracker tracker = trackers.get(perf.agentId);
+            if (tracker != null && tracker.cumulativeTrades > copy.totalTrades) {
+                copy.totalTrades = tracker.cumulativeTrades;
+                copy.wins = tracker.cumulativeWins;
+                copy.losses = tracker.cumulativeTrades - tracker.cumulativeWins;
+                copy.winRate = tracker.cumulativeTrades > 0 ? (tracker.cumulativeWins * 100.0 / tracker.cumulativeTrades) : 0;
+                copy.totalProfitLoss = tracker.cumulativeProfitLoss;
+            }
+            if (copy.totalTrades >= minTrades && copy.winRate >= 70.0) {
+                result.add(copy);
+            }
+        }
+        result.sort((a, b) -> Double.compare(b.winRate, a.winRate));
+        return result.subList(0, Math.min(maxResults, result.size()));
+    }
+
+    /** Returns true if an agent qualifies as a "top agent" (>=70% win rate, >=3 trades). */
+    public static boolean isTopAgent(String agentId) {
+        synchronized (LOCK) {
+            if (systemState == null) return false;
+            AgentPerformance perf = systemState.performance.get(agentId);
+            if (perf == null) return false;
+            return perf.totalTrades >= 3 && perf.winRate >= 70.0;
+        }
+    }
+
     private static void autoTrackWinners() {
         try {
             // IMPORTANT: Use raw systemState.performance values directly, NOT getAllPerformances()
@@ -3844,12 +4068,20 @@ public class AIToolAgent {
             List<AgentPerformance> agentsToRun = new ArrayList<>();
             
             if (selectedAgentsForScan != null && !selectedAgentsForScan.isEmpty()) {
-                // Use selected agents
+                // Use selected agents — include even if no performance record yet (e.g. new MASTER agents)
                 for (String agentId : selectedAgentsForScan) {
                     AgentPerformance perf = systemState.performance.get(agentId);
-                    if (perf != null) {
-                        agentsToRun.add(perf);
+                    if (perf == null) {
+                        // Agent exists in agents map but has no trades yet — create a stub perf so it can run
+                        AgentConfig cfg = systemState.agents.get(agentId);
+                        if (cfg != null && !cfg.disabled && cfg.strategyType != null) {
+                            perf = new AgentPerformance();
+                            perf.agentId = agentId;
+                            perf.agentName = cfg.name;
+                            perf.type = cfg.type;
+                        }
                     }
+                    if (perf != null) agentsToRun.add(perf);
                 }
             } else {
                 // Use top 5

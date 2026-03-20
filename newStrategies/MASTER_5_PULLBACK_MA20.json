@@ -11,7 +11,8 @@
     "rsiMin" : 35.0,
     "rsiMax" : 60.0,
     "sma200Required" : true,
-    "sma50Required" : true
+    "sma50Required" : true,
+    "atrMinPct" : 2.0
   },
   "riskManagement" : {
     "stopLossPct" : 4.0,
@@ -19,7 +20,8 @@
     "riskRewardRatio" : 3.0,
     "trailingStopPct" : 2.5,
     "atrMultiplier" : 2.5,
-    "maxPositionPct" : 0.07
+    "maxPositionPct" : 0.07,
+    "maxHoldDays" : 10
   },
   "scoring" : {
     "scoreThreshold" : 8,

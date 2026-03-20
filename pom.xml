@@ -6,7 +6,7 @@
 
     <groupId>com.mytrader</groupId>
     <artifactId>trading-model</artifactId>
-    <version>1.4-SNAPSHOT</version>
+    <version>1.5-SNAPSHOT</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>

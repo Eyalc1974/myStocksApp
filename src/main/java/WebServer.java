@@ -6986,39 +6986,72 @@ public class WebServer {
                 sb.append("})();");
                 sb.append("</script>");
                 
-                // Top 5 Agents Full Scan Section
+                // Top Agents Full Scan Section
                 sb.append("<div style='margin-top:16px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:12px;'>");
                 int sectorTickerCount = LongTermCandidateFinder.getAllSectorTickers().size();
                 sb.append("<div style='font-weight:600;color:#a78bfa;margin-bottom:8px;'>🚀 Start Full Scan with Selected Agents (").append(sectorTickerCount).append(" tickers across 11 sectors)</div>");
                 sb.append("<div style='font-size:11px;color:#6b7280;margin-bottom:8px;'>Technology · Financials · Healthcare · Energy · Industrials · Consumer Disc. · Consumer Staples · Utilities · Materials · Real Estate · Communication Services</div>");
                 
-                // Get top 5 agents to display
+                // Get top agents (≥70% win rate) and top-5 combined list
                 List<AIToolAgent.AgentPerformance> top5Agents = AIToolAgent.getTop5Agents();
+                // Pinned master strategies always shown (MASTER_8 + MASTER_7)
+                java.util.Set<String> PINNED_MASTERS = new java.util.LinkedHashSet<>(java.util.Arrays.asList("MASTER_8_STRONG_TREND","MASTER_7_VIX_MARKET_FILTER"));
+
+                sb.append("<div style='color:#c4b5fd;font-size:12px;margin-bottom:8px;'>Select agents to run (≥70% win rate highlighted 🏆, pinned masters always shown):</div>");
+                sb.append("<form method='post' action='/aitool-full-scan' style='margin:0;'>");
                 
-                if (top5Agents.isEmpty()) {
-                    sb.append("<div style='color:#9ca3af;'>No qualified agents yet (need at least 3 trades each)</div>");
-                } else {
-                    sb.append("<div style='color:#c4b5fd;font-size:12px;margin-bottom:8px;'>Selected agents (by win rate × trades score):</div>");
-                    sb.append("<form method='post' action='/aitool-full-scan' style='margin:0;'>");
-                    
-                    // Show checkboxes for top 5 agents (select which ones to run)
-                    int agentIdx = 0;
-                    for (AIToolAgent.AgentPerformance p : top5Agents) {
-                        String bgColor = agentIdx % 2 == 0 ? "#2d2a5e" : "#1e1b4b";
-                        sb.append("<div style='display:flex;align-items:center;gap:8px;padding:6px 8px;background:").append(bgColor).append(";border-radius:4px;margin-bottom:4px;'>");
-                        sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(p.agentId)).append("' style='width:16px;height:16px;' />");
-                        sb.append("<span style='color:#e5e7eb;font-weight:500;flex:1;'>").append(escapeHtml(p.agentId)).append("</span>");
-                        sb.append("<span style='color:#a78bfa;font-size:11px;'>").append(p.type != null ? p.type : "").append("</span>");
-                        sb.append("<span style='color:#22c55e;font-weight:600;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
-                        sb.append("<span style='color:#9ca3af;font-size:11px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades</span>");
-                        sb.append("</div>");
-                        agentIdx++;
-                    }
-                    
-                    sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:8px;margin-bottom:8px;'>💡 Select the agent(s) you want to run (leave empty for all top 5)</div>");
-                    sb.append("<button type='submit' style='background:#7c3aed;margin-top:4px;'>🚀 Start Full Scan with Selected Agents</button>");
-                    sb.append("</form>");
+                int agentIdx = 0;
+                // 1. Show performance-ranked top-5 agents
+                for (AIToolAgent.AgentPerformance p : top5Agents) {
+                    boolean isTopAgent = p.winRate >= 70.0;
+                    String bgColor = isTopAgent ? "#1a2e1a" : (agentIdx % 2 == 0 ? "#2d2a5e" : "#1e1b4b");
+                    String border = isTopAgent ? "border:1px solid #22c55e;" : "";
+                    sb.append("<div style='display:flex;align-items:center;gap:8px;padding:6px 8px;background:").append(bgColor).append(";").append(border).append("border-radius:4px;margin-bottom:4px;'>");
+                    sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(p.agentId)).append("' style='width:16px;height:16px;' checked />");
+                    sb.append("<span style='color:#e5e7eb;font-weight:500;flex:1;'>");
+                    if (isTopAgent) sb.append("🏆 ");
+                    sb.append(escapeHtml(p.agentId)).append("</span>");
+                    sb.append("<span style='color:#a78bfa;font-size:11px;'>").append(p.type != null ? p.type : "").append("</span>");
+                    String wrColor = p.winRate >= 70 ? "#22c55e" : "#eab308";
+                    sb.append("<span style='color:").append(wrColor).append(";font-weight:600;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
+                    sb.append("<span style='color:#9ca3af;font-size:11px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades</span>");
+                    sb.append("<a href='/agent-detail?id=").append(urlEncode(p.agentId)).append("' style='color:#60a5fa;font-size:11px;text-decoration:none;' title='Agent detail page'>📋</a>");
+                    sb.append("</div>");
+                    agentIdx++;
                 }
+                // 2. Show pinned master strategies (always visible regardless of performance)
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:8px;margin-bottom:4px;'>📌 Pinned Master Strategies:</div>");
+                for (String masterId : PINNED_MASTERS) {
+                    AIToolAgent.AgentConfig masterCfg = AIToolAgent.getAgentConfig(masterId);
+                    AIToolAgent.AgentPerformance masterPerf = AIToolAgent.getAgentPerformance(masterId);
+                    String masterName = masterCfg != null ? masterCfg.name : masterId;
+                    String masterType = masterCfg != null ? (masterCfg.strategyType != null ? masterCfg.strategyType : masterCfg.type) : "MASTER";
+                    boolean isFilter = masterCfg != null && !masterCfg.masterStrategy;
+                    String bgPinned = isFilter ? "#2a1a0e" : "#1a1a2e";
+                    String borderPinned = isFilter ? "border:1px solid #f59e0b;" : "border:1px solid #6366f1;";
+                    sb.append("<div style='display:flex;align-items:center;gap:8px;padding:6px 8px;background:").append(bgPinned).append(";").append(borderPinned).append("border-radius:4px;margin-bottom:4px;'>");
+                    if (!isFilter) {
+                        sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(masterId)).append("' style='width:16px;height:16px;' />");
+                    } else {
+                        sb.append("<input type='checkbox' disabled title='Market filter — not a trading strategy' style='width:16px;height:16px;opacity:0.4;' />");
+                    }
+                    sb.append("<span style='color:#e5e7eb;font-weight:500;flex:1;'>").append(escapeHtml(masterName)).append("</span>");
+                    sb.append("<span style='color:#818cf8;font-size:11px;'>").append(escapeHtml(masterType)).append("</span>");
+                    if (masterPerf != null && masterPerf.totalTrades > 0) {
+                        String wrColor2 = masterPerf.winRate >= 70 ? "#22c55e" : "#eab308";
+                        sb.append("<span style='color:").append(wrColor2).append(";font-weight:600;'>").append(String.format("%.1f%%", masterPerf.winRate)).append("</span>");
+                        sb.append("<span style='color:#9ca3af;font-size:11px;'>").append(masterPerf.wins).append("/").append(masterPerf.totalTrades).append(" trades</span>");
+                    } else {
+                        sb.append("<span style='color:#6b7280;font-size:11px;'>").append(isFilter ? "Market Filter" : "No trades yet").append("</span>");
+                    }
+                    sb.append("<a href='/agent-detail?id=").append(urlEncode(masterId)).append("' style='color:#60a5fa;font-size:11px;text-decoration:none;' title='Agent detail page'>📋</a>");
+                    sb.append("</div>");
+                    if (!isFilter) agentIdx++;
+                }
+
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:8px;margin-bottom:8px;'>💡 Select agents to run. Top performers pre-checked. Pinned masters must be manually checked. Leave all unchecked to auto-run top 5.</div>");
+                sb.append("<button type='submit' style='background:#7c3aed;margin-top:4px;'>🚀 Start Full Scan with Selected Agents</button>");
+                sb.append("</form>");
                 
                 // Full scan status (if running or recently completed)
                 if (AIToolAgent.isTopAgentsFullScanRunning() || !AIToolAgent.getTopAgentsFullScanStatus().isEmpty()) {
@@ -7073,10 +7106,10 @@ public class WebServer {
                 sb.append("</div>");
                 sb.append("</div>");
 
-                // Build set of high-performing agent IDs (>=75% win rate, >=3 trades) — used by both open position tables
+                // Build set of high-performing agent IDs (>=70% win rate, >=3 trades) — used by both open position tables
                 java.util.Set<String> highPerfAgents = new java.util.HashSet<>();
                 for (AIToolAgent.AgentPerformance hp : performances) {
-                    if (hp.totalTrades >= 3 && hp.winRate >= 75.0) {
+                    if (hp.totalTrades >= 3 && hp.winRate >= 70.0) {
                         highPerfAgents.add(hp.agentId);
                     }
                 }
@@ -7650,7 +7683,7 @@ public class WebServer {
                     sb.append("</div>");
                 }
                 
-                // List top agents to save (>75% win rate highlighted)
+                // List top agents to save (>70% win rate highlighted)
                 sb.append("<div id='top-agents' style='font-weight:600;margin-bottom:10px;color:#93c5fd;'>🏆 Top Performing Agents (click to track):</div>");
                 sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;'>");
                 List<AIToolAgent.AgentPerformance> topAgents = new ArrayList<>(performances);
@@ -7659,13 +7692,13 @@ public class WebServer {
                 for (AIToolAgent.AgentPerformance p : topAgents) {
                     if (savedCount >= 10) break;
                     if (p.totalTrades < 3) continue;
-                    boolean isWinner = p.winRate >= 75;
+                    boolean isWinner = p.winRate >= 70;
                     boolean isTracked = trackers != null && trackers.containsKey(p.agentId);
                     boolean notifyEnabled = ScoringConfig.isTradeNotificationEnabled(p.agentId);
                     boolean isLocked = AIToolAgent.isAgentLocked(p.agentId);
                     boolean codeVersionChanged = AIToolAgent.hasCodeVersionChanged(p.agentId);
-                    String winColor = p.winRate >= 75 ? "#22c55e" : p.winRate >= 50 ? "#eab308" : "#ef4444";
-                    String borderColor = isLocked ? "#f59e0b" : (isTracked ? "#22c55e" : (isWinner ? "#eab308" : "#1f2a44"));
+                    String winColor = p.winRate >= 70 ? "#22c55e" : p.winRate >= 50 ? "#eab308" : "#ef4444";
+                    String borderColor = isLocked ? "#f59e0b" : (isTracked ? "#22c55e" : (isWinner ? "#22c55e" : "#1f2a44"));
                     sb.append("<div style='position:relative;'>");
                     sb.append("<form method='post' action='/aitool-track-agent' style='margin:0;'>");
                     sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(p.agentId)).append("' />");
@@ -7680,7 +7713,10 @@ public class WebServer {
                     sb.append("<span style='color:").append(winColor).append(";font-weight:700;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
                     sb.append("</div>");
                     sb.append("</div>");
-                    sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades | P/L: $").append(String.format("%.2f", p.totalProfitLoss)).append("</div>");
+                    sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-top:4px;'>");
+                    sb.append("<span style='color:#9ca3af;font-size:12px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades | P/L: $").append(String.format("%.2f", p.totalProfitLoss)).append("</span>");
+                    sb.append("<a href='/agent-detail?id=").append(urlEncode(p.agentId)).append("' style='color:#60a5fa;font-size:11px;padding:2px 6px;background:#1e3a5f;border-radius:4px;text-decoration:none;' onclick='event.stopPropagation();'>📋 Detail</a>");
+                    sb.append("</div>");
                     // Show code version warning if locked and code changed
                     if (isLocked && codeVersionChanged) {
                         AIToolAgent.AgentConfig cfg = AIToolAgent.getAgentConfig(p.agentId);
@@ -7784,7 +7820,7 @@ public class WebServer {
                 Map<String,String> form = parseForm(body);
                 
                 List<String> selectedAgents = new ArrayList<>();
-                for (int i = 0; i < 5; i++) {
+                for (int i = 0; i < 15; i++) {
                     String agentId = form.get("agent" + i);
                     if (agentId != null && !agentId.trim().isEmpty()) {
                         selectedAgents.add(agentId.trim());
@@ -7800,6 +7836,174 @@ public class WebServer {
                 
                 ex.getResponseHeaders().add("Location", "/aitool?fullScanStarted=true");
                 ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // ── Per-agent detail page ──────────────────────────────────────────────
+        server.createContext("/agent-detail", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                String query = ex.getRequestURI().getQuery();
+                String agentId = "";
+                if (query != null) {
+                    for (String part : query.split("&")) {
+                        if (part.startsWith("id=")) {
+                            agentId = java.net.URLDecoder.decode(part.substring(3), "UTF-8");
+                            break;
+                        }
+                    }
+                }
+                if (agentId.isEmpty()) {
+                    ex.getResponseHeaders().add("Location", "/aitool");
+                    ex.sendResponseHeaders(303, -1); ex.close(); return;
+                }
+
+                AIToolAgent.AgentPerformance perf = AIToolAgent.getAgentPerformance(agentId);
+                AIToolAgent.AgentConfig cfg = AIToolAgent.getAgentConfig(agentId);
+                List<AIToolAgent.Trade> allTrades = AIToolAgent.getAgentTradeHistory(agentId);
+
+                StringBuilder sb = new StringBuilder();
+                // ── Header ──
+                sb.append("<div style='max-width:1100px;margin:0 auto;padding:20px;'>");
+                sb.append("<div style='display:flex;align-items:center;gap:12px;margin-bottom:20px;'>");
+                sb.append("<a href='/aitool' style='color:#a78bfa;text-decoration:none;font-size:14px;'>← Back to AITool</a>");
+                sb.append("<span style='color:#374151;'>|</span>");
+                sb.append("<span style='font-size:20px;font-weight:700;color:#e5e7eb;'>📋 Agent Detail: ").append(escapeHtml(agentId)).append("</span>");
+                boolean isTop = AIToolAgent.isTopAgent(agentId);
+                if (isTop) sb.append("<span style='background:#15803d;color:#86efac;font-size:12px;padding:2px 8px;border-radius:12px;font-weight:600;'>🏆 TOP AGENT</span>");
+                sb.append("</div>");
+
+                // ── Stats cards ──
+                double winRate = perf != null ? perf.winRate : 0;
+                int totalTrades = perf != null ? perf.totalTrades : 0;
+                int wins = perf != null ? perf.wins : 0;
+                int losses = perf != null ? perf.losses : 0;
+                double totalPL = perf != null ? perf.totalProfitLoss : 0;
+                String wrColor = winRate >= 70 ? "#22c55e" : winRate >= 50 ? "#eab308" : "#ef4444";
+                sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px;'>");
+                // Win rate
+                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;text-align:center;'>");
+                sb.append("<div style='font-size:28px;font-weight:700;color:").append(wrColor).append(";'>").append(String.format("%.1f%%", winRate)).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>Win Rate</div></div>");
+                // Wins
+                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;text-align:center;'>");
+                sb.append("<div style='font-size:28px;font-weight:700;color:#22c55e;'>").append(wins).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>✅ Wins</div></div>");
+                // Losses
+                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;text-align:center;'>");
+                sb.append("<div style='font-size:28px;font-weight:700;color:#ef4444;'>").append(losses).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>❌ Losses</div></div>");
+                // Total trades
+                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;text-align:center;'>");
+                sb.append("<div style='font-size:28px;font-weight:700;color:#a78bfa;'>").append(totalTrades).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>Total Trades</div></div>");
+                // P/L
+                String plColor = totalPL >= 0 ? "#22c55e" : "#ef4444";
+                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;text-align:center;'>");
+                sb.append("<div style='font-size:24px;font-weight:700;color:").append(plColor).append(";'>$").append(String.format("%+.2f", totalPL)).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>Total P/L</div></div>");
+                sb.append("</div>");
+
+                // ── Config summary ──
+                if (cfg != null) {
+                    sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:14px;margin-bottom:20px;'>");
+                    sb.append("<div style='font-weight:600;color:#93c5fd;margin-bottom:8px;'>⚙️ Strategy Configuration</div>");
+                    sb.append("<div style='display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:#d1d5db;'>");
+                    sb.append("<span><b>Type:</b> ").append(escapeHtml(cfg.strategyType != null ? cfg.strategyType : cfg.type != null ? cfg.type : "N/A")).append("</span>");
+                    if (cfg.riskManagement != null) {
+                        Object sl = cfg.riskManagement.get("stopLossPct");
+                        Object tp = cfg.riskManagement.get("takeProfitPct");
+                        Object trail = cfg.riskManagement.get("trailingStopPct");
+                        if (sl != null) sb.append("<span><b>SL:</b> ").append(String.format("%.1f%%", ((Number)sl).doubleValue())).append("</span>");
+                        if (tp != null) sb.append("<span><b>TP:</b> ").append(String.format("%.1f%%", ((Number)tp).doubleValue())).append(" (min $25 profit)</span>");
+                        if (trail != null) sb.append("<span><b>Trailing:</b> ").append(String.format("%.1f%%", ((Number)trail).doubleValue())).append("</span>");
+                    }
+                    if (cfg.locked) sb.append("<span style='color:#f59e0b;'>🔒 Locked</span>");
+                    if (cfg.masterStrategy) sb.append("<span style='color:#818cf8;'>⭐ Master Strategy</span>");
+                    sb.append("</div></div>");
+                }
+
+                // ── Active positions ──
+                List<AIToolAgent.Trade> openTrades = new ArrayList<>();
+                List<AIToolAgent.Trade> closedTrades = new ArrayList<>();
+                for (AIToolAgent.Trade t : allTrades) {
+                    if ("OPEN".equals(t.status)) openTrades.add(t);
+                    else closedTrades.add(t);
+                }
+                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;margin-bottom:20px;'>");
+                sb.append("<div style='font-weight:600;color:#a78bfa;margin-bottom:10px;'>📈 Active Positions (").append(openTrades.size()).append(")</div>");
+                if (openTrades.isEmpty()) {
+                    sb.append("<div style='color:#6b7280;font-size:13px;'>No open positions for this agent.</div>");
+                } else {
+                    sb.append("<div style='overflow-x:auto;'><table style='width:100%;border-collapse:collapse;font-size:12px;'>");
+                    sb.append("<thead><tr style='background:#0b1220;'>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Ticker</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Entry $</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Stop Loss</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Take Profit</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Min TP ($25 floor)</th>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Entry Time</th>");
+                    sb.append("</tr></thead><tbody>");
+                    for (AIToolAgent.Trade t : openTrades) {
+                        double minTP = t.entryPrice + 25.0;
+                        sb.append("<tr style='background:#2d2a5e;'>");
+                        sb.append("<td style='padding:8px;font-weight:600;color:#e5e7eb;'>").append(escapeHtml(t.ticker)).append("</td>");
+                        sb.append("<td style='padding:8px;text-align:right;color:#93c5fd;'>$").append(String.format("%.2f", t.entryPrice)).append("</td>");
+                        sb.append("<td style='padding:8px;text-align:right;color:#ef4444;'>$").append(String.format("%.2f", t.stopLoss)).append("</td>");
+                        sb.append("<td style='padding:8px;text-align:right;color:#22c55e;'>$").append(String.format("%.2f", t.takeProfit)).append("</td>");
+                        sb.append("<td style='padding:8px;text-align:right;color:#fbbf24;'>$").append(String.format("%.2f", Math.max(t.takeProfit, minTP))).append("</td>");
+                        sb.append("<td style='padding:8px;color:#9ca3af;font-size:11px;'>").append(escapeHtml(t.entryTime != null ? t.entryTime.substring(0, Math.min(16, t.entryTime.length())) : "")).append("</td>");
+                        sb.append("</tr>");
+                    }
+                    sb.append("</tbody></table></div>");
+                }
+                sb.append("</div>");
+
+                // ── Trade history ──
+                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;'>");
+                sb.append("<div style='font-weight:600;color:#a78bfa;margin-bottom:10px;'>📚 Trade History (").append(closedTrades.size()).append(" closed)</div>");
+                if (closedTrades.isEmpty()) {
+                    sb.append("<div style='color:#6b7280;font-size:13px;'>No closed trades yet.</div>");
+                } else {
+                    sb.append("<div style='overflow-x:auto;'><table style='width:100%;border-collapse:collapse;font-size:12px;'>");
+                    sb.append("<thead><tr style='background:#0b1220;'>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>#</th>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Ticker</th>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Result</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Entry $</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Exit $</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>P/L $</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>P/L %</th>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Close Reason</th>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Date</th>");
+                    sb.append("</tr></thead><tbody>");
+                    int row = 0;
+                    for (AIToolAgent.Trade t : closedTrades) {
+                        row++;
+                        boolean isWin = "CLOSED_WIN".equals(t.status);
+                        String rowBg = row % 2 == 0 ? "#24215a" : "#2d2a5e";
+                        String statusColor = isWin ? "#22c55e" : "#ef4444";
+                        String statusIcon = isWin ? "✅" : "❌";
+                        String plColor2 = t.profitLoss >= 0 ? "#22c55e" : "#ef4444";
+                        sb.append("<tr style='background:").append(rowBg).append(";'>");
+                        sb.append("<td style='padding:8px;color:#6b7280;'>").append(row).append("</td>");
+                        sb.append("<td style='padding:8px;font-weight:600;color:#e5e7eb;'>").append(escapeHtml(t.ticker)).append("</td>");
+                        sb.append("<td style='padding:8px;color:").append(statusColor).append(";font-weight:600;'>").append(statusIcon).append(" ").append(isWin ? "WIN" : "LOSS").append("</td>");
+                        sb.append("<td style='padding:8px;text-align:right;color:#93c5fd;'>$").append(String.format("%.2f", t.entryPrice)).append("</td>");
+                        sb.append("<td style='padding:8px;text-align:right;color:#d1d5db;'>$").append(String.format("%.2f", t.exitPrice)).append("</td>");
+                        sb.append("<td style='padding:8px;text-align:right;color:").append(plColor2).append(";font-weight:600;'>$").append(String.format("%+.2f", t.profitLoss)).append("</td>");
+                        sb.append("<td style='padding:8px;text-align:right;color:").append(plColor2).append(";'>").append(String.format("%+.2f%%", t.profitLossPct)).append("</td>");
+                        String reason = t.closeReason != null ? t.closeReason : t.status;
+                        sb.append("<td style='padding:8px;color:#9ca3af;font-size:11px;'>").append(escapeHtml(reason)).append("</td>");
+                        String dateStr = t.exitTime != null ? t.exitTime.substring(0, Math.min(10, t.exitTime.length())) : (t.entryTime != null ? t.entryTime.substring(0, Math.min(10, t.entryTime.length())) : "");
+                        sb.append("<td style='padding:8px;color:#9ca3af;font-size:11px;'>").append(escapeHtml(dateStr)).append("</td>");
+                        sb.append("</tr>");
+                    }
+                    sb.append("</tbody></table></div>");
+                }
+                sb.append("</div>");
+                sb.append("</div>"); // max-width container
+
+                respondHtml(ex, htmlPage(sb.toString()), 200);
             }
         });
 
