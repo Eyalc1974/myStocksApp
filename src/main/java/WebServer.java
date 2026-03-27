@@ -7446,6 +7446,63 @@ public class WebServer {
                 }
                 sb.append("</div>");
 
+                // ── Watchlist — Pending Signals Waiting for Trigger ──
+                sb.append("<div class='card' id='watchlistCard'>");
+                sb.append("<div class='title'>⏳ Watchlist — Signals Waiting for Entry Trigger</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:10px;'>Stocks that scored &ge;10/12 but the entry trigger has <b>not yet fired</b>. ");
+                sb.append("Check each ticker's real-time price. Execute manually if <b>current price &ge; Trigger</b>. ");
+                sb.append("Signals expire after 3 scans without firing.</div>");
+                List<AIToolAgent.PendingSignal> pendingList = AIToolAgent.getPendingSignals();
+                if (pendingList.isEmpty()) {
+                    sb.append("<div style='color:#6b7280;padding:14px;text-align:center;'>No pending signals — watchlist is empty.</div>");
+                } else {
+                    sb.append("<div style='overflow-x:auto;'>");
+                    sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
+                    sb.append("<thead><tr style='border-bottom:1px solid #1f2a44;color:#9ca3af;text-align:left;'>");
+                    sb.append("<th style='padding:8px 10px;'>Ticker</th>");
+                    sb.append("<th style='padding:8px 10px;'>Score</th>");
+                    sb.append("<th style='padding:8px 10px;'>Strategy</th>");
+                    sb.append("<th style='padding:8px 10px;'>Scan Price</th>");
+                    sb.append("<th style='padding:8px 10px;'>Trigger</th>");
+                    sb.append("<th style='padding:8px 10px;'>Gap Needed</th>");
+                    sb.append("<th style='padding:8px 10px;'>SL / TP</th>");
+                    sb.append("<th style='padding:8px 10px;'>Scanned</th>");
+                    sb.append("<th style='padding:8px 10px;'>Scan #</th>");
+                    sb.append("<th style='padding:8px 10px;'></th>");
+                    sb.append("</tr></thead><tbody>");
+                    for (AIToolAgent.PendingSignal ps : pendingList) {
+                        String scanTimeShort = ps.scanTime != null ? ps.scanTime.substring(0, Math.min(16, ps.scanTime.length())).replace("T"," ") : "-";
+                        String gapColor = ps.triggerGapPct <= 1.0 ? "#22c55e" : ps.triggerGapPct <= 3.0 ? "#f59e0b" : "#9ca3af";
+                        sb.append("<tr style='border-bottom:1px solid #111827;' id='prow-").append(escapeHtml(ps.id)).append("'>");
+                        sb.append("<td style='padding:8px 10px;font-weight:700;color:#93c5fd;'>").append(escapeHtml(ps.ticker)).append("</td>");
+                        sb.append("<td style='padding:8px 10px;color:#f59e0b;font-weight:700;'>").append(ps.score).append("/12</td>");
+                        sb.append("<td style='padding:8px 10px;color:#9ca3af;font-size:11px;'>").append(escapeHtml(ps.strategyId)).append("</td>");
+                        sb.append("<td style='padding:8px 10px;'>$").append(String.format("%.2f", ps.scanPrice)).append("</td>");
+                        sb.append("<td style='padding:8px 10px;font-weight:700;color:#22c55e;'>$").append(String.format("%.2f", ps.triggerPrice)).append("</td>");
+                        sb.append("<td style='padding:8px 10px;font-weight:700;color:").append(gapColor).append(";'>+")
+                          .append(String.format("%.1f%%", ps.triggerGapPct)).append("</td>");
+                        sb.append("<td style='padding:8px 10px;font-size:11px;color:#9ca3af;'>SL $")
+                          .append(String.format("%.2f", ps.suggestedStopLoss))
+                          .append(" / TP $").append(String.format("%.2f", ps.suggestedTakeProfit)).append("</td>");
+                        sb.append("<td style='padding:8px 10px;font-size:11px;color:#6b7280;'>").append(scanTimeShort).append("</td>");
+                        sb.append("<td style='padding:8px 10px;color:#6b7280;'>").append(ps.scanCount).append("/3</td>");
+                        sb.append("<td style='padding:8px 10px;'>");
+                        sb.append("<button onclick=\"dismissSignal('").append(escapeHtml(ps.id)).append("')\" ");
+                        sb.append("style='padding:4px 10px;background:#1f2a44;border:1px solid #374151;border-radius:6px;color:#9ca3af;cursor:pointer;font-size:12px;'>✕ Dismiss</button>");
+                        sb.append("</td></tr>");
+                    }
+                    sb.append("</tbody></table></div>");
+                }
+                sb.append("</div>");
+                // JS for dismiss action
+                sb.append("<script>");
+                sb.append("function dismissSignal(id){");
+                sb.append("  fetch('/aitool-pending-dismiss?id='+id).then(function(r){return r.json();}).then(function(d){");
+                sb.append("    if(d.ok){var row=document.getElementById('prow-'+id);if(row)row.remove();}");
+                sb.append("  });");
+                sb.append("}");
+                sb.append("</script>");
+
                 // Scan Detail Log Viewer
                 sb.append("<div class='card'><div class='title'>🔍 Scan Detail Log — Operations Trace</div>");
                 sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:8px;'>Live log from <code>newStrategies/scan-detail.log</code> — auto-cleaned every 48h. Shows every agent decision: PASS, REJECT (with reason), MONITOR checks, EOD closes.</div>");
@@ -7799,6 +7856,60 @@ public class WebServer {
                     + ",\"total\":" + tot
                     + ",\"currentAgent\":\"" + (ca != null ? ca.replace("\"","\\\"") : "") + "\""
                     + ",\"currentTicker\":\"" + (ct != null ? ct.replace("\"","\\\"") : "") + "\"}";
+                byte[] bytes = body.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                ex.sendResponseHeaders(200, bytes.length);
+                ex.getResponseBody().write(bytes);
+                ex.close();
+            }
+        });
+
+        // Watchlist: return all WAITING pending signals as JSON
+        server.createContext("/aitool-pending", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Content-Type", "application/json");
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+                List<AIToolAgent.PendingSignal> list = AIToolAgent.getPendingSignals();
+                StringBuilder sb = new StringBuilder("[");
+                for (int i = 0; i < list.size(); i++) {
+                    AIToolAgent.PendingSignal ps = list.get(i);
+                    if (i > 0) sb.append(",");
+                    sb.append("{")
+                      .append("\"id\":\"").append(ps.id).append("\",")
+                      .append("\"ticker\":").append(escapeJsonString(ps.ticker)).append(",")
+                      .append("\"strategyId\":").append(escapeJsonString(ps.strategyId)).append(",")
+                      .append("\"strategyType\":").append(escapeJsonString(ps.strategyType != null ? ps.strategyType : "")).append(",")
+                      .append("\"score\":").append(ps.score).append(",")
+                      .append("\"scanPrice\":").append(String.format("%.2f", ps.scanPrice)).append(",")
+                      .append("\"triggerPrice\":").append(String.format("%.2f", ps.triggerPrice)).append(",")
+                      .append("\"triggerGapPct\":").append(String.format("%.2f", ps.triggerGapPct)).append(",")
+                      .append("\"suggestedStopLoss\":").append(String.format("%.2f", ps.suggestedStopLoss)).append(",")
+                      .append("\"suggestedTakeProfit\":").append(String.format("%.2f", ps.suggestedTakeProfit)).append(",")
+                      .append("\"rejectReason\":").append(escapeJsonString(ps.rejectReason != null ? ps.rejectReason : "")).append(",")
+                      .append("\"scanTime\":").append(escapeJsonString(ps.scanTime != null ? ps.scanTime.substring(0, Math.min(19, ps.scanTime.length())) : "")).append(",")
+                      .append("\"scanCount\":").append(ps.scanCount)
+                      .append("}");
+                }
+                sb.append("]");
+                byte[] bytes = sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                ex.sendResponseHeaders(200, bytes.length);
+                ex.getResponseBody().write(bytes);
+                ex.close();
+            }
+        });
+
+        // Watchlist: dismiss a pending signal by id
+        server.createContext("/aitool-pending-dismiss", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                String id = "";
+                String query = ex.getRequestURI().getQuery();
+                if (query != null) {
+                    for (String kv : query.split("&")) {
+                        if (kv.startsWith("id=")) id = kv.substring(3);
+                    }
+                }
+                boolean ok = AIToolAgent.dismissPendingSignal(id);
+                String body = ok ? "{\"ok\":true}" : "{\"ok\":false,\"error\":\"not found\"}";
+                ex.getResponseHeaders().add("Content-Type", "application/json");
                 byte[] bytes = body.getBytes(java.nio.charset.StandardCharsets.UTF_8);
                 ex.sendResponseHeaders(200, bytes.length);
                 ex.getResponseBody().write(bytes);
@@ -8197,11 +8308,23 @@ public class WebServer {
                     respondHtml(ex, htmlPage(""), 200); return;
                 }
 
+                Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
                 ScoringConfig.ConfigData config = ScoringConfig.load();
                 String activeMode = config.activeMode;
                 ScoringConfig.ModeConfig activeCfg = ScoringConfig.getActiveModeConfig();
 
                 StringBuilder sb = new StringBuilder();
+                if ("true".equals(qp.get("investment_saved"))) {
+                    sb.append("<div style='background:#064e3b;border:1px solid #22c55e;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#22c55e;font-weight:600;'>✅ Investment per stock saved!</div>");
+                } else if ("true".equals(qp.get("saved"))) {
+                    sb.append("<div style='background:#064e3b;border:1px solid #22c55e;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#22c55e;font-weight:600;'>✅ Mode saved!</div>");
+                } else if ("true".equals(qp.get("agent_saved"))) {
+                    sb.append("<div style='background:#064e3b;border:1px solid #22c55e;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#22c55e;font-weight:600;'>✅ Agent config saved!</div>");
+                } else if ("true".equals(qp.get("monitor_saved"))) {
+                    sb.append("<div style='background:#064e3b;border:1px solid #22c55e;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#22c55e;font-weight:600;'>✅ Discord monitor saved!</div>");
+                } else if ("true".equals(qp.get("sector_saved"))) {
+                    sb.append("<div style='background:#064e3b;border:1px solid #22c55e;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#22c55e;font-weight:600;'>✅ Sector allocation saved!</div>");
+                }
                 sb.append("<div class='card'><div class='title'>⚙️ Scoring Settings | הגדרות ציון</div>");
                 sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>Configure how stocks are scored. Choose a preset or customize weights.</div>");
                 sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>הגדר איך מניות מקבלות ציון. בחר פריסט או התאם משקלים.</div>");
@@ -8770,6 +8893,29 @@ public class WebServer {
 
                 sb.append("</div>");
 
+                // ===================== INVESTMENT PER STOCK SECTION =====================
+                double currentInvestment = ScoringConfig.getInvestmentPerStock();
+                sb.append("<div style='margin-top:20px;background:#0b1220;border:2px solid #22c55e;border-radius:8px;padding:16px;margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;margin-bottom:10px;color:#22c55e;'>💵 Investment Per Stock | השקעה למניה</div>");
+                sb.append("<div style='color:#9ca3af;font-size:13px;margin-bottom:12px;'>Dollar amount invested per stock in the simulation (Daily Trading Simulator &amp; AI agents).<br/>סכום הדולרים שמושקע בכל מניה בסימולציה.</div>");
+                sb.append("<form method='post' action='/settings-investment' style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;'>");
+                sb.append("<div style='display:flex;align-items:center;gap:6px;'>");
+                sb.append("<span style='color:#9ca3af;font-size:16px;'>$</span>");
+                sb.append("<input type='number' name='amount' value='").append((int) currentInvestment).append("' min='100' max='100000' step='100' ");
+                sb.append("style='padding:10px 12px;border-radius:8px;border:1px solid #1f2a44;background:#1f2a44;color:#e5e7eb;width:140px;font-size:16px;font-weight:600;' />");
+                sb.append("</div>");
+                sb.append("<button type='submit' style='background:#22c55e;color:#000;border:none;padding:10px 20px;border-radius:8px;font-weight:600;cursor:pointer;'>💾 Save</button>");
+                sb.append("</form>");
+                sb.append("<div style='margin-top:12px;padding:10px;background:#1f2a44;border-radius:8px;border-left:3px solid #22c55e;'>");
+                sb.append("<div style='color:#22c55e;font-weight:600;'>Current: $").append(String.format("%,.0f", currentInvestment)).append(" per stock</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>Common presets: ");
+                sb.append("<span onclick=\"document.querySelector('input[name=amount]').value='500'\" style='cursor:pointer;color:#93c5fd;margin-right:10px;'>$500</span>");
+                sb.append("<span onclick=\"document.querySelector('input[name=amount]').value='1000'\" style='cursor:pointer;color:#93c5fd;margin-right:10px;'>$1,000</span>");
+                sb.append("<span onclick=\"document.querySelector('input[name=amount]').value='2500'\" style='cursor:pointer;color:#93c5fd;margin-right:10px;'>$2,500</span>");
+                sb.append("<span onclick=\"document.querySelector('input[name=amount]').value='5000'\" style='cursor:pointer;color:#93c5fd;'>$5,000</span>");
+                sb.append("</div></div>");
+                sb.append("</div>");
+
                 respondHtml(ex, htmlPage(sb.toString()), 200);
             }
         });
@@ -8917,6 +9063,27 @@ public class WebServer {
                 System.out.println("[WebServer] Sector allocation updated: " + allocation);
                 
                 ex.getResponseHeaders().add("Location", "/settings?sector_saved=true");
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // Settings - Investment Per Stock endpoint
+        server.createContext("/settings-investment", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/settings");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                try {
+                    double amount = Double.parseDouble(form.getOrDefault("amount", "1000"));
+                    if (amount < 100) amount = 100;
+                    if (amount > 100000) amount = 100000;
+                    ScoringConfig.setInvestmentPerStock(amount);
+                } catch (NumberFormatException ignore) {}
+                ex.getResponseHeaders().add("Location", "/settings?investment_saved=true");
                 ex.sendResponseHeaders(303, -1); ex.close();
             }
         });

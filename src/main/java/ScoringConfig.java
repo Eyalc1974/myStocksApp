@@ -20,6 +20,7 @@ public class ScoringConfig {
         public String activeMode = "LONG_TERM_INVESTOR";
         public String activeAgentConfig = null; // AITool agent ID to use for filtering
         public String monitoredAgentForDiscord = null; // Agent ID to monitor for Discord notifications
+        public double investmentPerStock = 1000.0; // $ invested per stock in simulation
         public Map<String, ModeConfig> presets = new ConcurrentHashMap<>();
         public Map<String, SavedAgentTracker> savedAgentTrackers = new ConcurrentHashMap<>(); // Cumulative tracking
     }
@@ -294,6 +295,19 @@ public class ScoringConfig {
             }
         }
         return false;
+    }
+
+    // Investment Per Stock methods
+    public static double getInvestmentPerStock() {
+        ConfigData config = load();
+        return config.investmentPerStock > 0 ? config.investmentPerStock : 1000.0;
+    }
+
+    public static void setInvestmentPerStock(double amount) {
+        ConfigData config = load();
+        config.investmentPerStock = amount;
+        save(config);
+        System.out.println("[ScoringConfig] Investment per stock set to: $" + amount);
     }
 
     // Discord Agent Monitor methods

@@ -1,9 +1,11 @@
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeAll;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.nio.file.Paths;
 
 /**
  * Debug test for S10_SWING_TIGHT_RANGE_GEN1 agent.
@@ -323,6 +325,225 @@ public class AIToolAgentDebugTest {
         }
     }
     
+    /**
+     * Full scoring flow for all MATERIALS sector tickers against one master strategy.
+     *
+     * Flow demonstrated per ticker:
+     *   1. Load MASTER_7_VIX_MARKET_FILTER.json config (from JSON file, no system state needed)
+     *   2. Read current market regime (HEALTHY / WEAK / VERY_WEAK)
+     *   3. Fetch daily OHLCV data  →  DataFetcher.fetchStockData()
+     *   4. Compute indicators      →  AIToolAgent.computeIndicatorsPublic()
+     *      (price, SMA20/50/200, RSI, RVOL, ATR%, resistance30d, week52High, …)
+     *   5. Score against MASTER_6_VOLUME_BREAKOUT  →  AIToolAgent.scoreStrategyForTickerPublic()
+     *      Volume (0–3) + Trend (0–3) + Momentum (0–3) + Setup (0–3) = Total (0–12)
+     *      + Move-potential penalty/bonus  + WEAK regime penalty  + Execution trigger gate
+     *   6. Decide: SIGNAL (≥10 + trigger met) | TRIGGER_WAIT (≥10, trigger pending) | SCORE_LOW
+     *   7. Print summary table sorted by score descending
+     *
+     * NOTE: MASTER_7 is a global Market Filter — it does NOT score individual stocks.
+     *       It is loaded here to illustrate the JSON-based config loading step.
+     *       Per-stock scoring requires a trading strategyType (VOLUME_BREAKOUT, etc.).
+     *       MASTER_6_VOLUME_BREAKOUT is used as the scoring agent.
+     *
+     * Runtime: ~20 × 13 s = ~4 min  (Alpha Vantage free-tier rate limit)
+     */
+    @Test
+    void testMaterialsTickersScoringFlow() {
+        final List<String> MATERIALS_TICKERS = Arrays.asList(
+            "LIN","APD","SHW","FCX","NEM","DD","DOW","PPG","ECL","ALB",
+            "VMC","MLM","NUE","STLD","X","CF","MOS","FMC","IFF","CE"
+        );
+        final int SCORE_THRESHOLD = 10;
+        final String SCORING_AGENT_ID = "MASTER_6_VOLUME_BREAKOUT";
+
+        System.out.println("\n╔══════════════════════════════════════════════════════════════════════╗");
+        System.out.println("║         MATERIALS SECTOR — FULL SCORING FLOW TEST                    ║");
+        System.out.println("║   20 tickers  |  1 agent  |  entire pipeline  |  ~4 min              ║");
+        System.out.println("╚══════════════════════════════════════════════════════════════════════╝");
+
+        // ── Phase 1: Load MASTER_7 from its JSON file ─────────────────────────────
+        System.out.println("\n── Phase 1: Load MASTER_7_VIX_MARKET_FILTER.json from disk ────────────");
+        AIToolAgent.AgentConfig master7 = AIToolAgent.loadAgentConfigFromFile(
+            Paths.get("newStrategies/MASTER_7_VIX_MARKET_FILTER.json"));
+        if (master7 == null) {
+            System.err.println("  ❌ ERROR: could not load MASTER_7 JSON file");
+        } else {
+            System.out.println("  ✓ Loaded:  " + master7.id);
+            System.out.println("  Name:      " + master7.name);
+            System.out.println("  Type:      " + master7.type);
+            System.out.println("  StratType: " + master7.strategyType);
+            System.out.println("  Locked:    " + master7.locked);
+            System.out.println("  ⚠ This is a global Market Filter — no per-stock scoring.");
+            System.out.println("    Per-stock scoring is done by: " + SCORING_AGENT_ID);
+        }
+
+        // ── Phase 2: Current market regime ────────────────────────────────────────
+        System.out.println("\n── Phase 2: Current Market Regime ─────────────────────────────────────");
+        AIToolAgent.RegimeLevel regime = AIToolAgent.getLastKnownRegime();
+        System.out.println("  Regime:  " + regime);
+        System.out.println("  Detail:  " + AIToolAgent.getLastRegimeDetail());
+        System.out.println("  Rules:");
+        System.out.println("    HEALTHY   → full position size, no score penalty");
+        System.out.println("    WEAK      → score −2 per ticker, 50% size if traded");
+        System.out.println("    VERY_WEAK → no new trades at all (execution blocked)");
+
+        // ── Phase 3: Load trading agent for scoring ───────────────────────────────
+        System.out.println("\n── Phase 3: Load scoring agent ─────────────────────────────────────────");
+        AIToolAgent.AgentConfig scoringAgent = AIToolAgent.getAgentConfig(SCORING_AGENT_ID);
+        if (scoringAgent == null) {
+            System.err.println("  ❌ ERROR: " + SCORING_AGENT_ID + " not found in systemState — aborting");
+            return;
+        }
+        System.out.println("  ✓ Loaded:    " + scoringAgent.id);
+        System.out.println("  StratType:   " + scoringAgent.strategyType);
+        System.out.println("  SL%:         " + scoringAgent.riskManagement.getOrDefault("stopLossPct",  "?"));
+        System.out.println("  TP%:         " + scoringAgent.riskManagement.getOrDefault("takeProfitPct","?"));
+        System.out.println("  MaxOpen:     " + scoringAgent.maxOpenTrades);
+        System.out.println("  ScoreThresh: " + SCORE_THRESHOLD + "/12");
+
+        // ── Phase 4: Score each ticker ────────────────────────────────────────────
+        System.out.println("\n── Phase 4: Scanning " + MATERIALS_TICKERS.size() + " MATERIALS tickers ──");
+        System.out.println("  (13 s sleep between tickers — Alpha Vantage free tier)\n");
+
+        // result row: ticker | status | total | V | T | M | S | price | triggerPrice
+        List<String[]> results = new ArrayList<>();
+
+        for (String ticker : MATERIALS_TICKERS) {
+            System.out.println("┌─── " + ticker + " " + "─".repeat(Math.max(0, 55 - ticker.length())));
+
+            // Step A — Fetch
+            System.out.println("│  [A] Fetch: DataFetcher.setTicker(\"" + ticker + "\") + fetchStockData()");
+            DataFetcher.setTicker(ticker);
+            String rawJson = DataFetcher.fetchStockData();
+            if (rawJson == null || rawJson.isBlank()) {
+                System.out.println("│      ❌ FETCH FAIL — no data returned");
+                System.out.println("└" + "─".repeat(57));
+                results.add(new String[]{ticker, "FETCH FAIL", "-", "-", "-", "-", "-", "-", "-"});
+                try { Thread.sleep(13000); } catch (InterruptedException ignored) {}
+                continue;
+            }
+            System.out.println("│      ✓ Data received (" + rawJson.length() + " bytes)");
+
+            // Step B — Compute indicators
+            System.out.println("│  [B] Compute indicators: computeIndicatorsPublic()");
+            AIToolAgent.IndicatorData ind = AIToolAgent.computeIndicatorsPublic(ticker, rawJson);
+            if (ind == null || !ind.valid) {
+                System.out.println("│      ❌ INDICATOR FAIL — insufficient history");
+                System.out.println("└" + "─".repeat(57));
+                results.add(new String[]{ticker, "NULL", "-", "-", "-", "-", "-", "-", "-"});
+                try { Thread.sleep(13000); } catch (InterruptedException ignored) {}
+                continue;
+            }
+            System.out.printf("│      Price:       $%.2f  (prev $%.2f, today %+.2f%%)%n",
+                ind.currentPrice, ind.prevClose, ind.todayChangePct);
+            System.out.printf("│      SMA20/50/200: $%.2f / $%.2f / $%.2f%n",
+                ind.sma20, ind.sma50, ind.sma200);
+            System.out.printf("│      Above SMA:   20=%b  50=%b  200=%b  maCross=%b%n",
+                ind.priceAboveSMA20, ind.priceAboveSMA50, ind.priceAboveSMA200, ind.maCrossoverUp);
+            System.out.printf("│      RSI: %.1f   RVOL: %.2fx   ATR%%: %.2f%%%n",
+                ind.rsi, ind.rvol, ind.atrPct);
+            System.out.printf("│      Resistance30d: $%.2f   Week52High: $%.2f (%.1f%% from high)%n",
+                ind.resistance30d, ind.week52High, ind.pctFromWeek52High);
+            System.out.printf("│      VWAP%%: %+.2f%%   Momentum20d: %+.2f%%%n",
+                ind.vwapPct, ind.momentum20d);
+
+            // Step C — Score
+            System.out.println("│  [C] Score: scoreStrategyForTickerPublic(ticker, " + SCORING_AGENT_ID + ", indicators)");
+            AIToolAgent.TradeDecision dec =
+                AIToolAgent.scoreStrategyForTickerPublic(ticker, scoringAgent, ind);
+
+            if (dec == null) {
+                System.out.println("│      ❌ SKIPPED — ATR too low (hard filter, no score computed)");
+                System.out.println("└" + "─".repeat(57));
+                results.add(new String[]{ticker, "ATR SKIP", "-", "-", "-", "-", "-",
+                    String.format("$%.2f", ind.currentPrice), "-"});
+                try { Thread.sleep(13000); } catch (InterruptedException ignored) {}
+                continue;
+            }
+
+            // Step D — Print breakdown
+            System.out.println("│  [D] Score breakdown:");
+            System.out.printf("│      Volume   (0-3): %d%n", dec.volumeScore);
+            System.out.printf("│      Trend    (0-3): %d%n", dec.trendScore);
+            System.out.printf("│      Momentum (0-3): %d%n", dec.momentumScore);
+            System.out.printf("│      Setup    (0-3): %d%n", dec.setupScore);
+            System.out.printf("│      ─────────────────────%n");
+            System.out.printf("│      TOTAL:   %d/12  (threshold=%d)%n", dec.totalScore, SCORE_THRESHOLD);
+            if (dec.confluenceBonus > 0) {
+                System.out.printf("│      🔥 Confluence bonus: +%d (included above)%n", dec.confluenceBonus);
+            }
+            if (dec.entryTriggerPrice > 0) {
+                double gapPct = ((dec.entryTriggerPrice - ind.currentPrice) / ind.currentPrice) * 100;
+                System.out.printf("│      Trigger Level: $%.2f  (need %+.1f%% from $%.2f)%n",
+                    dec.entryTriggerPrice, gapPct, ind.currentPrice);
+            }
+
+            // Step E — Decision
+            System.out.println("│  [E] Decision:");
+            String status;
+            if (dec.totalScore >= SCORE_THRESHOLD && !dec.triggerNotMet) {
+                status = "✅ SIGNAL";
+                System.out.printf("│      ✅ SIGNAL — score %d/12 ≥ %d AND trigger met%n",
+                    dec.totalScore, SCORE_THRESHOLD);
+                System.out.printf("│         Entry=$%.2f  SL=$%.2f  TP=$%.2f%n",
+                    dec.entryPrice, dec.suggestedStopLoss, dec.suggestedTakeProfit);
+            } else if (dec.totalScore >= SCORE_THRESHOLD && dec.triggerNotMet) {
+                status = "⏳ TRIGGER_WAIT";
+                System.out.printf("│      ⏳ WATCHLIST — score %d/12 OK, but trigger not met:%n",
+                    dec.totalScore);
+                System.out.println("│         " + dec.rejectReason);
+                System.out.println("│         → Saved to pending watchlist, re-evaluated next scan");
+            } else {
+                status = "❌ SCORE_LOW";
+                System.out.printf("│      ❌ SCORE TOO LOW — %d/12 < %d (no signal)%n",
+                    dec.totalScore, SCORE_THRESHOLD);
+            }
+            System.out.println("└" + "─".repeat(57));
+
+            results.add(new String[]{
+                ticker,
+                status,
+                String.valueOf(dec.totalScore),
+                String.valueOf(dec.volumeScore),
+                String.valueOf(dec.trendScore),
+                String.valueOf(dec.momentumScore),
+                String.valueOf(dec.setupScore),
+                String.format("$%.2f", ind.currentPrice),
+                dec.entryTriggerPrice > 0 ? String.format("$%.2f", dec.entryTriggerPrice) : "-"
+            });
+
+            try { Thread.sleep(13000); } catch (InterruptedException ignored) {}
+        }
+
+        // ── Phase 5: Summary table sorted by score ────────────────────────────────
+        results.sort((a, b) -> {
+            try { return Integer.compare(Integer.parseInt(b[2]), Integer.parseInt(a[2])); }
+            catch (NumberFormatException e) { return 0; }
+        });
+
+        System.out.println("\n╔══════════════════════════════════════════════════════════════════════╗");
+        System.out.println("║              SUMMARY — MATERIALS SECTOR SCORING                      ║");
+        System.out.println("╚══════════════════════════════════════════════════════════════════════╝");
+        System.out.printf("%-6s  %-17s  %5s  %2s  %2s  %2s  %2s  %9s  %9s%n",
+            "TICKER","STATUS","SCORE","V","T","M","S","PRICE","TRIGGER");
+        System.out.println("─".repeat(72));
+        for (String[] r : results) {
+            System.out.printf("%-6s  %-17s  %5s  %2s  %2s  %2s  %2s  %9s  %9s%n",
+                r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8]);
+        }
+        System.out.println("─".repeat(72));
+
+        long signals  = results.stream().filter(r -> r[1].contains("SIGNAL") && !r[1].contains("WAIT")).count();
+        long waiting  = results.stream().filter(r -> r[1].contains("WAIT")).count();
+        long rejected = results.stream().filter(r -> r[1].contains("SCORE_LOW")).count();
+        long skipped  = results.stream().filter(r -> r[1].contains("FAIL") || r[1].contains("SKIP") || r[1].contains("NULL")).count();
+        System.out.printf("✅ Signals: %d  |  ⏳ Trigger-Wait: %d  |  ❌ Score-Low: %d  |  ⚠ Skipped: %d%n",
+            signals, waiting, rejected, skipped);
+        System.out.printf("Regime: %s  |  Agent: %s  |  Threshold: %d/12%n",
+            regime, SCORING_AGENT_ID, SCORE_THRESHOLD);
+        System.out.println("═".repeat(72));
+    }
+
     /**
      * Sends a test message to Discord via the configured webhook.
      * Requires env var: DAILY_SIM_DISCORD_WEBHOOK_URL

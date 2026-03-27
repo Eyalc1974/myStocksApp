@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class DailyTradingSimulator {
 
     private static final Path STORE_PATH = Paths.get("daily-trading-sim.json");
-    private static final double POSITION_SIZE = 1000.0; // $1000 per stock
+    // POSITION_SIZE is now configurable via /settings (default $1000)
     private static final int STOCKS_PER_STRATEGY = 4;   // 4 stocks per strategy
     private static final double STOP_LOSS_PCT = 2.0;    // 2% stop loss
     private static final double TAKE_PROFIT_PCT = 4.0;  // 4% take profit (2:1 R/R)
@@ -133,8 +133,9 @@ public class DailyTradingSimulator {
             this.ticker = ticker;
             this.strategy = strategy;
             this.entryPrice = entryPrice;
-            this.shares = POSITION_SIZE / entryPrice;
-            this.positionValue = POSITION_SIZE;
+            double positionSize = ScoringConfig.getInvestmentPerStock();
+            this.shares = positionSize / entryPrice;
+            this.positionValue = positionSize;
             this.currentPrice = entryPrice;
             this.highestPrice = entryPrice;
             this.stopLossPrice = entryPrice * (1 - STOP_LOSS_PCT / 100.0);

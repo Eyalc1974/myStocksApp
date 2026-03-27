@@ -163,6 +163,25 @@ public class LongTermCandidateFinder {
         return new ArrayList<>(selected);
     }
 
+    /**
+     * Reverse-lookup: returns the sector name for a given ticker.
+     * Returns "OTHER" if the ticker is not found in any named sector list.
+     */
+    public static String getSectorForTicker(String ticker) {
+        if (TECHNOLOGY_TICKERS.contains(ticker))             return "TECHNOLOGY";
+        if (FINANCIALS_TICKERS.contains(ticker))             return "FINANCIALS";
+        if (HEALTHCARE_TICKERS.contains(ticker))             return "HEALTHCARE";
+        if (ENERGY_TICKERS.contains(ticker))                 return "ENERGY";
+        if (INDUSTRIALS_TICKERS.contains(ticker))            return "INDUSTRIALS";
+        if (CONSUMER_DISCRETIONARY_TICKERS.contains(ticker)) return "CONSUMER_DISCRETIONARY";
+        if (CONSUMER_STAPLES_TICKERS.contains(ticker))       return "CONSUMER_STAPLES";
+        if (UTILITIES_TICKERS.contains(ticker))              return "UTILITIES";
+        if (MATERIALS_TICKERS.contains(ticker))              return "MATERIALS";
+        if (REAL_ESTATE_TICKERS.contains(ticker))            return "REAL_ESTATE";
+        if (COMMUNICATION_SERVICES_TICKERS.contains(ticker)) return "COMMUNICATION_SERVICES";
+        return "OTHER";
+    }
+
     // ======================= RS RANKING CACHE =======================
     static final int TOP_RS_COUNT = 200;
     private static final java.util.concurrent.ConcurrentHashMap<String, Double> rsScoreCache =
