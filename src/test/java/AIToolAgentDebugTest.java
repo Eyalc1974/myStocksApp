@@ -6,6 +6,7 @@ import java.util.List;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.file.Paths;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Debug test for S10_SWING_TIGHT_RANGE_GEN1 agent.
@@ -29,7 +30,7 @@ public class AIToolAgentDebugTest {
 
     // Test stocks - single ticker for faster testing
     private static final List<String> TEST_TICKERS = Arrays.asList(
-        "AAPL"    // Single ticker
+        "DELL"    // Single ticker
     );
 
     @BeforeAll
@@ -42,7 +43,7 @@ public class AIToolAgentDebugTest {
 
     @Test
     void testS10AgentWithMultipleStocks() {
-        String agentId = "S10_SWING_TIGHT_RANGE_GEN1";
+        String agentId = "M5_MA_CROSS";
         
         System.out.println("========================================");
         System.out.println("Testing Agent: " + agentId);
@@ -104,7 +105,7 @@ public class AIToolAgentDebugTest {
     void testSingleStock() {
         // Change this ticker to test a specific stock
         String ticker = "AAPL";
-        String agentId = "S10_SWING_TIGHT_RANGE_GEN1";
+        String agentId = "M5_MA_CROSS";
         
         System.out.println("========================================");
         System.out.println("Single Stock Test: " + ticker);
@@ -117,12 +118,13 @@ public class AIToolAgentDebugTest {
             return;
         }
         
-        // Print expected filter values
+        // Print expected filter values (M5_MA_CROSS)
         System.out.println("Expected Filter Values:");
-        System.out.println("  RSI must be between 47.93 and 61.04");
-        System.out.println("  RVOL must be >= 1.35");
-        System.out.println("  Price must be > SMA200");
-        System.out.println("  Price must be > VWAP");
+        System.out.println("  RSI must be between 45 and 70 (rsiMin/rsiMax)");
+        System.out.println("  RVOL must be >= 1.3 (rvolMin)");
+        System.out.println("  Price must be > SMA200 (sma200Required)");
+        System.out.println("  MA9 must be > MA21 (maCrossoverRequired)");
+        System.out.println("  entryType = TREND_CONTINUATION (T4: price>SMA50, RSI 50-70)");
         System.out.println();
         
         // PUT BREAKPOINT ON THE NEXT LINE
@@ -138,7 +140,7 @@ public class AIToolAgentDebugTest {
     @Test
     void testExecuteTradeWithRealPrices() {
         String ticker = "AAPL";
-        String agentId = "S10_SWING_TIGHT_RANGE_GEN1";
+        String agentId = "M5_MA_CROSS";
         
         System.out.println("========================================");
         System.out.println("Execute Trade Test (Real Prices)");
@@ -191,7 +193,7 @@ public class AIToolAgentDebugTest {
     void testSingleSymbolFullReport() {
         // ========== CONFIGURE HERE ==========
         String ticker = "NVDA";  // Change to any ticker you want to analyze
-        String agentId = "S10_SWING_TIGHT_RANGE_GEN1";
+        String agentId = "M5_MA_CROSS";
         // ====================================
         
         System.out.println("\n");
@@ -248,7 +250,7 @@ public class AIToolAgentDebugTest {
      */
     @Test
     void testMultipleSymbolsFullReport() {
-        String agentId = "S10_SWING_TIGHT_RANGE_GEN1";
+        String agentId = "M5_MA_CROSS";
         
         // Symbols to analyze
         List<String> symbols = Arrays.asList("AAPL", "NVDA", "TSLA", "META", "MSFT");
@@ -635,5 +637,250 @@ public class AIToolAgentDebugTest {
             System.err.println("Error running analysis: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Full Scan Flow Integration Test — DELL + M5_MA_CROSS
+     *
+     * Walks through every section of SCAN_FLOW.md in order:
+     *   §1  Agent Loading
+     *   §7  Market Regime Guard  (SPY check)
+     *   §2  Scan Loop            (one API call for DELL, shared)
+     *   §3a Indicator Computation (computeIndicators)
+     *   §4  Variant Agent Path   (Layer 1 gates + Layer 2 triggers)
+     *   §6  Trade Execution / SL-TP
+     *   §8  Key Constants
+     *
+     * Assertions (marked ✔) verify correctness; display lines are informational.
+     * One real Alpha Vantage API call is made for DELL data.
+     */
+    @Test
+    void testFullScanFlowDellM5() throws Exception {
+        final String TICKER      = "DELL";
+        final String AGENT_ID    = "M5_MA_CROSS";
+        final int    SCORE_THRESHOLD = 10;
+
+        System.out.println("\n╔══════════════════════════════════════════════════════════════════════╗");
+        System.out.println("║      FULL SCAN FLOW  —  DELL  ×  M5_MA_CROSS  (SCAN_FLOW.md)        ║");
+        System.out.println("╚══════════════════════════════════════════════════════════════════════╝");
+
+        // ── §1  Agent Loading ─────────────────────────────────────────────────
+        System.out.println("\n━━━ §1  AGENT LOADING ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        AIToolAgent.AgentConfig agent = AIToolAgent.getAgentConfig(AGENT_ID);
+        assertNotNull(agent, "✘ " + AGENT_ID + " must be loaded by initialize()");
+        System.out.println("  ✔ Agent loaded: " + agent.id + " — " + agent.name);
+        System.out.println("  ✔ Entry type:   " + agent.entryType);
+        System.out.println("  ✔ Strategy type: " + agent.strategyType);
+        System.out.println("  Filters:");
+        agent.entryFilters.forEach((k, v) -> System.out.printf("     %-30s = %s%n", k, v));
+        System.out.println("  Risk:");
+        agent.riskManagement.forEach((k, v) -> System.out.printf("     %-30s = %s%n", k, v));
+
+        // ── §8  Key Constants ─────────────────────────────────────────────────
+        System.out.println("\n━━━ §8  KEY CONSTANTS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        System.out.println("  SCORE_THRESHOLD        = " + SCORE_THRESHOLD + " / 12");
+        System.out.println("  MIN_STOP_LOSS_PCT       = 3.0%");
+        System.out.println("  MAX_TRADES_PER_SCAN     = 5");
+        System.out.println("  MAX_OPEN_POSITIONS      = 5");
+        System.out.println("  MAX_OPEN_PER_SECTOR     = 2");
+        System.out.println("  API sleep between ticks = 12 500 ms");
+
+        // ── §7  Market Regime Guard ───────────────────────────────────────────
+        System.out.println("\n━━━ §7  MARKET REGIME GUARD ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        AIToolAgent.RegimeLevel regime = AIToolAgent.getLastKnownRegime();
+        System.out.println("  Last known regime: " + regime + "  (" + AIToolAgent.getLastRegimeDetail() + ")");
+        System.out.println("  Rules: HEALTHY=full size | WEAK=50% size | VERY_WEAK=no trades");
+        if (regime == AIToolAgent.RegimeLevel.VERY_WEAK) {
+            System.out.println("  ⚠ VERY_WEAK — new trades would be BLOCKED in live scan");
+        } else {
+            System.out.println("  ✔ Regime allows new trades");
+        }
+
+        // ── §2  Scan Loop — one shared API call for DELL ──────────────────────
+        System.out.println("\n━━━ §2  SCAN LOOP — fetch DELL (1 API call, shared) ━━━━━━━━━━━━━━━━━");
+        DataFetcher.setTicker(TICKER);
+        String json = DataFetcher.fetchStockData();
+        assertNotNull(json,      "✘ fetchStockData() returned null for " + TICKER);
+        assertFalse(json.isBlank(), "✘ fetchStockData() returned empty JSON for " + TICKER);
+        System.out.printf("  ✔ JSON received: %,d bytes%n", json.length());
+
+        // ── §3a  Indicator Computation ────────────────────────────────────────
+        System.out.println("\n━━━ §3a  INDICATOR COMPUTATION  (computeIndicators) ━━━━━━━━━━━━━━━━━");
+        AIToolAgent.IndicatorData ind = AIToolAgent.computeIndicatorsPublic(TICKER, json);
+        assertNotNull(ind,     "✘ computeIndicators() returned null");
+        assertTrue(ind.valid,  "✘ IndicatorData.valid=false — insufficient price history");
+
+        System.out.printf("  ✔ currentPrice     = $%.2f%n",           ind.currentPrice);
+        System.out.printf("     prevClose        = $%.2f  (%+.2f%%)%n", ind.prevClose, ind.todayChangePct);
+        System.out.printf("     SMA20 / 50 / 200 = $%.2f / $%.2f / $%.2f%n", ind.sma20, ind.sma50, ind.sma200);
+        System.out.printf("     abvSMA20=%b  abvSMA50=%b  abvSMA200=%b  maCross↑=%b%n",
+            ind.priceAboveSMA20, ind.priceAboveSMA50, ind.priceAboveSMA200, ind.maCrossoverUp);
+        System.out.printf("     RSI-14           = %.2f%n",  ind.rsi);
+        System.out.printf("     CCI-20           = %.2f%n",  ind.cci);
+        System.out.printf("     RVOL             = %.2fx%n", ind.rvol);
+        System.out.printf("     ATR (raw)        = $%.2f   ATR%%=%.2f%%%n", ind.atr, ind.atrPct);
+        System.out.printf("     Momentum-20d     = %+.2f%%  (RS proxy)%n", ind.momentum20d);
+        System.out.printf("     Resistance-30d   = $%.2f%n", ind.resistance30d);
+        System.out.printf("     Week-52 High     = $%.2f  (%.1f%% from high)%n",
+            ind.week52High, ind.pctFromWeek52High);
+        System.out.printf("     prevHigh         = $%.2f%n", ind.prevHigh);
+        System.out.printf("     VWAP%%            = %+.2f%%%n", ind.vwapPct);
+
+        // ── §4  Variant Agent Path — Layer 1 Gate-by-Gate Evaluation ─────────
+        System.out.println("\n━━━ §4  VARIANT PATH — LAYER 1: SCAN GATES ━━━━━━━━━━━━━━━━━━━━━━━━━");
+        System.out.printf("  %-5s  %-30s  %-22s  %s%n", "Gate", "Filter", "Threshold", "Result");
+        System.out.println("  " + "─".repeat(75));
+
+        double rsiMin = 45, rsiMax = 70;
+        boolean g1 = ind.rsi >= rsiMin && ind.rsi <= rsiMax;
+        printGate("G1", "rsiMin / rsiMax",
+            String.format("%.0f–%.0f", rsiMin, rsiMax),
+            String.format("RSI=%.1f", ind.rsi), g1);
+
+        boolean g2 = ind.priceAboveSMA20;
+        printGate("G2", "price > SMA20 (always)",
+            String.format("$%.2f", ind.sma20),
+            String.format("price=$%.2f", ind.currentPrice), g2);
+
+        double cciMin = 50, cciMax = 350;
+        boolean g3 = ind.cci >= cciMin && ind.cci <= cciMax;
+        printGate("G3", "cciMin / cciMax",
+            String.format("%.0f–%.0f", cciMin, cciMax),
+            String.format("CCI=%.1f", ind.cci), g3);
+
+        // Gate 4: no atrMin/atrMax in M5_MA_CROSS → always pass
+        printGate("G4", "atrMin / atrMax", "(not set)", "—", true);
+
+        double rsMin = 1.02;
+        double rs = (ind.momentum20d / 100.0) + 1.0;
+        boolean g5 = rs >= rsMin;
+        printGate("G5", "rsMin (20d momentum ratio)",
+            String.format("≥ %.2f", rsMin),
+            String.format("RS=%.3f", rs), g5);
+
+        double rvolMin = 1.3;
+        boolean g6 = ind.rvol >= rvolMin;
+        printGate("G6", "rvolMin",
+            String.format("≥ %.1fx", rvolMin),
+            String.format("RVOL=%.2fx", ind.rvol), g6);
+
+        // Gates 7, 8: not configured in M5_MA_CROSS
+        printGate("G7", "volumeThreshold", "(not set)", "—", true);
+        printGate("G8", "cmfMin",          "(not set)", "—", true);
+
+        boolean g9 = ind.priceAboveSMA200;
+        printGate("G9", "sma200Required",
+            String.format("price > SMA200 ($%.2f)", ind.sma200),
+            String.format("price=$%.2f", ind.currentPrice), g9);
+
+        // Gates 10, 11: not configured in M5_MA_CROSS
+        printGate("G10", "smaWindows",       "(not set)", "—", true);
+        printGate("G11", "priceAboveVwapPct","(not set)", "—", true);
+
+        boolean allGatesPass = g1 && g2 && g3 && g5 && g6 && g9;
+        System.out.println("  " + "─".repeat(75));
+        System.out.printf("  Layer 1 overall: %s%n",
+            allGatesPass ? "✅ ALL GATES PASS" : "❌ REJECTED at one or more gates");
+
+        // ── §4  Layer 2: Entry Triggers — via analyzeStockPublic ─────────────
+        System.out.println("\n━━━ §4  VARIANT PATH — LAYER 2: ENTRY TRIGGERS ━━━━━━━━━━━━━━━━━━━━━");
+        System.out.println("  Running analyzeStockPublic(DELL, M5_MA_CROSS, json) ...");
+
+        AIToolAgent.TradeDecision decision = AIToolAgent.analyzeStockPublic(TICKER, agent, json);
+        assertNotNull(decision, "✘ analyzeStockPublic() returned null — check gate logic");
+
+        System.out.println();
+        System.out.printf("  T1 maCrossoverRequired   : MA9>MA21 — ");
+        System.out.println("(see triggerNotMet/rejectReason below)");
+
+        System.out.printf("  T2 prevHighBreakout      : not configured in M5_MA_CROSS%n");
+
+        double distFromResistance = (ind.resistance30d > 0 && ind.currentPrice > 0)
+            ? ((ind.resistance30d - ind.currentPrice) / ind.currentPrice) * 100 : 0;
+        System.out.printf("  T3 distanceFromResistance: (R30d - price) / price = %.1f%%  (need ≥ 5.0%%)  → %s%n",
+            distFromResistance,
+            distFromResistance >= 5.0 ? "✔ pass" : "⚠ deferred");
+
+        System.out.printf("  T4 TREND_CONTINUATION    : price>SMA50=%b  RSI∈[50,70]=%b%n",
+            ind.priceAboveSMA50,
+            ind.rsi >= 50 && ind.rsi <= 70);
+        System.out.printf("     trigger price would be: max(price, SMA50) × 1.005 = $%.2f%n",
+            Math.max(ind.currentPrice, ind.sma50) * 1.005);
+
+        System.out.println();
+        System.out.println("  ── Decision from analyzeStock ──");
+        System.out.printf("  shouldTrade    = %b%n",  decision.shouldTrade);
+        System.out.printf("  triggerNotMet  = %b%n",  decision.triggerNotMet);
+        System.out.printf("  rejectReason   = %s%n",
+            decision.rejectReason != null ? decision.rejectReason : "(none)");
+        System.out.printf("  entryTriggerPx = $%.2f%n", decision.entryTriggerPrice);
+
+        // ── §6  SL / TP ───────────────────────────────────────────────────────
+        System.out.println("\n━━━ §6  TRADE EXECUTION — SL / TP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        double entryPrice = decision.entryPrice > 0 ? decision.entryPrice : ind.currentPrice;
+        System.out.printf("  Entry price      = $%.2f%n", entryPrice);
+        System.out.printf("  suggestedSL      = $%.2f  (%.2f%% below entry)%n",
+            decision.suggestedStopLoss,
+            entryPrice > 0 ? (entryPrice - decision.suggestedStopLoss) / entryPrice * 100 : 0);
+        System.out.printf("  suggestedTP      = $%.2f  (%.2f%% above entry)%n",
+            decision.suggestedTakeProfit,
+            entryPrice > 0 ? (decision.suggestedTakeProfit - entryPrice) / entryPrice * 100 : 0);
+        System.out.printf("  R/R ratio        = %.2fx%n",
+            (decision.suggestedStopLoss > 0 && entryPrice > decision.suggestedStopLoss)
+                ? (decision.suggestedTakeProfit - entryPrice) / (entryPrice - decision.suggestedStopLoss)
+                : 0);
+        System.out.printf("  ATR-based SL     = entry - (ATR × 2.0) = $%.2f - $%.2f = $%.2f%n",
+            entryPrice, ind.atr * 2.0, entryPrice - ind.atr * 2.0);
+        System.out.printf("  PCT-based SL     = entry × (1 - 3.5%%) = $%.2f%n",
+            entryPrice * (1 - 3.5 / 100));
+        System.out.printf("  Floor SL (3%%)    = entry × 0.97 = $%.2f%n",
+            entryPrice * 0.97);
+        System.out.println("  calculateFinalStopPrice picks the wider of ATR/PCT, floored at 3%");
+
+        if (decision.suggestedStopLoss > 0) {
+            assertTrue(decision.suggestedStopLoss < entryPrice,
+                "✘ SL must be below entry price");
+            double slPct = (entryPrice - decision.suggestedStopLoss) / entryPrice * 100;
+            assertTrue(slPct >= 3.0,
+                String.format("✘ SL %.2f%% violates MIN_STOP_LOSS_PCT=3.0%%", slPct));
+            System.out.printf("  ✔ SL assertion: %.2f%% ≥ 3.0%% (MIN_STOP_LOSS_PCT)%n", slPct);
+        }
+        if (decision.suggestedTakeProfit > 0) {
+            assertTrue(decision.suggestedTakeProfit > entryPrice,
+                "✘ TP must be above entry price");
+            double tpDollar = decision.suggestedTakeProfit - entryPrice;
+            assertTrue(tpDollar >= 25.0,
+                String.format("✘ TP $%.2f profit < $25 min TP floor", tpDollar));
+            System.out.printf("  ✔ TP assertion: $%.2f profit ≥ $25 (min TP floor)%n", tpDollar);
+        }
+
+        // ── Final Outcome ─────────────────────────────────────────────────────
+        System.out.println("\n━━━ FINAL OUTCOME ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        if (decision.shouldTrade) {
+            System.out.println("  ✅  BUY SIGNAL — all gates + triggers passed");
+            System.out.printf("      Entry=$%.2f  SL=$%.2f  TP=$%.2f%n",
+                decision.entryPrice, decision.suggestedStopLoss, decision.suggestedTakeProfit);
+            assertFalse(decision.triggerNotMet,
+                "✘ shouldTrade=true but triggerNotMet=true — contradiction");
+        } else if (decision.triggerNotMet) {
+            System.out.println("  ⏳  WATCHLIST — gates passed, waiting for entry trigger");
+            System.out.printf("      Trigger price: $%.2f%n", decision.entryTriggerPrice);
+            System.out.printf("      Reason: %s%n", decision.rejectReason);
+            assertTrue(decision.entryTriggerPrice > 0,
+                "✘ triggerNotMet=true but entryTriggerPrice not set");
+        } else {
+            System.out.println("  ❌  REJECTED at Layer 1 (scan gate failed)");
+            System.out.printf("      Reason: %s%n",
+                decision.rejectReason != null ? decision.rejectReason : "(no reason set)");
+            assertNotNull(decision.rejectReason,
+                "✘ rejected but rejectReason is null — gate should set rejectReason");
+        }
+        System.out.println("═".repeat(72));
+    }
+
+    /** Helper: prints a single Layer 1 gate row */
+    private static void printGate(String gate, String name, String threshold, String actual, boolean pass) {
+        System.out.printf("  %-5s  %-30s  %-22s  %s  %s%n",
+            gate, name, threshold, actual, pass ? "✔" : "✘ FAIL");
     }
 }

@@ -40,7 +40,7 @@ public class AIToolAgent {
     private static final int MAX_TRADES_PER_SCAN       = 5;
     private static final int MAX_OPEN_POSITIONS_TOTAL  = 5;   // global cap: max open trades across all agents
     private static final int MAX_OPEN_PER_SECTOR        = 2;   // max simultaneous positions in the same sector
-    private static final double MIN_STOP_LOSS_PCT       = 4.0; // minimum stop-loss distance (%)
+    private static final double MIN_STOP_LOSS_PCT       = 3.0; // minimum stop-loss distance (%)
     private static final double RISK_PER_TRADE = 500.0; // $ risk per trade for position sizing
 
     enum RegimeLevel {
@@ -116,7 +116,6 @@ public class AIToolAgent {
         public int generation = 0; // How many times this agent has evolved
         public String parentId; // Original agent ID if evolved
         public String lastModified;
-        public String aiSuggestion; // AI improvement suggestion from Ollama/ChatGPT
         // Lock protection fields - prevents evolution/modification of winning agents
         public boolean locked = false;
         public String lockedAt; // ISO timestamp when locked
@@ -124,6 +123,7 @@ public class AIToolAgent {
         public String lockedByUser; // Who locked it
         public boolean masterStrategy = false;
         public String strategyType; // MOMENTUM_BREAKOUT, PULLBACK, TREND_CONTINUATION
+        public String entryType = "AUTO"; // AUTO, EARLY_BREAKOUT, RETEST_BREAKOUT, TREND_CONTINUATION
         public boolean disabled = false; // true = skip this strategy (e.g. intraday strategies disabled for swing mode)
         public int maxOpenTrades = 5;  // max concurrent open positions for this agent (portfolio manager)
         public int maxPerSector  = 2;  // max concurrent positions in the same sector
@@ -203,18 +203,6 @@ public class AIToolAgent {
         public Map<String, DailyStats> dailyHistory = new LinkedHashMap<>(); // date -> stats
     }
 
-    public static class EvolutionEvent {
-        public String timestamp;
-        public String originalAgentId;
-        public String newAgentId;
-        public String reason;
-        public double oldWinRate;
-        public int oldTrades;
-        public double oldProfitLoss;
-        public Map<String, String> parameterChanges = new HashMap<>(); // "rsiMin: 30 -> 25"
-        public String aiSuggestion; // ChatGPT improvement suggestion
-    }
-
     public static class PendingSignal {
         public String id;             // short UUID for UI actions
         public String ticker;
@@ -237,7 +225,6 @@ public class AIToolAgent {
         public Map<String, AgentConfig> agents = new ConcurrentHashMap<>();
         public Map<String, List<Trade>> tradeHistory = new ConcurrentHashMap<>();
         public Map<String, AgentPerformance> performance = new ConcurrentHashMap<>();
-        public List<EvolutionEvent> evolutionLog = new ArrayList<>(); // Track all evolution decisions
         public List<PendingSignal> pendingSignals = new CopyOnWriteArrayList<>(); // Watchlist: scored signals waiting for trigger
         public String lastRunTime;
         public boolean running = false;
@@ -1169,6 +1156,14 @@ public class AIToolAgent {
             if (!Files.exists(path)) return;
             
             JsonNode root = JSON.readTree(path.toFile());
+            
+            // Respect top-level "enabled" flag — skip entire file if set to false
+            JsonNode enabledNode = root.get("enabled");
+            if (enabledNode != null && !enabledNode.asBoolean(true)) {
+                System.out.println("[AIToolAgent] Skipping disabled agent file: " + filename);
+                return;
+            }
+            
             JsonNode variants = root.get(arrayKey);
             if (variants == null || !variants.isArray()) return;
             
@@ -1214,6 +1209,8 @@ public class AIToolAgent {
                     }
                 }
                 
+                agent.entryType = v.path("entryType").asText("AUTO");
+
                 if (!agent.id.isEmpty()) {
                     systemState.agents.put(agent.id, agent);
                     if (!systemState.performance.containsKey(agent.id)) {
@@ -1475,11 +1472,19 @@ public class AIToolAgent {
                                 if (decision == null) {
                                     writeScanLog("[NULL] " + ticker + " | " + agent.id + " — insufficient data");
                                 } else if (decision.shouldTrade) {
+                                    // Promote from watchlist if it was waiting
+                                    confirmPendingSignal(ticker, agent.id);
                                     writeScanLog("[✅ BUY SIGNAL] " + ticker + " | " + agent.id +
                                         " | Entry=$" + String.format("%.2f", decision.entryPrice) +
                                         " SL=$" + String.format("%.2f", decision.suggestedStopLoss) +
                                         " TP=$" + String.format("%.2f", decision.suggestedTakeProfit) +
                                         " conf=" + String.format("%.2f", decision.confidence));
+                                    writeScanLog("[📊 ENTRY DIAG] " + ticker + " | " + agent.id +
+                                        " | type=" + decision.diagEntryType +
+                                        " | RSI=" + String.format("%.1f", decision.diagRsi) +
+                                        " | RVOL=" + String.format("%.2f", decision.diagRvol) +
+                                        " | distSMA20=" + String.format("%+.1f%%", decision.diagDistSMA20) +
+                                        " | distSMA50=" + String.format("%+.1f%%", decision.diagDistSMA50));
                                     sendBuyAlertIfMonitored(agent, ticker, decision);
                                     Trade trade = executeTrade(agent, ticker, decision);
                                     if (trade != null) {
@@ -1493,7 +1498,12 @@ public class AIToolAgent {
                                         updatePerformance(agent.id, trade);
                                         totalSignals++;
                                     }
+                                } else if (decision.triggerNotMet) {
+                                    // Scan gates passed but entry trigger not yet fired → watchlist
+                                    upsertPendingSignal(ticker, agent, decision);
                                 } else {
+                                    // Scan gates failed → expire any existing watchlist entry
+                                    expirePendingSignal(ticker, agent.id);
                                     writeScanLog("[❌ REJECT] " + ticker + " | " + agent.id +
                                         " — " + (decision.rejectReason != null ? decision.rejectReason : "unknown"));
                                 }
@@ -1651,7 +1661,6 @@ public class AIToolAgent {
                 " | Signals: " + totalSignals + " | Tickers scanned: " + total);
             writeScanLog("════════════════════════════════════════");
 
-            evolveUnderperformingAgents();
             autoTrackWinners();
 
             synchronized (LOCK) {
@@ -1751,6 +1760,12 @@ public class AIToolAgent {
         public int confluenceCount; // how many strategies scored >= CONFLUENCE_SCORE_THRESHOLD
         public double entryTriggerPrice; // BUY ONLY IF price breaks above this level (swing confirmation)
         public boolean triggerNotMet = false; // Execution gate: price hasn't met the entry trigger yet
+        // Entry diagnostics — captured at decision time, logged + stored on every executed trade
+        public String diagEntryType   = "AUTO";
+        public double diagRsi         = 0;
+        public double diagRvol        = 0;
+        public double diagDistSMA20   = 0; // % distance from SMA20
+        public double diagDistSMA50   = 0; // % distance from SMA50
     }
 
     private static class RankedSignal {
@@ -1782,6 +1797,7 @@ public class AIToolAgent {
         double pctFromWeek52High; // how far below the 52W high (negative = below, 0 = at high)
         double resistance30d;     // highest close over last 30 trading days (excl. today) = resistance level
         double atrPct;            // ATR(14) as % of price — volatility check (0 if unavailable)
+        double atr;               // ATR(14) raw dollar value — used for ATR-based stop calculation
         double prevHigh;          // yesterday's high price (for entry trigger: break above prev high)
         double high20d;           // highest high over last 20 sessions (near 20-day high check)
         boolean priceAboveSMA20;
@@ -1944,6 +1960,7 @@ public class AIToolAgent {
                     Double atrVal = atrList.get(atrList.size() - 1);
                     if (atrVal != null && atrVal > 0 && d.currentPrice > 0) {
                         d.atrPct = (atrVal / d.currentPrice) * 100.0;
+                        d.atr    = atrVal;
                     }
                 }
             }
@@ -2132,8 +2149,12 @@ public class AIToolAgent {
         dec.entryPrice = d.currentPrice;
         double slPct = getDoubleRisk(strategy, "stopLossPct", 3.0);
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 9.0);
-        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
-        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
+        double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
+        dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice,
+            d.currentPrice + (d.currentPrice - dec.suggestedStopLoss) * atrM > d.currentPrice
+                ? d.currentPrice + (d.currentPrice - dec.suggestedStopLoss) * atrM
+                : d.currentPrice * (1 + tpPct / 100));
 
         double upside_breakout = (d.resistance30d > 0 && d.currentPrice > 0)
             ? ((d.resistance30d - d.currentPrice) / d.currentPrice) * 100 : 0;
@@ -2187,7 +2208,8 @@ public class AIToolAgent {
         dec.entryPrice = d.currentPrice;
         double slPct = getDoubleRisk(strategy, "stopLossPct", 3.5);
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 10.5);
-        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
+        double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
+        dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
         dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
 
         // Entry trigger: buy only when price reclaims VWAP/typical-price support
@@ -2250,7 +2272,8 @@ public class AIToolAgent {
         dec.entryPrice = d.currentPrice;
         double slPct = getDoubleRisk(strategy, "stopLossPct", 3.5);
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 13.0);
-        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
+        double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
+        dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
         dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
 
         // Entry trigger: buy only if price pushes 0.5% above last close — confirms momentum is real
@@ -2307,7 +2330,8 @@ public class AIToolAgent {
         dec.entryPrice = d.currentPrice;
         double slPct = getDoubleRisk(strategy, "stopLossPct", 6.0);
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 18.0);
-        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
+        double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
+        dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
         dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
 
         // Entry trigger: buy only on confirmed break above the 52W high
@@ -2362,7 +2386,8 @@ public class AIToolAgent {
         dec.entryPrice = d.currentPrice;
         double slPct = getDoubleRisk(strategy, "stopLossPct", 4.0);
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 12.0);
-        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
+        double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
+        dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
         dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
 
         // Entry trigger: buy only when price closes back above MA20 with a small buffer
@@ -2418,7 +2443,8 @@ public class AIToolAgent {
         dec.entryPrice = d.currentPrice;
         double slPct = getDoubleRisk(strategy, "stopLossPct", 5.0);
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 15.0);
-        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
+        double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
+        dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
         dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
 
         // Entry trigger: buy only on confirmed break above the 30-day resistance
@@ -2473,7 +2499,8 @@ public class AIToolAgent {
         dec.entryPrice = d.currentPrice;
         double slPct = getDoubleRisk(strategy, "stopLossPct", 5.0);
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 15.0);
-        dec.suggestedStopLoss   = d.currentPrice * (1 - slPct / 100);
+        double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
+        dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
         dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
 
         // Entry trigger: buy ONLY if price breaks above yesterday's high (momentum confirmation)
@@ -2498,6 +2525,11 @@ public class AIToolAgent {
     // Public wrapper for debugging - calls the private analyzeStock
     public static TradeDecision analyzeStockPublic(String ticker, AgentConfig agent) {
         return analyzeStock(ticker, agent);
+    }
+
+    // Public wrapper for testing — accepts pre-fetched JSON (mirrors real scan loop behaviour)
+    public static TradeDecision analyzeStockPublic(String ticker, AgentConfig agent, String json) {
+        return analyzeStock(ticker, agent, json);
     }
 
     /** Public wrapper for testing — runs computeIndicators() on pre-fetched JSON */
@@ -2922,6 +2954,23 @@ public class AIToolAgent {
                 }
             }
             
+            // === OPTIONAL RS FILTER (Relative Strength — 20-day price momentum ratio) ===
+            // rsMin: 1.05 means currentPrice must be >= 5% above price 20 days ago (stock is a leader)
+            if (hasFilter(agent, "rsMin") || hasFilter(agent, "rsMax")) {
+                if (prices.size() >= 21) {
+                    double price20dAgo = prices.get(prices.size() - 21);
+                    if (price20dAgo > 0) {
+                        double rs = currentPrice / price20dAgo;
+                        double rsMin = getDoubleFilter(agent, "rsMin", 0);
+                        double rsMax = getDoubleFilter(agent, "rsMax", 99);
+                        if (rs < rsMin || rs > rsMax) {
+                            decision.rejectReason = String.format("RS=%.3f not in [%.2f,%.2f] (20d momentum ratio)", rs, rsMin, rsMax);
+                            return decision;
+                        }
+                    }
+                }
+            }
+
             // === OPTIONAL RVOL FILTER (relative volume) ===
             if (hasFilter(agent, "rvolMin") || hasFilter(agent, "rvolMax")) {
                 if (volumes != null && volumes.size() >= 20) {
@@ -3086,53 +3135,212 @@ public class AIToolAgent {
                 }
             }
             
-            // === ALL FILTERS PASSED - TRADE SIGNAL ===
+            // ═══════════════════════════════════════════════════════════════
+            // LAYER 2: ENTRY TRIGGERS
+            // All scan gates (1-11) have passed. These triggers are NOT hard
+            // rejects — failing them defers the stock to the watchlist so it
+            // can be promoted automatically when the trigger fires.
+            // ═══════════════════════════════════════════════════════════════
+
+            // Pre-calculate SL/TP using daily close so watchlist entries
+            // always carry meaningful risk levels for display.
+            decision.entryPrice = currentPrice;
+            decision.confidence = Math.min(1.0, (rsi - rsiMin) / (rsiMax - rsiMin));
+
+            double stopLossPct   = getDoubleRisk(agent, "stopLossPct",   3.0);
+            double takeProfitPct = getDoubleRisk(agent, "takeProfitPct", 6.0);
+            double atrMult       = getDoubleFilter(agent, "atrMultiplier", 2.0);
+            double dailyAtr      = 0;
+            if (highPrices != null && lowPrices != null && highPrices.size() >= 14) {
+                List<Double> atrList = ATR.calculateATR(highPrices, lowPrices, prices, 14);
+                Double atrVal = (atrList != null && !atrList.isEmpty()) ? atrList.get(atrList.size() - 1) : null;
+                if (atrVal != null) dailyAtr = atrVal;
+            }
+            double rrRatio = getDoubleRisk(agent, "riskRewardRatio", 1.5);
+            decision.suggestedStopLoss   = calculateFinalStopPrice(currentPrice, dailyAtr, atrMult, stopLossPct);
+            double riskPerShare           = currentPrice - decision.suggestedStopLoss;
+            decision.suggestedTakeProfit = applyMinTakeProfit(currentPrice,
+                currentPrice + (riskPerShare * rrRatio > 0 ? riskPerShare * rrRatio
+                    : currentPrice * takeProfitPct / 100));
+
+            // --- Entry Trigger 1: MA Crossover (MA9 > MA21) ---
+            if (getBooleanFilter(agent, "maCrossoverRequired", false)) {
+                if (prices.size() >= 21) {
+                    List<Double> sma9List  = TechnicalAnalysisModel.calculateSMA(prices, 9);
+                    List<Double> sma21List = TechnicalAnalysisModel.calculateSMA(prices, 21);
+                    if (sma9List != null && !sma9List.isEmpty() && sma21List != null && !sma21List.isEmpty()) {
+                        double sma9  = sma9List.get(sma9List.size() - 1);
+                        double sma21 = sma21List.get(sma21List.size() - 1);
+                        if (sma9 <= sma21) {
+                            decision.triggerNotMet     = true;
+                            decision.entryTriggerPrice = sma21 * 1.002;
+                            decision.rejectReason      = String.format("Waiting: MA9=$%.2f <= MA21=$%.2f", sma9, sma21);
+                        }
+                    }
+                } else {
+                    decision.triggerNotMet = true;
+                    decision.rejectReason  = "Waiting: need 21 bars for MA crossover";
+                }
+            }
+
+            // --- Entry Trigger 2: Prev-Day High Breakout (0.2% buffer blocks fake breakouts) ---
+            if (!decision.triggerNotMet && getBooleanFilter(agent, "prevHighBreakoutRequired", false)) {
+                if (highPrices != null && highPrices.size() >= 2) {
+                    double prevDayHigh        = highPrices.get(highPrices.size() - 2);
+                    double breakoutThreshold  = prevDayHigh * 1.002;
+                    if (currentPrice < breakoutThreshold) {
+                        decision.triggerNotMet     = true;
+                        decision.entryTriggerPrice = breakoutThreshold;
+                        decision.rejectReason      = String.format("Waiting: price=$%.2f < breakout=$%.2f (prevHigh=$%.2f +0.2%%)", currentPrice, breakoutThreshold, prevDayHigh);
+                    }
+                }
+            }
+
+            // --- Entry Trigger 3: Distance from 30-Day Resistance ---
+            if (!decision.triggerNotMet && hasFilter(agent, "distanceFromResistancePct")) {
+                double minDistPct = getDoubleFilter(agent, "distanceFromResistancePct", 0);
+                if (minDistPct > 0 && prices.size() >= 2) {
+                    int lookback = Math.min(prices.size() - 1, 30);
+                    List<Double> recentCloses = prices.subList(prices.size() - 1 - lookback, prices.size() - 1);
+                    double resistance = recentCloses.stream().mapToDouble(p -> p != null ? p : 0).max().orElse(0);
+                    if (resistance > 0 && currentPrice > 0) {
+                        double distPct = ((resistance - currentPrice) / currentPrice) * 100;
+                        if (distPct < minDistPct) {
+                            decision.triggerNotMet     = true;
+                            decision.entryTriggerPrice = resistance * 1.005;
+                            decision.rejectReason      = String.format("Waiting: R30d dist=%.1f%% < %.1f%% (R=$%.2f)", distPct, minDistPct, resistance);
+                        }
+                    }
+                }
+            }
+
+            // --- Entry Trigger T4: Entry-Type Routing ---
+            // Applied only when entryType is explicitly set (not AUTO).
+            // Adds type-specific precision on top of the generic T1–T3 triggers.
+            if (!decision.triggerNotMet && agent.entryType != null && !agent.entryType.equals("AUTO")) {
+                String et = agent.entryType;
+
+                if ("EARLY_BREAKOUT".equals(et)) {
+                    // Confirm first break above prevHigh with high-conviction volume
+                    // Requires: price >= prevHigh * 1.003  AND  rvol > 1.5
+                    if (highPrices != null && highPrices.size() >= 2 && volumes != null && volumes.size() >= 21) {
+                        double prevDayHigh   = highPrices.get(highPrices.size() - 2);
+                        double earlyThresh   = prevDayHigh * 1.003;
+                        double avgVol        = volumes.subList(volumes.size() - 21, volumes.size() - 1)
+                                                       .stream().mapToDouble(v -> v != null ? v : 0).average().orElse(0);
+                        double todayVol      = volumes.get(volumes.size() - 1) != null ? volumes.get(volumes.size() - 1) : 0;
+                        double rvol          = avgVol > 0 ? todayVol / avgVol : 0;
+                        if (currentPrice < earlyThresh || rvol < 1.5) {
+                            decision.triggerNotMet     = true;
+                            decision.entryTriggerPrice = earlyThresh;
+                            decision.rejectReason      = String.format(
+                                "EARLY: need price=$%.2f (+0.3%%) AND rvol>1.5 (now=%.2f)", earlyThresh, rvol);
+                        }
+                    }
+
+                } else if ("RETEST_BREAKOUT".equals(et)) {
+                    // Enter on confirmed retest: peak 2–3 days ago → pullback → reclaim
+                    // Requires: hadBreakout + reclaim + above SMA50 + rvol > 1.3
+                    if (highPrices != null && highPrices.size() >= 4) {
+                        int sz             = highPrices.size();
+                        double prevHigh    = highPrices.get(sz - 2);
+                        double high2d      = highPrices.get(sz - 3);
+                        double high3d      = highPrices.get(sz - 4);
+                        double recentPeak  = Math.max(high2d, high3d);
+                        boolean hadBreakout = recentPeak > prevHigh * 1.01;
+                        boolean reclaim     = currentPrice >= prevHigh;
+
+                        // SMA50 structure: must be above SMA50 (trending structure)
+                        List<Double> sma50r = TechnicalAnalysisModel.calculateSMA(prices, 50);
+                        double sma50r_val   = (sma50r != null && !sma50r.isEmpty()) ? sma50r.get(sma50r.size() - 1) : 0;
+                        boolean aboveSMA50  = sma50r_val > 0 && currentPrice > sma50r_val;
+
+                        // Volume confirmation: retest needs volume backing
+                        double retestRvol = 0;
+                        if (volumes != null && volumes.size() >= 21) {
+                            double avgV  = volumes.subList(volumes.size() - 21, volumes.size() - 1)
+                                                   .stream().mapToDouble(v -> v != null ? v : 0).average().orElse(0);
+                            double curV  = volumes.get(volumes.size() - 1) != null ? volumes.get(volumes.size() - 1) : 0;
+                            retestRvol   = avgV > 0 ? curV / avgV : 0;
+                        }
+                        boolean volumeOk = retestRvol >= 1.3;
+
+                        if (!(hadBreakout && reclaim && aboveSMA50 && volumeOk)) {
+                            decision.triggerNotMet     = true;
+                            decision.entryTriggerPrice = prevHigh;
+                            decision.rejectReason      = String.format(
+                                "RETEST: breakout=%b reclaim=%b sma50=%b vol=%b (peak=$%.2f prev=$%.2f rvol=%.2f)",
+                                hadBreakout, reclaim, aboveSMA50, volumeOk, recentPeak, prevHigh, retestRvol);
+                        }
+                    }
+
+                } else if ("TREND_CONTINUATION".equals(et)) {
+                    // Already in a healthy uptrend — just ensure RSI is in the "momentum but not overbought" zone
+                    // and price is above SMA50. SMA200 is already enforced by scan gate.
+                    List<Double> sma50List = TechnicalAnalysisModel.calculateSMA(prices, 50);
+                    double sma50 = (sma50List != null && !sma50List.isEmpty())
+                        ? sma50List.get(sma50List.size() - 1) : 0;
+                    boolean aboveSMA50  = sma50 > 0 && currentPrice > sma50;
+                    boolean rsiHealthy  = rsi >= 50 && rsi <= 70;
+                    if (!aboveSMA50 || !rsiHealthy) {
+                        decision.triggerNotMet     = true;
+                        decision.entryTriggerPrice = Math.max(currentPrice, sma50) * 1.005;
+                        decision.rejectReason      = String.format(
+                            "TREND: aboveSMA50=%b rsiHealthy=%b (RSI=%.1f SMA50=$%.2f)",
+                            aboveSMA50, rsiHealthy, rsi, sma50);
+                    }
+                }
+            }
+
+            // Trigger not yet met → qualified candidate, deferred to watchlist
+            if (decision.triggerNotMet) {
+                writeScanLog("[⏳ WATCHLIST] " + ticker + " | " + agent.id
+                    + " | " + decision.rejectReason
+                    + " | Trigger=$" + String.format("%.2f", decision.entryTriggerPrice));
+                return decision;
+            }
+
+            // === ALL SCAN GATES + ENTRY TRIGGERS PASSED — EXECUTE ===
+            // Capture entry diagnostics for post-trade analysis
+            try {
+                decision.diagEntryType = agent.entryType != null ? agent.entryType : "AUTO";
+                List<Double> rsiDiag = RSI.calculateRSI(prices, 14);
+                decision.diagRsi = (rsiDiag != null && !rsiDiag.isEmpty()) ? rsiDiag.get(rsiDiag.size() - 1) : 0;
+                List<Double> s20d = TechnicalAnalysisModel.calculateSMA(prices, 20);
+                double s20v = (s20d != null && !s20d.isEmpty()) ? s20d.get(s20d.size() - 1) : 0;
+                List<Double> s50d = TechnicalAnalysisModel.calculateSMA(prices, 50);
+                double s50v = (s50d != null && !s50d.isEmpty()) ? s50d.get(s50d.size() - 1) : 0;
+                if (s20v > 0) decision.diagDistSMA20 = (currentPrice - s20v) / s20v * 100;
+                if (s50v > 0) decision.diagDistSMA50 = (currentPrice - s50v) / s50v * 100;
+                if (volumes != null && volumes.size() >= 21) {
+                    double avgV = volumes.subList(volumes.size() - 21, volumes.size() - 1)
+                                         .stream().mapToDouble(v -> v != null ? v : 0).average().orElse(0);
+                    double curV = volumes.get(volumes.size() - 1) != null ? volumes.get(volumes.size() - 1) : 0;
+                    decision.diagRvol = avgV > 0 ? curV / avgV : 0;
+                }
+            } catch (Exception ignored) {}
+
             decision.shouldTrade = true;
             decision.action = "BUY";
 
-            // During market hours: use GLOBAL_QUOTE for live (15-min delayed) entry price.
-            // Off-hours / simulation: fall back to last daily close from TIME_SERIES_DAILY.
-            double effectiveEntryPrice = currentPrice;
+            // Live price fetch for confirmed entries only (not watchlist candidates)
             if (isMarketHours()) {
                 String quoteJson = DataFetcher.fetchGlobalQuote(ticker);
                 double livePrice = quoteJson != null ? parseGlobalQuoteField(quoteJson, "05. price") : 0;
                 if (livePrice > 0) {
-                    effectiveEntryPrice = livePrice;
+                    decision.entryPrice = livePrice;
                     System.out.println("[AIToolAgent] LIVE price for " + ticker + ": $" + String.format("%.2f", livePrice)
                         + " (daily close was $" + String.format("%.2f", currentPrice) + ")");
+                    // Recalculate SL/TP with confirmed live entry price
+                    double liveAtr = dailyAtr; // reuse already-computed ATR
+                    decision.suggestedStopLoss   = calculateFinalStopPrice(livePrice, liveAtr, atrMult, stopLossPct);
+                    double liveRisk               = livePrice - decision.suggestedStopLoss;
+                    decision.suggestedTakeProfit = applyMinTakeProfit(livePrice,
+                        livePrice + (liveRisk * rrRatio > 0 ? liveRisk * rrRatio
+                            : livePrice * takeProfitPct / 100));
                 }
             }
 
-            decision.entryPrice = effectiveEntryPrice;
-            decision.confidence = Math.min(1.0, (rsi - rsiMin) / (rsiMax - rsiMin));
-            
-            // Calculate stop loss and take profit from risk management
-            double stopLossPct = getDoubleRisk(agent, "stopLossPct", 3.0);
-            double takeProfitPct = getDoubleRisk(agent, "takeProfitPct", 6.0);
-            
-            // Use ATR-based stop loss if atrMultiplier is set
-            if (hasFilter(agent, "atrMultiplier") && highPrices != null && lowPrices != null) {
-                List<Double> atrList = ATR.calculateATR(highPrices, lowPrices, prices, 14);
-                if (atrList != null && !atrList.isEmpty()) {
-                    Double atr = atrList.get(atrList.size() - 1);
-                    if (atr != null && atr > 0) {
-                        double atrMultiplier = getDoubleFilter(agent, "atrMultiplier", 2.0);
-                        decision.suggestedStopLoss = effectiveEntryPrice - (atr * atrMultiplier);
-                        double riskRewardRatio = getDoubleRisk(agent, "riskRewardRatio", 1.5);
-                        decision.suggestedTakeProfit = effectiveEntryPrice + (atr * atrMultiplier * riskRewardRatio);
-                    } else {
-                        decision.suggestedStopLoss = effectiveEntryPrice * (1 - stopLossPct / 100);
-                        decision.suggestedTakeProfit = effectiveEntryPrice * (1 + takeProfitPct / 100);
-                    }
-                } else {
-                    decision.suggestedStopLoss = effectiveEntryPrice * (1 - stopLossPct / 100);
-                    decision.suggestedTakeProfit = effectiveEntryPrice * (1 + takeProfitPct / 100);
-                }
-            } else {
-                decision.suggestedStopLoss = effectiveEntryPrice * (1 - stopLossPct / 100);
-                decision.suggestedTakeProfit = effectiveEntryPrice * (1 + takeProfitPct / 100);
-            }
-            
             return decision;
         } catch (Exception e) {
             return null;
@@ -3163,6 +3371,30 @@ public class AIToolAgent {
     private static double applyMinTakeProfit(double entryPrice, double rawTP) {
         double minTP = entryPrice * 1.06;
         return Math.max(rawTP, minTP);
+    }
+
+    /**
+     * Calculates the final stop-loss price using the best of two methods:
+     *   1. Percentage-based stop  (from agent JSON: stopLossPct)
+     *   2. ATR-based stop         (entry - atr × atrMultiplier)
+     *
+     * Takes the LOWER/wider stop to give volatile stocks breathing room,
+     * then enforces MIN_STOP_LOSS_PCT as a floor (stop must be at least
+     * MIN_STOP_LOSS_PCT% below entry — prevents stop being too tight).
+     *
+     * Example: entry=$100, ATR=$4, mult=2.5 → atrStop=$90, pctStop=$96.5 (3.5%)
+     *   → final=$90 (ATR wins, wider stop for volatile stock)
+     * Example: entry=$100, ATR=$0.5, mult=2.5 → atrStop=$98.75, pctStop=$96.5
+     *   → raw=$96.5 (pct wins), floor check: $97 > $96.5 so final=$97 (3% floor)
+     */
+    private static double calculateFinalStopPrice(double entryPrice, double atr, double atrMultiplier,
+                                                   double stopLossPct) {
+        double percentStop = entryPrice * (1 - stopLossPct / 100.0);
+        double atrStop     = (atr > 0) ? entryPrice - (atr * atrMultiplier) : percentStop;
+        double finalStop   = Math.min(percentStop, atrStop); // wider stop wins
+        double floorStop   = entryPrice * (1 - MIN_STOP_LOSS_PCT / 100.0);
+        if (finalStop > floorStop) finalStop = floorStop; // enforce minimum distance
+        return finalStop;
     }
 
     private static double getDoubleRisk(AgentConfig agent, String key, double defaultVal) {
@@ -3578,376 +3810,6 @@ public class AIToolAgent {
         }
     }
 
-    private static void evolveUnderperformingAgents() {
-        synchronized (LOCK) {
-            for (AgentPerformance perf : systemState.performance.values()) {
-                // EVOLUTION DECISION LOGIC:
-                // Agent will ABANDON its strategy and create a new evolved version if:
-                // 1. Has at least 5 trades (enough data to judge)
-                // 2. Win rate is below 70% (underperforming)
-                // 3. Has not already evolved in this session
-                // 4. Agent is NOT locked (locked agents are protected from evolution)
-                
-                AgentConfig original = systemState.agents.get(perf.agentId);
-                if (original == null) continue;
-                
-                // Skip locked agents - they are protected from evolution
-                if (original.locked) {
-                    continue;
-                }
-                
-                boolean hasEnoughTrades = perf.totalTrades >= 5;
-                boolean isUnderperforming = perf.winRate < 70;
-                boolean hasNotEvolvedYet = !perf.configChanged;
-                
-                if (hasEnoughTrades && isUnderperforming && hasNotEvolvedYet) {
-                    
-                    // Build evolution reason
-                    String reason = String.format(
-                        "Win rate %.1f%% < 70%% threshold after %d trades. Total P/L: $%.2f",
-                        perf.winRate, perf.totalTrades, perf.totalProfitLoss
-                    );
-                    
-                    System.out.println("[AIToolAgent] EVOLUTION TRIGGERED for " + original.id);
-                    System.out.println("[AIToolAgent] Reason: " + reason);
-                    
-                    // STEP 1: Get AI suggestion FIRST (synchronously) so we can apply it
-                    System.out.println("[AIToolAgent] Requesting AI improvement suggestions for " + original.id + "...");
-                    AIParameterSuggestion aiSuggestion = getStructuredAISuggestion(original, perf);
-                    
-                    // STEP 2: Create evolved version with AI-guided parameters (or random if AI unavailable)
-                    EvolutionResult evolveResult = evolveAgentWithAI(original, perf, aiSuggestion);
-                    if (evolveResult != null && evolveResult.evolved != null) {
-                        AgentConfig evolved = evolveResult.evolved;
-                        
-                        // Store AI suggestion in evolved agent
-                        if (aiSuggestion != null && aiSuggestion.rawSuggestion != null) {
-                            evolved.aiSuggestion = aiSuggestion.rawSuggestion;
-                        }
-                        
-                        systemState.agents.put(evolved.id, evolved);
-                        
-                        AgentPerformance newPerf = new AgentPerformance();
-                        newPerf.agentId = evolved.id;
-                        newPerf.agentName = evolved.name;
-                        newPerf.type = evolved.type;
-                        newPerf.generation = evolved.generation;
-                        newPerf.configChanged = false; // New agent starts fresh
-                        systemState.performance.put(evolved.id, newPerf);
-                        systemState.tradeHistory.put(evolved.id, new ArrayList<>());
-                        
-                        // Mark original as having spawned evolution
-                        perf.configChanged = true;
-                        perf.newConfigName = evolved.id;
-                        perf.evolutionReason = reason;
-                        
-                        // Log the evolution event
-                        EvolutionEvent event = new EvolutionEvent();
-                        event.timestamp = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
-                        event.originalAgentId = original.id;
-                        event.newAgentId = evolved.id;
-                        event.reason = reason;
-                        event.oldWinRate = perf.winRate;
-                        event.oldTrades = perf.totalTrades;
-                        event.oldProfitLoss = perf.totalProfitLoss;
-                        event.parameterChanges = evolveResult.changes;
-                        if (aiSuggestion != null && aiSuggestion.rawSuggestion != null) {
-                            event.aiSuggestion = aiSuggestion.rawSuggestion;
-                        }
-                        
-                        systemState.evolutionLog.add(event);
-                        
-                        // Save evolved agent to file
-                        saveEvolvedAgent(evolved);
-                        
-                        // Save state immediately after evolution
-                        saveState();
-                        
-                        System.out.println("[AIToolAgent] Created evolved agent: " + evolved.id);
-                        System.out.println("[AIToolAgent] Parameter changes: " + evolveResult.changes);
-                        if (aiSuggestion != null && aiSuggestion.parsed) {
-                            System.out.println("[AIToolAgent] AI suggestions APPLIED: " + 
-                                aiSuggestion.entryFilterChanges.size() + " entry filters, " +
-                                aiSuggestion.riskManagementChanges.size() + " risk mgmt, " +
-                                aiSuggestion.newFilters.size() + " new filters");
-                        } else {
-                            System.out.println("[AIToolAgent] AI unavailable - used random mutations");
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private static class EvolutionResult {
-        AgentConfig evolved;
-        Map<String, String> changes = new HashMap<>();
-    }
-
-    // Evolve agent using AI suggestions (or fall back to random mutations)
-    private static EvolutionResult evolveAgentWithAI(AgentConfig original, AgentPerformance perf, AIParameterSuggestion aiSuggestion) {
-        try {
-            EvolutionResult result = new EvolutionResult();
-            AgentConfig evolved = new AgentConfig();
-            evolved.id = original.id + "_GEN" + (original.generation + 1);
-            evolved.name = original.name + " (Gen " + (original.generation + 1) + ")";
-            evolved.type = original.type;
-            evolved.sourceFile = NEW_STRATEGIES_DIR.resolve(evolved.id + ".json").toString();
-            evolved.generation = original.generation + 1;
-            evolved.parentId = original.id;
-            evolved.lastModified = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
-            
-            // Copy original filters
-            evolved.entryFilters = new HashMap<>(original.entryFilters);
-            evolved.riskManagement = new HashMap<>(original.riskManagement);
-            evolved.scoring = new HashMap<>(original.scoring);
-            
-            // Check if we have valid AI suggestions to apply
-            if (aiSuggestion != null && aiSuggestion.parsed) {
-                System.out.println("[AIToolAgent] Applying AI-suggested parameters...");
-                
-                // Apply entry filter changes from AI
-                for (Map.Entry<String, Double> change : aiSuggestion.entryFilterChanges.entrySet()) {
-                    String key = change.getKey();
-                    double newVal = change.getValue();
-                    Object oldVal = evolved.entryFilters.get(key);
-                    
-                    // Validate the value is within reasonable bounds
-                    newVal = validateParameterValue(key, newVal);
-                    
-                    if (oldVal != null) {
-                        result.changes.put(key, String.format("%.2f -> %.2f (AI)", ((Number) oldVal).doubleValue(), newVal));
-                    } else {
-                        result.changes.put(key, String.format("(new) -> %.2f (AI)", newVal));
-                    }
-                    evolved.entryFilters.put(key, newVal);
-                }
-                
-                // Apply risk management changes from AI
-                for (Map.Entry<String, Double> change : aiSuggestion.riskManagementChanges.entrySet()) {
-                    String key = change.getKey();
-                    double newVal = change.getValue();
-                    Object oldVal = evolved.riskManagement.get(key);
-                    
-                    // Validate the value is within reasonable bounds
-                    newVal = validateParameterValue(key, newVal);
-                    
-                    if (oldVal != null) {
-                        result.changes.put(key, String.format("%.2f -> %.2f (AI)", ((Number) oldVal).doubleValue(), newVal));
-                    } else {
-                        result.changes.put(key, String.format("(new) -> %.2f (AI)", newVal));
-                    }
-                    evolved.riskManagement.put(key, newVal);
-                }
-                
-                // Add NEW filters suggested by AI
-                for (Map.Entry<String, Double> newFilter : aiSuggestion.newFilters.entrySet()) {
-                    String key = newFilter.getKey();
-                    double newVal = newFilter.getValue();
-                    
-                    // Validate the value
-                    newVal = validateParameterValue(key, newVal);
-                    
-                    // Add to entry filters (most new filters are entry filters)
-                    evolved.entryFilters.put(key, newVal);
-                    result.changes.put(key, String.format("NEW FILTER: %.2f (AI)", newVal));
-                    System.out.println("[AIToolAgent] Added new filter from AI: " + key + " = " + newVal);
-                }
-                
-                // Apply boolean entry filter changes from AI
-                for (Map.Entry<String, Boolean> change : aiSuggestion.booleanFilterChanges.entrySet()) {
-                    String key = change.getKey();
-                    boolean newVal = change.getValue();
-                    Object oldVal = evolved.entryFilters.get(key);
-                    result.changes.put(key, String.format("%s -> %s (AI)", oldVal != null ? oldVal.toString() : "null", newVal));
-                    evolved.entryFilters.put(key, newVal);
-                    System.out.println("[AIToolAgent] Applied boolean filter from AI: " + key + " = " + newVal);
-                }
-                
-            } else {
-                // Fall back to random mutations if AI is unavailable
-                System.out.println("[AIToolAgent] AI unavailable, using random mutations...");
-                return evolveAgentWithTracking(original, perf);
-            }
-            
-            result.evolved = evolved;
-            return result;
-        } catch (Exception e) {
-            System.err.println("[AIToolAgent] Error evolving agent with AI: " + e.getMessage());
-            // Fall back to random mutations
-            return evolveAgentWithTracking(original, perf);
-        }
-    }
-
-    // Validate parameter values to ensure they're within reasonable bounds
-    private static double validateParameterValue(String paramName, double value) {
-        String lowerName = paramName.toLowerCase();
-        
-        // RSI bounds (0-100)
-        if (lowerName.contains("rsi")) {
-            return Math.max(0, Math.min(100, value));
-        }
-        // Percentage bounds (0-100)
-        if (lowerName.contains("pct") || lowerName.contains("percent")) {
-            return Math.max(0.1, Math.min(50, value));
-        }
-        // Multipliers (0.1-10)
-        if (lowerName.contains("multiplier")) {
-            return Math.max(0.1, Math.min(10, value));
-        }
-        // Min thresholds (0-10)
-        if (lowerName.contains("min") && !lowerName.contains("rsi")) {
-            return Math.max(0, Math.min(10, value));
-        }
-        // Volume thresholds (allow large values up to 100M)
-        if (lowerName.contains("volume")) {
-            return Math.max(0, Math.min(100_000_000, value));
-        }
-        // CCI bounds (-200 to 200)
-        if (lowerName.contains("cci")) {
-            return Math.max(-200, Math.min(200, value));
-        }
-        // Max thresholds (allow negative for indicators like CCI-based max)
-        if (lowerName.contains("max") && !lowerName.contains("rsi")) {
-            return Math.max(-1000, Math.min(1000, value));
-        }
-        // Default: allow reasonable range
-        return Math.max(-1000, Math.min(1000, value));
-    }
-
-    private static EvolutionResult evolveAgentWithTracking(AgentConfig original, AgentPerformance perf) {
-        try {
-            EvolutionResult result = new EvolutionResult();
-            AgentConfig evolved = new AgentConfig();
-            evolved.id = original.id + "_GEN" + (original.generation + 1);
-            evolved.name = original.name + " (Gen " + (original.generation + 1) + ")";
-            evolved.type = original.type;
-            evolved.sourceFile = NEW_STRATEGIES_DIR.resolve(evolved.id + ".json").toString();
-            evolved.generation = original.generation + 1;
-            evolved.parentId = original.id;
-            evolved.lastModified = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
-            
-            // Copy and mutate entry filters with tracking
-            evolved.entryFilters = new HashMap<>(original.entryFilters);
-            Random rand = new Random();
-            
-            // Mutate RSI range
-            if (evolved.entryFilters.containsKey("rsiMin")) {
-                double oldVal = ((Number) evolved.entryFilters.get("rsiMin")).doubleValue();
-                double newVal = Math.max(10, oldVal + (rand.nextDouble() - 0.5) * 20);
-                evolved.entryFilters.put("rsiMin", newVal);
-                result.changes.put("rsiMin", String.format("%.1f -> %.1f", oldVal, newVal));
-            }
-            if (evolved.entryFilters.containsKey("rsiMax")) {
-                double oldVal = ((Number) evolved.entryFilters.get("rsiMax")).doubleValue();
-                double newVal = Math.min(95, oldVal + (rand.nextDouble() - 0.5) * 20);
-                evolved.entryFilters.put("rsiMax", newVal);
-                result.changes.put("rsiMax", String.format("%.1f -> %.1f", oldVal, newVal));
-            }
-            
-            // Mutate RS threshold
-            if (evolved.entryFilters.containsKey("rsMin")) {
-                double oldVal = ((Number) evolved.entryFilters.get("rsMin")).doubleValue();
-                double newVal = Math.max(0.9, Math.min(1.3, oldVal + (rand.nextDouble() - 0.5) * 0.1));
-                evolved.entryFilters.put("rsMin", newVal);
-                result.changes.put("rsMin", String.format("%.2f -> %.2f", oldVal, newVal));
-            }
-            
-            // Mutate RVOL
-            if (evolved.entryFilters.containsKey("rvolMin")) {
-                double oldVal = ((Number) evolved.entryFilters.get("rvolMin")).doubleValue();
-                double newVal = Math.max(0.5, Math.min(3.0, oldVal + (rand.nextDouble() - 0.5) * 0.5));
-                evolved.entryFilters.put("rvolMin", newVal);
-                result.changes.put("rvolMin", String.format("%.2f -> %.2f", oldVal, newVal));
-            }
-            
-            // Copy and mutate risk management
-            evolved.riskManagement = new HashMap<>(original.riskManagement);
-            if (evolved.riskManagement.containsKey("stopLossPct")) {
-                double oldVal = ((Number) evolved.riskManagement.get("stopLossPct")).doubleValue();
-                double newVal = Math.max(1.0, Math.min(8.0, oldVal + (rand.nextDouble() - 0.5) * 2));
-                evolved.riskManagement.put("stopLossPct", newVal);
-                result.changes.put("stopLossPct", String.format("%.1f%% -> %.1f%%", oldVal, newVal));
-            }
-            if (evolved.riskManagement.containsKey("takeProfitPct")) {
-                double oldVal = ((Number) evolved.riskManagement.get("takeProfitPct")).doubleValue();
-                double newVal = Math.max(2.0, Math.min(20.0, oldVal + (rand.nextDouble() - 0.5) * 4));
-                evolved.riskManagement.put("takeProfitPct", newVal);
-                result.changes.put("takeProfitPct", String.format("%.1f%% -> %.1f%%", oldVal, newVal));
-            }
-            
-            evolved.scoring = new HashMap<>(original.scoring);
-            
-            result.evolved = evolved;
-            return result;
-        } catch (Exception e) {
-            System.err.println("[AIToolAgent] Error evolving agent: " + e.getMessage());
-            return null;
-        }
-    }
-
-    private static AgentConfig evolveAgent(AgentConfig original) {
-        try {
-            AgentConfig evolved = new AgentConfig();
-            evolved.id = original.id + "_GEN" + (original.generation + 1);
-            evolved.name = original.name + " (Gen " + (original.generation + 1) + ")";
-            evolved.type = original.type;
-            evolved.sourceFile = NEW_STRATEGIES_DIR.resolve(evolved.id + ".json").toString();
-            evolved.generation = original.generation + 1;
-            evolved.parentId = original.id;
-            evolved.lastModified = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
-            
-            // Copy and mutate entry filters
-            evolved.entryFilters = new HashMap<>(original.entryFilters);
-            Random rand = new Random();
-            
-            // Mutate RSI range
-            if (evolved.entryFilters.containsKey("rsiMin")) {
-                double val = ((Number) evolved.entryFilters.get("rsiMin")).doubleValue();
-                val = Math.max(10, val + (rand.nextDouble() - 0.5) * 20); // +/- 10
-                evolved.entryFilters.put("rsiMin", val);
-            }
-            if (evolved.entryFilters.containsKey("rsiMax")) {
-                double val = ((Number) evolved.entryFilters.get("rsiMax")).doubleValue();
-                val = Math.min(95, val + (rand.nextDouble() - 0.5) * 20);
-                evolved.entryFilters.put("rsiMax", val);
-            }
-            
-            // Mutate RS threshold
-            if (evolved.entryFilters.containsKey("rsMin")) {
-                double val = ((Number) evolved.entryFilters.get("rsMin")).doubleValue();
-                val = Math.max(0.9, Math.min(1.3, val + (rand.nextDouble() - 0.5) * 0.1));
-                evolved.entryFilters.put("rsMin", val);
-            }
-            
-            // Mutate RVOL
-            if (evolved.entryFilters.containsKey("rvolMin")) {
-                double val = ((Number) evolved.entryFilters.get("rvolMin")).doubleValue();
-                val = Math.max(0.5, Math.min(3.0, val + (rand.nextDouble() - 0.5) * 0.5));
-                evolved.entryFilters.put("rvolMin", val);
-            }
-            
-            // Copy and mutate risk management
-            evolved.riskManagement = new HashMap<>(original.riskManagement);
-            if (evolved.riskManagement.containsKey("stopLossPct")) {
-                double val = ((Number) evolved.riskManagement.get("stopLossPct")).doubleValue();
-                val = Math.max(1.0, Math.min(8.0, val + (rand.nextDouble() - 0.5) * 2));
-                evolved.riskManagement.put("stopLossPct", val);
-            }
-            if (evolved.riskManagement.containsKey("takeProfitPct")) {
-                double val = ((Number) evolved.riskManagement.get("takeProfitPct")).doubleValue();
-                val = Math.max(2.0, Math.min(20.0, val + (rand.nextDouble() - 0.5) * 4));
-                evolved.riskManagement.put("takeProfitPct", val);
-            }
-            
-            evolved.scoring = new HashMap<>(original.scoring);
-            
-            return evolved;
-        } catch (Exception e) {
-            System.err.println("[AIToolAgent] Error evolving agent: " + e.getMessage());
-            return null;
-        }
-    }
 
     private static void saveEvolvedAgent(AgentConfig agent) {
         try {
@@ -3980,11 +3842,6 @@ public class AIToolAgent {
                 } else {
                     rm.put(e.getKey(), String.valueOf(e.getValue()));
                 }
-            }
-            
-            // Save AI suggestion if available
-            if (agent.aiSuggestion != null && !agent.aiSuggestion.isEmpty()) {
-                root.put("aiSuggestion", agent.aiSuggestion);
             }
             
             // Save lock protection fields
@@ -4690,368 +4547,6 @@ public class AIToolAgent {
         }
     }
 
-    // Result class for structured AI suggestions
-    public static class AIParameterSuggestion {
-        public Map<String, Double> entryFilterChanges = new HashMap<>();
-        public Map<String, Double> riskManagementChanges = new HashMap<>();
-        public Map<String, Double> newFilters = new HashMap<>(); // New filters to add
-        public Map<String, Boolean> booleanFilterChanges = new HashMap<>(); // Boolean entry filter changes
-        public String marketConditions;
-        public String rawSuggestion; // Original text for display
-        public boolean parsed = false;
-    }
-
-    private static String getAIImprovementSuggestion(AgentConfig agent, AgentPerformance perf) {
-        AIParameterSuggestion suggestion = getStructuredAISuggestion(agent, perf);
-        return suggestion != null ? suggestion.rawSuggestion : null;
-    }
-
-    // Get structured AI suggestion that can be parsed and applied
-    private static AIParameterSuggestion getStructuredAISuggestion(AgentConfig agent, AgentPerformance perf) {
-        try {
-            // Build detailed prompt requesting JSON output
-            StringBuilder prompt = new StringBuilder();
-            prompt.append("You are a quantitative trading strategy advisor. Analyze this underperforming trading agent and suggest specific parameter improvements.\n\n");
-            prompt.append("AGENT CONFIGURATION:\n");
-            prompt.append("- ID: ").append(agent.id).append("\n");
-            prompt.append("- Type: ").append(agent.type != null ? agent.type : "UNKNOWN").append("\n");
-            prompt.append("- Generation: ").append(agent.generation).append("\n");
-            
-            if (agent.entryFilters != null) {
-                prompt.append("- Entry Filters:\n");
-                for (Map.Entry<String, Object> entry : agent.entryFilters.entrySet()) {
-                    prompt.append("  * ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
-                }
-            }
-            if (agent.riskManagement != null) {
-                prompt.append("- Risk Management:\n");
-                for (Map.Entry<String, Object> entry : agent.riskManagement.entrySet()) {
-                    prompt.append("  * ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
-                }
-            }
-            
-            prompt.append("\nPERFORMANCE (POOR - NEEDS IMPROVEMENT):\n");
-            prompt.append("- Win Rate: ").append(String.format("%.1f%%", perf.winRate)).append(" (threshold: 70%)\n");
-            prompt.append("- Total Trades: ").append(perf.totalTrades).append("\n");
-            prompt.append("- Wins: ").append(perf.wins).append(", Losses: ").append(perf.losses).append("\n");
-            prompt.append("- Total P/L: $").append(String.format("%.2f", perf.totalProfitLoss)).append("\n");
-            
-            prompt.append("\nIMPORTANT: You MUST respond with a JSON block containing your parameter suggestions.\n");
-            prompt.append("The JSON must be wrapped in ```json and ``` markers.\n");
-            prompt.append("\nJSON FORMAT:\n");
-            prompt.append("```json\n");
-            prompt.append("{\n");
-            prompt.append("  \"entryFilters\": { \"paramName\": newValue, ... },\n");
-            prompt.append("  \"riskManagement\": { \"paramName\": newValue, ... },\n");
-            prompt.append("  \"newFilters\": { \"newParamName\": value, ... },\n");
-            prompt.append("  \"marketConditions\": \"description of ideal market conditions\"\n");
-            prompt.append("}\n");
-            prompt.append("```\n");
-            prompt.append("\nAvailable entry filter parameters: rsiMin, rsiMax, rsMin, rvolMin, cciMin, cciMax, atrMultiplier, sma200Required, smaWindows (array e.g. [50,100] for multi-SMA momentum)\n");
-            prompt.append("Available risk management parameters: stopLossPct, takeProfitPct, maxPositionPct, trailingStopPct\n");
-            prompt.append("You can suggest NEW filters in 'newFilters' that don't exist yet (e.g., cciStdDev, volumeThreshold, etc.)\n");
-            prompt.append("\nAfter the JSON, briefly explain your reasoning (2-3 sentences).");
-
-            // Try Ollama first, then OpenAI
-            String result = callOllamaAPI(prompt.toString());
-            if (result == null || result.isEmpty() || result.startsWith("(")) {
-                result = callOpenAIAPI(prompt.toString());
-            }
-            
-            if (result == null || result.isEmpty()) {
-                return null;
-            }
-            
-            // Parse the result
-            AIParameterSuggestion suggestion = parseAISuggestion(result, agent);
-            suggestion.rawSuggestion = result;
-            return suggestion;
-            
-        } catch (Exception e) {
-            System.err.println("[AIToolAgent] Error getting AI suggestion: " + e.getMessage());
-            return null;
-        }
-    }
-
-    // Parse AI response to extract JSON parameter suggestions
-    private static AIParameterSuggestion parseAISuggestion(String response, AgentConfig agent) {
-        AIParameterSuggestion suggestion = new AIParameterSuggestion();
-        
-        try {
-            // Extract JSON block from response
-            String jsonStr = null;
-            int jsonStart = response.indexOf("```json");
-            int jsonEnd = response.indexOf("```", jsonStart + 7);
-            
-            if (jsonStart >= 0 && jsonEnd > jsonStart) {
-                jsonStr = response.substring(jsonStart + 7, jsonEnd).trim();
-            } else {
-                // Try to find raw JSON object
-                int braceStart = response.indexOf("{");
-                int braceEnd = response.lastIndexOf("}");
-                if (braceStart >= 0 && braceEnd > braceStart) {
-                    jsonStr = response.substring(braceStart, braceEnd + 1);
-                }
-            }
-            
-            if (jsonStr == null || jsonStr.isEmpty()) {
-                System.out.println("[AIToolAgent] No JSON found in AI response, using fallback parsing");
-                return parseAISuggestionFallback(response, agent);
-            }
-            
-            // Parse JSON
-            JsonNode root = JSON.readTree(jsonStr);
-            
-            // Parse entryFilters changes
-            JsonNode entryFilters = root.get("entryFilters");
-            if (entryFilters != null && entryFilters.isObject()) {
-                Iterator<String> fields = entryFilters.fieldNames();
-                while (fields.hasNext()) {
-                    String field = fields.next();
-                    JsonNode val = entryFilters.get(field);
-                    if (val.isNumber()) {
-                        suggestion.entryFilterChanges.put(field, val.doubleValue());
-                    } else if (val.isBoolean()) {
-                        suggestion.booleanFilterChanges.put(field, val.booleanValue());
-                    }
-                }
-            }
-            
-            // Parse riskManagement changes
-            JsonNode riskMgmt = root.get("riskManagement");
-            if (riskMgmt != null && riskMgmt.isObject()) {
-                Iterator<String> fields = riskMgmt.fieldNames();
-                while (fields.hasNext()) {
-                    String field = fields.next();
-                    JsonNode val = riskMgmt.get(field);
-                    if (val.isNumber()) {
-                        suggestion.riskManagementChanges.put(field, val.doubleValue());
-                    }
-                }
-            }
-            
-            // Parse new filters
-            JsonNode newFilters = root.get("newFilters");
-            if (newFilters != null && newFilters.isObject()) {
-                Iterator<String> fields = newFilters.fieldNames();
-                while (fields.hasNext()) {
-                    String field = fields.next();
-                    JsonNode val = newFilters.get(field);
-                    if (val.isNumber()) {
-                        suggestion.newFilters.put(field, val.doubleValue());
-                    }
-                }
-            }
-            
-            // Parse market conditions
-            JsonNode marketCond = root.get("marketConditions");
-            if (marketCond != null && marketCond.isTextual()) {
-                suggestion.marketConditions = marketCond.asText();
-            }
-            
-            suggestion.parsed = true;
-            System.out.println("[AIToolAgent] Parsed AI suggestion: " + 
-                suggestion.entryFilterChanges.size() + " entry filter changes, " +
-                suggestion.riskManagementChanges.size() + " risk mgmt changes, " +
-                suggestion.newFilters.size() + " new filters");
-            
-        } catch (Exception e) {
-            System.err.println("[AIToolAgent] Error parsing AI JSON: " + e.getMessage());
-            return parseAISuggestionFallback(response, agent);
-        }
-        
-        return suggestion;
-    }
-
-    // Fallback parser for non-JSON responses (regex-based)
-    private static AIParameterSuggestion parseAISuggestionFallback(String response, AgentConfig agent) {
-        AIParameterSuggestion suggestion = new AIParameterSuggestion();
-        
-        try {
-            Set<String> entryFilterKeys = agent.entryFilters != null ? agent.entryFilters.keySet() : new HashSet<>();
-            Set<String> riskMgmtKeys = agent.riskManagement != null ? agent.riskManagement.keySet() : new HashSet<>();
-            
-            // Pattern 1: "Increase/Decrease/Reduce `paramName` to VALUE (from OLD)"
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
-                "(?i)(?:increase|decrease|reduce|set)\\s+[`'\"]?(\\w+)[`'\"]?\\s+to\\s+([\\d.]+)\\s*\\(from"
-            );
-            java.util.regex.Matcher matcher = pattern.matcher(response);
-            
-            while (matcher.find()) {
-                String paramName = matcher.group(1);
-                String newValueStr = matcher.group(2);
-                addParsedParam(suggestion, paramName, newValueStr, entryFilterKeys, riskMgmtKeys);
-            }
-            
-            // Pattern 2: "`paramName` filter... set to VALUE" (for new filters)
-            pattern = java.util.regex.Pattern.compile(
-                "(?i)[`'\"]?(\\w+)[`'\"]?\\s+filter[^:]*:\\s*set\\s+to\\s+([\\d.]+)"
-            );
-            matcher = pattern.matcher(response);
-            
-            while (matcher.find()) {
-                String paramName = matcher.group(1);
-                String newValueStr = matcher.group(2);
-                // These are typically new filters
-                if (!entryFilterKeys.contains(paramName) && !riskMgmtKeys.contains(paramName)) {
-                    try {
-                        suggestion.newFilters.put(paramName, Double.parseDouble(newValueStr));
-                    } catch (NumberFormatException ignored) {}
-                }
-            }
-            
-            // Pattern 3: "short-term `paramName` filter... set to VALUE (from OLD)"
-            pattern = java.util.regex.Pattern.compile(
-                "(?i)short-term\\s+[`'\"]?(\\w+)[`'\"]?\\s+filter[^:]*:\\s*set\\s+to\\s+([\\d.]+)"
-            );
-            matcher = pattern.matcher(response);
-            
-            while (matcher.find()) {
-                String paramName = matcher.group(1);
-                String newValueStr = matcher.group(2);
-                addParsedParam(suggestion, paramName, newValueStr, entryFilterKeys, riskMgmtKeys);
-            }
-            
-            // Pattern 4: "paramName: oldValue -> newValue"
-            pattern = java.util.regex.Pattern.compile(
-                "(?i)[`'\"]?(\\w+)[`'\"]?\\s*:\\s*[\\d.]+\\s*(?:->|→)\\s*([\\d.]+)"
-            );
-            matcher = pattern.matcher(response);
-            
-            while (matcher.find()) {
-                String paramName = matcher.group(1);
-                String newValueStr = matcher.group(2);
-                addParsedParam(suggestion, paramName, newValueStr, entryFilterKeys, riskMgmtKeys);
-            }
-            
-            // Pattern 5: "paramName to VALUE" for known params ending in Min/Max/Pct/Multiplier
-            pattern = java.util.regex.Pattern.compile(
-                "(?i)[`'\"]?(\\w+(?:Min|Max|Pct|Multiplier))[`'\"]?\\s+to\\s+([\\d.]+)"
-            );
-            matcher = pattern.matcher(response);
-            
-            while (matcher.find()) {
-                String paramName = matcher.group(1);
-                String newValueStr = matcher.group(2);
-                addParsedParam(suggestion, paramName, newValueStr, entryFilterKeys, riskMgmtKeys);
-            }
-            
-            if (!suggestion.entryFilterChanges.isEmpty() || !suggestion.riskManagementChanges.isEmpty() || !suggestion.newFilters.isEmpty()) {
-                suggestion.parsed = true;
-                System.out.println("[AIToolAgent] Fallback parsed: " + 
-                    suggestion.entryFilterChanges.size() + " entry changes, " +
-                    suggestion.riskManagementChanges.size() + " risk changes, " +
-                    suggestion.newFilters.size() + " new filters");
-            }
-            
-        } catch (Exception e) {
-            System.err.println("[AIToolAgent] Fallback parsing error: " + e.getMessage());
-        }
-        
-        return suggestion;
-    }
-    
-    // Helper to add parsed parameter to the right category
-    private static void addParsedParam(AIParameterSuggestion suggestion, String paramName, String valueStr, 
-                                        Set<String> entryFilterKeys, Set<String> riskMgmtKeys) {
-        try {
-            double newValue = Double.parseDouble(valueStr);
-            
-            if (entryFilterKeys.contains(paramName)) {
-                suggestion.entryFilterChanges.put(paramName, newValue);
-            } else if (riskMgmtKeys.contains(paramName)) {
-                suggestion.riskManagementChanges.put(paramName, newValue);
-            } else if (isValidParamName(paramName)) {
-                // New filter - but only if it looks like a valid param name
-                suggestion.newFilters.put(paramName, newValue);
-            }
-        } catch (NumberFormatException ignored) {}
-    }
-    
-    // Check if a parameter name looks valid (not a common word)
-    private static boolean isValidParamName(String name) {
-        if (name == null || name.length() < 3) return false;
-        String lower = name.toLowerCase();
-        // Exclude common words that might be picked up by regex
-        Set<String> excluded = new HashSet<>(Arrays.asList(
-            "set", "to", "from", "the", "and", "for", "with", "this", "that", "add", "use"
-        ));
-        return !excluded.contains(lower);
-    }
-
-    private static String callOllamaAPI(String prompt) {
-        try {
-            String body = "{\"model\":\"llama3.2\",\"prompt\":" + jsonEscape(prompt) + ",\"stream\":false}";
-            
-            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
-            java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
-                    .uri(java.net.URI.create("http://localhost:11434/api/generate"))
-                    .header("Content-Type", "application/json")
-                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body))
-                    .timeout(java.time.Duration.ofSeconds(60))
-                    .build();
-            
-            java.net.http.HttpResponse<String> resp = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() == 200) {
-                com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
-                com.fasterxml.jackson.databind.JsonNode root = om.readTree(resp.body());
-                if (root.has("response")) {
-                    return root.get("response").asText();
-                }
-            }
-        } catch (Exception e) {
-            // Ollama not available, will try OpenAI
-        }
-        return null;
-    }
-
-    private static String callOpenAIAPI(String prompt) {
-        try {
-            String key = System.getenv("OPENAI_API_KEY");
-            if (key == null || key.isBlank()) return null;
-            
-            String body = "{\n" +
-                    "\"model\":\"gpt-4o-mini\",\n" +
-                    "\"messages\":[{" +
-                    "\"role\":\"system\",\"content\":\"You are a quantitative trading strategy advisor. Be concise and specific.\"}," +
-                    "{\"role\":\"user\",\"content\":" + jsonEscape(prompt) + "}],\n" +
-                    "\"temperature\":0.3,\n" +
-                    "\"max_tokens\":300\n" +
-                    "}";
-            
-            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
-            java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
-                    .uri(java.net.URI.create("https://api.openai.com/v1/chat/completions"))
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + key)
-                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body))
-                    .timeout(java.time.Duration.ofSeconds(30))
-                    .build();
-            
-            java.net.http.HttpResponse<String> resp = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() == 200) {
-                com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
-                com.fasterxml.jackson.databind.JsonNode root = om.readTree(resp.body());
-                com.fasterxml.jackson.databind.JsonNode msg = root.path("choices").isArray() && root.path("choices").size() > 0
-                        ? root.path("choices").get(0).path("message").path("content") : null;
-                if (msg != null && msg.isTextual()) {
-                    return msg.asText();
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("[AIToolAgent] OpenAI API error: " + e.getMessage());
-        }
-        return null;
-    }
-
-    private static String jsonEscape(String s) {
-        if (s == null) return "\"\"";
-        return "\"" + s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t") + "\"";
-    }
 
     public static boolean isRunning() {
         synchronized (LOCK) {
@@ -5071,30 +4566,6 @@ public class AIToolAgent {
         }
     }
 
-    public static List<EvolutionEvent> getEvolutionLog() {
-        synchronized (LOCK) {
-            if (systemState == null || systemState.evolutionLog == null) {
-                return new ArrayList<>();
-            }
-            // Filter for last 2 days only
-            ZonedDateTime twoDaysAgo = ZonedDateTime.now(NY).minusDays(2).toLocalDate().atStartOfDay(NY);
-            List<EvolutionEvent> filtered = new ArrayList<>();
-            for (EvolutionEvent evt : systemState.evolutionLog) {
-                try {
-                    ZonedDateTime evtTime = ZonedDateTime.parse(evt.timestamp, DateTimeFormatter.ISO_ZONED_DATE_TIME);
-                    if (evtTime.isAfter(twoDaysAgo)) {
-                        filtered.add(evt);
-                    }
-                } catch (Exception e) {
-                    // If parsing fails, include the event anyway
-                    filtered.add(evt);
-                }
-            }
-            // Return in reverse order (newest first)
-            Collections.reverse(filtered);
-            return filtered;
-        }
-    }
 
     // Discord notification - public wrapper for external calls
     public static boolean sendDiscordPublic(String text) {

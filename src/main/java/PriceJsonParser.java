@@ -330,10 +330,10 @@ public class PriceJsonParser {
             String date = dates.next();
             JsonNode day = series.get(date);
             if (day != null && day.isObject()) {
-                // Alpha Vantage uses keys like "5. volume"
-                JsonNode volNode = day.get("5. volume");
+                // TIME_SERIES_DAILY        → "5. volume"
+                // TIME_SERIES_DAILY_ADJUSTED → "6. volume" ("5." is adjusted close)
+                JsonNode volNode = day.get("6. volume");
                 if (volNode == null) {
-                    // Some crypto endpoints use different keys; try a common alternative
                     volNode = day.get("5. volume");
                 }
                 if (volNode != null && volNode.isTextual()) {
@@ -383,13 +383,14 @@ public class PriceJsonParser {
         for (Map.Entry<String, JsonNode> entry : unsortedVolumes.entrySet()) {
             JsonNode dayData = entry.getValue();
 
-            // *** חילוץ הערך של "5. volume" ***
-            JsonNode volumeNode = dayData.get("5. volume");
+            // TIME_SERIES_DAILY_ADJUSTED → "6. volume", TIME_SERIES_DAILY → "5. volume"
+            JsonNode volumeNode = dayData.get("6. volume");
+            if (volumeNode == null) {
+                volumeNode = dayData.get("5. volume");
+            }
 
             if (volumeNode != null) {
                 String volumeString = volumeNode.asText();
-
-                // ממיר את המחרוזת למספר שלם ארוך (Long)
                 volumeValues.add(Long.parseLong(volumeString));
             }
         }

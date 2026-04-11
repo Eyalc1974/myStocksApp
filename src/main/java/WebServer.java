@@ -6992,29 +6992,47 @@ public class WebServer {
                 sb.append("<div style='font-weight:600;color:#a78bfa;margin-bottom:8px;'>🚀 Start Full Scan with Selected Agents (").append(sectorTickerCount).append(" tickers across 11 sectors)</div>");
                 sb.append("<div style='font-size:11px;color:#6b7280;margin-bottom:8px;'>Technology · Financials · Healthcare · Energy · Industrials · Consumer Disc. · Consumer Staples · Utilities · Materials · Real Estate · Communication Services</div>");
                 
-                // Get top agents (≥70% win rate) and top-5 combined list
-                List<AIToolAgent.AgentPerformance> top5Agents = AIToolAgent.getTop5Agents();
-                // Pinned master strategies always shown (MASTER_8 + MASTER_7)
+                // Pinned master strategies always shown at the bottom (MASTER_8 + MASTER_7)
                 java.util.Set<String> PINNED_MASTERS = new java.util.LinkedHashSet<>(java.util.Arrays.asList("MASTER_8_STRONG_TREND","MASTER_7_VIX_MARKET_FILTER"));
+                // Top agents (≥70% win rate AND ≥3 trades) — these get pre-checked
+                java.util.Set<String> topAgentIds = new java.util.HashSet<>();
+                for (AIToolAgent.AgentPerformance tp : AIToolAgent.getTop5Agents()) topAgentIds.add(tp.agentId);
 
-                sb.append("<div style='color:#c4b5fd;font-size:12px;margin-bottom:8px;'>Select agents to run (≥70% win rate highlighted 🏆, pinned masters always shown):</div>");
+                sb.append("<div style='color:#c4b5fd;font-size:12px;margin-bottom:8px;'>Select agents to run (🏆 = ≥70% win rate pre-checked, others unchecked):</div>");
                 sb.append("<form method='post' action='/aitool-full-scan' style='margin:0;'>");
-                
+
                 int agentIdx = 0;
-                // 1. Show performance-ranked top-5 agents
-                for (AIToolAgent.AgentPerformance p : top5Agents) {
-                    boolean isTopAgent = p.winRate >= 70.0;
+                // 1. Show ALL loaded variant agents (sorted: top performers first, then alphabetical)
+                List<AIToolAgent.AgentPerformance> allAgentPerfs = AIToolAgent.getAllPerformances();
+                allAgentPerfs.sort((a, b) -> {
+                    boolean aTop = topAgentIds.contains(a.agentId);
+                    boolean bTop = topAgentIds.contains(b.agentId);
+                    if (aTop != bTop) return aTop ? -1 : 1;
+                    return a.agentId.compareTo(b.agentId);
+                });
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-bottom:4px;'>📊 Variant Agents:</div>");
+                for (AIToolAgent.AgentPerformance p : allAgentPerfs) {
+                    if (PINNED_MASTERS.contains(p.agentId)) continue; // shown separately below
+                    AIToolAgent.AgentConfig pCfg = AIToolAgent.getAgentConfig(p.agentId);
+                    if (pCfg != null && pCfg.masterStrategy) continue; // master strategies pinned below
+                    boolean isTopAgent = topAgentIds.contains(p.agentId);
                     String bgColor = isTopAgent ? "#1a2e1a" : (agentIdx % 2 == 0 ? "#2d2a5e" : "#1e1b4b");
-                    String border = isTopAgent ? "border:1px solid #22c55e;" : "";
+                    String border = isTopAgent ? "border:1px solid #22c55e;" : "border:1px solid transparent;";
                     sb.append("<div style='display:flex;align-items:center;gap:8px;padding:6px 8px;background:").append(bgColor).append(";").append(border).append("border-radius:4px;margin-bottom:4px;'>");
-                    sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(p.agentId)).append("' style='width:16px;height:16px;' checked />");
+                    sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(p.agentId)).append("' style='width:16px;height:16px;'");
+                    if (isTopAgent) sb.append(" checked");
+                    sb.append(" />");
                     sb.append("<span style='color:#e5e7eb;font-weight:500;flex:1;'>");
                     if (isTopAgent) sb.append("🏆 ");
                     sb.append(escapeHtml(p.agentId)).append("</span>");
                     sb.append("<span style='color:#a78bfa;font-size:11px;'>").append(p.type != null ? p.type : "").append("</span>");
-                    String wrColor = p.winRate >= 70 ? "#22c55e" : "#eab308";
-                    sb.append("<span style='color:").append(wrColor).append(";font-weight:600;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
-                    sb.append("<span style='color:#9ca3af;font-size:11px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades</span>");
+                    if (p.totalTrades > 0) {
+                        String wrColor = p.winRate >= 70 ? "#22c55e" : "#eab308";
+                        sb.append("<span style='color:").append(wrColor).append(";font-weight:600;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
+                        sb.append("<span style='color:#9ca3af;font-size:11px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades</span>");
+                    } else {
+                        sb.append("<span style='color:#6b7280;font-size:11px;'>No trades yet</span>");
+                    }
                     sb.append("<a href='/agent-detail?id=").append(urlEncode(p.agentId)).append("' style='color:#60a5fa;font-size:11px;text-decoration:none;' title='Agent detail page'>📋</a>");
                     sb.append("</div>");
                     agentIdx++;
@@ -7551,125 +7569,8 @@ public class WebServer {
                 sb.append("</div>");
                 sb.append("</div>");
 
-                // Evolution Log - shows when/why agents abandoned their strategies
-                List<AIToolAgent.EvolutionEvent> evolutionLog = AIToolAgent.getEvolutionLog();
-                sb.append("<div class='card'><div class='title'>🧬 Evolution Log - Strategy Abandonment History</div>");
-                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>When an agent's win rate drops below 70% after 5+ trades, it abandons its strategy and creates a new evolved version with mutated parameters.</div>");
-                
-                if (evolutionLog.isEmpty()) {
-                    sb.append("<div style='color:#6b7280;padding:20px;text-align:center;'>No evolution events yet. Run agents to see strategy changes.</div>");
-                } else {
-                    sb.append("<div style='max-height:400px;overflow-y:auto;'>");
-                    for (AIToolAgent.EvolutionEvent evt : evolutionLog) {
-                        sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;margin-bottom:10px;'>");
-                        sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;'>");
-                        sb.append("<div style='font-weight:600;color:#eab308;'>🔄 ").append(escapeHtml(evt.originalAgentId)).append(" → ").append(escapeHtml(evt.newAgentId)).append("</div>");
-                        if (evt.timestamp != null) {
-                            String ts = evt.timestamp.length() > 19 ? evt.timestamp.substring(0, 19) : evt.timestamp;
-                            sb.append("<div style='color:#6b7280;font-size:11px;'>").append(escapeHtml(ts)).append("</div>");
-                        }
-                        sb.append("</div>");
-                        sb.append("<div style='color:#ef4444;font-size:13px;margin-bottom:6px;'>⚠️ ").append(escapeHtml(evt.reason != null ? evt.reason : "")).append("</div>");
-                        sb.append("<div style='display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#9ca3af;margin-bottom:6px;'>");
-                        sb.append("<div>Win Rate: <span style='color:#ef4444;'>").append(String.format("%.1f%%", evt.oldWinRate)).append("</span></div>");
-                        sb.append("<div>Trades: ").append(evt.oldTrades).append("</div>");
-                        sb.append("<div>P/L: <span style='color:").append(evt.oldProfitLoss >= 0 ? "#22c55e" : "#ef4444").append(";'>$").append(String.format("%.2f", evt.oldProfitLoss)).append("</span></div>");
-                        sb.append("</div>");
-                        if (evt.parameterChanges != null && !evt.parameterChanges.isEmpty()) {
-                            sb.append("<div style='background:#1f2a44;border-radius:6px;padding:8px;font-size:11px;'>");
-                            sb.append("<div style='color:#93c5fd;margin-bottom:4px;'>Parameter Changes:</div>");
-                            for (Map.Entry<String, String> change : evt.parameterChanges.entrySet()) {
-                                sb.append("<div style='color:#e5e7eb;'>• <b>").append(escapeHtml(change.getKey())).append("</b>: ").append(escapeHtml(change.getValue())).append("</div>");
-                            }
-                            sb.append("</div>");
-                        }
-                        // AI Improvement Suggestion
-                        if (evt.aiSuggestion != null && !evt.aiSuggestion.isEmpty()) {
-                            sb.append("<div style='background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #4f46e5;border-radius:6px;padding:10px;margin-top:8px;'>");
-                            sb.append("<div style='color:#a78bfa;font-weight:600;margin-bottom:6px;'>🤖 AI Improvement Suggestion:</div>");
-                            sb.append("<div style='color:#e5e7eb;font-size:12px;white-space:pre-wrap;'>").append(escapeHtml(evt.aiSuggestion)).append("</div>");
-                            sb.append("</div>");
-                        } else {
-                            sb.append("<div style='color:#6b7280;font-size:11px;margin-top:6px;font-style:italic;'>⏳ AI suggestion pending... (requires Ollama or OPENAI_API_KEY)</div>");
-                        }
-                        sb.append("</div>");
-                    }
-                    sb.append("</div>");
-                }
-                sb.append("</div>");
+                // Evolution log removed (agent evolution logic has been removed)
 
-                // Evolution Decision Logic — LLM decision history + static explanation
-                sb.append("<div class='card'><div class='title'>🧠 Evolution Decision Logic</div>");
-
-                // LLM decision history (newest first, only events with AI suggestions)
-                List<AIToolAgent.EvolutionEvent> allEvoLog = AIToolAgent.getEvolutionLog();
-                List<AIToolAgent.EvolutionEvent> aiDecisions = new ArrayList<>();
-                for (int i = allEvoLog.size() - 1; i >= 0; i--) {
-                    AIToolAgent.EvolutionEvent e = allEvoLog.get(i);
-                    if (e.aiSuggestion != null && !e.aiSuggestion.isEmpty()) {
-                        aiDecisions.add(e);
-                    }
-                }
-
-                sb.append("<div style='margin-bottom:16px;'>");
-                sb.append("<div style='font-weight:600;color:#a78bfa;margin-bottom:10px;'>🤖 LLM/Ollama Decision History (").append(aiDecisions.size()).append(" decisions)</div>");
-                if (aiDecisions.isEmpty()) {
-                    sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;color:#6b7280;'>");
-                    sb.append("No LLM decisions recorded yet. When an agent's win rate drops below 70% after 5+ trades, Ollama (or OpenAI if configured) is consulted for parameter improvements. Each AI recommendation and the resulting config changes will appear here.");
-                    sb.append("</div>");
-                } else {
-                    sb.append("<div style='max-height:520px;overflow-y:auto;'>");
-                    for (AIToolAgent.EvolutionEvent aiEvt : aiDecisions) {
-                        String aiTs = aiEvt.timestamp != null ? aiEvt.timestamp.substring(0, Math.min(19, aiEvt.timestamp.length())).replace("T", " ") : "";
-                        sb.append("<div style='background:#0b1220;border:1px solid #4f46e5;border-radius:8px;padding:12px;margin-bottom:10px;'>");
-                        sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:4px;'>");
-                        sb.append("<span style='color:#a78bfa;font-weight:600;font-size:13px;'>🧬 ").append(escapeHtml(aiEvt.originalAgentId)).append(" &rarr; ").append(escapeHtml(aiEvt.newAgentId)).append("</span>");
-                        sb.append("<span style='color:#6b7280;font-size:11px;'>").append(escapeHtml(aiTs)).append("</span>");
-                        sb.append("</div>");
-                        sb.append("<div style='color:#ef4444;font-size:12px;margin-bottom:8px;'>⚠️ ").append(escapeHtml(aiEvt.reason != null ? aiEvt.reason : "")).append("</div>");
-                        sb.append("<div style='background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #4f46e5;border-radius:6px;padding:10px;margin-bottom:8px;'>");
-                        sb.append("<div style='color:#a78bfa;font-weight:600;margin-bottom:6px;font-size:12px;'>🤖 LLM Recommendation:</div>");
-                        sb.append("<div style='color:#e5e7eb;font-size:12px;white-space:pre-wrap;max-height:220px;overflow-y:auto;line-height:1.5;'>").append(escapeHtml(aiEvt.aiSuggestion)).append("</div>");
-                        sb.append("</div>");
-                        if (aiEvt.parameterChanges != null && !aiEvt.parameterChanges.isEmpty()) {
-                            sb.append("<div style='background:#1f2a44;border-radius:6px;padding:8px;font-size:11px;'>");
-                            sb.append("<div style='color:#22c55e;margin-bottom:4px;font-weight:600;'>✅ Applied Parameter Changes:</div>");
-                            for (Map.Entry<String, String> chg : aiEvt.parameterChanges.entrySet()) {
-                                sb.append("<div style='color:#e5e7eb;'>• <b>").append(escapeHtml(chg.getKey())).append("</b>: ").append(escapeHtml(chg.getValue())).append("</div>");
-                            }
-                            sb.append("</div>");
-                        } else {
-                            sb.append("<div style='color:#6b7280;font-size:11px;font-style:italic;'>⚡ Random mutation fallback (no parseable JSON from LLM)</div>");
-                        }
-                        sb.append("</div>");
-                    }
-                    sb.append("</div>");
-                }
-                sb.append("</div>");
-
-                // Collapsible static explanation
-                sb.append("<details style='margin-top:4px;'>");
-                sb.append("<summary style='color:#6b7280;font-size:12px;cursor:pointer;padding:4px 0;'>📖 How evolution works (click to expand)</summary>");
-                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:10px;'>");
-                sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;margin-bottom:8px;'>");
-                sb.append("<div style='margin-bottom:6px;'>Agent abandons its strategy when <b>all</b> conditions are met:</div>");
-                sb.append("<div style='color:#ef4444;'>1. ≥ <b>5 trades</b> completed (enough data)</div>");
-                sb.append("<div style='color:#ef4444;'>2. Win rate &lt; <b>70%</b> (underperforming threshold)</div>");
-                sb.append("<div style='color:#ef4444;'>3. Not yet evolved this session</div>");
-                sb.append("<div style='color:#ef4444;'>4. Agent is <b>not locked</b></div>");
-                sb.append("</div>");
-                sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;'>");
-                sb.append("<div style='margin-bottom:4px;font-weight:600;color:#e5e7eb;'>Parameters mutated by LLM/Ollama:</div>");
-                sb.append("<div>• <b>rsiMin/rsiMax</b> — RSI entry range</div>");
-                sb.append("<div>• <b>rsMin</b> — Relative Strength threshold</div>");
-                sb.append("<div>• <b>rvolMin</b> — Volume ratio threshold</div>");
-                sb.append("<div>• <b>stopLossPct</b> — Stop loss %</div>");
-                sb.append("<div>• <b>takeProfitPct</b> — Take profit %</div>");
-                sb.append("<div>• <b>+ new filters</b> if LLM suggests them (e.g. cciMin, atrMultiplier)</div>");
-                sb.append("</div>");
-                sb.append("</div>");
-                sb.append("</details>");
-                sb.append("</div>");
 
                 // Saved Configurations with Cumulative Tracking Section
                 sb.append("<div class='card'>");

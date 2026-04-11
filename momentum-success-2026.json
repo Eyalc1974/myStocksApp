@@ -1,6 +1,6 @@
 {
   "description": "Momentum Success Formula 2026 - With Market Guard",
-  "enabled": true,
+  "enabled": false,
   "delayMinutes": 15,
   "marketGuard": {
     "spyFilterEnabled": true,
