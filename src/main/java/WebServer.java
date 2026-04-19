@@ -7031,7 +7031,12 @@ public class WebServer {
                         sb.append("<span style='color:").append(wrColor).append(";font-weight:600;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
                         sb.append("<span style='color:#9ca3af;font-size:11px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades</span>");
                     } else {
-                        sb.append("<span style='color:#6b7280;font-size:11px;'>No trades yet</span>");
+                        long openCnt = p.recentTrades != null ? p.recentTrades.stream().filter(t -> "OPEN".equals(t.status)).count() : 0;
+                        if (openCnt > 0) {
+                            sb.append("<span style='color:#facc15;font-size:11px;'>🕐 ").append(openCnt).append(" open</span>");
+                        } else {
+                            sb.append("<span style='color:#6b7280;font-size:11px;'>No trades yet</span>");
+                        }
                     }
                     sb.append("<a href='/agent-detail?id=").append(urlEncode(p.agentId)).append("' style='color:#60a5fa;font-size:11px;text-decoration:none;' title='Agent detail page'>📋</a>");
                     sb.append("</div>");
@@ -7059,6 +7064,13 @@ public class WebServer {
                         String wrColor2 = masterPerf.winRate >= 70 ? "#22c55e" : "#eab308";
                         sb.append("<span style='color:").append(wrColor2).append(";font-weight:600;'>").append(String.format("%.1f%%", masterPerf.winRate)).append("</span>");
                         sb.append("<span style='color:#9ca3af;font-size:11px;'>").append(masterPerf.wins).append("/").append(masterPerf.totalTrades).append(" trades</span>");
+                    } else if (!isFilter && masterPerf != null) {
+                        long openCntM = masterPerf.recentTrades != null ? masterPerf.recentTrades.stream().filter(t -> "OPEN".equals(t.status)).count() : 0;
+                        if (openCntM > 0) {
+                            sb.append("<span style='color:#facc15;font-size:11px;'>🕐 ").append(openCntM).append(" open</span>");
+                        } else {
+                            sb.append("<span style='color:#6b7280;font-size:11px;'>No trades yet</span>");
+                        }
                     } else {
                         sb.append("<span style='color:#6b7280;font-size:11px;'>").append(isFilter ? "Market Filter" : "No trades yet").append("</span>");
                     }
@@ -7092,17 +7104,37 @@ public class WebServer {
                     // Show recent trades from full scan
                     List<AIToolAgent.Trade> recentScanTrades = AIToolAgent.getRecentFullScanTrades();
                     if (recentScanTrades != null && !recentScanTrades.isEmpty()) {
+                        long openCount   = recentScanTrades.stream().filter(t -> "OPEN".equals(t.status)).count();
+                        long winCount    = recentScanTrades.stream().filter(t -> "CLOSED_WIN".equals(t.status)).count();
+                        long lossCount   = recentScanTrades.stream().filter(t -> "CLOSED_LOSS".equals(t.status)).count();
                         sb.append("<div style='margin-top:12px;'>");
-                        sb.append("<div style='color:#a78bfa;font-size:12px;margin-bottom:6px;'>📈 Recent Trades from Scan:</div>");
+                        sb.append("<div style='color:#a78bfa;font-size:12px;margin-bottom:4px;'>📈 Trades from Scan: ");
+                        if (openCount > 0)  sb.append("<span style='color:#facc15;margin-right:6px;'>🕐 ").append(openCount).append(" open</span>");
+                        if (winCount > 0)   sb.append("<span style='color:#22c55e;margin-right:6px;'>✅ ").append(winCount).append(" win</span>");
+                        if (lossCount > 0)  sb.append("<span style='color:#ef4444;'>❌ ").append(lossCount).append(" loss</span>");
+                        sb.append("</div>");
                         for (AIToolAgent.Trade t : recentScanTrades) {
-                            String tColor = t.profitLoss >= 0 ? "#22c55e" : "#ef4444";
-                            String tIcon = t.profitLoss >= 0 ? "✅" : "❌";
+                            boolean isOpen = "OPEN".equals(t.status);
+                            boolean isWin  = "CLOSED_WIN".equals(t.status);
+                            String tColor  = isOpen ? "#facc15" : (isWin ? "#22c55e" : "#ef4444");
+                            String tIcon   = isOpen ? "🕐" : (isWin ? "✅" : "❌");
+                            String statusLabel = isOpen ? "OPEN" : (isWin ? "WIN" : "LOSS");
+                            String reasonLabel = (t.closeReason != null && !t.closeReason.isEmpty())
+                                ? t.closeReason.replace("_", " ") : "";
                             sb.append("<div style='display:flex;gap:8px;align-items:center;padding:4px 8px;background:#2d2a5e;border-radius:4px;margin-bottom:2px;font-size:12px;'>");
                             sb.append("<span>").append(tIcon).append("</span>");
-                            sb.append("<span style='color:#e5e7eb;font-weight:500;'>").append(escapeHtml(t.ticker)).append("</span>");
-                            sb.append("<span style='color:#9ca3af;'>").append(escapeHtml(t.agentId)).append("</span>");
-                            sb.append("<span style='color:").append(tColor).append(";font-weight:600;'>").append(String.format("%+.2f%%", t.profitLossPct)).append("</span>");
-                            sb.append("<span style='color:").append(tColor).append(";'>$").append(String.format("%.2f", t.profitLoss)).append("</span>");
+                            sb.append("<span style='color:#e5e7eb;font-weight:500;min-width:50px;'>").append(escapeHtml(t.ticker)).append("</span>");
+                            sb.append("<span style='color:#9ca3af;min-width:60px;'>").append(escapeHtml(t.agentId)).append("</span>");
+                            sb.append("<span style='color:").append(tColor).append(";font-weight:700;min-width:42px;'>").append(statusLabel).append("</span>");
+                            if (!isOpen) {
+                                sb.append("<span style='color:").append(tColor).append(";font-weight:600;'>").append(String.format("%+.2f%%", t.profitLossPct)).append("</span>");
+                                sb.append("<span style='color:").append(tColor).append(";'>$").append(String.format("%+.2f", t.profitLoss)).append("</span>");
+                                if (!reasonLabel.isEmpty()) {
+                                    sb.append("<span style='color:#6b7280;font-size:10px;'>").append(escapeHtml(reasonLabel)).append("</span>");
+                                }
+                            } else {
+                                sb.append("<span style='color:#9ca3af;'>entry $").append(String.format("%.2f", t.entryPrice)).append("</span>");
+                            }
                             sb.append("</div>");
                         }
                         sb.append("</div>");
@@ -7115,13 +7147,24 @@ public class WebServer {
                 // Open Positions Section — top 20, deduplicated by ticker
                 List<AIToolAgent.OpenPositionSummary> openPosSummaries = AIToolAgent.getTop20OpenPositionsDeduped();
                 int totalOpenRaw = AIToolAgent.getOpenPositionsCount();
-                sb.append("<div style='background:#1e1b4b;border-radius:8px;padding:16px;margin-bottom:20px;border:1px solid #7c3aed;'>");
-                sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;'>");
-                sb.append("<div style='font-size:16px;font-weight:600;color:#a78bfa;'>📊 Open Positions — Top 20 Unique Stocks");
+                String todayEtStr = LocalDate.now(ZoneId.of("America/New_York")).toString(); // YYYY-MM-DD
+                long todayCount = openPosSummaries.stream()
+                    .filter(p -> p.entryTime != null && p.entryTime.startsWith(todayEtStr))
+                    .count();
+                sb.append("<div id='open-positions' style='background:#1e1b4b;border-radius:8px;padding:16px;margin-bottom:20px;border:1px solid #7c3aed;'>");
+                sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;'>");
+                sb.append("<div style='font-size:16px;font-weight:600;color:#a78bfa;'>📋 Open Positions — Place in IB");
                 if (totalOpenRaw > 0) {
                     sb.append(" <span style='color:#6b7280;font-size:12px;font-weight:400;'>(").append(totalOpenRaw).append(" total across all agents)</span>");
                 }
-                sb.append("</div>");
+                sb.append("</div></div>");
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-bottom:10px;'>")
+                  .append("Use the values below to place <b>BUY LIMIT</b> orders in Interactive Brokers. ")
+                  .append("Set a <b style='color:#ef4444;'>Stop Loss</b> bracket order and a <b style='color:#22c55e;'>Take Profit</b> limit. ")
+                  .append("Positions are auto-tracked; manual entry is optional.");
+                if (todayCount > 0) {
+                    sb.append(" &nbsp;<span style='background:#14532d;color:#86efac;border:1px solid #16a34a;border-radius:4px;padding:1px 7px;font-weight:700;'>🟢 ").append(todayCount).append(" new today</span>");
+                }
                 sb.append("</div>");
 
                 // Build set of high-performing agent IDs (>=70% win rate, >=3 trades) — used by both open position tables
@@ -7140,53 +7183,64 @@ public class WebServer {
                     sb.append("<thead><tr style='background:#0b1220;'>");
                     sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>#</th>");
                     sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Ticker</th>");
-                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Entry $</th>");
-                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Stop Loss</th>");
-                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Take Profit</th>");
-                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>SL %</th>");
-                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>TP %</th>");
-                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Agents Holding</th>");
-                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Entry Time</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>BUY @ (Limit)</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Qty</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>🛑 Stop Loss</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>🎯 Take Profit</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Risk%</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Reward%</th>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Agent(s)</th>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Opened</th>");
                     sb.append("</tr></thead><tbody>");
 
                     int rowNum = 0;
                     for (AIToolAgent.OpenPositionSummary pos : openPosSummaries) {
                         rowNum++;
-                        String rowBg = rowNum % 2 == 0 ? "#24215a" : "#2d2a5e";
-                        double slPct = pos.entryPrice > 0 ? ((pos.stopLoss - pos.entryPrice) / pos.entryPrice * 100) : 0;
+                        boolean isToday = pos.entryTime != null && pos.entryTime.startsWith(todayEtStr);
+                        String rowBg = isToday ? "#0f2a1a" : (rowNum % 2 == 0 ? "#24215a" : "#2d2a5e");
+                        String rowBorder = isToday ? "#16a34a" : "#3d3a7e";
+                        double slPct = pos.entryPrice > 0 ? ((pos.entryPrice - pos.stopLoss) / pos.entryPrice * 100) : 0;
                         double tpPct = pos.entryPrice > 0 ? ((pos.takeProfit - pos.entryPrice) / pos.entryPrice * 100) : 0;
-                        String entryTimeDisplay = pos.entryTime != null ? pos.entryTime.substring(0, Math.min(19, pos.entryTime.length())).replace("T", " ") : "N/A";
+                        String entryTimeDisplay = pos.entryTime != null ? pos.entryTime.substring(0, Math.min(16, pos.entryTime.length())).replace("T", " ") : "N/A";
                         String agentList = String.join(", ", pos.agentIds);
+                        int qty = pos.quantity > 0 ? (int) pos.quantity : 0;
 
                         // Build agent chips — yellow highlight for high performers
                         StringBuilder agentChips = new StringBuilder();
                         for (String agentId : pos.agentIds) {
                             if (agentChips.length() > 0) agentChips.append(" ");
                             if (highPerfAgents.contains(agentId)) {
-                                agentChips.append("<span style='background:#854d0e;color:#fef08a;border:1px solid #ca8a04;border-radius:4px;padding:1px 5px;font-weight:700;' title='🏆 High performer (≥75% win rate)'>")
+                                agentChips.append("<span style='background:#854d0e;color:#fef08a;border:1px solid #ca8a04;border-radius:4px;padding:1px 5px;font-weight:700;' title='High performer'>")
                                     .append(escapeHtml(agentId)).append("</span>");
                             } else {
                                 agentChips.append("<span style='color:#a78bfa;'>").append(escapeHtml(agentId)).append("</span>");
                             }
                         }
 
-                        sb.append("<tr style='background:").append(rowBg).append(";'>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;color:#6b7280;'>").append(rowNum).append("</td>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;font-weight:700;color:#e5e7eb;font-size:13px;'>").append(escapeHtml(pos.ticker)).append("</td>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#22c55e;font-weight:600;'>$").append(String.format("%.2f", pos.entryPrice)).append("</td>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#ef4444;'>$").append(String.format("%.2f", pos.stopLoss)).append("</td>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#22c55e;'>$").append(String.format("%.2f", pos.takeProfit)).append("</td>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#ef4444;'>").append(String.format("%.1f%%", slPct)).append("</td>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;text-align:right;color:#22c55e;'>+").append(String.format("%.1f%%", tpPct)).append("</td>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;font-size:11px;max-width:220px;' title='").append(escapeHtml(agentList)).append("'>").append(agentChips).append("</td>");
-                        sb.append("<td style='padding:8px;border-bottom:1px solid #3d3a7e;color:#9ca3af;font-size:11px;'>").append(entryTimeDisplay).append("</td>");
+                        sb.append("<tr style='background:").append(rowBg).append(";border-left:3px solid ").append(rowBorder).append(";'>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid ").append(rowBorder).append(";color:#6b7280;'>").append(rowNum).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid ").append(rowBorder).append(";font-weight:700;font-size:13px;'>");
+                        sb.append("<span style='color:#e5e7eb;'>").append(escapeHtml(pos.ticker)).append("</span>");
+                        if (isToday) sb.append(" <span style='background:#14532d;color:#86efac;border-radius:3px;padding:0 5px;font-size:10px;font-weight:700;'>NEW</span>");
+                        sb.append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid ").append(rowBorder).append(";text-align:right;color:#93c5fd;font-weight:700;font-size:13px;'>$").append(String.format("%.2f", pos.entryPrice)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid ").append(rowBorder).append(";text-align:right;color:#e5e7eb;font-weight:600;'>")
+                          .append(qty > 0 ? qty : "<span style='color:#6b7280;'>—</span>").append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid ").append(rowBorder).append(";text-align:right;color:#ef4444;font-weight:600;'>$").append(String.format("%.2f", pos.stopLoss)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid ").append(rowBorder).append(";text-align:right;color:#22c55e;font-weight:600;'>$").append(String.format("%.2f", pos.takeProfit)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid ").append(rowBorder).append(";text-align:right;color:#ef4444;font-size:11px;'>-").append(String.format("%.1f%%", slPct)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid ").append(rowBorder).append(";text-align:right;color:#22c55e;font-size:11px;'>+").append(String.format("%.1f%%", tpPct)).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid ").append(rowBorder).append(";font-size:11px;max-width:200px;' title='").append(escapeHtml(agentList)).append("'>").append(agentChips).append("</td>");
+                        sb.append("<td style='padding:8px;border-bottom:1px solid ").append(rowBorder).append(";color:#9ca3af;font-size:11px;'>").append(entryTimeDisplay).append("</td>");
                         sb.append("</tr>");
                     }
 
                     sb.append("</tbody></table>");
                     sb.append("</div>");
-                    sb.append("<div style='margin-top:10px;color:#9ca3af;font-size:11px;'>💡 Each row = one unique stock. Positions are held open and closed at EOD (4:30 PM ET) or when stop-loss / take-profit is triggered. &nbsp;");
-                    sb.append("<span style='background:#854d0e;color:#fef08a;border:1px solid #ca8a04;border-radius:4px;padding:1px 5px;font-weight:700;'>Agent</span> = 🏆 High performer (≥75% win rate, ≥3 trades)</div>");
+                    sb.append("<div style='margin-top:10px;color:#9ca3af;font-size:11px;'>")
+                      .append("💡 <b style='color:#86efac;'>NEW</b> = opened today. Each row = one unique stock (deduplicated). ")
+                      .append("Closed automatically at 4:30 PM ET or when SL/TP is hit. ")
+                      .append("<span style='background:#854d0e;color:#fef08a;border:1px solid #ca8a04;border-radius:4px;padding:1px 5px;font-weight:700;'>Agent</span> = 🏆 High performer</div>");
                 }
                 sb.append("</div>");
                 sb.append("</div>"); // close main AITool card
@@ -7913,7 +7967,30 @@ public class WebServer {
                 sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;text-align:center;'>");
                 sb.append("<div style='font-size:24px;font-weight:700;color:").append(plColor).append(";'>$").append(String.format("%+.2f", totalPL)).append("</div>");
                 sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>Total P/L</div></div>");
+                // Open positions (OPEN trades don't count toward totalTrades until closed)
+                int openPosCount = (int) allTrades.stream().filter(t -> "OPEN".equals(t.status)).count();
+                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;text-align:center;'>");
+                sb.append("<div style='font-size:28px;font-weight:700;color:#facc15;'>").append(openPosCount).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>🕐 Open</div></div>");
                 sb.append("</div>");
+
+                // ── No-trades notice ──
+                if (allTrades.isEmpty()) {
+                    sb.append("<div style='background:#0b1220;border:1px solid #374151;border-radius:8px;padding:14px;margin-bottom:20px;'>");
+                    sb.append("<div style='font-weight:600;color:#f59e0b;margin-bottom:8px;'>\u23F3 No Trades Executed Yet</div>");
+                    sb.append("<div style='color:#9ca3af;font-size:13px;margin-bottom:10px;'>This agent has not opened any positions. It may have strict entry criteria or may not have been included in a recent scan.</div>");
+                    if (cfg != null && cfg.entryFilters != null && !cfg.entryFilters.isEmpty()) {
+                        sb.append("<div style='color:#d1d5db;font-size:12px;font-weight:600;margin-bottom:6px;'>Entry Filters:</div>");
+                        sb.append("<div style='display:flex;flex-wrap:wrap;gap:6px;'>");
+                        for (java.util.Map.Entry<String, Object> ef : cfg.entryFilters.entrySet()) {
+                            sb.append("<span style='background:#1e1b4b;border:1px solid #4b5563;border-radius:4px;padding:2px 8px;color:#d1d5db;font-size:11px;'>");
+                            sb.append(escapeHtml(ef.getKey())).append(": ").append(escapeHtml(String.valueOf(ef.getValue())));
+                            sb.append("</span>");
+                        }
+                        sb.append("</div>");
+                    }
+                    sb.append("</div>");
+                }
 
                 // ── Config summary ──
                 if (cfg != null) {
@@ -7946,24 +8023,68 @@ public class WebServer {
                 if (openTrades.isEmpty()) {
                     sb.append("<div style='color:#6b7280;font-size:13px;'>No open positions for this agent.</div>");
                 } else {
+                    // Get maxHoldDays from agent config (default 10)
+                    int maxHoldDays = 10;
+                    if (cfg != null && cfg.riskManagement != null && cfg.riskManagement.containsKey("maxHoldDays")) {
+                        try { maxHoldDays = (int)((Number) cfg.riskManagement.get("maxHoldDays")).doubleValue(); } catch (Exception ignored) {}
+                    }
+                    final int maxHold = maxHoldDays;
+                    sb.append("<div style='color:#9ca3af;font-size:11px;margin-bottom:10px;'>")
+                      .append("⏱ Monitored every 60 min during market hours &nbsp;|&nbsp; ")
+                      .append("🛑 SL &amp; 🎯 TP close immediately &nbsp;|&nbsp; ")
+                      .append("📅 Max hold: <b style='color:#a78bfa;'>").append(maxHold).append(" days</b> then EOD-closed")
+                      .append("</div>");
                     sb.append("<div style='overflow-x:auto;'><table style='width:100%;border-collapse:collapse;font-size:12px;'>");
                     sb.append("<thead><tr style='background:#0b1220;'>");
                     sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Ticker</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Entry $</th>");
-                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Stop Loss</th>");
-                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Take Profit</th>");
-                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Min TP ($25 floor)</th>");
-                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Entry Time</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>🛑 Stop Loss</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>🎯 Take Profit</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>R:R</th>");
+                    sb.append("<th style='padding:8px;text-align:center;border-bottom:1px solid #7c3aed;'>⏳ Hold</th>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Entry Date</th>");
                     sb.append("</tr></thead><tbody>");
                     for (AIToolAgent.Trade t : openTrades) {
-                        double minTP = t.entryPrice + 25.0;
-                        sb.append("<tr style='background:#2d2a5e;'>");
+                        double toSLPct = t.entryPrice > 0 ? ((t.entryPrice - t.stopLoss) / t.entryPrice) * 100 : 0;
+                        double toTPPct = t.entryPrice > 0 ? ((t.takeProfit - t.entryPrice) / t.entryPrice) * 100 : 0;
+                        double rr = toSLPct > 0 ? toTPPct / toSLPct : 0;
+                        // Days held since entry
+                        int daysHeld = 0;
+                        if (t.entryTime != null && !t.entryTime.isBlank()) {
+                            try {
+                                ZonedDateTime entryDt = ZonedDateTime.parse(t.entryTime);
+                                daysHeld = (int) java.time.temporal.ChronoUnit.DAYS.between(
+                                    entryDt.toLocalDate(), LocalDate.now(ZoneId.of("America/New_York")));
+                            } catch (Exception ignored) {}
+                        }
+                        int daysLeft = Math.max(0, maxHold - daysHeld);
+                        double holdFraction = maxHold > 0 ? Math.min(1.0, (double) daysHeld / maxHold) : 0;
+                        int barPct = (int)(holdFraction * 100);
+                        String holdColor = holdFraction >= 0.8 ? "#ef4444" : holdFraction >= 0.5 ? "#f59e0b" : "#22c55e";
+                        String rowBg = "#2d2a5e";
+                        String dateOnly = t.entryTime != null ? t.entryTime.substring(0, Math.min(10, t.entryTime.length())) : "";
+                        sb.append("<tr style='background:").append(rowBg).append(";'>");
                         sb.append("<td style='padding:8px;font-weight:600;color:#e5e7eb;'>").append(escapeHtml(t.ticker)).append("</td>");
                         sb.append("<td style='padding:8px;text-align:right;color:#93c5fd;'>$").append(String.format("%.2f", t.entryPrice)).append("</td>");
-                        sb.append("<td style='padding:8px;text-align:right;color:#ef4444;'>$").append(String.format("%.2f", t.stopLoss)).append("</td>");
-                        sb.append("<td style='padding:8px;text-align:right;color:#22c55e;'>$").append(String.format("%.2f", t.takeProfit)).append("</td>");
-                        sb.append("<td style='padding:8px;text-align:right;color:#fbbf24;'>$").append(String.format("%.2f", Math.max(t.takeProfit, minTP))).append("</td>");
-                        sb.append("<td style='padding:8px;color:#9ca3af;font-size:11px;'>").append(escapeHtml(t.entryTime != null ? t.entryTime.substring(0, Math.min(16, t.entryTime.length())) : "")).append("</td>");
+                        sb.append("<td style='padding:8px;text-align:right;'>")
+                          .append("<span style='color:#ef4444;font-weight:600;'>$").append(String.format("%.2f", t.stopLoss)).append("</span>")
+                          .append("<br><span style='color:#ef4444;font-size:10px;'>need -").append(String.format("%.1f%%", toSLPct)).append("</span>")
+                          .append("</td>");
+                        sb.append("<td style='padding:8px;text-align:right;'>")
+                          .append("<span style='color:#22c55e;font-weight:600;'>$").append(String.format("%.2f", t.takeProfit)).append("</span>")
+                          .append("<br><span style='color:#22c55e;font-size:10px;'>need +").append(String.format("%.1f%%", toTPPct)).append("</span>")
+                          .append("</td>");
+                        sb.append("<td style='padding:8px;text-align:right;color:#a78bfa;font-weight:700;'>1:")
+                          .append(String.format("%.1f", rr)).append("</td>");
+                        sb.append("<td style='padding:8px;text-align:center;'>")
+                          .append("<div style='background:#1e1b4b;border-radius:4px;height:5px;width:72px;margin:0 auto 4px;'>")
+                          .append("<div style='background:").append(holdColor).append(";width:").append(barPct).append("%;height:5px;border-radius:4px;'></div></div>")
+                          .append("<span style='color:").append(holdColor).append(";font-size:11px;font-weight:600;'>day ").append(daysHeld).append("/").append(maxHold).append("</span>");
+                        if (daysLeft <= 2) {
+                            sb.append("<br><span style='color:#f59e0b;font-size:10px;'>⚠️ ").append(daysLeft).append("d left</span>");
+                        }
+                        sb.append("</td>");
+                        sb.append("<td style='padding:8px;color:#9ca3af;font-size:11px;'>").append(escapeHtml(dateOnly)).append("</td>");
                         sb.append("</tr>");
                     }
                     sb.append("</tbody></table></div>");

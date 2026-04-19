@@ -1014,6 +1014,7 @@ public class AIToolAgent {
         public double entryPrice;
         public double stopLoss;
         public double takeProfit;
+        public double quantity;
         public String entryTime;
         public List<String> agentIds = new ArrayList<>();
     }
@@ -1035,6 +1036,7 @@ public class AIToolAgent {
                 s.entryPrice = t.entryPrice;
                 s.stopLoss = t.stopLoss;
                 s.takeProfit = t.takeProfit;
+                s.quantity = t.quantity;
                 s.entryTime = t.entryTime;
                 return s;
             });
@@ -1314,7 +1316,6 @@ public class AIToolAgent {
         }
         if (alreadyRunning) {
             System.out.println("[AIToolAgent] Already running, skipping...");
-            sendDiscord("⏳ **Scan Already Running** — A scan is currently in progress, skipping this request.");
             return;
         }
 
@@ -1439,6 +1440,13 @@ public class AIToolAgent {
                                     " | Entry=$" + String.format("%.2f", d.entryPrice) +
                                     " SL=$" + String.format("%.2f", d.suggestedStopLoss) +
                                     " TP=$" + String.format("%.2f", d.suggestedTakeProfit));
+                                sendDiscord("\u2705 **" + ticker + "** | " + strategy.id
+                                    + " | Score=" + d.totalScore + "/12" + confluenceTag
+                                    + " (V=" + d.volumeScore + " T=" + d.trendScore
+                                    + " M=" + d.momentumScore + " S=" + d.setupScore + ")"
+                                    + " | Entry=$" + String.format("%.2f", d.entryPrice)
+                                    + " SL=$" + String.format("%.2f", d.suggestedStopLoss)
+                                    + " TP=$" + String.format("%.2f", d.suggestedTakeProfit));
                                 // If this ticker was previously on the watchlist, promote it
                                 confirmPendingSignal(ticker, strategy.id);
                                 allSignals.add(new RankedSignal(strategy, ticker, d, confluenceCount >= 2));
@@ -1627,7 +1635,6 @@ public class AIToolAgent {
                             writeScanLog("[EXECUTE] ⚠️ " + sig.ticker + " | " + sig.strategy.id + " — already has open position today, skipped");
                             continue;
                         }
-                        sendBuyAlertIfMonitored(sig.strategy, sig.ticker, sig.decision);
                         Trade trade = executeTrade(sig.strategy, sig.ticker, sig.decision);
                         if (trade != null) {
                             logBuySignal(sig.strategy.id, sig.ticker, trade.entryPrice, trade.stopLoss, trade.takeProfit);
@@ -1650,8 +1657,6 @@ public class AIToolAgent {
                     }
                 }
                 writeScanLog("────────────────────────────────────────");
-            } else if (useMasters) {
-                sendDiscord("📊 **Scan Complete** — No signals above threshold (" + SCORE_THRESHOLD + "/12) this run.");
             }
 
             runProgress = total;
@@ -4356,7 +4361,6 @@ public class AIToolAgent {
     public static void runFullScanWithAgentsAsync(List<String> agentIds) {
         if (topAgentsFullScanRunning) {
             System.out.println("[AIToolAgent] Top agents full scan already running, skipping...");
-            sendDiscord("⏳ **Scan Already Running** — A full scan is currently in progress, skipping this request.");
             return;
         }
         
@@ -4418,7 +4422,6 @@ public class AIToolAgent {
             if (agentsToRun.isEmpty()) {
                 topAgentsFullScanStatus = "No qualified agents found (need at least 3 trades)";
                 topAgentsFullScanRunning = false;
-                sendDiscord("⚠️ **Full Scan Skipped** — No qualified agents found (each agent needs at least 3 trades).");
                 return;
             }
             
@@ -4426,23 +4429,11 @@ public class AIToolAgent {
             List<String> allTickers = LongTermCandidateFinder.getAllSectorTickers();
             topAgentsFullScanTotal = allTickers.size() * agentsToRun.size();
             
-            // Build agent names for notification
-            StringBuilder agentNames = new StringBuilder();
-            for (AgentPerformance p : agentsToRun) {
-                agentNames.append("• **").append(p.agentId).append("** (").append(String.format("%.1f%%", p.winRate)).append(" win rate, ").append(p.totalTrades).append(" trades)\n");
-            }
-            
-            // Send Discord notification
-            String startMsg = String.format(
-                "🚀 **Full Scan Started**\n" +
-                "Scanning **%d tickers** with %d agents:\n%s" +
-                "Estimated time: ~%d minutes (API rate limited)",
-                allTickers.size(),
-                agentsToRun.size(),
-                agentNames.toString(),
-                (allTickers.size() * agentsToRun.size() * 13) / 60 // ~13 seconds per ticker
-            );
-            sendDiscord(startMsg);
+            // Send Discord scan-start notification
+            String agentListStr = agentsToRun.stream().map(p -> p.agentId).collect(Collectors.joining(", "));
+            sendDiscord("\uD83D\uDE80 **Full Scan Started** — " + agentsToRun.size() + " agents | " + allTickers.size() + " tickers\n"
+                + "Agents: " + agentListStr + "\n"
+                + "\u23F0 " + ZonedDateTime.now(NY).format(DateTimeFormatter.ofPattern("HH:mm:ss z")));
             
             // Log scan start to trade log
             List<String> agentIdList = agentsToRun.stream().map(p -> p.agentId).collect(Collectors.toList());
@@ -4473,8 +4464,13 @@ public class AIToolAgent {
                             logBuySignal(agent.id, ticker, decision.suggestedStopLoss / (1 - 0.03), 
                                 decision.suggestedStopLoss, decision.suggestedTakeProfit);
                             
-                            // Send BUY ALERT notification BEFORE executing trade
-                            sendBuyAlertIfMonitored(agent, ticker, decision);
+                            // Send clean BUY SIGNAL notification to Discord
+                            double signalEntry = decision.entryPrice > 0 ? decision.entryPrice
+                                : decision.suggestedStopLoss / (1 - 0.03);
+                            sendDiscord("\u2705 **" + ticker + "** | " + agent.id
+                                + " | Entry=$" + String.format("%.2f", signalEntry)
+                                + " SL=$" + String.format("%.2f", decision.suggestedStopLoss)
+                                + " TP=$" + String.format("%.2f", decision.suggestedTakeProfit));
                             
                             Trade trade = executeTrade(agent, ticker, decision);
                             if (trade != null) {
@@ -4525,16 +4521,7 @@ public class AIToolAgent {
             // Save state
             saveState();
             
-            // Send completion notification
-            String completeMsg = String.format(
-                "✅ **Top 5 Agents Full Scan Complete**\n" +
-                "Analyzed: **%d** ticker-agent combinations\n" +
-                "Trades executed: **%d**\n" +
-                "Check /aitool for updated performance stats.",
-                totalAnalyzed,
-                totalTrades
-            );
-            sendDiscord(completeMsg);
+            // Scan complete — no Discord noise, signals were already notified individually
             
             // Log scan complete
             logScanComplete(totalAnalyzed, totalTrades);
