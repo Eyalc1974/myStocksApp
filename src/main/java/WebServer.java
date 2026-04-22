@@ -7518,62 +7518,66 @@ public class WebServer {
                 }
                 sb.append("</div>");
 
-                // ── Watchlist — Pending Signals Waiting for Trigger ──
-                sb.append("<div class='card' id='watchlistCard'>");
-                sb.append("<div class='title'>⏳ Watchlist — Signals Waiting for Entry Trigger</div>");
-                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:10px;'>Stocks that scored &ge;10/12 but the entry trigger has <b>not yet fired</b>. ");
-                sb.append("Check each ticker's real-time price. Execute manually if <b>current price &ge; Trigger</b>. ");
-                sb.append("Signals expire after 3 scans without firing.</div>");
-                List<AIToolAgent.PendingSignal> pendingList = AIToolAgent.getPendingSignals();
-                if (pendingList.isEmpty()) {
-                    sb.append("<div style='color:#6b7280;padding:14px;text-align:center;'>No pending signals — watchlist is empty.</div>");
-                } else {
-                    sb.append("<div style='overflow-x:auto;'>");
-                    sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
-                    sb.append("<thead><tr style='border-bottom:1px solid #1f2a44;color:#9ca3af;text-align:left;'>");
-                    sb.append("<th style='padding:8px 10px;'>Ticker</th>");
-                    sb.append("<th style='padding:8px 10px;'>Score</th>");
-                    sb.append("<th style='padding:8px 10px;'>Strategy</th>");
-                    sb.append("<th style='padding:8px 10px;'>Scan Price</th>");
-                    sb.append("<th style='padding:8px 10px;'>Trigger</th>");
-                    sb.append("<th style='padding:8px 10px;'>Gap Needed</th>");
-                    sb.append("<th style='padding:8px 10px;'>SL / TP</th>");
-                    sb.append("<th style='padding:8px 10px;'>Scanned</th>");
-                    sb.append("<th style='padding:8px 10px;'>Scan #</th>");
-                    sb.append("<th style='padding:8px 10px;'></th>");
-                    sb.append("</tr></thead><tbody>");
-                    for (AIToolAgent.PendingSignal ps : pendingList) {
-                        String scanTimeShort = ps.scanTime != null ? ps.scanTime.substring(0, Math.min(16, ps.scanTime.length())).replace("T"," ") : "-";
-                        String gapColor = ps.triggerGapPct <= 1.0 ? "#22c55e" : ps.triggerGapPct <= 3.0 ? "#f59e0b" : "#9ca3af";
-                        sb.append("<tr style='border-bottom:1px solid #111827;' id='prow-").append(escapeHtml(ps.id)).append("'>");
-                        sb.append("<td style='padding:8px 10px;font-weight:700;color:#93c5fd;'>").append(escapeHtml(ps.ticker)).append("</td>");
-                        sb.append("<td style='padding:8px 10px;color:#f59e0b;font-weight:700;'>").append(ps.score).append("/12</td>");
-                        sb.append("<td style='padding:8px 10px;color:#9ca3af;font-size:11px;'>").append(escapeHtml(ps.strategyId)).append("</td>");
-                        sb.append("<td style='padding:8px 10px;'>$").append(String.format("%.2f", ps.scanPrice)).append("</td>");
-                        sb.append("<td style='padding:8px 10px;font-weight:700;color:#22c55e;'>$").append(String.format("%.2f", ps.triggerPrice)).append("</td>");
-                        sb.append("<td style='padding:8px 10px;font-weight:700;color:").append(gapColor).append(";'>+")
-                          .append(String.format("%.1f%%", ps.triggerGapPct)).append("</td>");
-                        sb.append("<td style='padding:8px 10px;font-size:11px;color:#9ca3af;'>SL $")
-                          .append(String.format("%.2f", ps.suggestedStopLoss))
-                          .append(" / TP $").append(String.format("%.2f", ps.suggestedTakeProfit)).append("</td>");
-                        sb.append("<td style='padding:8px 10px;font-size:11px;color:#6b7280;'>").append(scanTimeShort).append("</td>");
-                        sb.append("<td style='padding:8px 10px;color:#6b7280;'>").append(ps.scanCount).append("/3</td>");
-                        sb.append("<td style='padding:8px 10px;'>");
-                        sb.append("<button onclick=\"dismissSignal('").append(escapeHtml(ps.id)).append("')\" ");
-                        sb.append("style='padding:4px 10px;background:#1f2a44;border:1px solid #374151;border-radius:6px;color:#9ca3af;cursor:pointer;font-size:12px;'>✕ Dismiss</button>");
-                        sb.append("</td></tr>");
+                // ── 📡 Buy Recommendations ──
+                {
+                    List<AIToolAgent.ScanRecommendation> recs = AIToolAgent.getRecentRecommendations();
+                    sb.append("<div class='card'>");
+                    sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;'>");
+                    sb.append("<div class='title' style='margin:0;'>📡 Buy Recommendations</div>");
+                    if (!recs.isEmpty()) {
+                        sb.append("<span style='color:#9ca3af;font-size:12px;'>").append(recs.size()).append(" signal(s) — newest first</span>");
                     }
-                    sb.append("</tbody></table></div>");
+                    sb.append("</div>");
+                    if (recs.isEmpty()) {
+                        sb.append("<div style='color:#6b7280;text-align:center;padding:20px;font-size:13px;'>")
+                          .append("No buy signals yet — run a scan to see recommendations here.")
+                          .append("</div>");
+                    } else {
+                        sb.append("<div style='display:flex;flex-direction:column;gap:8px;'>");
+                        for (AIToolAgent.ScanRecommendation r : recs) {
+                            double slPct  = r.entryPrice > 0 ? ((r.entryPrice - r.stopLoss)  / r.entryPrice) * 100 : 0;
+                            double tpPct  = r.entryPrice > 0 ? ((r.takeProfit - r.entryPrice) / r.entryPrice) * 100 : 0;
+                            double rr     = slPct > 0 ? tpPct / slPct : 0;
+                            String rrColor = rr >= 2.0 ? "#22c55e" : rr >= 1.5 ? "#eab308" : "#9ca3af";
+                            sb.append("<div style='background:#0f1f35;border:1px solid #1f3a5f;border-left:4px solid #22c55e;")
+                              .append("border-radius:6px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;'>");
+                            // Ticker + timestamp
+                            sb.append("<div style='min-width:180px;'>");
+                            sb.append("<span style='font-size:18px;font-weight:800;color:#22c55e;'>✅ ").append(escapeHtml(r.ticker)).append("</span>");
+                            sb.append("<div style='color:#6b7280;font-size:11px;margin-top:2px;'>")
+                              .append(escapeHtml(r.timestamp))
+                              .append(" &nbsp;·&nbsp; Run #").append(r.runNumber)
+                              .append("</div>");
+                            sb.append("</div>");
+                            // Strategy + score
+                            sb.append("<div style='min-width:160px;'>");
+                            sb.append("<div style='color:#a78bfa;font-size:12px;font-weight:600;'>").append(escapeHtml(r.agentId)).append("</div>");
+                            if (r.score > 0) {
+                                String scoreColor = r.score >= 11 ? "#22c55e" : r.score >= 10 ? "#eab308" : "#9ca3af";
+                                sb.append("<div style='color:").append(scoreColor).append(";font-size:12px;font-weight:700;'>Score: ")
+                                  .append(r.score).append("/12</div>");
+                            }
+                            sb.append("</div>");
+                            // Prices
+                            sb.append("<div style='display:flex;gap:16px;flex-wrap:wrap;font-size:13px;'>");
+                            sb.append("<div><div style='color:#9ca3af;font-size:10px;'>ENTRY</div>")
+                              .append("<div style='color:#93c5fd;font-weight:700;'>$").append(String.format("%.2f", r.entryPrice)).append("</div></div>");
+                            sb.append("<div><div style='color:#9ca3af;font-size:10px;'>STOP LOSS</div>")
+                              .append("<div style='color:#ef4444;font-weight:700;'>$").append(String.format("%.2f", r.stopLoss))
+                              .append(" <span style='font-size:10px;color:#ef4444;'>-").append(String.format("%.1f%%", slPct)).append("</span></div></div>");
+                            sb.append("<div><div style='color:#9ca3af;font-size:10px;'>TAKE PROFIT</div>")
+                              .append("<div style='color:#22c55e;font-weight:700;'>$").append(String.format("%.2f", r.takeProfit))
+                              .append(" <span style='font-size:10px;color:#22c55e;'>+").append(String.format("%.1f%%", tpPct)).append("</span></div></div>");
+                            sb.append("<div><div style='color:#9ca3af;font-size:10px;'>R:R</div>")
+                              .append("<div style='color:").append(rrColor).append(";font-weight:700;'>1:")
+                              .append(String.format("%.1f", rr)).append("</div></div>");
+                            sb.append("</div>");
+                            sb.append("</div>");
+                        }
+                        sb.append("</div>");
+                    }
+                    sb.append("</div>");
                 }
-                sb.append("</div>");
-                // JS for dismiss action
-                sb.append("<script>");
-                sb.append("function dismissSignal(id){");
-                sb.append("  fetch('/aitool-pending-dismiss?id='+id).then(function(r){return r.json();}).then(function(d){");
-                sb.append("    if(d.ok){var row=document.getElementById('prow-'+id);if(row)row.remove();}");
-                sb.append("  });");
-                sb.append("}");
-                sb.append("</script>");
 
                 // Scan Detail Log Viewer
                 sb.append("<div class='card'><div class='title'>🔍 Scan Detail Log — Operations Trace</div>");
@@ -7938,6 +7942,18 @@ public class WebServer {
                 if (isTop) sb.append("<span style='background:#15803d;color:#86efac;font-size:12px;padding:2px 8px;border-radius:12px;font-weight:600;'>🏆 TOP AGENT</span>");
                 sb.append("</div>");
 
+                // Pre-compute avg win / avg loss P/L from trade history
+                double avgWinPL = 0, avgLossPL = 0;
+                {
+                    double sumWin = 0, sumLoss = 0; int cntWin = 0, cntLoss = 0;
+                    for (AIToolAgent.Trade t : allTrades) {
+                        if ("CLOSED_WIN".equals(t.status))  { sumWin  += t.profitLoss; cntWin++;  }
+                        else if ("CLOSED_LOSS".equals(t.status)) { sumLoss += t.profitLoss; cntLoss++; }
+                    }
+                    avgWinPL  = cntWin  > 0 ? sumWin  / cntWin  : 0;
+                    avgLossPL = cntLoss > 0 ? sumLoss / cntLoss : 0;
+                }
+
                 // ── Stats cards ──
                 double winRate = perf != null ? perf.winRate : 0;
                 int totalTrades = perf != null ? perf.totalTrades : 0;
@@ -7973,6 +7989,32 @@ public class WebServer {
                 sb.append("<div style='font-size:28px;font-weight:700;color:#facc15;'>").append(openPosCount).append("</div>");
                 sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>🕐 Open</div></div>");
                 sb.append("</div>");
+
+                // ── Win/Loss breakdown bar ──
+                if (totalTrades > 0) {
+                    double winBarPct  = winRate;
+                    double lossBarPct = 100.0 - winRate;
+                    sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:14px;margin-bottom:20px;'>");
+                    sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;'>");
+                    sb.append("<span style='font-weight:600;color:#d1d5db;font-size:13px;'>📊 Win / Loss Breakdown</span>");
+                    sb.append("<span style='color:#9ca3af;font-size:12px;'>").append(wins).append(" wins &nbsp;/&nbsp; ").append(losses).append(" losses</span>");
+                    sb.append("</div>");
+                    // Progress bar
+                    sb.append("<div style='display:flex;height:18px;border-radius:6px;overflow:hidden;margin-bottom:10px;'>");
+                    if (winBarPct > 0) sb.append("<div style='background:#22c55e;width:").append(String.format("%.1f", winBarPct)).append("%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;'>").append(String.format("%.0f%%", winBarPct)).append("</div>");
+                    if (lossBarPct > 0) sb.append("<div style='background:#ef4444;width:").append(String.format("%.1f", lossBarPct)).append("%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;'>").append(String.format("%.0f%%", lossBarPct)).append("</div>");
+                    sb.append("</div>");
+                    // Avg P/L per win vs loss
+                    sb.append("<div style='display:flex;gap:20px;font-size:12px;'>");
+                    sb.append("<span>✅ Avg win: <b style='color:#22c55e;'>").append(avgWinPL >= 0 ? "+" : "").append(String.format("$%.2f", avgWinPL)).append("</b></span>");
+                    sb.append("<span>❌ Avg loss: <b style='color:#ef4444;'>").append(String.format("$%.2f", avgLossPL)).append("</b></span>");
+                    if (avgLossPL < 0 && avgWinPL > 0) {
+                        double ratio = avgWinPL / Math.abs(avgLossPL);
+                        String rColor = ratio >= 1.5 ? "#22c55e" : ratio >= 1.0 ? "#eab308" : "#ef4444";
+                        sb.append("<span>⚖️ Profit factor: <b style='color:").append(rColor).append(";'>").append(String.format("%.2fx", ratio)).append("</b></span>");
+                    }
+                    sb.append("</div></div>");
+                }
 
                 // ── No-trades notice ──
                 if (allTrades.isEmpty()) {
@@ -8023,17 +8065,33 @@ public class WebServer {
                 if (openTrades.isEmpty()) {
                     sb.append("<div style='color:#6b7280;font-size:13px;'>No open positions for this agent.</div>");
                 } else {
-                    // Get maxHoldDays from agent config (default 10)
-                    int maxHoldDays = 10;
+                    // Get maxHoldDays from agent config (default 7)
+                    int maxHoldDays = 7;
                     if (cfg != null && cfg.riskManagement != null && cfg.riskManagement.containsKey("maxHoldDays")) {
                         try { maxHoldDays = (int)((Number) cfg.riskManagement.get("maxHoldDays")).doubleValue(); } catch (Exception ignored) {}
                     }
                     final int maxHold = maxHoldDays;
-                    sb.append("<div style='color:#9ca3af;font-size:11px;margin-bottom:10px;'>")
-                      .append("⏱ Monitored every 60 min during market hours &nbsp;|&nbsp; ")
-                      .append("🛑 SL &amp; 🎯 TP close immediately &nbsp;|&nbsp; ")
-                      .append("📅 Max hold: <b style='color:#a78bfa;'>").append(maxHold).append(" days</b> then EOD-closed")
+                    // Check if any position is overdue
+                    boolean hasExpired = openTrades.stream().anyMatch(t -> {
+                        try {
+                            ZonedDateTime e = ZonedDateTime.parse(t.entryTime);
+                            int d = (int) java.time.temporal.ChronoUnit.DAYS.between(
+                                e.toLocalDate(), LocalDate.now(ZoneId.of("America/New_York")));
+                            return d >= maxHold;
+                        } catch (Exception ignored) { return false; }
+                    });
+                    sb.append("<div style='display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;'>");
+                    sb.append("<div style='color:#9ca3af;font-size:11px;'>")
+                      .append("⏱ Monitored every 60 min &nbsp;|&nbsp; ")
+                      .append("📅 Max hold: <b style='color:#a78bfa;'>").append(maxHold).append(" days</b>")
                       .append("</div>");
+                    if (hasExpired) {
+                        sb.append("<form method='POST' action='/close-expired' style='margin:0;'>")
+                          .append("<input type='hidden' name='agentId' value='").append(escapeHtml(agentId)).append("'/>")
+                          .append("<button type='submit' style='background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;'>")
+                          .append("🔴 Force Close Expired Now</button></form>");
+                    }
+                    sb.append("</div>");
                     sb.append("<div style='overflow-x:auto;'><table style='width:100%;border-collapse:collapse;font-size:12px;'>");
                     sb.append("<thead><tr style='background:#0b1220;'>");
                     sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Ticker</th>");
@@ -8137,6 +8195,29 @@ public class WebServer {
                 sb.append("</div>"); // max-width container
 
                 respondHtml(ex, htmlPage(sb.toString()), 200);
+            }
+        });
+
+        // Force-close expired positions (called from agent-detail page button)
+        server.createContext("/close-expired", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/aitool");
+                    ex.sendResponseHeaders(303, -1); ex.close(); return;
+                }
+                String body = readBody(ex);
+                Map<String,String> form = parseForm(body);
+                String agentId = form.getOrDefault("agentId", "").trim();
+
+                // Run synchronously — browser waits until all trades are closed & saved to disk.
+                // This guarantees persistence even if the server restarts immediately after.
+                try { AIToolAgent.closeExpiredPositionsNow(agentId); }
+                catch (Exception e) { System.err.println("[close-expired] " + e.getMessage()); }
+
+                String redirect = agentId.isEmpty() ? "/aitool"
+                    : "/agent-detail?id=" + java.net.URLEncoder.encode(agentId, "UTF-8");
+                ex.getResponseHeaders().add("Location", redirect);
+                ex.sendResponseHeaders(303, -1); ex.close();
             }
         });
 

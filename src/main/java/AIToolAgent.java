@@ -158,6 +158,38 @@ public class AIToolAgent {
         public String sector;            // sector label (TECHNOLOGY, FINANCIALS, etc.)
     }
 
+    /** A single BUY recommendation captured during a scan (mirrors the Discord message). */
+    public static class ScanRecommendation {
+        public String ticker;
+        public String agentId;
+        public double entryPrice;
+        public double stopLoss;
+        public double takeProfit;
+        public int    score;        // 0 if not available (legacy agents)
+        public String timestamp;    // human-readable NY time
+        public int    runNumber;
+    }
+
+    private static final List<ScanRecommendation> recentRecs = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private static final int MAX_RECS = 100;
+
+    public static List<ScanRecommendation> getRecentRecommendations() { return recentRecs; }
+
+    private static void addRecommendation(String ticker, String agentId,
+                                          double entry, double sl, double tp, int score) {
+        ScanRecommendation r = new ScanRecommendation();
+        r.ticker     = ticker;
+        r.agentId    = agentId;
+        r.entryPrice = entry;
+        r.stopLoss   = sl;
+        r.takeProfit = tp;
+        r.score      = score;
+        r.timestamp  = ZonedDateTime.now(NY).format(DateTimeFormatter.ofPattern("MM/dd HH:mm z"));
+        r.runNumber  = systemState != null ? systemState.runCount : 0;
+        recentRecs.add(0, r); // newest first
+        if (recentRecs.size() > MAX_RECS) recentRecs.remove(recentRecs.size() - 1);
+    }
+
     // Daily statistics record for historical tracking
     public static class DailyStats {
         public String date; // YYYY-MM-DD format
@@ -249,6 +281,7 @@ public class AIToolAgent {
                 systemState = new AgentSystemState();
             }
             loadAllAgents();
+            LongTermCandidateFinder.loadRSCache(); // warm up RS cache from last scan (eliminates cold-start penalty)
             saveState();
             
             System.out.println("[AIToolAgent] Initialized with " + systemState.agents.size() + " agents");
@@ -406,6 +439,113 @@ public class AIToolAgent {
     }
     
     /**
+     * Immediately closes all expired OPEN trades for the given agent (or all agents if agentId is empty/null).
+     * Fetches the latest daily close price from Alpha Vantage for each expired ticker.
+     * Called from the "Force Close Expired Now" button on the agent-detail page.
+     */
+    public static void closeExpiredPositionsNow(String filterAgentId) {
+        writeScanLog("[FORCE EXPIRE] Manual force-close triggered"
+            + (filterAgentId != null && !filterAgentId.isBlank() ? " for agent " + filterAgentId : " for ALL agents"));
+        List<Map.Entry<String, Trade>> toUpdate = new ArrayList<>();
+        synchronized (LOCK) {
+            for (Map.Entry<String, List<Trade>> entry : systemState.tradeHistory.entrySet()) {
+                String agentId = entry.getKey();
+                if (filterAgentId != null && !filterAgentId.isBlank() && !filterAgentId.equals(agentId)) continue;
+                AgentConfig agentCfg = systemState.agents.get(agentId);
+                int maxHold = agentCfg != null ? (int) getDoubleRisk(agentCfg, "maxHoldDays", 7.0) : 7;
+                for (Trade trade : entry.getValue()) {
+                    if (!"OPEN".equals(trade.status)) continue;
+                    int holdDays = calcHoldDays(trade.entryTime);
+                    if (holdDays < maxHold) continue;
+                    // Fetch live close price
+                    double exitPrice = trade.entryPrice; // fallback: neutral
+                    try {
+                        String json = DataFetcher.fetchStockDataForTicker(trade.ticker);
+                        if (json != null) {
+                            List<Double> closes = PriceJsonParser.extractClosingPrices(json);
+                            if (closes != null && !closes.isEmpty()) exitPrice = closes.get(closes.size() - 1);
+                        }
+                    } catch (Exception ignored) {}
+                    trade.exitPrice     = exitPrice;
+                    trade.profitLoss    = (exitPrice - trade.entryPrice) * trade.quantity;
+                    trade.profitLossPct = trade.entryPrice > 0
+                        ? ((exitPrice - trade.entryPrice) / trade.entryPrice) * 100 : 0;
+                    trade.status        = trade.profitLoss >= 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
+                    trade.closeReason   = "MAX_HOLD_DAYS";
+                    trade.exitTime      = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
+                    writeScanLog(String.format(
+                        "[FORCE EXPIRE \uD83D\uDCC5] %s | %s | day %d/%d | exit $%.2f | P/L $%+.2f | %s",
+                        trade.ticker, agentId, holdDays, maxHold,
+                        exitPrice, trade.profitLoss, trade.status));
+                    toUpdate.add(new java.util.AbstractMap.SimpleEntry<>(agentId, trade));
+                }
+            }
+        }
+        for (Map.Entry<String, Trade> e : toUpdate) {
+            updatePerformance(e.getKey(), e.getValue());
+        }
+        if (!toUpdate.isEmpty()) {
+            writeScanLog("[FORCE EXPIRE] Closed " + toUpdate.size() + " position(s)");
+            saveState();
+            saveHistory();
+        } else {
+            writeScanLog("[FORCE EXPIRE] No expired positions found");
+        }
+    }
+
+    /**
+     * Called at the start of every scan (after pre-fetch).
+     * Closes any OPEN trade whose hold duration >= maxHoldDays using the latest close price
+     * from already-downloaded prefetchedJson — no additional API calls needed.
+     */
+    private static void closeExpiredPositions(java.util.concurrent.ConcurrentHashMap<String, String> prefetchedJson) {
+        // Pass 1: close expired trades and collect (agentId, trade) pairs for performance update
+        List<Map.Entry<String, Trade>> toUpdate = new ArrayList<>();
+        synchronized (LOCK) {
+            for (Map.Entry<String, List<Trade>> entry : systemState.tradeHistory.entrySet()) {
+                String agentId = entry.getKey();
+                AgentConfig agentCfg = systemState.agents.get(agentId);
+                int maxHold = agentCfg != null ? (int) getDoubleRisk(agentCfg, "maxHoldDays", 7.0) : 7;
+                for (Trade trade : entry.getValue()) {
+                    if (!"OPEN".equals(trade.status)) continue;
+                    int holdDays = calcHoldDays(trade.entryTime);
+                    if (holdDays < maxHold) continue;
+                    // Use latest close price from pre-fetched data; fall back to entry price (neutral)
+                    double exitPrice = trade.entryPrice;
+                    String json = prefetchedJson.get(trade.ticker);
+                    if (json != null) {
+                        try {
+                            List<Double> closes = PriceJsonParser.extractClosingPrices(json);
+                            if (closes != null && !closes.isEmpty()) exitPrice = closes.get(closes.size() - 1);
+                        } catch (Exception ignored) {}
+                    }
+                    trade.exitPrice     = exitPrice;
+                    trade.profitLoss    = (exitPrice - trade.entryPrice) * trade.quantity;
+                    trade.profitLossPct = trade.entryPrice > 0
+                        ? ((exitPrice - trade.entryPrice) / trade.entryPrice) * 100 : 0;
+                    trade.status        = trade.profitLoss >= 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
+                    trade.closeReason   = "MAX_HOLD_DAYS";
+                    trade.exitTime      = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
+                    writeScanLog(String.format(
+                        "[EXPIRE \uD83D\uDCC5] %s | %s | day %d/%d | exit $%.2f | P/L $%+.2f | %s",
+                        trade.ticker, agentId, holdDays, maxHold,
+                        exitPrice, trade.profitLoss, trade.status));
+                    toUpdate.add(new java.util.AbstractMap.SimpleEntry<>(agentId, trade));
+                }
+            }
+        }
+        // Pass 2: update performance counters (outside LOCK to avoid re-entering on deadlock risk)
+        if (!toUpdate.isEmpty()) {
+            for (Map.Entry<String, Trade> e : toUpdate) {
+                updatePerformance(e.getKey(), e.getValue());
+            }
+            writeScanLog("[EXPIRE] Closed " + toUpdate.size() + " expired position(s) before scan");
+            saveState();
+            saveHistory();
+        }
+    }
+
+    /**
      * Close all OPEN positions at end of day.
      * Fetches current price and determines win/loss based on stop loss and take profit.
      */
@@ -491,7 +631,7 @@ public class AIToolAgent {
                         
                         if (!partialExit1RUsed) {
                             AgentConfig agentCfgEod = systemState.agents.get(agentId);
-                            int maxHold  = agentCfgEod != null ? (int) getDoubleRisk(agentCfgEod, "maxHoldDays", 10.0) : 10;
+                            int maxHold  = agentCfgEod != null ? (int) getDoubleRisk(agentCfgEod, "maxHoldDays", 7.0) : 7;
                             int holdDays = calcHoldDays(trade.entryTime);
 
                             if (currentPrice <= trade.stopLoss) {
@@ -773,6 +913,16 @@ public class AIToolAgent {
     /**
      * Append one line to scan-detail.log, prefixed with timestamp.
      */
+    // Returns Alpha Vantage call rate from env var AV_CALLS_PER_MIN.
+    // Free tier = 5/min. Premium ($50/mo) = 150/min. Set env var to unlock speed.
+    private static int avCallsPerMin() {
+        String val = System.getenv("AV_CALLS_PER_MIN");
+        if (val != null && !val.isBlank()) {
+            try { return Math.max(1, Integer.parseInt(val.trim())); } catch (Exception ignored) {}
+        }
+        return 5; // Alpha Vantage free tier default
+    }
+
     static void writeScanLog(String line) {
         try {
             String entry = ZonedDateTime.now(NY).format(LOG_TIMESTAMP_FMT) + "  " + line + "\n";
@@ -1334,9 +1484,10 @@ public class AIToolAgent {
             writeScanLog("════════════════════════════════════════");
             writeScanLog("[SCAN START] Run #" + systemState.runCount +
                 " | Tickers: " + total + " | Agents: " + allAgents.size());
-            sendDiscord("🔍 **Scan Started** — Run #" + systemState.runCount
-                + "\nScanning **" + total + "** tickers"
-                + " | ETA ~" + (int) Math.ceil(total * 12.5 / 60) + " min"
+            int avCpm = avCallsPerMin();
+            int etaMin = (int) Math.ceil(total * (60.0 / avCpm) / 60);
+            sendDiscord("🚀 **Scan Started** — Run #" + systemState.runCount
+                + "\nScanning **" + total + "** tickers | AV rate: **" + avCpm + " calls/min** | ETA ~" + etaMin + " min"
                 + "\n⏰ " + ZonedDateTime.now(NY).format(DateTimeFormatter.ofPattern("HH:mm:ss z")));
             runProgress = 0;
             runTotal = total;
@@ -1370,18 +1521,53 @@ public class AIToolAgent {
                 ? "MASTER STRATEGY scoring — " + masterStrategies.size() + " strategies (threshold=" + SCORE_THRESHOLD + "/12)"
                 : "LEGACY AGENTS binary — " + legacyAgents.size() + " agents"));
 
+            // ── PARALLEL PRE-FETCH: all tickers fetched concurrently via Alpha Vantage ──
+            // Rate is controlled by AV_CALLS_PER_MIN env var (default 5 for free tier, 150 for premium).
+            // Each thread acquires a time-slot ticket so total rate never exceeds the configured limit.
+            final int AV_CPM = avCallsPerMin();
+            final long MS_PER_CALL = 60_000L / AV_CPM;
+            final int FETCH_THREADS = Math.min(AV_CPM, 16); // no point in more threads than calls/min
+            final java.util.concurrent.atomic.AtomicLong nextSlot = new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis());
+            ExecutorService fetchPool = Executors.newFixedThreadPool(FETCH_THREADS);
+            ConcurrentHashMap<String, String> prefetchedJson = new ConcurrentHashMap<>();
+            long prefetchStart = System.currentTimeMillis();
+            writeScanLog("[PRE-FETCH] Starting parallel AV fetch: " + total + " tickers | " + AV_CPM + " calls/min | ETA ~" + (int)Math.ceil(total / (double)AV_CPM) + " min");
+            List<CompletableFuture<Void>> fetchFutures = allTickers.stream()
+                .map(t -> CompletableFuture.runAsync(() -> {
+                    try {
+                        // Acquire a rate-limited time slot (ticket system)
+                        long slot = nextSlot.getAndAdd(MS_PER_CALL);
+                        long waitMs = slot - System.currentTimeMillis();
+                        if (waitMs > 0) Thread.sleep(waitMs);
+                        String data = DataFetcher.fetchStockDataForTicker(t);
+                        if (data != null && !data.isBlank()) prefetchedJson.put(t, data);
+                    } catch (Exception ignored) {}
+                }, fetchPool))
+                .collect(Collectors.toList());
+            try {
+                CompletableFuture.allOf(fetchFutures.toArray(new CompletableFuture[0]))
+                    .get(120, TimeUnit.MINUTES);
+            } catch (Exception e) {
+                writeScanLog("[PRE-FETCH] Warning: timeout or partial failure — " + e.getMessage());
+            }
+            fetchPool.shutdownNow();
+            long prefetchMs = System.currentTimeMillis() - prefetchStart;
+            writeScanLog("[PRE-FETCH] Done in " + (prefetchMs / 1000) + "s — "
+                + prefetchedJson.size() + "/" + total + " tickers loaded");
+
+            // ── CLOSE EXPIRED POSITIONS: settle any trade past maxHoldDays using pre-fetched prices ──
+            closeExpiredPositions(prefetchedJson);
+
             for (int i = 0; i < allTickers.size(); i++) {
                 String ticker = allTickers.get(i);
                 runCurrentTicker = ticker;
                 runProgress = i;
 
                 try {
-                    // Fetch ticker data ONCE — reused by every agent/strategy (no redundant API calls)
-                    DataFetcher.setTicker(ticker);
-                    String json = DataFetcher.fetchStockData();
+                    // Use pre-fetched data from parallel download phase
+                    String json = prefetchedJson.get(ticker);
                     if (json == null || json.isBlank()) {
-                        writeScanLog("[FETCH FAIL] " + ticker + " — no data returned");
-                        Thread.sleep(12500);
+                        writeScanLog("[FETCH FAIL] " + ticker + " — not in pre-fetch cache");
                         continue;
                     }
 
@@ -1396,7 +1582,6 @@ public class AIToolAgent {
                         LongTermCandidateFinder.updateRSScore(ticker, data.valid ? rsScore : -99.0);
                         if (!data.valid) {
                             writeScanLog("[NULL] " + ticker + " — insufficient data for scoring");
-                            Thread.sleep(12500);
                             continue;
                         }
 
@@ -1447,6 +1632,8 @@ public class AIToolAgent {
                                     + " | Entry=$" + String.format("%.2f", d.entryPrice)
                                     + " SL=$" + String.format("%.2f", d.suggestedStopLoss)
                                     + " TP=$" + String.format("%.2f", d.suggestedTakeProfit));
+                                addRecommendation(ticker, strategy.id, d.entryPrice,
+                                    d.suggestedStopLoss, d.suggestedTakeProfit, d.totalScore);
                                 // If this ticker was previously on the watchlist, promote it
                                 confirmPendingSignal(ticker, strategy.id);
                                 allSignals.add(new RankedSignal(strategy, ticker, d, confluenceCount >= 2));
@@ -1523,12 +1710,6 @@ public class AIToolAgent {
                         }
                     }
 
-                    // Rate limit: 1 API call per ticker (Alpha Vantage free tier = 5 calls/min)
-                    Thread.sleep(12500);
-
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    break;
                 } catch (Exception e) {
                     System.err.println("[AIToolAgent] Error fetching " + ticker + ": " + e.getMessage());
                 }
@@ -1677,6 +1858,7 @@ public class AIToolAgent {
             runTotal = 0;
             runCurrentTicker = null;
 
+            LongTermCandidateFinder.persistRSCache(); // persist RS scores so next cold start skips weak tickers
             saveState();
             saveHistory();
 
@@ -4471,7 +4653,9 @@ public class AIToolAgent {
                                 + " | Entry=$" + String.format("%.2f", signalEntry)
                                 + " SL=$" + String.format("%.2f", decision.suggestedStopLoss)
                                 + " TP=$" + String.format("%.2f", decision.suggestedTakeProfit));
-                            
+                            addRecommendation(ticker, agent.id, signalEntry,
+                                decision.suggestedStopLoss, decision.suggestedTakeProfit, 0);
+
                             Trade trade = executeTrade(agent, ticker, decision);
                             if (trade != null) {
                                 // Log trade execution (position is now OPEN)

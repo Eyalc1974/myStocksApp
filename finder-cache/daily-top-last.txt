@@ -1,5 +1,15 @@
 --- 🎯 Daily Nasdaq Top 5 (GREEN) candidates ---
+שגיאה בניתוח ADRO: חסר נתונים לחישובים מורכבים עבור ADRO
+Alpha Vantage: Invalid API call. Please retry or visit the documentation (https://www.alphavantage.co/documentation/) for TIME_SERIES_DAILY_ADJUSTED.
+[AIToolAgent][Discord] Sent notification, status: 204
+[AIToolAgent][Discord] Sent notification, status: 204
+[AIToolAgent][Discord] Sent notification, status: 204
+[AIToolAgent][Discord] Sent notification, status: 204
+[AIToolAgent][Discord] Sent notification, status: 204
+[AIToolAgent] Scan complete — signals: 0, tickers: 120, agents: 16
+[AIToolAgent] Run #38 completed.
+[AIToolAgent] Monitoring 31 open positions...
 
 | TICKER | PRICE    | טכני (כניסה)    | פונדמנטלי         | ADX (חוזק) |
 |--------|----------|-----------------|-------------------|-----------|
-No GREEN candidates found today (based on current filters). Try again later.
+| LVS   | $57.40    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 15.65 |

@@ -1,4 +1,7 @@
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -183,7 +186,15 @@ public class LongTermCandidateFinder {
     }
 
     // ======================= RS RANKING CACHE =======================
-    static final int TOP_RS_COUNT = 200;
+    // Max tickers to scan after the first run builds the RS cache.
+    // Lower = faster scan. Raise if you want broader coverage.
+    // With AV free tier (5/min): 120 tickers = ~24 min, 200 = ~40 min.
+    static final int TOP_RS_COUNT = 120;
+
+    // Skip tickers whose RS score from the last scan is below this threshold.
+    // Stocks well below both MAs with negative momentum rarely trigger BUY signals.
+    // Range: valid scores ~-14 to +18. Sentinel for no-data = -99.
+    private static final double RS_MIN_THRESHOLD = -2.0;
     private static final java.util.concurrent.ConcurrentHashMap<String, Double> rsScoreCache =
         new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -219,21 +230,47 @@ public class LongTermCandidateFinder {
     }
 
     /**
-     * Get scan universe: top TOP_RS_COUNT tickers by Relative Strength score when
-     * cache is warm (>= 50 entries from prior scan), otherwise full universe.
-     * First scan always processes all tickers to build the cache.
+     * Get scan universe.
+     * - Cold cache (< 50 entries): returns full universe to build the RS ranking.
+     * - Warm cache: returns top TOP_RS_COUNT tickers by RS score, filtered by RS_MIN_THRESHOLD.
+     *   This skips stocks well below their MAs that rarely generate BUY signals.
      */
     public static List<String> getAllSectorTickers() {
         List<String> all = getAllSectorTickersRaw();
         if (rsScoreCache.size() < 50) {
-            return all;
+            return all; // first scan — process everything to warm up the cache
         }
         return all.stream()
+            .filter(t -> rsScoreCache.getOrDefault(t, -99.0) >= RS_MIN_THRESHOLD)
             .sorted((a, b) -> Double.compare(
                 rsScoreCache.getOrDefault(b, -99.0),
                 rsScoreCache.getOrDefault(a, -99.0)))
             .limit(TOP_RS_COUNT)
             .collect(Collectors.toList());
+    }
+
+    private static final Path RS_CACHE_FILE = Paths.get("newStrategies", "rs-cache.json");
+
+    /** Persist RS scores to disk so the next cold start also benefits from the filtered universe. */
+    public static void persistRSCache() {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode node = mapper.createObjectNode();
+            rsScoreCache.forEach((ticker, score) -> node.put(ticker, score));
+            Files.createDirectories(RS_CACHE_FILE.getParent());
+            Files.writeString(RS_CACHE_FILE, mapper.writeValueAsString(node));
+        } catch (Exception ignored) {}
+    }
+
+    /** Load persisted RS scores from disk on startup (eliminates cold-start penalty after restarts). */
+    public static void loadRSCache() {
+        try {
+            if (!Files.exists(RS_CACHE_FILE)) return;
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.readTree(Files.readString(RS_CACHE_FILE))
+                  .fields()
+                  .forEachRemaining(e -> rsScoreCache.put(e.getKey(), e.getValue().asDouble()));
+        } catch (Exception ignored) {}
     }
 
     // ======================= ORIGINAL NASDAQ_100 TICKERS =======================

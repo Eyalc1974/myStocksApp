@@ -1,8 +1,13 @@
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
 
 public class DataFetcher {
 
@@ -160,6 +165,95 @@ public class DataFetcher {
 
     public static void setTicker(String ticker) {
         TICKER = ticker;
+    }
+
+    // Fetch 2 years of daily OHLCV from Yahoo Finance (no API key required, high concurrency).
+    // Response is converted to Alpha Vantage TIME_SERIES_DAILY_ADJUSTED format so
+    // PriceJsonParser and all downstream code work without any changes.
+    public static String fetchYahooFinanceData(String ticker) {
+        String url = "https://query1.finance.yahoo.com/v8/finance/chart/" + ticker
+                + "?interval=1d&range=2y&includePrePost=false";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(REQUEST_TIMEOUT)
+                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)")
+                .header("Accept", "application/json")
+                .build();
+        try {
+            HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) return null;
+            return convertYahooToAlphaVantageFormat(response.body());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String convertYahooToAlphaVantageFormat(String yahooJson) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(yahooJson);
+            JsonNode resultArr = root.path("chart").path("result");
+            if (resultArr.isMissingNode() || resultArr.isEmpty()) return null;
+            JsonNode chartData = resultArr.get(0);
+            JsonNode timestamps = chartData.get("timestamp");
+            if (timestamps == null || timestamps.isEmpty()) return null;
+            JsonNode quote      = chartData.path("indicators").path("quote").get(0);
+            JsonNode adjCloseArr = chartData.path("indicators").path("adjclose").get(0).path("adjclose");
+            JsonNode opens   = quote.get("open");
+            JsonNode highs   = quote.get("high");
+            JsonNode lows    = quote.get("low");
+            JsonNode closes  = quote.get("close");
+            JsonNode volumes = quote.get("volume");
+            ObjectNode timeSeries = mapper.createObjectNode();
+            ZoneId etZone = ZoneId.of("America/New_York");
+            for (int i = 0; i < timestamps.size(); i++) {
+                if (closes == null || closes.get(i) == null || closes.get(i).isNull()) continue;
+                String date = Instant.ofEpochSecond(timestamps.get(i).asLong())
+                        .atZone(etZone).toLocalDate().toString();
+                ObjectNode day = mapper.createObjectNode();
+                day.put("1. open",  yahooSafeDouble(opens,  i));
+                day.put("2. high",  yahooSafeDouble(highs,  i));
+                day.put("3. low",   yahooSafeDouble(lows,   i));
+                day.put("4. close", yahooSafeDouble(closes, i));
+                double adj = (!adjCloseArr.isMissingNode() && i < adjCloseArr.size() && !adjCloseArr.get(i).isNull())
+                        ? adjCloseArr.get(i).asDouble() : closes.get(i).asDouble();
+                day.put("5. adjusted close", String.format("%.4f", adj));
+                day.put("6. volume", volumes != null && !volumes.get(i).isNull()
+                        ? String.valueOf(volumes.get(i).asLong()) : "0");
+                timeSeries.set(date, day);
+            }
+            ObjectNode output = mapper.createObjectNode();
+            output.set("Time Series (Daily)", timeSeries);
+            return mapper.writeValueAsString(output);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String yahooSafeDouble(JsonNode arr, int i) {
+        if (arr == null || arr.get(i) == null || arr.get(i).isNull()) return "0.0000";
+        return String.format("%.4f", arr.get(i).asDouble());
+    }
+
+    // Thread-safe version of fetchStockData() — takes ticker as a parameter
+    // so multiple threads can call it concurrently without touching the global TICKER field.
+    public static String fetchStockDataForTicker(String ticker) {
+        String url = String.format(
+                "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=%s%s&outputsize=full&apikey=%s",
+                ticker, entitlementQueryParam(), API_KEY
+        );
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(REQUEST_TIMEOUT)
+                .build();
+        try {
+            ApiUsageTracker.track("TIME_SERIES_DAILY");
+            HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) return response.body();
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // Fetch live current price + today's high/low/open via GLOBAL_QUOTE endpoint.
