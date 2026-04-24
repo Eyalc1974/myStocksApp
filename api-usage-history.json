@@ -141,21 +141,6 @@
     "GLOBAL_QUOTE" : 375,
     "ATR" : 20
   },
-  "2026-03-23" : {
-    "SAR" : 32,
-    "OVERVIEW" : 534,
-    "CASH_FLOW" : 1000,
-    "NEWS_SENTIMENT" : 32,
-    "BBANDS" : 32,
-    "OBV" : 32,
-    "TEMA" : 32,
-    "AD" : 32,
-    "INCOME_STATEMENT" : 572,
-    "BALANCE_SHEET" : 502,
-    "TIME_SERIES_DAILY" : 3546,
-    "GLOBAL_QUOTE" : 528,
-    "ATR" : 32
-  },
   "2026-04-13" : {
     "TEMA" : 16,
     "OBV" : 16,
@@ -168,20 +153,8 @@
     "BBANDS" : 16,
     "ATR" : 16
   },
-  "2026-03-24" : {
-    "SAR" : 24,
-    "OVERVIEW" : 294,
-    "CASH_FLOW" : 540,
-    "NEWS_SENTIMENT" : 24,
-    "BBANDS" : 24,
-    "OBV" : 24,
-    "TEMA" : 24,
-    "AD" : 24,
-    "INCOME_STATEMENT" : 284,
-    "BALANCE_SHEET" : 270,
-    "TIME_SERIES_DAILY" : 3292,
-    "GLOBAL_QUOTE" : 615,
-    "ATR" : 24
+  "2026-04-24" : {
+    "TIME_SERIES_DAILY" : 9
   },
   "2026-04-14" : {
     "SAR" : 16,
