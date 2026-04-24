@@ -3,19 +3,34 @@
     "TIME_SERIES_DAILY" : 4
   },
   "2026-04-22" : {
-    "SAR" : 12,
-    "OVERVIEW" : 168,
+    "SAR" : 28,
+    "OVERVIEW" : 184,
     "CASH_FLOW" : 310,
-    "NEWS_SENTIMENT" : 12,
-    "BBANDS" : 12,
-    "OBV" : 12,
-    "TEMA" : 12,
-    "AD" : 12,
+    "NEWS_SENTIMENT" : 28,
+    "BBANDS" : 28,
+    "OBV" : 28,
+    "TEMA" : 28,
+    "AD" : 28,
     "INCOME_STATEMENT" : 159,
     "BALANCE_SHEET" : 155,
-    "TIME_SERIES_DAILY" : 2283,
-    "GLOBAL_QUOTE" : 81,
-    "ATR" : 12
+    "TIME_SERIES_DAILY" : 3096,
+    "GLOBAL_QUOTE" : 109,
+    "ATR" : 28
+  },
+  "2026-04-23" : {
+    "SAR" : 32,
+    "OVERVIEW" : 235,
+    "CASH_FLOW" : 406,
+    "NEWS_SENTIMENT" : 32,
+    "BBANDS" : 32,
+    "OBV" : 32,
+    "TEMA" : 32,
+    "AD" : 32,
+    "INCOME_STATEMENT" : 211,
+    "BALANCE_SHEET" : 203,
+    "TIME_SERIES_DAILY" : 2804,
+    "GLOBAL_QUOTE" : 48,
+    "ATR" : 32
   },
   "2026-04-20" : {
     "SAR" : 16,
@@ -140,21 +155,6 @@
     "TIME_SERIES_DAILY" : 5879,
     "GLOBAL_QUOTE" : 375,
     "ATR" : 20
-  },
-  "2026-03-23" : {
-    "SAR" : 32,
-    "OVERVIEW" : 534,
-    "CASH_FLOW" : 1000,
-    "NEWS_SENTIMENT" : 32,
-    "BBANDS" : 32,
-    "OBV" : 32,
-    "TEMA" : 32,
-    "AD" : 32,
-    "INCOME_STATEMENT" : 572,
-    "BALANCE_SHEET" : 502,
-    "TIME_SERIES_DAILY" : 3546,
-    "GLOBAL_QUOTE" : 528,
-    "ATR" : 32
   },
   "2026-04-13" : {
     "TEMA" : 16,
