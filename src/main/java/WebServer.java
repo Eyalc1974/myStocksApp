@@ -7205,15 +7205,16 @@ public class WebServer {
                         String agentList = String.join(", ", pos.agentIds);
                         int qty = pos.quantity > 0 ? (int) pos.quantity : 0;
 
-                        // Build agent chips — yellow highlight for high performers
+                        // Build agent chips — clickable links to agent-detail, yellow highlight for high performers
                         StringBuilder agentChips = new StringBuilder();
-                        for (String agentId : pos.agentIds) {
+                        for (String aid : pos.agentIds) {
                             if (agentChips.length() > 0) agentChips.append(" ");
-                            if (highPerfAgents.contains(agentId)) {
-                                agentChips.append("<span style='background:#854d0e;color:#fef08a;border:1px solid #ca8a04;border-radius:4px;padding:1px 5px;font-weight:700;' title='High performer'>")
-                                    .append(escapeHtml(agentId)).append("</span>");
+                            String href = "/agent-detail?id=" + urlEncode(aid);
+                            if (highPerfAgents.contains(aid)) {
+                                agentChips.append("<a href='").append(href).append("' style='background:#854d0e;color:#fef08a;border:1px solid #ca8a04;border-radius:4px;padding:1px 5px;font-weight:700;text-decoration:none;' title='High performer — click for detail'>")
+                                    .append(escapeHtml(aid)).append("</a>");
                             } else {
-                                agentChips.append("<span style='color:#a78bfa;'>").append(escapeHtml(agentId)).append("</span>");
+                                agentChips.append("<a href='").append(href).append("' style='color:#a78bfa;text-decoration:none;' title='Click for agent detail'>").append(escapeHtml(aid)).append("</a>");
                             }
                         }
 
