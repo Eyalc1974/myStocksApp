@@ -23,6 +23,7 @@ public class AIToolAgent {
     private static final Path HISTORY_FILE = Paths.get("newStrategies", "agent-history.json");
     private static final Path AGENT_STATE_FILE = Paths.get("newStrategies", "agent-state.json");
     private static final Path TRADE_LOG_FILE = Paths.get("newStrategies", "full-scan-trade-log.txt");
+    private static final Path RECS_FILE       = Paths.get("newStrategies", "buy-recommendations.json");
     private static final Path SCAN_LOG_FILE  = Paths.get("newStrategies", "scan-detail.log");
     private static final ZoneId NY = ZoneId.of("America/New_York");
     private static final DateTimeFormatter LOG_TIMESTAMP_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
@@ -168,12 +169,21 @@ public class AIToolAgent {
         public int    score;        // 0 if not available (legacy agents)
         public String timestamp;    // human-readable NY time
         public int    runNumber;
+        public String date;          // YYYY-MM-DD in NY timezone
+        public long   signalTimeMs;  // epoch millis at signal creation (for expiry check)
     }
 
     private static final List<ScanRecommendation> recentRecs = new java.util.concurrent.CopyOnWriteArrayList<>();
     private static final int MAX_RECS = 100;
 
-    public static List<ScanRecommendation> getRecentRecommendations() { return recentRecs; }
+    public static List<ScanRecommendation> getRecentRecommendations() {
+        String today = LocalDate.now(NY).toString();
+        List<ScanRecommendation> todayRecs = new ArrayList<>();
+        for (ScanRecommendation r : recentRecs) {
+            if (today.equals(r.date)) todayRecs.add(r);
+        }
+        return todayRecs;
+    }
 
     private static void addRecommendation(String ticker, String agentId,
                                           double entry, double sl, double tp, int score) {
@@ -186,8 +196,34 @@ public class AIToolAgent {
         r.score      = score;
         r.timestamp  = ZonedDateTime.now(NY).format(DateTimeFormatter.ofPattern("MM/dd HH:mm z"));
         r.runNumber  = systemState != null ? systemState.runCount : 0;
+        r.date       = LocalDate.now(NY).toString();
+        r.signalTimeMs = System.currentTimeMillis();
         recentRecs.add(0, r); // newest first
         if (recentRecs.size() > MAX_RECS) recentRecs.remove(recentRecs.size() - 1);
+        saveRecommendations();
+    }
+
+    private static void saveRecommendations() {
+        try {
+            Files.createDirectories(NEW_STRATEGIES_DIR);
+            JSON.writeValue(RECS_FILE.toFile(), new ArrayList<>(recentRecs));
+        } catch (Exception e) {
+            System.err.println("[AIToolAgent] Error saving recommendations: " + e.getMessage());
+        }
+    }
+
+    private static void loadRecommendations() {
+        try {
+            if (!Files.exists(RECS_FILE)) return;
+            List<ScanRecommendation> loaded = JSON.readValue(RECS_FILE.toFile(),
+                JSON.getTypeFactory().constructCollectionType(List.class, ScanRecommendation.class));
+            if (loaded != null) {
+                recentRecs.clear();
+                recentRecs.addAll(loaded);
+            }
+        } catch (Exception e) {
+            System.err.println("[AIToolAgent] Error loading recommendations: " + e.getMessage());
+        }
     }
 
     // Daily statistics record for historical tracking
@@ -281,6 +317,7 @@ public class AIToolAgent {
                 systemState = new AgentSystemState();
             }
             loadAllAgents();
+            loadRecommendations();
             LongTermCandidateFinder.loadRSCache(); // warm up RS cache from last scan (eliminates cold-start penalty)
             saveState();
             
@@ -1528,6 +1565,7 @@ public class AIToolAgent {
             final long MS_PER_CALL = 60_000L / AV_CPM;
             final int FETCH_THREADS = Math.min(AV_CPM, 16); // no point in more threads than calls/min
             final java.util.concurrent.atomic.AtomicLong nextSlot = new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis());
+            final java.util.concurrent.atomic.AtomicInteger fetchedCount = new java.util.concurrent.atomic.AtomicInteger(0);
             ExecutorService fetchPool = Executors.newFixedThreadPool(FETCH_THREADS);
             ConcurrentHashMap<String, String> prefetchedJson = new ConcurrentHashMap<>();
             long prefetchStart = System.currentTimeMillis();
@@ -1539,9 +1577,11 @@ public class AIToolAgent {
                         long slot = nextSlot.getAndAdd(MS_PER_CALL);
                         long waitMs = slot - System.currentTimeMillis();
                         if (waitMs > 0) Thread.sleep(waitMs);
+                        runCurrentTicker = t;
                         String data = DataFetcher.fetchStockDataForTicker(t);
                         if (data != null && !data.isBlank()) prefetchedJson.put(t, data);
                     } catch (Exception ignored) {}
+                    runProgress = fetchedCount.incrementAndGet();
                 }, fetchPool))
                 .collect(Collectors.toList());
             try {
@@ -1625,13 +1665,21 @@ public class AIToolAgent {
                                     " | Entry=$" + String.format("%.2f", d.entryPrice) +
                                     " SL=$" + String.format("%.2f", d.suggestedStopLoss) +
                                     " TP=$" + String.format("%.2f", d.suggestedTakeProfit));
-                                sendDiscord("\u2705 **" + ticker + "** | " + strategy.id
-                                    + " | Score=" + d.totalScore + "/12" + confluenceTag
-                                    + " (V=" + d.volumeScore + " T=" + d.trendScore
-                                    + " M=" + d.momentumScore + " S=" + d.setupScore + ")"
-                                    + " | Entry=$" + String.format("%.2f", d.entryPrice)
-                                    + " SL=$" + String.format("%.2f", d.suggestedStopLoss)
-                                    + " TP=$" + String.format("%.2f", d.suggestedTakeProfit));
+                                if (hasMinWinRate(strategy.id, 65.0)) {
+                                    String agentLabel = (strategy.name != null && !strategy.name.isEmpty())
+                                        ? strategy.name : strategy.id;
+                                    double entryZoneHigh = d.entryPrice * 1.01;
+                                    double cappedSL = d.entryPrice * 0.98; // max $20 risk on $1K position
+                                    double cappedSLActual = Math.max(d.suggestedStopLoss, cappedSL); // use tighter of the two
+                                    sendDiscord("\uD83C\uDFC6 **" + ticker + "** | " + agentLabel + " (`" + strategy.id + "`)"
+                                        + " | Score=" + d.totalScore + "/12" + confluenceTag
+                                        + " (V=" + d.volumeScore + " T=" + d.trendScore
+                                        + " M=" + d.momentumScore + " S=" + d.setupScore + ")"
+                                        + "\n📥 **ENTRY ZONE:** $" + String.format("%.2f", d.entryPrice) + " – $" + String.format("%.2f", entryZoneHigh)
+                                        + "  |  🛑 **SL:** $" + String.format("%.2f", cappedSLActual) + " *(max $20 risk)*"
+                                        + "  |  🎯 **TP:** $" + String.format("%.2f", d.suggestedTakeProfit)
+                                        + "\n⏱ **VALID FOR: 10 min**");
+                                }
                                 addRecommendation(ticker, strategy.id, d.entryPrice,
                                     d.suggestedStopLoss, d.suggestedTakeProfit, d.totalScore);
                                 // If this ticker was previously on the watchlist, promote it
@@ -4390,6 +4438,16 @@ public class AIToolAgent {
         }
     }
 
+    /** Returns true if an agent has at least minWinRatePct win rate AND >= 3 trades. */
+    public static boolean hasMinWinRate(String agentId, double minWinRatePct) {
+        synchronized (LOCK) {
+            if (systemState == null) return false;
+            AgentPerformance perf = systemState.performance.get(agentId);
+            if (perf == null) return false;
+            return perf.totalTrades >= 3 && perf.winRate > minWinRatePct;
+        }
+    }
+
     private static void autoTrackWinners() {
         try {
             // IMPORTANT: Use raw systemState.performance values directly, NOT getAllPerformances()
@@ -4646,13 +4704,21 @@ public class AIToolAgent {
                             logBuySignal(agent.id, ticker, decision.suggestedStopLoss / (1 - 0.03), 
                                 decision.suggestedStopLoss, decision.suggestedTakeProfit);
                             
-                            // Send clean BUY SIGNAL notification to Discord
+                            // Send clean BUY SIGNAL notification to Discord — top agents only
                             double signalEntry = decision.entryPrice > 0 ? decision.entryPrice
                                 : decision.suggestedStopLoss / (1 - 0.03);
-                            sendDiscord("\u2705 **" + ticker + "** | " + agent.id
-                                + " | Entry=$" + String.format("%.2f", signalEntry)
-                                + " SL=$" + String.format("%.2f", decision.suggestedStopLoss)
-                                + " TP=$" + String.format("%.2f", decision.suggestedTakeProfit));
+                            if (hasMinWinRate(agent.id, 65.0)) {
+                                String agentLabel = (agent.name != null && !agent.name.isEmpty())
+                                    ? agent.name : agent.id;
+                                double entryZoneHigh = signalEntry * 1.01;
+                                double cappedSL = signalEntry * 0.98; // max $20 risk on $1K position
+                                double cappedSLActual = Math.max(decision.suggestedStopLoss, cappedSL); // tighter of the two
+                                sendDiscord("\uD83C\uDFC6 **" + ticker + "** | " + agentLabel + " (`" + agent.id + "`)"
+                                    + "\n📥 **ENTRY ZONE:** $" + String.format("%.2f", signalEntry) + " – $" + String.format("%.2f", entryZoneHigh)
+                                    + "  |  🛑 **SL:** $" + String.format("%.2f", cappedSLActual) + " *(max $20 risk)*"
+                                    + "  |  🎯 **TP:** $" + String.format("%.2f", decision.suggestedTakeProfit)
+                                    + "\n⏱ **VALID FOR: 10 min**");
+                            }
                             addRecommendation(ticker, agent.id, signalEntry,
                                 decision.suggestedStopLoss, decision.suggestedTakeProfit, 0);
 
