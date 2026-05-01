@@ -33,8 +33,8 @@
     "ATR" : 32
   },
   "2026-05-01" : {
-    "TIME_SERIES_DAILY" : 23,
-    "GLOBAL_QUOTE" : 8
+    "TIME_SERIES_DAILY" : 27,
+    "GLOBAL_QUOTE" : 9
   },
   "2026-04-20" : {
     "SAR" : 16,
