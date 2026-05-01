@@ -26,7 +26,11 @@ public class AIToolAgent {
     private static final Path RECS_FILE       = Paths.get("newStrategies", "buy-recommendations.json");
     private static final Path SCAN_LOG_FILE  = Paths.get("newStrategies", "scan-detail.log");
     private static final ZoneId NY = ZoneId.of("America/New_York");
+    private static final ZoneId ISRAEL = ZoneId.of("Asia/Jerusalem");
     private static final DateTimeFormatter LOG_TIMESTAMP_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
+    
+    // AlphaPoint AI recommendation: Filter to TOP 2-3 signals per run to reduce noise
+    private static final int MAX_SIGNALS_PER_RUN = 3;
     
     // Discord webhook for notifications
     private static final String DISCORD_WEBHOOK_URL = System.getenv("DAILY_SIM_DISCORD_WEBHOOK_URL");
@@ -175,6 +179,11 @@ public class AIToolAgent {
 
     private static final List<ScanRecommendation> recentRecs = new java.util.concurrent.CopyOnWriteArrayList<>();
     private static final int MAX_RECS = 100;
+    
+    // AlphaPoint AI recommendation: Track signals per run to filter to TOP 2-3
+    private static volatile int signalsSentThisRun = 0;
+    private static volatile int currentRunNumber = 0;
+    private static volatile boolean isScheduledRun = false; // true = scheduled scan, false = manual scan
 
     public static List<ScanRecommendation> getRecentRecommendations() {
         String today = LocalDate.now(NY).toString();
@@ -323,8 +332,11 @@ public class AIToolAgent {
             
             System.out.println("[AIToolAgent] Initialized with " + systemState.agents.size() + " agents");
             
-            // Schedule market open run (9:30 AM ET)
-            scheduleMarketOpenRun();
+            // Schedule strategic scan runs (Israel time - AlphaPoint AI recommendation)
+            // Run 1: 17:15-17:30 (after market open, most important - market calms down)
+            // Run 2: 19:30-20:00 (mid-day - continuation setups, less noise)
+            // Run 3: 21:30-22:00 (before close - best swing trades)
+            scheduleStrategicScanRuns();
             
             // Schedule periodic runs every 60 minutes during NASDAQ market hours (9:30 AM - 4:00 PM ET)
             // Note: Using 60-min interval due to 15-min delay in real-time price data
@@ -402,40 +414,60 @@ public class AIToolAgent {
         }
     }
 
-    private static void scheduleMarketOpenRun() {
-        // Calculate delay until next 9:30 AM ET
-        ZonedDateTime now = ZonedDateTime.now(NY);
-        ZonedDateTime nextMarketOpen = now.withHour(9).withMinute(30).withSecond(0).withNano(0);
-        
-        // If we're past 9:30 today, schedule for tomorrow
-        if (now.isAfter(nextMarketOpen)) {
-            nextMarketOpen = nextMarketOpen.plusDays(1);
-        }
-        
-        // Skip weekends
-        while (nextMarketOpen.getDayOfWeek().getValue() > 5) {
-            nextMarketOpen = nextMarketOpen.plusDays(1);
-        }
-        
-        long delayMinutes = Duration.between(now, nextMarketOpen).toMinutes();
-        
-        System.out.println("[AIToolAgent] Next market open run scheduled in " + delayMinutes + " minutes (" + nextMarketOpen.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) + " ET)");
-        
-        // Schedule the market open run
-        scheduler.schedule(() -> {
+    /**
+     * AlphaPoint AI Strategic Scan Scheduling
+     * Schedules 3 optimal scan windows (Israel time) to avoid market open noise:
+     * - Run 1: 17:15-17:30 (after market open - most important, market calms down)
+     * - Run 2: 19:30-20:00 (mid-day - continuation setups, less noise)
+     * - Run 3: 21:30-22:00 (before close - best swing trades)
+     */
+    private static void scheduleStrategicScanRuns() {
+        scheduleScanRun(17, 15, "Post-Open (Primary)", "🟢 **Primary Scan - Post Market Open**\nMarket has calmed down. Direction starting to clear. Fewer fake moves.\nSelecting TOP 1-2 trades only.");
+        scheduleScanRun(19, 30, "Mid-Day", "🟡 **Mid-Day Scan**\nContinuation & retest setups. Less noise than open.\nAdding if strong signals found.");
+        scheduleScanRun(21, 30, "Pre-Close", "🔵 **Pre-Close Swing Scan**\nBest swing trades for next day entry.\nMore reliable with daily data. Swing only (not intraday).");
+    }
+
+    private static void scheduleScanRun(int hour, int minute, String runName, String discordMessage) {
+        scheduler.scheduleAtFixedRate(() -> {
             try {
-                System.out.println("[AIToolAgent] MARKET OPEN - Starting all agents!");
-                sendDiscord("🔔 **NASDAQ Market Open**\n🤖 AITool starting all " + getAgentCount() + " agents for daily trading simulation...");
+                ZonedDateTime nowIsrael = ZonedDateTime.now(ISRAEL);
+                ZonedDateTime scheduledTime = nowIsrael.withHour(hour).withMinute(minute).withSecond(0).withNano(0);
+                
+                // Only run if we're within the target window (within 15 minutes of scheduled time)
+                long minutesFromScheduled = Duration.between(scheduledTime, nowIsrael).toMinutes();
+                if (minutesFromScheduled < 0 || minutesFromScheduled > 15) {
+                    return;
+                }
+                
+                // Skip weekends
+                DayOfWeek dow = nowIsrael.getDayOfWeek();
+                if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+                    return;
+                }
+                
+                System.out.println("[AIToolAgent] " + runName + " Scan starting at " + nowIsrael.format(DateTimeFormatter.ofPattern("HH:mm")) + " Israel time");
+                sendDiscord(discordMessage + "\n🤖 Running " + getAgentCount() + " agents...");
+                
+                // Mark as scheduled run (for TOP 2-3 filtering)
+                isScheduledRun = true;
                 runAllAgents();
-                // Monitor open positions after market-open scan
                 monitorOpenPositions();
                 
-                // Reschedule for next market open
-                scheduleMarketOpenRun();
             } catch (Exception e) {
-                System.err.println("[AIToolAgent] Market open run error: " + e.getMessage());
+                System.err.println("[AIToolAgent] " + runName + " scan error: " + e.getMessage());
             }
-        }, delayMinutes, TimeUnit.MINUTES);
+        }, computeInitialDelay(hour, minute), 24 * 60, TimeUnit.MINUTES);
+    }
+
+    private static long computeInitialDelay(int targetHour, int targetMinute) {
+        ZonedDateTime nowIsrael = ZonedDateTime.now(ISRAEL);
+        ZonedDateTime target = nowIsrael.withHour(targetHour).withMinute(targetMinute).withSecond(0).withNano(0);
+        
+        if (nowIsrael.isAfter(target)) {
+            target = target.plusDays(1);
+        }
+        
+        return Duration.between(nowIsrael, target).toMinutes();
     }
 
     private static void scheduleEndOfDayCleanup() {
@@ -1499,6 +1531,9 @@ public class AIToolAgent {
             } else {
                 systemState.running = true;
                 systemState.runCount++;
+                // AlphaPoint AI: Reset signal counter for new run
+                signalsSentThisRun = 0;
+                currentRunNumber = systemState.runCount;
             }
         }
         if (alreadyRunning) {
@@ -1579,16 +1614,54 @@ public class AIToolAgent {
                         if (waitMs > 0) Thread.sleep(waitMs);
                         runCurrentTicker = t;
                         String data = DataFetcher.fetchStockDataForTicker(t);
-                        if (data != null && !data.isBlank()) prefetchedJson.put(t, data);
-                    } catch (Exception ignored) {}
-                    runProgress = fetchedCount.incrementAndGet();
+                        if (data != null && !data.isBlank()) {
+                            prefetchedJson.put(t, data);
+                            int progress = fetchedCount.incrementAndGet();
+                            // Log progress every 10 tickers or at completion
+                            if (progress % 10 == 0 || progress == total) {
+                                writeScanLog("[PRE-FETCH] Progress: " + progress + "/" + total + " (" + 
+                                    String.format("%.1f", (progress * 100.0 / total)) + "%) - Latest: " + t);
+                            }
+                        } else {
+                            int progress = fetchedCount.incrementAndGet();
+                            // Log failed fetches
+                            if (progress % 20 == 0) {
+                                writeScanLog("[PRE-FETCH] Progress: " + progress + "/" + total + " - Failed: " + t);
+                            }
+                        }
+                    } catch (Exception e) {
+                        int progress = fetchedCount.incrementAndGet();
+                        writeScanLog("[PRE-FETCH] Error fetching " + t + ": " + e.getMessage());
+                    }
                 }, fetchPool))
                 .collect(Collectors.toList());
+            // Start progress monitor thread
+            Thread progressMonitor = new Thread(() -> {
+                try {
+                    while (!fetchPool.isTerminated()) {
+                        Thread.sleep(30000); // Report every 30 seconds
+                        int current = fetchedCount.get();
+                        double elapsedSec = (System.currentTimeMillis() - prefetchStart) / 1000.0;
+                        double rate = current / elapsedSec * 60; // calls per minute
+                        writeScanLog("[PRE-FETCH] Status: " + current + "/" + total + " (" + 
+                            String.format("%.1f", current * 100.0 / total) + "%) - Rate: " + 
+                            String.format("%.1f", rate) + " calls/min - Elapsed: " + 
+                            String.format("%.1f", elapsedSec / 60) + " min");
+                    }
+                } catch (InterruptedException e) {
+                    // Normal termination
+                }
+            });
+            progressMonitor.setDaemon(true);
+            progressMonitor.start();
+            
             try {
                 CompletableFuture.allOf(fetchFutures.toArray(new CompletableFuture[0]))
                     .get(120, TimeUnit.MINUTES);
+                progressMonitor.interrupt(); // Stop the monitor when done
             } catch (Exception e) {
                 writeScanLog("[PRE-FETCH] Warning: timeout or partial failure — " + e.getMessage());
+                progressMonitor.interrupt();
             }
             fetchPool.shutdownNow();
             long prefetchMs = System.currentTimeMillis() - prefetchStart;
@@ -4604,6 +4677,9 @@ public class AIToolAgent {
             return;
         }
         
+        // Mark as manual run (no TOP 2-3 filtering)
+        isScheduledRun = false;
+        
         selectedAgentsForScan = agentIds;
         
         scheduler.submit(() -> {
@@ -4708,16 +4784,40 @@ public class AIToolAgent {
                             double signalEntry = decision.entryPrice > 0 ? decision.entryPrice
                                 : decision.suggestedStopLoss / (1 - 0.03);
                             if (hasMinWinRate(agent.id, 65.0)) {
-                                String agentLabel = (agent.name != null && !agent.name.isEmpty())
-                                    ? agent.name : agent.id;
-                                double entryZoneHigh = signalEntry * 1.01;
-                                double cappedSL = signalEntry * 0.98; // max $20 risk on $1K position
-                                double cappedSLActual = Math.max(decision.suggestedStopLoss, cappedSL); // tighter of the two
-                                sendDiscord("\uD83C\uDFC6 **" + ticker + "** | " + agentLabel + " (`" + agent.id + "`)"
-                                    + "\n📥 **ENTRY ZONE:** $" + String.format("%.2f", signalEntry) + " – $" + String.format("%.2f", entryZoneHigh)
-                                    + "  |  🛑 **SL:** $" + String.format("%.2f", cappedSLActual) + " *(max $20 risk)*"
-                                    + "  |  🎯 **TP:** $" + String.format("%.2f", decision.suggestedTakeProfit)
-                                    + "\n⏱ **VALID FOR: 10 min**");
+                                // AlphaPoint AI: Filter to TOP 2-3 signals per run ONLY for scheduled runs
+                                boolean shouldFilter = isScheduledRun && signalsSentThisRun >= MAX_SIGNALS_PER_RUN;
+                                
+                                if (shouldFilter) {
+                                    System.out.println("[AIToolAgent] Signal filtered: Already sent " + signalsSentThisRun + 
+                                        " signals this run (MAX=" + MAX_SIGNALS_PER_RUN + ")");
+                                } else {
+                                    String agentLabel = (agent.name != null && !agent.name.isEmpty())
+                                        ? agent.name : agent.id;
+                                    double entryZoneHigh = signalEntry * 1.01;
+                                    double cappedSL = signalEntry * 0.98; // max $20 risk on $1K position
+                                    double cappedSLActual = Math.max(decision.suggestedStopLoss, cappedSL); // tighter of the two
+                                    
+                                    // AlphaPoint AI recommendation: Add confirmation guidance
+                                    String confirmationAdvice = getConfirmationAdvice(agent.strategyType);
+                                    
+                                    // Visual indicator for run type
+                                    String runTypeIndicator = isScheduledRun ? "🔄 SCHEDULED" : "👆 MANUAL";
+                                    String signalCountInfo = isScheduledRun 
+                                        ? "\n\n📊 *Signal " + (signalsSentThisRun + 1) + "/" + MAX_SIGNALS_PER_RUN + " this run*"
+                                        : "\n\n📊 *Manual scan - all signals shown*";
+                                    
+                                    sendDiscord("\uD83C\uDFC6 **" + ticker + "** | " + agentLabel + " (`" + agent.id + "`) " + runTypeIndicator
+                                        + "\n📥 **ENTRY ZONE:** $" + String.format("%.2f", signalEntry) + " – $" + String.format("%.2f", entryZoneHigh)
+                                        + "  |  🛑 **SL:** $" + String.format("%.2f", cappedSLActual) + " *(max $20 risk)*"
+                                        + "  |  🎯 **TP:** $" + String.format("%.2f", decision.suggestedTakeProfit)
+                                        + "\n⏱ **VALID FOR: 10 min**"
+                                        + "\n\n💡 **WAIT FOR CONFIRMATION:** " + confirmationAdvice
+                                        + signalCountInfo);
+                                    
+                                    if (isScheduledRun) {
+                                        signalsSentThisRun++;
+                                    }
+                                }
                             }
                             addRecommendation(ticker, agent.id, signalEntry,
                                 decision.suggestedStopLoss, decision.suggestedTakeProfit, 0);
@@ -4809,7 +4909,7 @@ public class AIToolAgent {
         return sendDiscord(text);
     }
 
-    // Discord notification — uses curl via ProcessBuilder to bypass JVM network restrictions
+    // Discord notification — uses Java's built-in HttpClient for better reliability
     private static boolean sendDiscord(String text) {
         try {
             if (DISCORD_WEBHOOK_URL == null || DISCORD_WEBHOOK_URL.isBlank()) {
@@ -4822,25 +4922,34 @@ public class AIToolAgent {
             String preview = text.length() > 60 ? text.substring(0, 60).replace('\n', ' ') + "..." : text.replace('\n', ' ');
             String jsonBody = "{\"content\": " + escapeJsonString(text) + "}";
 
-            ProcessBuilder pb = new ProcessBuilder(
-                "curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
-                "-X", "POST", DISCORD_WEBHOOK_URL,
-                "-H", "Content-Type: application/json",
-                "-d", jsonBody
-            );
-            pb.redirectErrorStream(true);
-            Process proc = pb.start();
-            String statusCode = new String(proc.getInputStream().readAllBytes()).trim();
-            proc.waitFor();
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(DISCORD_WEBHOOK_URL))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                .timeout(java.time.Duration.ofSeconds(30))
+                .build();
 
-            boolean ok = "200".equals(statusCode) || "204".equals(statusCode);
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            int statusCode = response.statusCode();
+            
+            boolean ok = statusCode == 200 || statusCode == 204;
             System.out.println("[AIToolAgent][Discord] Sent notification, status: " + statusCode);
             if (ok) {
                 writeScanLog("[DISCORD] ✅ Sent (HTTP " + statusCode + "): " + preview);
             } else {
                 writeScanLog("[DISCORD] ❌ Failed (HTTP " + statusCode + "): " + preview);
+                writeScanLog("[DISCORD] Response: " + response.body());
             }
             return ok;
+        } catch (java.net.ConnectException e) {
+            System.err.println("[AIToolAgent][Discord] Connection failed: " + e.getMessage());
+            writeScanLog("[DISCORD] ❌ Connection failed: " + e.getMessage());
+            return false;
+        } catch (java.net.SocketTimeoutException e) {
+            System.err.println("[AIToolAgent][Discord] Request timed out: " + e.getMessage());
+            writeScanLog("[DISCORD] ❌ Timeout: " + e.getMessage());
+            return false;
         } catch (Exception e) {
             System.err.println("[AIToolAgent][Discord] Failed to send: " + e.getMessage());
             writeScanLog("[DISCORD] ❌ Exception: " + e.getMessage());
@@ -4865,5 +4974,31 @@ public class AIToolAgent {
         }
         sb.append("\"");
         return sb.toString();
+    }
+
+    /**
+     * AlphaPoint AI recommendation: Provide confirmation guidance based on strategy type
+     * Instead of immediate entry, wait for small confirmation to avoid fake moves
+     */
+    private static String getConfirmationAdvice(String strategyType) {
+        if (strategyType == null) {
+            return "Wait for price to stabilize before entering";
+        }
+        
+        switch (strategyType.toUpperCase()) {
+            case "MOMENTUM_BREAKOUT":
+            case "BREAKOUT":
+                return "Wait for next candle to close ABOVE breakout level before entering";
+            case "PULLBACK":
+            case "PULLBACK_MA20":
+                return "Wait for small pullback to complete, then bounce confirmation";
+            case "TREND_CONTINUATION":
+            case "TREND":
+                return "Wait for small pullback within the trend, then continuation signal";
+            case "RETEST":
+                return "Wait for level to hold (support/resistance) with bounce confirmation";
+            default:
+                return "Wait for price action confirmation before entering (don't chase)";
+        }
     }
 }

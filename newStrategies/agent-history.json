@@ -1,5 +1,5 @@
 {
-  "lastUpdated" : "2026-04-24T15:44:57.876764-04:00[America/New_York]",
+  "lastUpdated" : "2026-04-30T11:51:48.7290351-04:00[America/New_York]",
   "tradeHistory" : {
     "I5_VWAP_RETEST" : [ {
       "id" : "8d4a37e7",
@@ -50,12 +50,23 @@
       "ticker" : "TFX",
       "action" : "BUY",
       "entryPrice" : 138.81,
-      "exitPrice" : 136.78,
+      "exitPrice" : 133.3,
+      "profitLoss" : -550.9999999999991,
+      "profitLossPct" : -3.9694546502413304,
+      "status" : "CLOSED_LOSS",
+      "entryTime" : "2026-04-23T09:35:17.157807-04:00[America/New_York]",
+      "exitTime" : "2026-04-30T08:40:02.3117647-04:00[America/New_York]"
+    }, {
+      "id" : "e86aa36b",
+      "ticker" : "SBUX",
+      "action" : "BUY",
+      "entryPrice" : 105.5,
+      "exitPrice" : 0.0,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
-      "entryTime" : "2026-04-23T09:35:17.157807-04:00[America/New_York]",
-      "exitTime" : "2026-04-23T16:29:35.535865-04:00[America/New_York]"
+      "entryTime" : "2026-04-30T09:34:22.2737154-04:00[America/New_York]",
+      "exitTime" : null
     } ],
     "M5_MA_CROSS_V2" : [ ],
     "M4_PULLBACK" : [ ],
@@ -120,12 +131,12 @@
       "ticker" : "UNM",
       "action" : "BUY",
       "entryPrice" : 77.11,
-      "exitPrice" : 77.11,
+      "exitPrice" : 77.145,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "CLOSED_LOSS",
+      "status" : "OPEN",
       "entryTime" : "2026-04-22T12:20:07.992808-04:00[America/New_York]",
-      "exitTime" : "2026-04-24T10:30:13.855858-04:00[America/New_York]"
+      "exitTime" : "2026-04-27T16:30:26.7281394-04:00[America/New_York]"
     } ],
     "I6_AGGRESSIVE_INTRADAY" : [ {
       "id" : "d70efaf5",
@@ -255,23 +266,23 @@
       "ticker" : "TFX",
       "action" : "BUY",
       "entryPrice" : 134.1928,
-      "exitPrice" : 136.78,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 133.3,
+      "profitLoss" : -89.2799999999994,
+      "profitLossPct" : -0.6653114026982029,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-04-22T13:32:41.991902-04:00[America/New_York]",
-      "exitTime" : "2026-04-23T16:30:03.449248-04:00[America/New_York]"
+      "exitTime" : "2026-04-30T08:40:02.3261472-04:00[America/New_York]"
     }, {
       "id" : "3476990f",
       "ticker" : "MAS",
       "action" : "BUY",
       "entryPrice" : 75.87,
-      "exitPrice" : 75.42,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 71.26,
+      "profitLoss" : -460.99999999999994,
+      "profitLossPct" : -6.076182944510346,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-04-22T13:33:23.54929-04:00[America/New_York]",
-      "exitTime" : "2026-04-23T16:30:17.713976-04:00[America/New_York]"
+      "exitTime" : "2026-04-30T08:40:02.3414782-04:00[America/New_York]"
     }, {
       "id" : "af1fcdf3",
       "ticker" : "TXN",
@@ -345,12 +356,56 @@
       "ticker" : "TFX",
       "action" : "BUY",
       "entryPrice" : 134.48,
-      "exitPrice" : 136.78,
+      "exitPrice" : 133.3,
+      "profitLoss" : -117.99999999999784,
+      "profitLossPct" : -0.8774538964901685,
+      "status" : "CLOSED_LOSS",
+      "entryTime" : "2026-04-22T14:01:17.403408-04:00[America/New_York]",
+      "exitTime" : "2026-04-30T08:40:02.3705897-04:00[America/New_York]"
+    }, {
+      "id" : "dfe44dd1",
+      "ticker" : "TER",
+      "action" : "BUY",
+      "entryPrice" : 402.0,
+      "exitPrice" : 367.1518877611747,
+      "profitLoss" : -3484.8112238825306,
+      "profitLossPct" : -8.66868463652371,
+      "status" : "CLOSED_LOSS",
+      "entryTime" : "2026-04-27T16:51:25.8605247-04:00[America/New_York]",
+      "exitTime" : "2026-04-30T10:53:46.3419244-04:00[America/New_York]"
+    }, {
+      "id" : "333aaacb",
+      "ticker" : "NXPI",
+      "action" : "BUY",
+      "entryPrice" : 236.87,
+      "exitPrice" : 267.72772680431166,
+      "profitLoss" : 3085.772680431165,
+      "profitLossPct" : 13.027283659522798,
+      "status" : "CLOSED_WIN",
+      "entryTime" : "2026-04-27T16:52:02.7823286-04:00[America/New_York]",
+      "exitTime" : "2026-04-30T10:54:00.5675238-04:00[America/New_York]"
+    }, {
+      "id" : "1425555a",
+      "ticker" : "KLAC",
+      "action" : "BUY",
+      "entryPrice" : 1900.0,
+      "exitPrice" : 1768.172988425405,
+      "profitLoss" : -13182.701157459496,
+      "profitLossPct" : -6.938263767083945,
+      "status" : "CLOSED_LOSS",
+      "entryTime" : "2026-04-27T16:54:55.5565415-04:00[America/New_York]",
+      "exitTime" : "2026-04-30T10:54:15.8758643-04:00[America/New_York]"
+    }, {
+      "id" : "4b81858c",
+      "ticker" : "PSA",
+      "action" : "BUY",
+      "entryPrice" : 306.79,
+      "exitPrice" : 0.0,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
-      "entryTime" : "2026-04-22T14:01:17.403408-04:00[America/New_York]",
-      "exitTime" : "2026-04-23T16:30:31.627495-04:00[America/New_York]"
+      "entryTime" : "2026-04-27T16:57:17.221265-04:00[America/New_York]",
+      "exitTime" : null
     } ],
     "I2_VWAP_PULLBACK" : [ {
       "id" : "47dd4c35",
@@ -430,6 +485,28 @@
       "status" : "CLOSED_LOSS",
       "entryTime" : "2026-04-14T06:47:37.463374-04:00[America/New_York]",
       "exitTime" : "2026-04-22T11:55:48.95848-04:00[America/New_York]"
+    }, {
+      "id" : "e213a1ed",
+      "ticker" : "CDNS",
+      "action" : "BUY",
+      "entryPrice" : 336.54,
+      "exitPrice" : 0.0,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-04-27T16:39:26.7423073-04:00[America/New_York]",
+      "exitTime" : null
+    }, {
+      "id" : "9ce2b9ec",
+      "ticker" : "SNPS",
+      "action" : "BUY",
+      "entryPrice" : 498.54,
+      "exitPrice" : 0.0,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-04-27T16:40:30.2907282-04:00[America/New_York]",
+      "exitTime" : null
     } ],
     "I4_VOLUME_SURGE" : [ {
       "id" : "75187796",
@@ -459,12 +536,12 @@
       "ticker" : "TFX",
       "action" : "BUY",
       "entryPrice" : 135.9977,
-      "exitPrice" : 136.78,
+      "exitPrice" : 134.93,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
       "entryTime" : "2026-04-22T12:20:07.994211-04:00[America/New_York]",
-      "exitTime" : "2026-04-23T16:30:45.559889-04:00[America/New_York]"
+      "exitTime" : "2026-04-27T16:31:46.4780325-04:00[America/New_York]"
     } ]
   }
 }

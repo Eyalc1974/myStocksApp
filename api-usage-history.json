@@ -32,6 +32,10 @@
     "GLOBAL_QUOTE" : 48,
     "ATR" : 32
   },
+  "2026-05-01" : {
+    "TIME_SERIES_DAILY" : 23,
+    "GLOBAL_QUOTE" : 8
+  },
   "2026-04-20" : {
     "SAR" : 16,
     "OVERVIEW" : 520,
@@ -62,17 +66,13 @@
     "GLOBAL_QUOTE" : 220,
     "ATR" : 23
   },
-  "2026-03-27" : {
-    "TEMA" : 4,
-    "OBV" : 4,
-    "AD" : 4,
-    "SAR" : 4,
-    "OVERVIEW" : 4,
-    "TIME_SERIES_DAILY" : 97,
-    "NEWS_SENTIMENT" : 4,
-    "GLOBAL_QUOTE" : 6,
-    "BBANDS" : 4,
-    "ATR" : 4
+  "2026-04-30" : {
+    "OVERVIEW" : 168,
+    "CASH_FLOW" : 316,
+    "INCOME_STATEMENT" : 162,
+    "BALANCE_SHEET" : 162,
+    "TIME_SERIES_DAILY" : 1487,
+    "GLOBAL_QUOTE" : 23
   },
   "2026-04-17" : {
     "SAR" : 40,
@@ -88,6 +88,10 @@
     "TIME_SERIES_DAILY" : 3585,
     "GLOBAL_QUOTE" : 371,
     "ATR" : 40
+  },
+  "2026-04-28" : {
+    "TIME_SERIES_DAILY" : 321,
+    "GLOBAL_QUOTE" : 12
   },
   "2026-04-18" : {
     "TIME_SERIES_DAILY" : 104,
@@ -111,21 +115,6 @@
     "GLOBAL_QUOTE" : 167,
     "ATR" : 26
   },
-  "2026-03-26" : {
-    "SAR" : 22,
-    "OVERVIEW" : 517,
-    "CASH_FLOW" : 989,
-    "NEWS_SENTIMENT" : 21,
-    "BBANDS" : 21,
-    "OBV" : 21,
-    "TEMA" : 22,
-    "AD" : 21,
-    "INCOME_STATEMENT" : 563,
-    "BALANCE_SHEET" : 496,
-    "TIME_SERIES_DAILY" : 2884,
-    "GLOBAL_QUOTE" : 427,
-    "ATR" : 22
-  },
   "2026-04-16" : {
     "SAR" : 20,
     "OVERVIEW" : 467,
@@ -141,6 +130,10 @@
     "GLOBAL_QUOTE" : 375,
     "ATR" : 20
   },
+  "2026-04-27" : {
+    "TIME_SERIES_DAILY" : 906,
+    "GLOBAL_QUOTE" : 12
+  },
   "2026-04-13" : {
     "TEMA" : 16,
     "OBV" : 16,
@@ -154,19 +147,7 @@
     "ATR" : 16
   },
   "2026-04-24" : {
-    "SAR" : 24,
-    "OVERVIEW" : 46,
-    "CASH_FLOW" : 44,
-    "NEWS_SENTIMENT" : 24,
-    "BBANDS" : 24,
-    "TEMA" : 24,
-    "OBV" : 24,
-    "AD" : 24,
-    "INCOME_STATEMENT" : 22,
-    "BALANCE_SHEET" : 22,
-    "TIME_SERIES_DAILY" : 1645,
-    "GLOBAL_QUOTE" : 31,
-    "ATR" : 24
+    "TIME_SERIES_DAILY" : 9
   },
   "2026-04-14" : {
     "SAR" : 16,
@@ -182,12 +163,5 @@
     "TIME_SERIES_DAILY" : 6378,
     "GLOBAL_QUOTE" : 198,
     "ATR" : 16
-  },
-  "2026-04-25" : {
-    "TIME_SERIES_DAILY" : 5,
-    "OVERVIEW" : 1,
-    "CASH_FLOW" : 2,
-    "INCOME_STATEMENT" : 1,
-    "BALANCE_SHEET" : 1
   }
 }

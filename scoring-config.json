@@ -654,11 +654,11 @@
       "agentId" : "MASTER_5_PULLBACK_MA20",
       "agentName" : "Pullback to MA20 (Master)",
       "type" : "MASTER",
-      "cumulativeWins" : 8,
-      "cumulativeTrades" : 11,
-      "cumulativeProfitLoss" : 5406.876048542561,
+      "cumulativeWins" : 16,
+      "cumulativeTrades" : 21,
+      "cumulativeProfitLoss" : 10813.752097085122,
       "firstSavedDate" : "2026-04-23",
-      "lastUpdatedDate" : "2026-04-24",
+      "lastUpdatedDate" : "2026-04-30",
       "notifyOnTrade" : true,
       "dailySnapshots" : [ {
         "date" : "2026-04-23",
@@ -671,6 +671,18 @@
         "wins" : 4,
         "trades" : 6,
         "winRate" : 66.66666666666667,
+        "profitLoss" : 2703.4380242712805
+      }, {
+        "date" : "2026-04-27",
+        "wins" : 4,
+        "trades" : 5,
+        "winRate" : 80.0,
+        "profitLoss" : 2703.4380242712805
+      }, {
+        "date" : "2026-04-30",
+        "wins" : 4,
+        "trades" : 5,
+        "winRate" : 80.0,
         "profitLoss" : 2703.4380242712805
       } ]
     }

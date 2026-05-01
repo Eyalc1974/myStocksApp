@@ -1,8 +1,11 @@
 --- 🎯 Daily Nasdaq Top 5 (GREEN) candidates ---
-שגיאה בניתוח SEGA: חסר נתונים לחישובים מורכבים עבור SEGA
+שגיאה בניתוח ADS: חסר נתונים לחישובים מורכבים עבור ADS
 Alpha Vantage: Invalid API call. Please retry or visit the documentation (https://www.alphavantage.co/documentation/) for TIME_SERIES_DAILY_ADJUSTED.
-שגיאה בניתוח AFFC: חסר נתונים לחישובים מורכבים עבור AFFC
-Alpha Vantage: Invalid API call. Please retry or visit the documentation (https://www.alphavantage.co/documentation/) for TIME_SERIES_DAILY_ADJUSTED.
+שגיאה בניתוח AMX: חסר נתונים לחישובים מורכבים עבור AMX
+[daily-green] started (thread will run in background)
+[ScoringConfig] Loaded config: activeMode=LONG_TERM_INVESTOR
+[ScoringConfig] Mode thresholds: green=60, buy=60, strongBuy=80
+[AIToolAgent][Discord] Sent notification, status: 204
 
 | TICKER | PRICE    | טכני (כניסה)    | פונדמנטלי         | ADX (חוזק) |
 |--------|----------|-----------------|-------------------|-----------|
