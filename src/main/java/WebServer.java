@@ -3323,6 +3323,68 @@ public class WebServer {
             }
         });
 
+        // ── Success Recipe Engine endpoints ──
+        server.createContext("/api/recipes/analyze", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET") && !ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    respondJson(ex, Map.of("error", "GET/POST only"), 405); return;
+                }
+                try {
+                    RecipeAnalytics.RecipeBook book = RecipeAnalytics.analyze();
+                    respondJson(ex, book, 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage() != null ? e.getMessage() : "Unknown error"), 500);
+                }
+            }
+        });
+
+        server.createContext("/api/recipes", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                try {
+                    java.nio.file.Path p = java.nio.file.Paths.get("newStrategies", "success-recipes.json");
+                    if (!java.nio.file.Files.exists(p)) {
+                        respondJson(ex, Map.of("message", "No recipes yet. Run /api/recipes/analyze first."), 200); return;
+                    }
+                    String json = java.nio.file.Files.readString(p);
+                    respondJson(ex, JSON.readTree(json), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage() != null ? e.getMessage() : "Unknown error"), 500);
+                }
+            }
+        });
+
+        server.createContext("/api/recipes/recommend", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                try {
+                    java.nio.file.Path p = java.nio.file.Paths.get("newStrategies", "success-recipes.json");
+                    if (!java.nio.file.Files.exists(p)) {
+                        respondJson(ex, Map.of("message", "No recipes yet. Run /api/recipes/analyze first."), 200); return;
+                    }
+                    RecipeAnalytics.RecipeBook book = JSON.readValue(p.toFile(), RecipeAnalytics.RecipeBook.class);
+                    List<Map<String,Object>> recs = new ArrayList<>();
+                    for (RecipeAnalytics.RecommendedAgent ra : book.recommendedAgents) {
+                        Map<String,Object> m = new LinkedHashMap<>();
+                        m.put("id", ra.id);
+                        m.put("name", ra.name);
+                        m.put("setupType", ra.setupType);
+                        m.put("winCount", ra.winCount);
+                        m.put("lossCount", ra.lossCount);
+                        m.put("expectedWinRate", ra.expectedWinRate);
+                        m.put("expectedEdgePct", ra.expectedEdgePct);
+                        m.put("entryFilters", ra.entryFilters);
+                        m.put("riskManagement", ra.riskManagement);
+                        m.put("insightsHebrew", ra.insightsHebrew);
+                        recs.add(m);
+                    }
+                    respondJson(ex, Map.of("recommendedAgents", recs, "lastUpdated", book.lastUpdated), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", e.getMessage() != null ? e.getMessage() : "Unknown error"), 500);
+                }
+            }
+        });
+
         server.createContext("/nasdaq-daily-top-tracking-add", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondHtml(ex, htmlPage(""), 200); return; }
@@ -6993,8 +7055,8 @@ public class WebServer {
                 sb.append("<div style='font-weight:600;color:#a78bfa;margin-bottom:8px;'>🚀 Start Full Scan with Selected Agents (").append(sectorTickerCount).append(" tickers across 11 sectors)</div>");
                 sb.append("<div style='font-size:11px;color:#6b7280;margin-bottom:8px;'>Technology · Financials · Healthcare · Energy · Industrials · Consumer Disc. · Consumer Staples · Utilities · Materials · Real Estate · Communication Services</div>");
                 
-                // Pinned master strategies always shown at the bottom (MASTER_8 + MASTER_7)
-                java.util.Set<String> PINNED_MASTERS = new java.util.LinkedHashSet<>(java.util.Arrays.asList("MASTER_8_STRONG_TREND","MASTER_7_VIX_MARKET_FILTER"));
+                // Pinned master strategies always shown at the bottom (only active trading masters)
+                java.util.Set<String> PINNED_MASTERS = new java.util.LinkedHashSet<>(java.util.Arrays.asList("MASTER_5_PULLBACK_MA20","MASTER_6_VOLUME_BREAKOUT","MASTER_8_STRONG_TREND"));
                 // Top agents (≥70% win rate AND ≥3 trades) — these get pre-checked
                 java.util.Set<String> topAgentIds = new java.util.HashSet<>();
                 for (AIToolAgent.AgentPerformance tp : AIToolAgent.getTop5Agents()) topAgentIds.add(tp.agentId);
@@ -7015,7 +7077,7 @@ public class WebServer {
                 for (AIToolAgent.AgentPerformance p : allAgentPerfs) {
                     if (PINNED_MASTERS.contains(p.agentId)) continue; // shown separately below
                     AIToolAgent.AgentConfig pCfg = AIToolAgent.getAgentConfig(p.agentId);
-                    if (pCfg != null && pCfg.masterStrategy) continue; // master strategies pinned below
+                    if (pCfg == null || pCfg.disabled || "MOMENTUM".equals(pCfg.type) || pCfg.masterStrategy) continue; // skip disabled / momentum / master agents
                     boolean isTopAgent = topAgentIds.contains(p.agentId);
                     String bgColor = isTopAgent ? "#1a2e1a" : (agentIdx % 2 == 0 ? "#2d2a5e" : "#1e1b4b");
                     String border = isTopAgent ? "border:1px solid #22c55e;" : "border:1px solid transparent;";
@@ -7047,6 +7109,7 @@ public class WebServer {
                 sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:8px;margin-bottom:4px;'>📌 Pinned Master Strategies:</div>");
                 for (String masterId : PINNED_MASTERS) {
                     AIToolAgent.AgentConfig masterCfg = AIToolAgent.getAgentConfig(masterId);
+                    if (masterCfg == null || masterCfg.disabled) continue; // skip missing / disabled pinned masters
                     AIToolAgent.AgentPerformance masterPerf = AIToolAgent.getAgentPerformance(masterId);
                     String masterName = masterCfg != null ? masterCfg.name : masterId;
                     String masterType = masterCfg != null ? (masterCfg.strategyType != null ? masterCfg.strategyType : masterCfg.type) : "MASTER";

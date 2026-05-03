@@ -43,7 +43,7 @@ public class AIToolAgent {
     private static final int CONFLUENCE_SCORE_THRESHOLD = 7;
     private static final int CONFLUENCE_BONUS = 2;
     private static final int MAX_TRADES_PER_SCAN       = 5;
-    private static final int MAX_OPEN_POSITIONS_TOTAL  = 5;   // global cap: max open trades across all agents
+    private static final int MAX_OPEN_POSITIONS_TOTAL  = 8;   // global cap: max open trades across all agents (increased for faster edge discovery)
     private static final int MAX_OPEN_PER_SECTOR        = 2;   // max simultaneous positions in the same sector
     private static final double MIN_STOP_LOSS_PCT       = 3.0; // minimum stop-loss distance (%)
     private static final double RISK_PER_TRADE = 500.0; // $ risk per trade for position sizing
@@ -55,8 +55,9 @@ public class AIToolAgent {
     }
     
     // Number of random stocks each agent analyzes per run
-    // Note: Alpha Vantage free tier = 5 calls/minute, so keep this low
-    private static final int STOCKS_PER_AGENT_RUN = 5;
+    // Increased to 12 for faster edge discovery (more candidates = more signals = faster data collection)
+    // Note: Alpha Vantage free tier = 5 calls/minute; full scan = ~16 agents x 12 stocks = 192 calls (~40 min)
+    private static final int STOCKS_PER_AGENT_RUN = 12;
     
     // Track which agents we've already notified about (to avoid spam)
     private static final Set<String> notifiedWinningAgents = ConcurrentHashMap.newKeySet();
@@ -64,6 +65,19 @@ public class AIToolAgent {
     private static final Object LOCK = new Object();
     private static volatile AgentSystemState systemState = null;
     private static volatile boolean initialized = false;
+
+    private static double round2(double v) { return Math.round(v * 100.0) / 100.0; }
+
+    /** Normalize strategyType into broad setupType for recipe analysis. */
+    private static String deriveSetupType(String strategyType) {
+        if (strategyType == null) return "UNKNOWN";
+        return switch (strategyType) {
+            case "MOMENTUM_BREAKOUT", "VOLUME_BREAKOUT", "WEEK52_HIGH_MOMENTUM" -> "BREAKOUT";
+            case "PULLBACK", "PULLBACK_MA20" -> "PULLBACK";
+            case "TREND_CONTINUATION", "STRONG_TREND" -> "TREND";
+            default -> "UNKNOWN";
+        };
+    }
 
     // Market regime state — updated by checkMarketRegime() on every scan and every 30-min standalone check
     static volatile RegimeLevel lastKnownRegime    = RegimeLevel.HEALTHY;
@@ -160,7 +174,10 @@ public class AIToolAgent {
         public int entrySetupScore;
         public int entryConfluenceCount; // how many strategies agreed at entry
         public String strategyType;      // MOMENTUM_BREAKOUT | PULLBACK | TREND_CONTINUATION
+        public String setupType;         // BREAKOUT | PULLBACK | TREND — normalized setup classification
         public String sector;            // sector label (TECHNOLOGY, FINANCIALS, etc.)
+        // Full snapshot of market conditions at entry — used by SuccessRecipeEngine to find winning patterns
+        public java.util.Map<String, Object> entrySnapshot = new java.util.HashMap<>();
     }
 
     /** A single BUY recommendation captured during a scan (mirrors the Discord message). */
@@ -521,7 +538,7 @@ public class AIToolAgent {
                 String agentId = entry.getKey();
                 if (filterAgentId != null && !filterAgentId.isBlank() && !filterAgentId.equals(agentId)) continue;
                 AgentConfig agentCfg = systemState.agents.get(agentId);
-                int maxHold = agentCfg != null ? (int) getDoubleRisk(agentCfg, "maxHoldDays", 7.0) : 7;
+                int maxHold = agentCfg != null ? (int) getDoubleRisk(agentCfg, "maxHoldDays", 5.0) : 5;
                 for (Trade trade : entry.getValue()) {
                     if (!"OPEN".equals(trade.status)) continue;
                     int holdDays = calcHoldDays(trade.entryTime);
@@ -574,7 +591,7 @@ public class AIToolAgent {
             for (Map.Entry<String, List<Trade>> entry : systemState.tradeHistory.entrySet()) {
                 String agentId = entry.getKey();
                 AgentConfig agentCfg = systemState.agents.get(agentId);
-                int maxHold = agentCfg != null ? (int) getDoubleRisk(agentCfg, "maxHoldDays", 7.0) : 7;
+                int maxHold = agentCfg != null ? (int) getDoubleRisk(agentCfg, "maxHoldDays", 5.0) : 5;
                 for (Trade trade : entry.getValue()) {
                     if (!"OPEN".equals(trade.status)) continue;
                     int holdDays = calcHoldDays(trade.entryTime);
@@ -3792,14 +3809,70 @@ public class AIToolAgent {
             trade.entrySetupScore     = decision.setupScore;
             trade.entryConfluenceCount = decision.confluenceCount;
             trade.strategyType        = agent.strategyType;
-            
+            trade.setupType           = deriveSetupType(agent.strategyType);
+
             // P/L is 0 until position is closed
             trade.profitLoss = 0;
             trade.profitLossPct = 0;
-            
-            System.out.println("[AIToolAgent] OPEN POSITION: " + ticker + " Entry=$" + String.format("%.2f", entryPrice) + 
+
+            // ── SUCCESS RECIPE: capture full market snapshot at entry ──
+            try {
+                DataFetcher.setTicker(ticker);
+                String snapJson = DataFetcher.fetchStockData();
+                if (snapJson != null && !snapJson.isBlank()) {
+                    IndicatorData snap = computeIndicators(ticker, snapJson);
+                    if (snap != null && snap.valid) {
+                        java.util.Map<String, Object> m = trade.entrySnapshot;
+                        m.put("currentPrice", snap.currentPrice);
+                        m.put("prevClose", snap.prevClose);
+                        m.put("todayChangePct", round2(snap.todayChangePct));
+                        m.put("sma20", snap.sma20);
+                        m.put("sma50", snap.sma50);
+                        m.put("sma200", snap.sma200);
+                        m.put("rsi", round2(snap.rsi));
+                        m.put("cci", round2(snap.cci));
+                        m.put("rvol", round2(snap.rvol));
+                        m.put("vwapPct", round2(snap.vwapPct));
+                        m.put("momentum20d", round2(snap.momentum20d));
+                        m.put("week52High", snap.week52High);
+                        m.put("pctFromWeek52High", round2(snap.pctFromWeek52High));
+                        m.put("resistance30d", snap.resistance30d);
+                        m.put("atrPct", round2(snap.atrPct));
+                        m.put("atr", round2(snap.atr));
+                        m.put("prevHigh", snap.prevHigh);
+                        m.put("high20d", snap.high20d);
+                        m.put("priceAboveSMA20", snap.priceAboveSMA20);
+                        m.put("priceAboveSMA50", snap.priceAboveSMA50);
+                        m.put("priceAboveSMA200", snap.priceAboveSMA200);
+                        m.put("maCrossoverUp", snap.maCrossoverUp);
+                        m.put("distSMA20", round2(decision.diagDistSMA20));
+                        m.put("distSMA50", round2(decision.diagDistSMA50));
+                        m.put("diagRsi", round2(decision.diagRsi));
+                        m.put("diagRvol", round2(decision.diagRvol));
+                        m.put("entryScore", decision.totalScore);
+                        m.put("volumeScore", decision.volumeScore);
+                        m.put("trendScore", decision.trendScore);
+                        m.put("momentumScore", decision.momentumScore);
+                        m.put("setupScore", decision.setupScore);
+                        m.put("confluenceCount", decision.confluenceCount);
+                        m.put("agentId", agent.id);
+                        m.put("strategyType", agent.strategyType);
+                        // Also snapshot the active filter thresholds so we know what "recipe" was in effect
+                        if (agent.entryFilters != null) {
+                            agent.entryFilters.forEach((k, v) -> m.put("filter_" + k, v));
+                        }
+                        if (agent.riskManagement != null) {
+                            agent.riskManagement.forEach((k, v) -> m.put("risk_" + k, v));
+                        }
+                    }
+                }
+            } catch (Exception snapEx) {
+                System.err.println("[AIToolAgent] Snapshot error for " + ticker + ": " + snapEx.getMessage());
+            }
+
+            System.out.println("[AIToolAgent] OPEN POSITION: " + ticker + " Entry=$" + String.format("%.2f", entryPrice) +
                 " SL=$" + String.format("%.2f", trade.stopLoss) + " TP=$" + String.format("%.2f", trade.takeProfit));
-            
+
             return trade;
         } catch (Exception e) {
             return null;
@@ -4764,7 +4837,7 @@ public class AIToolAgent {
             // Run each agent against all tickers
             for (AgentPerformance perfInfo : agentsToRun) {
                 AgentConfig agent = systemState.agents.get(perfInfo.agentId);
-                if (agent == null) continue;
+                if (agent == null || agent.disabled) continue;
                 
                 System.out.println("[AIToolAgent] Full scan with agent: " + agent.id);
                 

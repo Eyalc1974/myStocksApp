@@ -17,6 +17,17 @@
     "GLOBAL_QUOTE" : 109,
     "ATR" : 28
   },
+  "2026-05-02" : {
+    "TIME_SERIES_DAILY" : 126,
+    "NEWS_SENTIMENT" : 2,
+    "OVERVIEW" : 14,
+    "GLOBAL_QUOTE" : 2,
+    "EARNINGS" : 1,
+    "CASH_FLOW" : 19,
+    "INCOME_STATEMENT" : 9,
+    "EARNINGS_ESTIMATES" : 1,
+    "BALANCE_SHEET" : 9
+  },
   "2026-04-23" : {
     "SAR" : 32,
     "OVERVIEW" : 235,
@@ -33,8 +44,12 @@
     "ATR" : 32
   },
   "2026-05-01" : {
-    "TIME_SERIES_DAILY" : 27,
-    "GLOBAL_QUOTE" : 9
+    "OVERVIEW" : 223,
+    "CASH_FLOW" : 446,
+    "INCOME_STATEMENT" : 232,
+    "BALANCE_SHEET" : 223,
+    "TIME_SERIES_DAILY" : 1929,
+    "GLOBAL_QUOTE" : 115
   },
   "2026-04-20" : {
     "SAR" : 16,

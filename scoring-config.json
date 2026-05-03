@@ -548,138 +548,18 @@
     }
   },
   "savedAgentTrackers" : {
-    "S2_SWING_BREAKOUT" : {
-      "agentId" : "S2_SWING_BREAKOUT",
-      "agentName" : "Swing Breakout",
-      "type" : "SWING",
-      "cumulativeWins" : 28,
-      "cumulativeTrades" : 54,
-      "cumulativeProfitLoss" : 531.3900000000039,
-      "firstSavedDate" : "2026-03-23",
-      "lastUpdatedDate" : "2026-03-25",
-      "notifyOnTrade" : false,
-      "dailySnapshots" : [ {
-        "date" : "2026-03-23",
-        "wins" : 9,
-        "trades" : 12,
-        "winRate" : 75.0,
-        "profitLoss" : 405.49000000000177
-      }, {
-        "date" : "2026-03-24",
-        "wins" : 9,
-        "trades" : 12,
-        "winRate" : 75.0,
-        "profitLoss" : 405.49000000000177
-      }, {
-        "date" : "2026-03-25",
-        "wins" : 10,
-        "trades" : 30,
-        "winRate" : 33.333333333333336,
-        "profitLoss" : -279.5899999999997
-      } ]
-    },
-    "M5_MA_CROSS" : {
-      "agentId" : "M5_MA_CROSS",
-      "agentName" : "MA Crossover Momentum",
-      "type" : "MOMENTUM",
-      "cumulativeWins" : 77,
-      "cumulativeTrades" : 114,
-      "cumulativeProfitLoss" : 32343.266250000022,
-      "firstSavedDate" : "2026-03-23",
-      "lastUpdatedDate" : "2026-03-26",
-      "notifyOnTrade" : false,
-      "dailySnapshots" : [ {
-        "date" : "2026-03-23",
-        "wins" : 9,
-        "trades" : 12,
-        "winRate" : 75.0,
-        "profitLoss" : 4157.383
-      }, {
-        "date" : "2026-03-24",
-        "wins" : 14,
-        "trades" : 19,
-        "winRate" : 73.6842105263158,
-        "profitLoss" : 6460.952500000004
-      }, {
-        "date" : "2026-03-25",
-        "wins" : 19,
-        "trades" : 32,
-        "winRate" : 59.375,
-        "profitLoss" : 8084.960000000007
-      }, {
-        "date" : "2026-03-26",
-        "wins" : 35,
-        "trades" : 51,
-        "winRate" : 68.62745098039215,
-        "profitLoss" : 13639.97075000001
-      } ]
-    },
-    "M6_LOW_NOISE" : {
-      "agentId" : "M6_LOW_NOISE",
-      "agentName" : "Low Noise Momentum",
-      "type" : "MOMENTUM",
-      "cumulativeWins" : 23,
-      "cumulativeTrades" : 40,
-      "cumulativeProfitLoss" : -4751.541440000012,
-      "firstSavedDate" : "2026-03-23",
-      "lastUpdatedDate" : "2026-03-26",
-      "notifyOnTrade" : false,
-      "dailySnapshots" : [ {
-        "date" : "2026-03-23",
-        "wins" : 4,
-        "trades" : 5,
-        "winRate" : 80.0,
-        "profitLoss" : 417.99999999999926
-      }, {
-        "date" : "2026-03-24",
-        "wins" : 4,
-        "trades" : 5,
-        "winRate" : 80.0,
-        "profitLoss" : 417.99999999999926
-      }, {
-        "date" : "2026-03-25",
-        "wins" : 7,
-        "trades" : 13,
-        "winRate" : 53.84615384615385,
-        "profitLoss" : 1002.4292800000011
-      }, {
-        "date" : "2026-03-26",
-        "wins" : 8,
-        "trades" : 17,
-        "winRate" : 47.05882352941177,
-        "profitLoss" : -6589.970720000011
-      } ]
-    },
     "MASTER_5_PULLBACK_MA20" : {
       "agentId" : "MASTER_5_PULLBACK_MA20",
       "agentName" : "Pullback to MA20 (Master)",
       "type" : "MASTER",
-      "cumulativeWins" : 16,
-      "cumulativeTrades" : 21,
-      "cumulativeProfitLoss" : 10813.752097085122,
-      "firstSavedDate" : "2026-04-23",
-      "lastUpdatedDate" : "2026-04-30",
-      "notifyOnTrade" : true,
+      "cumulativeWins" : 4,
+      "cumulativeTrades" : 5,
+      "cumulativeProfitLoss" : 2703.4380242712805,
+      "firstSavedDate" : "2026-05-01",
+      "lastUpdatedDate" : "2026-05-01",
+      "notifyOnTrade" : false,
       "dailySnapshots" : [ {
-        "date" : "2026-04-23",
-        "wins" : 4,
-        "trades" : 5,
-        "winRate" : 80.0,
-        "profitLoss" : 2703.4380242712805
-      }, {
-        "date" : "2026-04-24",
-        "wins" : 4,
-        "trades" : 6,
-        "winRate" : 66.66666666666667,
-        "profitLoss" : 2703.4380242712805
-      }, {
-        "date" : "2026-04-27",
-        "wins" : 4,
-        "trades" : 5,
-        "winRate" : 80.0,
-        "profitLoss" : 2703.4380242712805
-      }, {
-        "date" : "2026-04-30",
+        "date" : "2026-05-01",
         "wins" : 4,
         "trades" : 5,
         "winRate" : 80.0,

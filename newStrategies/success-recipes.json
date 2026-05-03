@@ -1,0 +1,256 @@
+{
+  "lastUpdated" : "2026-05-02T15:30:00.0000000-04:00[America/New_York]",
+  "totalWinsAnalyzed" : 19,
+  "totalTradesAnalyzed" : 42,
+  "recipesByStrategy" : {
+    "VWAP_RETEST" : {
+      "strategyType" : "VWAP_RETEST",
+      "winCount" : 3,
+      "avgProfitPct" : 2.83,
+      "medianProfitPct" : 2.99,
+      "maxProfitPct" : 5.09,
+      "minProfitPct" : 0.41,
+      "conditionStats" : { },
+      "filterStats" : {
+        "filter_rvolMin" : {
+          "min" : 1.3,
+          "max" : 1.3,
+          "avg" : 1.3,
+          "median" : 1.3,
+          "p25" : 1.3,
+          "p75" : 1.3,
+          "count" : 3
+        }
+      },
+      "booleanFreq" : { },
+      "winSnapshots" : [ {
+        "ticker" : "GS",
+        "agentId" : "I5_VWAP_RETEST",
+        "entryTime" : "2026-04-14T01:36:16.767043-04:00[America/New_York]",
+        "profitLossPct" : 5.09,
+        "snapshot" : { "entryScore" : 0 }
+      }, {
+        "ticker" : "ALB",
+        "agentId" : "I5_VWAP_RETEST",
+        "entryTime" : "2026-04-14T02:35:45.25873-04:00[America/New_York]",
+        "profitLossPct" : 2.99,
+        "snapshot" : { "entryScore" : 0 }
+      }, {
+        "ticker" : "GWW",
+        "agentId" : "I5_VWAP_RETEST",
+        "entryTime" : "2026-04-14T02:13:59.726888-04:00[America/New_York]",
+        "profitLossPct" : 0.41,
+        "snapshot" : { "entryScore" : 0 }
+      } ],
+      "recommendedConfig" : {
+        "id" : "RECIPE_VWAP_RETEST_3W",
+        "name" : "Recipe: VWAP_RETEST (3 wins)",
+        "strategyType" : "VWAP_RETEST",
+        "basedOn" : "3 winning trades",
+        "winCount" : 3,
+        "expectedEdgePct" : 2.83,
+        "entryFilters" : {
+          "rvolMin" : 1.3
+        },
+        "riskManagement" : { },
+        "scoring" : { },
+        "recipeSummaryHebrew" : "מתכון: VWAP_RETEST | 3 ניצחונות | תשואה ממוצעת 2.83%\n→ המלצה: בנה סוכן עם הפרמטרים המומלצים"
+      }
+    },
+    "PULLBACK_MA20" : {
+      "strategyType" : "PULLBACK_MA20",
+      "winCount" : 4,
+      "avgProfitPct" : 6.15,
+      "medianProfitPct" : 6.31,
+      "maxProfitPct" : 12.0,
+      "minProfitPct" : 0.0,
+      "conditionStats" : { },
+      "filterStats" : {
+        "filter_rvolMin" : {
+          "min" : 0.3,
+          "max" : 0.3,
+          "avg" : 0.3,
+          "median" : 0.3,
+          "p25" : 0.3,
+          "p75" : 0.3,
+          "count" : 4
+        },
+        "filter_rsiMax" : {
+          "min" : 60.0,
+          "max" : 60.0,
+          "avg" : 60.0,
+          "median" : 60.0,
+          "p25" : 60.0,
+          "p75" : 60.0,
+          "count" : 4
+        },
+        "filter_atrMinPct" : {
+          "min" : 2.0,
+          "max" : 2.0,
+          "avg" : 2.0,
+          "median" : 2.0,
+          "p25" : 2.0,
+          "p75" : 2.0,
+          "count" : 4
+        }
+      },
+      "booleanFreq" : { },
+      "winSnapshots" : [ {
+        "ticker" : "EXPE",
+        "agentId" : "MASTER_5_PULLBACK_MA20",
+        "entryTime" : "2026-04-13T14:16:23.5178-04:00[America/New_York]",
+        "profitLossPct" : 12.0,
+        "snapshot" : { "entryScore" : 0 }
+      }, {
+        "ticker" : "MRNA",
+        "agentId" : "MASTER_5_PULLBACK_MA20",
+        "entryTime" : "2026-04-13T14:16:21.319519-04:00[America/New_York]",
+        "profitLossPct" : 8.43,
+        "snapshot" : { "entryScore" : 0 }
+      }, {
+        "ticker" : "PLD",
+        "agentId" : "MASTER_5_PULLBACK_MA20",
+        "entryTime" : "2026-04-13T14:16:21.935423-04:00[America/New_York]",
+        "profitLossPct" : 4.18,
+        "snapshot" : { "entryScore" : 0 }
+      }, {
+        "ticker" : "BKR",
+        "agentId" : "MASTER_5_PULLBACK_MA20",
+        "entryTime" : "2026-04-13T14:16:22.547479-04:00[America/New_York]",
+        "profitLossPct" : 0.0,
+        "snapshot" : { "entryScore" : 0 }
+      } ],
+      "recommendedConfig" : {
+        "id" : "RECIPE_PULLBACK_MA20_4W",
+        "name" : "Recipe: PULLBACK_MA20 (4 wins)",
+        "strategyType" : "PULLBACK_MA20",
+        "basedOn" : "4 winning trades",
+        "winCount" : 4,
+        "expectedEdgePct" : 6.15,
+        "entryFilters" : {
+          "rvolMin" : 0.3,
+          "rsiMax" : 60.0,
+          "rsiMin" : 35.0,
+          "atrMinPct" : 2.0,
+          "sma200Required" : true,
+          "sma50Required" : true
+        },
+        "riskManagement" : {
+          "takeProfitPct" : 12.0,
+          "stopLossPct" : 4.0,
+          "atrMultiplier" : 2.5,
+          "trailingStopPct" : 2.5
+        },
+        "scoring" : { },
+        "recipeSummaryHebrew" : "מתכון: PULLBACK_MA20 | 4 ניצחונות | תשואה ממוצעת 6.15%\n• RVOL בניצחונות: 0.3 - 0.3 (חציון 0.3)\n• rsiMax בניצחונות: 60.0 - 60.0 (חציון 60.0)\n• atrMinPct בניצחונות: 2.0 - 2.0 (חציון 2.0)\n→ המלצה: בנה סוכן עם הפרמטרים המומלצים"
+      }
+    },
+    "AGGRESSIVE_INTRADAY" : {
+      "strategyType" : "AGGRESSIVE_INTRADAY",
+      "winCount" : 3,
+      "avgProfitPct" : 2.91,
+      "medianProfitPct" : 3.19,
+      "maxProfitPct" : 5.06,
+      "minProfitPct" : 0.47,
+      "conditionStats" : { },
+      "filterStats" : { },
+      "booleanFreq" : { },
+      "winSnapshots" : [ ],
+      "recommendedConfig" : {
+        "id" : "RECIPE_AGGRESSIVE_INTRADAY_3W",
+        "name" : "Recipe: AGGRESSIVE_INTRADAY (3 wins)",
+        "strategyType" : "AGGRESSIVE_INTRADAY",
+        "basedOn" : "3 winning trades",
+        "winCount" : 3,
+        "expectedEdgePct" : 2.91,
+        "entryFilters" : { },
+        "riskManagement" : { },
+        "scoring" : { },
+        "recipeSummaryHebrew" : "מתכון: AGGRESSIVE_INTRADAY | 3 ניצחונות | תשואה ממוצעת 2.91%\n→ המלצה: בנה סוכן עם הפרמטרים המומלצים"
+      }
+    },
+    "MOMENTUM" : {
+      "strategyType" : "MOMENTUM",
+      "winCount" : 9,
+      "avgProfitPct" : 3.22,
+      "medianProfitPct" : 3.0,
+      "maxProfitPct" : 13.02,
+      "minProfitPct" : 0.43,
+      "conditionStats" : { },
+      "filterStats" : { },
+      "booleanFreq" : { },
+      "winSnapshots" : [ ],
+      "recommendedConfig" : {
+        "id" : "RECIPE_MOMENTUM_9W",
+        "name" : "Recipe: MOMENTUM (9 wins)",
+        "strategyType" : "MOMENTUM",
+        "basedOn" : "9 winning trades",
+        "winCount" : 9,
+        "expectedEdgePct" : 3.22,
+        "entryFilters" : { },
+        "riskManagement" : { },
+        "scoring" : { },
+        "recipeSummaryHebrew" : "מתכון: MOMENTUM | 9 ניצחונות | תשואה ממוצעת 3.22%\n→ המלצה: בנה סוכן עם הפרמטרים המומלצים"
+      }
+    }
+  },
+  "recommendedAgents" : [ {
+    "id" : "RECIPE_VWAP_RETEST_3W",
+    "name" : "Recipe: VWAP_RETEST (3 wins)",
+    "strategyType" : "VWAP_RETEST",
+    "basedOn" : "3 winning trades",
+    "winCount" : 3,
+    "expectedEdgePct" : 2.83,
+    "entryFilters" : {
+      "rvolMin" : 1.3
+    },
+    "riskManagement" : { },
+    "scoring" : { },
+    "recipeSummaryHebrew" : "מתכון: VWAP_RETEST | 3 ניצחונות | תשואה ממוצעת 2.83%\n→ המלצה: בנה סוכן עם הפרמטרים המומלצים"
+  }, {
+    "id" : "RECIPE_PULLBACK_MA20_4W",
+    "name" : "Recipe: PULLBACK_MA20 (4 wins)",
+    "strategyType" : "PULLBACK_MA20",
+    "basedOn" : "4 winning trades",
+    "winCount" : 4,
+    "expectedEdgePct" : 6.15,
+    "entryFilters" : {
+      "rvolMin" : 0.3,
+      "rsiMax" : 60.0,
+      "rsiMin" : 35.0,
+      "atrMinPct" : 2.0,
+      "sma200Required" : true,
+      "sma50Required" : true
+    },
+    "riskManagement" : {
+      "takeProfitPct" : 12.0,
+      "stopLossPct" : 4.0,
+      "atrMultiplier" : 2.5,
+      "trailingStopPct" : 2.5
+    },
+    "scoring" : { },
+    "recipeSummaryHebrew" : "מתכון: PULLBACK_MA20 | 4 ניצחונות | תשואה ממוצעת 6.15%\n• RVOL בניצחונות: 0.3 - 0.3 (חציון 0.3)\n• rsiMax בניצחונות: 60.0 - 60.0 (חציון 60.0)\n• atrMinPct בניצחונות: 2.0 - 2.0 (חציון 2.0)\n→ המלצה: בנה סוכן עם הפרמטרים המומלצים"
+  }, {
+    "id" : "RECIPE_AGGRESSIVE_INTRADAY_3W",
+    "name" : "Recipe: AGGRESSIVE_INTRADAY (3 wins)",
+    "strategyType" : "AGGRESSIVE_INTRADAY",
+    "basedOn" : "3 winning trades",
+    "winCount" : 3,
+    "expectedEdgePct" : 2.91,
+    "entryFilters" : { },
+    "riskManagement" : { },
+    "scoring" : { },
+    "recipeSummaryHebrew" : "מתכון: AGGRESSIVE_INTRADAY | 3 ניצחונות | תשואה ממוצעת 2.91%\n→ המלצה: בנה סוכן עם הפרמטרים המומלצים"
+  }, {
+    "id" : "RECIPE_MOMENTUM_9W",
+    "name" : "Recipe: MOMENTUM (9 wins)",
+    "strategyType" : "MOMENTUM",
+    "basedOn" : "9 winning trades",
+    "winCount" : 9,
+    "expectedEdgePct" : 3.22,
+    "entryFilters" : { },
+    "riskManagement" : { },
+    "scoring" : { },
+    "recipeSummaryHebrew" : "מתכון: MOMENTUM | 9 ניצחונות | תשואה ממוצעת 3.22%\n→ המלצה: בנה סוכן עם הפרמטרים המומלצים"
+  } ]
+}
