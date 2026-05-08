@@ -8216,12 +8216,13 @@ public class WebServer {
                     sb.append("<div style='overflow-x:auto;'><table style='width:100%;border-collapse:collapse;font-size:12px;'>");
                     sb.append("<thead><tr style='background:#0b1220;'>");
                     sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Ticker</th>");
-                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Entry $</th>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Signal</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Entry Zone</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>🛑 Stop Loss</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>🎯 Take Profit</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>R:R</th>");
                     sb.append("<th style='padding:8px;text-align:center;border-bottom:1px solid #7c3aed;'>⏳ Hold</th>");
-                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Entry Date</th>");
+                    sb.append("<th style='padding:8px;text-align:center;border-bottom:1px solid #7c3aed;'>⏱ Valid</th>");
                     sb.append("</tr></thead><tbody>");
                     for (AIToolAgent.Trade t : openTrades) {
                         double toSLPct = t.entryPrice > 0 ? ((t.entryPrice - t.stopLoss) / t.entryPrice) * 100 : 0;
@@ -8242,9 +8243,26 @@ public class WebServer {
                         String holdColor = holdFraction >= 0.8 ? "#ef4444" : holdFraction >= 0.5 ? "#f59e0b" : "#22c55e";
                         String rowBg = "#2d2a5e";
                         String dateOnly = t.entryTime != null ? t.entryTime.substring(0, Math.min(10, t.entryTime.length())) : "";
+                        // Build signal badge
+                        StringBuilder sigHtml = new StringBuilder();
+                        if (t.entryScore > 0) {
+                            boolean hasCf = t.entryConfluenceCount >= 2;
+                            String cfTag = hasCf ? " <span style='color:#f59e0b;font-size:10px;'>🔥 CONFLUENCE(+" + t.entryConfluenceCount + ")</span>" : "";
+                            sigHtml.append("<div style='font-weight:700;color:#22c55e;font-size:12px;'>Score=").append(t.entryScore).append("/12").append(cfTag).append("</div>");
+                            sigHtml.append("<div style='color:#9ca3af;font-size:10px;margin-top:2px;'>(V=").append(t.entryVolumeScore)
+                                   .append(" T=").append(t.entryTrendScore)
+                                   .append(" M=").append(t.entryMomentumScore)
+                                   .append(" S=").append(t.entrySetupScore).append(")</div>");
+                        } else {
+                            sigHtml.append("<span style='color:#6b7280;font-size:11px;'>N/A</span>");
+                        }
+                        double entryZoneHigh = t.entryPrice * 1.01;
+                        String setupLabel = t.setupType != null ? escapeHtml(t.setupType) : (t.strategyType != null ? escapeHtml(t.strategyType) : "");
+
                         sb.append("<tr style='background:").append(rowBg).append(";'>");
-                        sb.append("<td style='padding:8px;font-weight:600;color:#e5e7eb;'>").append(escapeHtml(t.ticker)).append("</td>");
-                        sb.append("<td style='padding:8px;text-align:right;color:#93c5fd;'>$").append(String.format("%.2f", t.entryPrice)).append("</td>");
+                        sb.append("<td style='padding:8px;font-weight:600;color:#e5e7eb;'>").append(escapeHtml(t.ticker)).append("<br><span style='color:#93c5fd;font-size:10px;font-weight:500;'>").append(setupLabel).append("</span></td>");
+                        sb.append("<td style='padding:8px;text-align:left;'>").append(sigHtml.toString()).append("</td>");
+                        sb.append("<td style='padding:8px;text-align:right;color:#93c5fd;'>$").append(String.format("%.2f", t.entryPrice)).append(" – $").append(String.format("%.2f", entryZoneHigh)).append("</td>");
                         sb.append("<td style='padding:8px;text-align:right;'>")
                           .append("<span style='color:#ef4444;font-weight:600;'>$").append(String.format("%.2f", t.stopLoss)).append("</span>")
                           .append("<br><span style='color:#ef4444;font-size:10px;'>need -").append(String.format("%.1f%%", toSLPct)).append("</span>")
@@ -8263,7 +8281,7 @@ public class WebServer {
                             sb.append("<br><span style='color:#f59e0b;font-size:10px;'>⚠️ ").append(daysLeft).append("d left</span>");
                         }
                         sb.append("</td>");
-                        sb.append("<td style='padding:8px;color:#9ca3af;font-size:11px;'>").append(escapeHtml(dateOnly)).append("</td>");
+                        sb.append("<td style='padding:8px;text-align:center;color:#9ca3af;font-size:11px;'>⏱ 10 min</td>");
                         sb.append("</tr>");
                     }
                     sb.append("</tbody></table></div>");
@@ -8280,6 +8298,7 @@ public class WebServer {
                     sb.append("<thead><tr style='background:#0b1220;'>");
                     sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>#</th>");
                     sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Ticker</th>");
+                    sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Signal</th>");
                     sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Result</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Entry $</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Exit $</th>");
@@ -8296,9 +8315,23 @@ public class WebServer {
                         String statusColor = isWin ? "#22c55e" : "#ef4444";
                         String statusIcon = isWin ? "✅" : "❌";
                         String plColor2 = t.profitLoss >= 0 ? "#22c55e" : "#ef4444";
+                        StringBuilder sigHtml2 = new StringBuilder();
+                        if (t.entryScore > 0) {
+                            boolean hasCf2 = t.entryConfluenceCount >= 2;
+                            String cfTag2 = hasCf2 ? " <span style='color:#f59e0b;font-size:10px;'>🔥 CONFLUENCE(+" + t.entryConfluenceCount + ")</span>" : "";
+                            sigHtml2.append("<div style='font-weight:700;color:#22c55e;font-size:12px;'>Score=").append(t.entryScore).append("/12").append(cfTag2).append("</div>");
+                            sigHtml2.append("<div style='color:#9ca3af;font-size:10px;margin-top:2px;'>(V=").append(t.entryVolumeScore)
+                                   .append(" T=").append(t.entryTrendScore)
+                                   .append(" M=").append(t.entryMomentumScore)
+                                   .append(" S=").append(t.entrySetupScore).append(")</div>");
+                        } else {
+                            sigHtml2.append("<span style='color:#6b7280;font-size:11px;'>N/A</span>");
+                        }
+
                         sb.append("<tr style='background:").append(rowBg).append(";'>");
                         sb.append("<td style='padding:8px;color:#6b7280;'>").append(row).append("</td>");
                         sb.append("<td style='padding:8px;font-weight:600;color:#e5e7eb;'>").append(escapeHtml(t.ticker)).append("</td>");
+                        sb.append("<td style='padding:8px;text-align:left;'>").append(sigHtml2.toString()).append("</td>");
                         sb.append("<td style='padding:8px;color:").append(statusColor).append(";font-weight:600;'>").append(statusIcon).append(" ").append(isWin ? "WIN" : "LOSS").append("</td>");
                         sb.append("<td style='padding:8px;text-align:right;color:#93c5fd;'>$").append(String.format("%.2f", t.entryPrice)).append("</td>");
                         sb.append("<td style='padding:8px;text-align:right;color:#d1d5db;'>$").append(String.format("%.2f", t.exitPrice)).append("</td>");

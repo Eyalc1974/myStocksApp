@@ -1,6 +1,6 @@
 {
   "activeMode" : "LONG_TERM_INVESTOR",
-  "activeAgentConfig" : null,
+  "activeAgentConfig" : "MASTER_5_PULLBACK_MA20",
   "monitoredAgentForDiscord" : null,
   "investmentPerStock" : 1000.0,
   "presets" : {
@@ -552,11 +552,11 @@
       "agentId" : "MASTER_5_PULLBACK_MA20",
       "agentName" : "Pullback to MA20 (Master)",
       "type" : "MASTER",
-      "cumulativeWins" : 4,
-      "cumulativeTrades" : 5,
-      "cumulativeProfitLoss" : 2703.4380242712805,
+      "cumulativeWins" : 24,
+      "cumulativeTrades" : 30,
+      "cumulativeProfitLoss" : 14817.590121356407,
       "firstSavedDate" : "2026-05-01",
-      "lastUpdatedDate" : "2026-05-01",
+      "lastUpdatedDate" : "2026-05-07",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-05-01",
@@ -564,6 +564,30 @@
         "trades" : 5,
         "winRate" : 80.0,
         "profitLoss" : 2703.4380242712805
+      }, {
+        "date" : "2026-05-04",
+        "wins" : 5,
+        "trades" : 6,
+        "winRate" : 83.33333333333333,
+        "profitLoss" : 3028.538024271281
+      }, {
+        "date" : "2026-05-05",
+        "wins" : 5,
+        "trades" : 6,
+        "winRate" : 83.33333333333333,
+        "profitLoss" : 3028.538024271281
+      }, {
+        "date" : "2026-05-06",
+        "wins" : 5,
+        "trades" : 6,
+        "winRate" : 83.33333333333333,
+        "profitLoss" : 3028.538024271281
+      }, {
+        "date" : "2026-05-07",
+        "wins" : 5,
+        "trades" : 7,
+        "winRate" : 71.42857142857143,
+        "profitLoss" : 3028.538024271281
       } ]
     }
   }

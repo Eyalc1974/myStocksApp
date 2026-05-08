@@ -937,7 +937,7 @@ public class RecipeAnalytics {
                 case "atrPct":
                     if ("HIGHER_IS_BETTER".equals(edge.direction)) {
                         rec.entryFilters.put("atrMinPct", round2(Math.max(0.5, threshold - 0.3)));
-                        rec.insightsHebrew.add("ATR% גבוה = טוב ✅ (מנצחים " + edge.avgWin + "% vs מפסידים " + edge.avgLoss + "%")");
+                        rec.insightsHebrew.add("ATR% גבוה = טוב ✅ (מנצחים " + edge.avgWin + "% vs מפסידים " + edge.avgLoss + "%");
                     }
                     break;
                 case "cci":
@@ -1065,6 +1065,7 @@ public class RecipeAnalytics {
         boolean isWin;
         int qualityScore = 0;
         String timeBucket;                     // V2: OPEN_30M / MIDDAY / etc.
+        String comboKey;                       // V2: feature bucket combo
         Map<String, String> featureBuckets;    // V2: discretized feature values
         JsonNode agentNode;
         JsonNode tradeNode;
