@@ -192,6 +192,12 @@ public class AIToolAgent {
         public int    runNumber;
         public String date;          // YYYY-MM-DD in NY timezone
         public long   signalTimeMs;  // epoch millis at signal creation (for expiry check)
+
+        // ── Institutional Flow Layer scores ──
+        public double finalConviction;   // 0-50 weighted composite
+        public int    fundamentalScore;    // 0-10
+        public int    catalystScore;       // 0-10
+        public int    institutionalFlowScore; // 0-10
     }
 
     private static final List<ScanRecommendation> recentRecs = new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -212,7 +218,9 @@ public class AIToolAgent {
     }
 
     private static void addRecommendation(String ticker, String agentId,
-                                          double entry, double sl, double tp, int score) {
+                                          double entry, double sl, double tp, int score,
+                                          double finalConviction, int fundamentalScore,
+                                          int catalystScore, int institutionalFlowScore) {
         ScanRecommendation r = new ScanRecommendation();
         r.ticker     = ticker;
         r.agentId    = agentId;
@@ -224,6 +232,10 @@ public class AIToolAgent {
         r.runNumber  = systemState != null ? systemState.runCount : 0;
         r.date       = LocalDate.now(NY).toString();
         r.signalTimeMs = System.currentTimeMillis();
+        r.finalConviction        = finalConviction;
+        r.fundamentalScore       = fundamentalScore;
+        r.catalystScore          = catalystScore;
+        r.institutionalFlowScore = institutionalFlowScore;
         recentRecs.add(0, r); // newest first
         if (recentRecs.size() > MAX_RECS) recentRecs.remove(recentRecs.size() - 1);
         saveRecommendations();
@@ -1704,6 +1716,8 @@ public class AIToolAgent {
                     if (useMasters) {
                         // ── MASTER STRATEGY PATH: score-based with confluence detection ──
                         IndicatorData data = computeIndicators(ticker, json);
+                        // Institutional Flow Layer: warm cached fundamental/catalyst data (fast, no API calls)
+                        InstitutionalFlowLayer.enrichCached(data);
                         // Update RS ranking cache (used to pre-filter universe on next scan)
                         double rsScore = data.momentum20d
                             + (data.priceAboveSMA50  ? 4.0 : -4.0)
@@ -1743,15 +1757,22 @@ public class AIToolAgent {
                             }
                             d.confluenceCount = (int) confluenceCount;
 
+                            // Institutional Flow Layer: fetch + score (API calls only if technical score >= 7 to save quota)
+                            InstitutionalFlowLayer.enrichAndScore(data, d, d.totalScore >= 7);
+
                             d.shouldTrade = d.totalScore >= SCORE_THRESHOLD && !d.triggerNotMet;
 
                             if (d.shouldTrade) {
                                 String confluenceTag = confluenceCount >= 2
                                     ? " 🔥CONFLUENCE(+" + CONFLUENCE_BONUS + ")" : "";
+                                String iflTag = (d.finalConviction > 0)
+                                    ? " | Conviction=" + String.format("%.1f", d.finalConviction) + "/50"
+                                    : "";
                                 writeScanLog("[✅ SIGNAL] " + ticker + " | " + strategy.id +
                                     " | Score=" + d.totalScore + "/12" + confluenceTag +
                                     " (V=" + d.volumeScore + " T=" + d.trendScore +
                                     " M=" + d.momentumScore + " S=" + d.setupScore + ")" +
+                                    iflTag +
                                     " | Entry=$" + String.format("%.2f", d.entryPrice) +
                                     " SL=$" + String.format("%.2f", d.suggestedStopLoss) +
                                     " TP=$" + String.format("%.2f", d.suggestedTakeProfit));
@@ -1765,13 +1786,19 @@ public class AIToolAgent {
                                         + " | Score=" + d.totalScore + "/12" + confluenceTag
                                         + " (V=" + d.volumeScore + " T=" + d.trendScore
                                         + " M=" + d.momentumScore + " S=" + d.setupScore + ")"
+                                        + (d.finalConviction > 0
+                                            ? "\n🏦 Conviction=" + String.format("%.1f", d.finalConviction) + "/50"
+                                              + " (F=" + d.fundamentalScore + " C=" + d.catalystScore
+                                              + " I=" + d.institutionalFlowScore + ")"
+                                            : "")
                                         + "\n📥 **ENTRY ZONE:** $" + String.format("%.2f", d.entryPrice) + " – $" + String.format("%.2f", entryZoneHigh)
                                         + "  |  🛑 **SL:** $" + String.format("%.2f", cappedSLActual) + " *(max $20 risk)*"
                                         + "  |  🎯 **TP:** $" + String.format("%.2f", d.suggestedTakeProfit)
                                         + "\n⏱ **VALID FOR: 10 min**");
                                 }
                                 addRecommendation(ticker, strategy.id, d.entryPrice,
-                                    d.suggestedStopLoss, d.suggestedTakeProfit, d.totalScore);
+                                    d.suggestedStopLoss, d.suggestedTakeProfit, d.totalScore,
+                                    d.finalConviction, d.fundamentalScore, d.catalystScore, d.institutionalFlowScore);
                                 // If this ticker was previously on the watchlist, promote it
                                 confirmPendingSignal(ticker, strategy.id);
                                 allSignals.add(new RankedSignal(strategy, ticker, d, confluenceCount >= 2));
@@ -2091,6 +2118,16 @@ public class AIToolAgent {
         public double diagRvol        = 0;
         public double diagDistSMA20   = 0; // % distance from SMA20
         public double diagDistSMA50   = 0; // % distance from SMA50
+
+        // ── Institutional Flow Layer scores ──
+        public int    fundamentalScore;        // 0-10  (Layer 2)
+        public int    catalystScore;         // 0-10  (Layer 3)
+        public int    institutionalFlowScore; // 0-10  (Layer 4)
+        public double finalConviction;       // 0-50  (weighted composite)
+
+        // Raw IFL data for snapshot persistence
+        public FundamentalData fundamentalData;
+        public CatalystData    catalystData;
     }
 
     private static class RankedSignal {
@@ -2132,6 +2169,10 @@ public class AIToolAgent {
         boolean hasSMA50;
         boolean hasSMA200;
         boolean valid = false;
+
+        // ── Institutional Flow Layer enrichment ──
+        FundamentalData fundamentalData;
+        CatalystData catalystData;
     }
 
     /**
@@ -3855,6 +3896,40 @@ public class AIToolAgent {
                         m.put("momentumScore", decision.momentumScore);
                         m.put("setupScore", decision.setupScore);
                         m.put("confluenceCount", decision.confluenceCount);
+                        // ── Institutional Flow Layer snapshot ──
+                        m.put("finalConviction", round2(decision.finalConviction));
+                        m.put("fundamentalScore", decision.fundamentalScore);
+                        m.put("catalystScore", decision.catalystScore);
+                        m.put("institutionalFlowScore", decision.institutionalFlowScore);
+                        if (decision.fundamentalData != null) {
+                            FundamentalData fd = decision.fundamentalData;
+                            m.put("fd_marketCap", fd.marketCap);
+                            m.put("fd_revenueGrowth", round2(fd.revenueGrowth));
+                            m.put("fd_eps", round2(fd.eps));
+                            m.put("fd_profitMargin", round2(fd.profitMargin));
+                            m.put("fd_operatingMargin", round2(fd.operatingMargin));
+                            m.put("fd_peRatio", round2(fd.peRatio));
+                            m.put("fd_analystTargetPrice", fd.analystTargetPrice);
+                            m.put("fd_beta", round2(fd.beta));
+                            m.put("fd_debtToEquity", round2(fd.debtToEquity));
+                            m.put("fd_analystUpside", round2(fd.analystUpside));
+                            m.put("fd_sector", fd.sector);
+                            m.put("fd_industry", fd.industry);
+                        }
+                        if (decision.catalystData != null) {
+                            CatalystData cd = decision.catalystData;
+                            m.put("cd_sentimentScore", round2(cd.sentimentScore));
+                            m.put("cd_relevanceScore", round2(cd.relevanceScore));
+                            m.put("cd_newsCount24h", cd.newsCount24h);
+                            m.put("cd_earningsBeat", cd.earningsBeat);
+                            m.put("cd_guidanceRaise", cd.guidanceRaise);
+                            m.put("cd_analystUpgrade", cd.analystUpgrade);
+                            m.put("cd_analystDowngrade", cd.analystDowngrade);
+                            m.put("cd_hasAIMention", cd.hasAIMention);
+                            m.put("cd_hasMnaMention", cd.hasMnaMention);
+                            m.put("cd_hasFDAStage", cd.hasFDAStage);
+                            m.put("cd_hasPartnership", cd.hasPartnership);
+                        }
                         m.put("agentId", agent.id);
                         m.put("strategyType", agent.strategyType);
                         // Also snapshot the active filter thresholds so we know what "recipe" was in effect
@@ -4893,7 +4968,8 @@ public class AIToolAgent {
                                 }
                             }
                             addRecommendation(ticker, agent.id, signalEntry,
-                                decision.suggestedStopLoss, decision.suggestedTakeProfit, 0);
+                                decision.suggestedStopLoss, decision.suggestedTakeProfit, 0,
+                                0.0, 0, 0, 0);
 
                             Trade trade = executeTrade(agent, ticker, decision);
                             if (trade != null) {

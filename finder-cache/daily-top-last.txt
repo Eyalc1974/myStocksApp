@@ -1,8 +1,12 @@
 --- 🎯 Daily Nasdaq Top 5 (GREEN) candidates ---
-שגיאה בניתוח AGRI: חסר נתונים לחישובים מורכבים עבור AGRI
+שגיאה בניתוח ALLG: חסר נתונים לחישובים מורכבים עבור ALLG
 Alpha Vantage: Invalid API call. Please retry or visit the documentation (https://www.alphavantage.co/documentation/) for TIME_SERIES_DAILY_ADJUSTED.
+[AIToolAgent] Scheduled 60-min periodic run starting...
+[AIToolAgent] Run #79 | Scanning 102 tickers with 16 agents
+[AIToolAgent][Discord] Sent notification, status: 204
+שגיאה בניתוח AGTI: חסר נתונים לחישובים מורכבים עבור AGTI
+[AIToolAgent] Full scan with agent: MASTER_8_STRONG_TREND
 
 | TICKER | PRICE    | טכני (כניסה)    | פונדמנטלי         | ADX (חוזק) |
 |--------|----------|-----------------|-------------------|-----------|
-| HAS   | $95.96    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 9.78 |
-| UBER  | $75.07    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 11.62 |
+No GREEN candidates found today (based on current filters). Try again later.

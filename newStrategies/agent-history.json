@@ -1,5 +1,5 @@
 {
-  "lastUpdated" : "2026-05-07T15:20:16.167492-04:00[America/New_York]",
+  "lastUpdated" : "2026-05-11T11:50:39.1064199-04:00[America/New_York]",
   "tradeHistory" : {
     "I5_VWAP_RETEST" : [ {
       "id" : "8d4a37e7",
@@ -72,45 +72,45 @@
       "ticker" : "MTCH",
       "action" : "BUY",
       "entryPrice" : 38.105,
-      "exitPrice" : 38.0,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 35.92,
+      "profitLoss" : -218.49999999999952,
+      "profitLossPct" : -5.7341556226216905,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-06T14:41:44.0275088-04:00[America/New_York]",
-      "exitTime" : "2026-05-07T00:41:59.2531409-04:00[America/New_York]"
+      "exitTime" : "2026-05-11T11:24:10.022379-04:00[America/New_York]"
     }, {
       "id" : "ee37a572",
       "ticker" : "TT",
       "action" : "BUY",
       "entryPrice" : 488.18,
-      "exitPrice" : 0.0,
+      "exitPrice" : 465.76,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
       "entryTime" : "2026-05-07T00:44:25.7034154-04:00[America/New_York]",
-      "exitTime" : null
+      "exitTime" : "2026-05-08T16:29:43.1997768-04:00[America/New_York]"
     }, {
       "id" : "dd1c4a44",
       "ticker" : "AME",
       "action" : "BUY",
       "entryPrice" : 241.38,
-      "exitPrice" : 0.0,
+      "exitPrice" : 232.42,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
       "entryTime" : "2026-05-07T00:51:43.5137687-04:00[America/New_York]",
-      "exitTime" : null
+      "exitTime" : "2026-05-08T16:30:09.7555544-04:00[America/New_York]"
     }, {
       "id" : "84363b63",
       "ticker" : "DIS",
       "action" : "BUY",
       "entryPrice" : 108.06,
-      "exitPrice" : 0.0,
+      "exitPrice" : 107.98,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
       "entryTime" : "2026-05-07T00:57:11.9680782-04:00[America/New_York]",
-      "exitTime" : null
+      "exitTime" : "2026-05-08T16:30:37.7290959-04:00[America/New_York]"
     } ],
     "M5_MA_CROSS_V2" : [ ],
     "M4_PULLBACK" : [ ],
@@ -186,23 +186,23 @@
       "ticker" : "LRCX",
       "action" : "BUY",
       "entryPrice" : 257.0092,
-      "exitPrice" : 297.17,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 298.7689,
+      "profitLoss" : 4175.969999999996,
+      "profitLossPct" : 16.24832885359744,
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-01T14:00:25.3411227-04:00[America/New_York]",
-      "exitTime" : "2026-05-07T00:42:13.4581061-04:00[America/New_York]"
+      "exitTime" : "2026-05-11T11:24:10.0397936-04:00[America/New_York]"
     }, {
       "id" : "b960f23a",
       "ticker" : "AMAT",
       "action" : "BUY",
       "entryPrice" : 391.94,
-      "exitPrice" : 428.62,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 445.83,
+      "profitLoss" : 5388.999999999998,
+      "profitLossPct" : 13.749553503087203,
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-01T14:03:14.6204276-04:00[America/New_York]",
-      "exitTime" : "2026-05-07T00:42:27.5412464-04:00[America/New_York]"
+      "exitTime" : "2026-05-11T11:24:10.0566748-04:00[America/New_York]"
     }, {
       "id" : "1152aff8",
       "ticker" : "C",
@@ -219,23 +219,89 @@
       "ticker" : "BA",
       "action" : "BUY",
       "entryPrice" : 229.338,
-      "exitPrice" : 229.93,
+      "exitPrice" : 229.338,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-01T14:28:44.6028951-04:00[America/New_York]",
-      "exitTime" : "2026-05-07T00:43:00.5136882-04:00[America/New_York]"
+      "exitTime" : "2026-05-11T11:24:10.0597086-04:00[America/New_York]"
     }, {
       "id" : "1530e5d8",
       "ticker" : "FOXA",
       "action" : "BUY",
       "entryPrice" : 63.35,
-      "exitPrice" : 62.21,
+      "exitPrice" : 62.94,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
       "entryTime" : "2026-05-02T01:04:44.9259494-04:00[America/New_York]",
-      "exitTime" : "2026-05-07T00:43:13.9892793-04:00[America/New_York]"
+      "exitTime" : "2026-05-08T16:32:03.1649231-04:00[America/New_York]"
+    }, {
+      "id" : "61445bee",
+      "ticker" : "ALB",
+      "action" : "BUY",
+      "entryPrice" : 201.38,
+      "exitPrice" : 203.59,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-05-08T12:53:58.1153774-04:00[America/New_York]",
+      "exitTime" : "2026-05-08T16:32:22.3751475-04:00[America/New_York]"
+    }, {
+      "id" : "8bee4853",
+      "ticker" : "MTCH",
+      "action" : "BUY",
+      "entryPrice" : 36.67,
+      "exitPrice" : 36.96,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-05-08T12:58:07.9180243-04:00[America/New_York]",
+      "exitTime" : "2026-05-08T16:32:40.5062238-04:00[America/New_York]"
+    }, {
+      "id" : "dcdd50a2",
+      "ticker" : "CRL",
+      "action" : "BUY",
+      "entryPrice" : 179.9563,
+      "exitPrice" : 179.9563,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "CLOSED_LOSS",
+      "entryTime" : "2026-05-08T13:02:17.6944785-04:00[America/New_York]",
+      "exitTime" : "2026-05-08T15:05:30.1858808-04:00[America/New_York]"
+    }, {
+      "id" : "dbf0a6b0",
+      "ticker" : "SWKS",
+      "action" : "BUY",
+      "entryPrice" : 66.7812,
+      "exitPrice" : 66.78,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-05-08T13:05:20.4171233-04:00[America/New_York]",
+      "exitTime" : "2026-05-08T16:33:08.6075032-04:00[America/New_York]"
+    }, {
+      "id" : "bc5e1ba3",
+      "ticker" : "WELL",
+      "action" : "BUY",
+      "entryPrice" : 216.62,
+      "exitPrice" : 216.62,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "CLOSED_LOSS",
+      "entryTime" : "2026-05-08T13:08:36.8938316-04:00[America/New_York]",
+      "exitTime" : "2026-05-08T15:07:13.4581698-04:00[America/New_York]"
+    }, {
+      "id" : "3679908e",
+      "ticker" : "ENB",
+      "action" : "BUY",
+      "entryPrice" : 53.605,
+      "exitPrice" : 53.59,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-05-08T13:16:50.6034755-04:00[America/New_York]",
+      "exitTime" : "2026-05-08T16:33:24.8761037-04:00[America/New_York]"
     } ],
     "I6_AGGRESSIVE_INTRADAY" : [ {
       "id" : "d70efaf5",
@@ -366,23 +432,23 @@
       "ticker" : "MTCH",
       "action" : "BUY",
       "entryPrice" : 37.99,
-      "exitPrice" : 38.0,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 35.92,
+      "profitLoss" : -207.00000000000003,
+      "profitLossPct" : -5.448802316399052,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-06T14:08:14.3502677-04:00[America/New_York]",
-      "exitTime" : "2026-05-07T00:43:28.2607955-04:00[America/New_York]"
+      "exitTime" : "2026-05-11T11:24:10.0649537-04:00[America/New_York]"
     }, {
       "id" : "98db92e2",
       "ticker" : "DIS",
       "action" : "BUY",
       "entryPrice" : 107.3301,
-      "exitPrice" : 108.06,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 105.9729,
+      "profitLoss" : -135.7200000000006,
+      "profitLossPct" : -1.2645101420757139,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-06T14:23:14.8645594-04:00[America/New_York]",
-      "exitTime" : "2026-05-07T00:43:42.2709197-04:00[America/New_York]"
+      "exitTime" : "2026-05-11T11:24:10.077691-04:00[America/New_York]"
     } ],
     "I4_VOLUME_SURGE" : [ {
       "id" : "75187796",
@@ -423,23 +489,23 @@
       "ticker" : "EBAY",
       "action" : "BUY",
       "entryPrice" : 109.81,
-      "exitPrice" : 108.15,
+      "exitPrice" : 107.69,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
       "entryTime" : "2026-05-04T13:37:29.3287986-04:00[America/New_York]",
-      "exitTime" : "2026-05-07T00:43:56.5302014-04:00[America/New_York]"
+      "exitTime" : "2026-05-08T16:34:23.7891269-04:00[America/New_York]"
     }, {
       "id" : "5d93d0cb",
       "ticker" : "PINS",
       "action" : "BUY",
       "entryPrice" : 20.85,
-      "exitPrice" : 21.16,
+      "exitPrice" : 21.28,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
       "entryTime" : "2026-05-04T21:12:24.7913162-04:00[America/New_York]",
-      "exitTime" : "2026-05-07T00:44:12.4743568-04:00[America/New_York]"
+      "exitTime" : "2026-05-08T16:34:38.1178084-04:00[America/New_York]"
     } ],
     "M1_AGGRESSIVE" : [ ],
     "M2_CONSERVATIVE" : [ ],

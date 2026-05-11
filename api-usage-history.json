@@ -2,6 +2,44 @@
   "2026-04-11" : {
     "TIME_SERIES_DAILY" : 4
   },
+  "2026-05-02" : {
+    "OVERVIEW" : 14,
+    "EARNINGS" : 1,
+    "CASH_FLOW" : 19,
+    "INCOME_STATEMENT" : 9,
+    "BALANCE_SHEET" : 9,
+    "TIME_SERIES_DAILY" : 126,
+    "NEWS_SENTIMENT" : 2,
+    "GLOBAL_QUOTE" : 2,
+    "EARNINGS_ESTIMATES" : 1
+  },
+  "2026-05-01" : {
+    "OVERVIEW" : 223,
+    "CASH_FLOW" : 446,
+    "INCOME_STATEMENT" : 232,
+    "BALANCE_SHEET" : 223,
+    "TIME_SERIES_DAILY" : 1929,
+    "GLOBAL_QUOTE" : 115
+  },
+  "2026-04-30" : {
+    "OVERVIEW" : 168,
+    "CASH_FLOW" : 316,
+    "INCOME_STATEMENT" : 162,
+    "BALANCE_SHEET" : 162,
+    "TIME_SERIES_DAILY" : 1487,
+    "GLOBAL_QUOTE" : 23
+  },
+  "2026-04-28" : {
+    "TIME_SERIES_DAILY" : 321,
+    "GLOBAL_QUOTE" : 12
+  },
+  "2026-04-27" : {
+    "TIME_SERIES_DAILY" : 906,
+    "GLOBAL_QUOTE" : 12
+  },
+  "2026-04-24" : {
+    "TIME_SERIES_DAILY" : 9
+  },
   "2026-04-22" : {
     "SAR" : 28,
     "OVERVIEW" : 184,
@@ -16,17 +54,6 @@
     "TIME_SERIES_DAILY" : 3096,
     "GLOBAL_QUOTE" : 109,
     "ATR" : 28
-  },
-  "2026-05-02" : {
-    "OVERVIEW" : 14,
-    "EARNINGS" : 1,
-    "CASH_FLOW" : 19,
-    "INCOME_STATEMENT" : 9,
-    "BALANCE_SHEET" : 9,
-    "TIME_SERIES_DAILY" : 126,
-    "NEWS_SENTIMENT" : 2,
-    "GLOBAL_QUOTE" : 2,
-    "EARNINGS_ESTIMATES" : 1
   },
   "2026-04-23" : {
     "SAR" : 32,
@@ -43,14 +70,6 @@
     "GLOBAL_QUOTE" : 48,
     "ATR" : 32
   },
-  "2026-05-01" : {
-    "OVERVIEW" : 223,
-    "CASH_FLOW" : 446,
-    "INCOME_STATEMENT" : 232,
-    "BALANCE_SHEET" : 223,
-    "TIME_SERIES_DAILY" : 1929,
-    "GLOBAL_QUOTE" : 115
-  },
   "2026-04-20" : {
     "SAR" : 16,
     "OVERVIEW" : 520,
@@ -65,6 +84,10 @@
     "TIME_SERIES_DAILY" : 2998,
     "GLOBAL_QUOTE" : 128,
     "ATR" : 16
+  },
+  "2026-05-11" : {
+    "TIME_SERIES_DAILY" : 281,
+    "GLOBAL_QUOTE" : 20
   },
   "2026-04-21" : {
     "SAR" : 23,
@@ -81,13 +104,12 @@
     "GLOBAL_QUOTE" : 220,
     "ATR" : 23
   },
-  "2026-04-30" : {
-    "OVERVIEW" : 168,
-    "CASH_FLOW" : 316,
-    "INCOME_STATEMENT" : 162,
-    "BALANCE_SHEET" : 162,
-    "TIME_SERIES_DAILY" : 1487,
-    "GLOBAL_QUOTE" : 23
+  "2026-05-09" : {
+    "TIME_SERIES_DAILY" : 561,
+    "OVERVIEW" : 89,
+    "CASH_FLOW" : 170,
+    "INCOME_STATEMENT" : 110,
+    "BALANCE_SHEET" : 82
   },
   "2026-04-17" : {
     "SAR" : 40,
@@ -104,17 +126,13 @@
     "GLOBAL_QUOTE" : 371,
     "ATR" : 40
   },
-  "2026-04-28" : {
-    "TIME_SERIES_DAILY" : 321,
-    "GLOBAL_QUOTE" : 12
-  },
   "2026-05-08" : {
-    "TIME_SERIES_DAILY" : 17,
-    "OVERVIEW" : 1,
-    "GLOBAL_QUOTE" : 4,
-    "CASH_FLOW" : 2,
-    "INCOME_STATEMENT" : 1,
-    "BALANCE_SHEET" : 1
+    "TIME_SERIES_DAILY" : 2584,
+    "OVERVIEW" : 196,
+    "GLOBAL_QUOTE" : 164,
+    "CASH_FLOW" : 392,
+    "INCOME_STATEMENT" : 209,
+    "BALANCE_SHEET" : 196
   },
   "2026-04-18" : {
     "TIME_SERIES_DAILY" : 104,
@@ -161,10 +179,6 @@
     "GLOBAL_QUOTE" : 375,
     "ATR" : 20
   },
-  "2026-04-27" : {
-    "TIME_SERIES_DAILY" : 906,
-    "GLOBAL_QUOTE" : 12
-  },
   "2026-05-05" : {
     "TIME_SERIES_DAILY" : 162
   },
@@ -179,9 +193,6 @@
     "GLOBAL_QUOTE" : 7,
     "BBANDS" : 16,
     "ATR" : 16
-  },
-  "2026-04-24" : {
-    "TIME_SERIES_DAILY" : 9
   },
   "2026-05-04" : {
     "TIME_SERIES_DAILY" : 165
