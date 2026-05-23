@@ -42,11 +42,13 @@ public class AIToolAgent {
     private static final int SCORE_THRESHOLD = 10;
     private static final int CONFLUENCE_SCORE_THRESHOLD = 7;
     private static final int CONFLUENCE_BONUS = 2;
-    private static final int MAX_TRADES_PER_SCAN       = 5;
-    private static final int MAX_OPEN_POSITIONS_TOTAL  = 8;   // global cap: max open trades across all agents (increased for faster edge discovery)
-    private static final int MAX_OPEN_PER_SECTOR        = 2;   // max simultaneous positions in the same sector
+    private static final int MAX_TRADES_PER_SCAN       = 2;   // TOP 2 only - quality over quantity
+    private static final int MAX_OPEN_POSITIONS_TOTAL  = 5;   // global cap: max open trades (reduced from 8 for focus)
+    private static final int MAX_OPEN_PER_SECTOR        = 1;   // max simultaneous positions in the same sector (reduced from 2)
     private static final double MIN_STOP_LOSS_PCT       = 3.0; // minimum stop-loss distance (%)
-    private static final double RISK_PER_TRADE = 500.0; // $ risk per trade for position sizing
+    private static final double RISK_PER_TRADE = 1000.0; // $ position size per trade (changed from $500 to $1K)
+    private static final double MIN_PROFIT_FOR_WIN = 20.0; // minimum profit ($) to be considered a WIN
+    private static final double EARLY_EXIT_PROFIT_THRESHOLD = 30.0; // profit threshold to consider early exit
 
     enum RegimeLevel {
         HEALTHY,    // SPY above 20MA and change > -1%  → full position (100%)
@@ -176,6 +178,10 @@ public class AIToolAgent {
         public String strategyType;      // MOMENTUM_BREAKOUT | PULLBACK | TREND_CONTINUATION
         public String setupType;         // BREAKOUT | PULLBACK | TREND — normalized setup classification
         public String sector;            // sector label (TECHNOLOGY, FINANCIALS, etc.)
+        // Expectancy metrics - calculated at trade close
+        public double avgWin;             // average win percentage for this agent at time of trade close
+        public double avgLoss;            // average loss percentage for this agent at time of trade close
+        public double expectancy;         // (WinRate × AvgWin) - (LossRate × AvgLoss) at time of trade close
         // Full snapshot of market conditions at entry — used by SuccessRecipeEngine to find winning patterns
         public java.util.Map<String, Object> entrySnapshot = new java.util.HashMap<>();
     }
@@ -272,7 +278,10 @@ public class AIToolAgent {
         public int losses = 0;
         public double profitLoss = 0.0;
         public double winRate = 0.0;
-        
+        public double avgWin = 0.0;
+        public double avgLoss = 0.0;
+        public double expectancy = 0.0; // (WinRate × AvgWin) - (LossRate × AvgLoss) - the REAL metric
+
         public DailyStats() {}
         
         public DailyStats(String date) {
@@ -283,6 +292,34 @@ public class AIToolAgent {
             if (trades > 0) {
                 this.winRate = (wins * 100.0) / trades;
             }
+        }
+
+        public void updateExpectancy(List<Trade> dayTrades) {
+            if (dayTrades.isEmpty()) return;
+
+            double totalWin = 0.0;
+            double totalLoss = 0.0;
+            int winCount = 0;
+            int lossCount = 0;
+
+            for (Trade t : dayTrades) {
+                if (t.profitLossPct > 0) {
+                    totalWin += t.profitLossPct;
+                    winCount++;
+                } else if (t.profitLossPct < 0) {
+                    totalLoss += Math.abs(t.profitLossPct);
+                    lossCount++;
+                }
+            }
+
+            this.avgWin = winCount > 0 ? totalWin / winCount : 0.0;
+            this.avgLoss = lossCount > 0 ? totalLoss / lossCount : 0.0;
+
+            double winRateDecimal = winCount / (double) dayTrades.size();
+            double lossRateDecimal = lossCount / (double) dayTrades.size();
+
+            // Expectancy formula: (WinRate × AvgWin) - (LossRate × AvgLoss)
+            this.expectancy = (winRateDecimal * avgWin) - (lossRateDecimal * avgLoss);
         }
     }
 
@@ -295,6 +332,9 @@ public class AIToolAgent {
         public int losses = 0;
         public double totalProfitLoss = 0.0;
         public double winRate = 0.0;
+        public double avgWin = 0.0;
+        public double avgLoss = 0.0;
+        public double expectancy = 0.0; // (WinRate × AvgWin) - (LossRate × AvgLoss) - the REAL metric
         public double avgDailyReturn = 0.0;
         public double avgWeeklyReturn = 0.0;
         public double avgMonthlyReturn = 0.0;
@@ -550,7 +590,7 @@ public class AIToolAgent {
                 String agentId = entry.getKey();
                 if (filterAgentId != null && !filterAgentId.isBlank() && !filterAgentId.equals(agentId)) continue;
                 AgentConfig agentCfg = systemState.agents.get(agentId);
-                int maxHold = agentCfg != null ? (int) getDoubleRisk(agentCfg, "maxHoldDays", 5.0) : 5;
+                int maxHold = agentCfg != null ? (int) getDoubleRisk(agentCfg, "maxHoldDays", 7.0) : 7;
                 for (Trade trade : entry.getValue()) {
                     if (!"OPEN".equals(trade.status)) continue;
                     int holdDays = calcHoldDays(trade.entryTime);
@@ -568,7 +608,7 @@ public class AIToolAgent {
                     trade.profitLoss    = (exitPrice - trade.entryPrice) * trade.quantity;
                     trade.profitLossPct = trade.entryPrice > 0
                         ? ((exitPrice - trade.entryPrice) / trade.entryPrice) * 100 : 0;
-                    trade.status        = trade.profitLoss >= 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
+                    trade.status        = trade.profitLoss >= MIN_PROFIT_FOR_WIN ? "CLOSED_WIN" : "CLOSED_LOSS";
                     trade.closeReason   = "MAX_HOLD_DAYS";
                     trade.exitTime      = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
                     writeScanLog(String.format(
@@ -603,7 +643,7 @@ public class AIToolAgent {
             for (Map.Entry<String, List<Trade>> entry : systemState.tradeHistory.entrySet()) {
                 String agentId = entry.getKey();
                 AgentConfig agentCfg = systemState.agents.get(agentId);
-                int maxHold = agentCfg != null ? (int) getDoubleRisk(agentCfg, "maxHoldDays", 5.0) : 5;
+                int maxHold = agentCfg != null ? (int) getDoubleRisk(agentCfg, "maxHoldDays", 7.0) : 7;
                 for (Trade trade : entry.getValue()) {
                     if (!"OPEN".equals(trade.status)) continue;
                     int holdDays = calcHoldDays(trade.entryTime);
@@ -621,7 +661,7 @@ public class AIToolAgent {
                     trade.profitLoss    = (exitPrice - trade.entryPrice) * trade.quantity;
                     trade.profitLossPct = trade.entryPrice > 0
                         ? ((exitPrice - trade.entryPrice) / trade.entryPrice) * 100 : 0;
-                    trade.status        = trade.profitLoss >= 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
+                    trade.status        = trade.profitLoss >= MIN_PROFIT_FOR_WIN ? "CLOSED_WIN" : "CLOSED_LOSS";
                     trade.closeReason   = "MAX_HOLD_DAYS";
                     trade.exitTime      = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
                     writeScanLog(String.format(
@@ -713,7 +753,7 @@ public class AIToolAgent {
                                 double remainingProfit = (remainingExitPrice - trade.entryPrice) * remainingQty;
                                 trade.profitLoss = partialProfit + remainingProfit;
                                 trade.profitLossPct = (trade.profitLoss / (trade.entryPrice * trade.quantity)) * 100;
-                                trade.status = trade.profitLoss > 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
+                                trade.status = trade.profitLoss >= MIN_PROFIT_FOR_WIN ? "CLOSED_WIN" : "CLOSED_LOSS";
                                 trade.closeReason = "PARTIAL_1R";
                                 partialExit1RUsed = true;
                                 System.out.println("[AIToolAgent] PARTIAL_1R: " + trade.ticker +
@@ -742,17 +782,49 @@ public class AIToolAgent {
                                 trade.closeReason = "TAKE_PROFIT";
                             } else if (holdDays >= maxHold) {
                                 double priceChange = currentPrice - trade.entryPrice;
-                                trade.status    = priceChange >= 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
+                                trade.status    = priceChange >= MIN_PROFIT_FOR_WIN ? "CLOSED_WIN" : "CLOSED_LOSS";
                                 trade.exitPrice = currentPrice;
                                 trade.closeReason = "MAX_HOLD_DAYS";
                             } else {
-                                // Within hold window — carry trade over to the next trading day
-                                writeScanLog(String.format(
-                                    "[EOD CARRY ⏳] %s | %s | day %d/%d | $%.2f | SL=$%.2f | TP=$%.2f",
-                                    trade.ticker, agentId, holdDays, maxHold,
-                                    currentPrice, trade.stopLoss, trade.takeProfit));
-                                Thread.sleep(12500);
-                                continue;
+                                // Check for early exit opportunity if profit >= $30
+                                double currentProfit = (currentPrice - trade.entryPrice) * trade.quantity;
+                                if (currentProfit >= EARLY_EXIT_PROFIT_THRESHOLD) {
+                                    // Analyze whether to sell or hold
+                                    double profitPct = ((currentPrice - trade.entryPrice) / trade.entryPrice) * 100;
+                                    double distanceToTP = ((trade.takeProfit - currentPrice) / currentPrice) * 100;
+
+                                    // Sell early if:
+                                    // 1. Profit is good (>= 3%) AND
+                                    // 2. Either close to take profit (< 2% away) OR showing signs of weakness (held 3+ days)
+                                    boolean shouldSellEarly = (profitPct >= 3.0) &&
+                                        (distanceToTP < 2.0 || holdDays >= 3);
+
+                                    if (shouldSellEarly) {
+                                        trade.status    = "CLOSED_WIN";
+                                        trade.exitPrice = currentPrice;
+                                        trade.closeReason = "EARLY_EXIT";
+                                        writeScanLog(String.format(
+                                            "[EOD EARLY EXIT 💰] %s | %s | day %d/%d | P/L=$%+.2f (%.2f%%) | dist to TP=%.2f%%",
+                                            trade.ticker, agentId, holdDays, maxHold,
+                                            currentProfit, profitPct, distanceToTP));
+                                    } else {
+                                        // Hold the runner
+                                        writeScanLog(String.format(
+                                            "[EOD HOLD RUNNER 🚀] %s | %s | day %d/%d | P/L=$%+.2f (%.2f%%) | SL=$%.2f | TP=$%.2f",
+                                            trade.ticker, agentId, holdDays, maxHold,
+                                            currentProfit, profitPct, trade.stopLoss, trade.takeProfit));
+                                        Thread.sleep(12500);
+                                        continue;
+                                    }
+                                } else {
+                                    // Within hold window — carry trade over to the next trading day
+                                    writeScanLog(String.format(
+                                        "[EOD CARRY ⏳] %s | %s | day %d/%d | $%.2f | SL=$%.2f | TP=$%.2f",
+                                        trade.ticker, agentId, holdDays, maxHold,
+                                        currentPrice, trade.stopLoss, trade.takeProfit));
+                                    Thread.sleep(12500);
+                                    continue;
+                                }
                             }
                             // Calculate P/L for closed trade
                             double priceChange = trade.exitPrice - trade.entryPrice;
@@ -1307,10 +1379,11 @@ public class AIToolAgent {
         
         synchronized (LOCK) {
             for (AgentPerformance perf : systemState.performance.values()) {
-                if (perf.totalTrades >= MIN_TRADES_FOR_DELETION && perf.winRate < UNDERPERFORMING_THRESHOLD) {
+                // Use expectancy instead of winRate for deletion threshold
+                if (perf.totalTrades >= MIN_TRADES_FOR_DELETION && perf.expectancy < 0.0) {
                     agentsToDelete.add(perf.agentId);
-                    deletedReport.append(String.format("• **%s** - %.1f%% win rate (%d/%d trades)\n", 
-                        perf.agentId, perf.winRate, perf.wins, perf.totalTrades));
+                    deletedReport.append(String.format("• **%s** - %.2f%% expectancy (%d/%d trades)\n",
+                        perf.agentId, perf.expectancy, perf.wins, perf.totalTrades));
                 }
             }
             
@@ -1597,23 +1670,23 @@ public class AIToolAgent {
 
             int totalSignals = 0;
 
-            // Comparator: top-performing agents first (win rate desc, min 3 trades), rest at end
-            Comparator<AgentConfig> byWinRateDesc = (a, b) -> {
+            // Comparator: top-performing agents first (expectancy desc, min 3 trades), rest at end
+            Comparator<AgentConfig> byExpectancyDesc = (a, b) -> {
                 AgentPerformance pa = systemState.performance.get(a.id);
                 AgentPerformance pb = systemState.performance.get(b.id);
-                double wa = (pa != null && pa.totalTrades >= 3) ? pa.winRate : -1;
-                double wb = (pb != null && pb.totalTrades >= 3) ? pb.winRate : -1;
-                return Double.compare(wb, wa); // descending
+                double ea = (pa != null && pa.totalTrades >= 3) ? pa.expectancy : -1;
+                double eb = (pb != null && pb.totalTrades >= 3) ? pb.expectancy : -1;
+                return Double.compare(eb, ea); // descending
             };
 
             // Separate master strategies (scoring-based) from legacy agents (binary pass/fail)
             List<AgentConfig> masterStrategies = allAgents.stream()
                 .filter(a -> a.masterStrategy && a.strategyType != null && !a.disabled)
-                .sorted(byWinRateDesc)
+                .sorted(byExpectancyDesc)
                 .collect(Collectors.toList());
             List<AgentConfig> legacyAgents = allAgents.stream()
                 .filter(a -> !a.masterStrategy)
-                .sorted(byWinRateDesc)
+                .sorted(byExpectancyDesc)
                 .collect(Collectors.toList());
             boolean useMasters = !masterStrategies.isEmpty();
             List<RankedSignal> allSignals = new ArrayList<>();
@@ -1882,42 +1955,52 @@ public class AIToolAgent {
 
             // ── RANK & EXECUTE: portfolio-manager mode ──
             if (useMasters && !allSignals.isEmpty()) {
-                allSignals.sort((a, b) -> Integer.compare(b.decision.totalScore, a.decision.totalScore));
+                // Rank by finalConviction (META SCORE) instead of totalScore
+                allSignals.sort((a, b) -> Double.compare(b.decision.finalConviction, a.decision.finalConviction));
 
                 writeScanLog("────────────────────────────────────────");
                 writeScanLog("[PORTFOLIO] ── Step 1: Dedup ─────────────────────────");
                 writeScanLog("[PORTFOLIO] Raw signals before dedup: " + allSignals.size());
 
-                // ── Step 1: Dedup same ticker across strategies — keep highest-score signal ──
+                // ── Step 1: Dedup same ticker across strategies — keep highest finalConviction signal ──
                 Map<String, RankedSignal> dedupMap = new LinkedHashMap<>();
                 for (RankedSignal sig : allSignals) {
                     RankedSignal existing = dedupMap.get(sig.ticker);
-                    if (existing != null && existing.decision.totalScore >= sig.decision.totalScore) {
+                    if (existing != null && existing.decision.finalConviction >= sig.decision.finalConviction) {
                         writeScanLog("[DEDUP] " + sig.ticker + " — dropped " + sig.strategy.id
-                            + " (score=" + sig.decision.totalScore + ") — kept " + existing.strategy.id
-                            + " (score=" + existing.decision.totalScore + ")");
+                            + " (finalConviction=" + String.format("%.2f", sig.decision.finalConviction) + ") — kept " + existing.strategy.id
+                            + " (finalConviction=" + String.format("%.2f", existing.decision.finalConviction) + ")");
                     } else {
                         if (existing != null) {
                             writeScanLog("[DEDUP] " + sig.ticker + " — replaced " + existing.strategy.id
-                                + " (score=" + existing.decision.totalScore + ") with " + sig.strategy.id
-                                + " (score=" + sig.decision.totalScore + ")");
+                                + " (finalConviction=" + String.format("%.2f", existing.decision.finalConviction) + ") with " + sig.strategy.id
+                                + " (finalConviction=" + String.format("%.2f", sig.decision.finalConviction) + ")");
                         }
                         dedupMap.put(sig.ticker, sig);
                     }
                 }
                 List<RankedSignal> dedupedSignals = new ArrayList<>(dedupMap.values());
-                dedupedSignals.sort((a, b) -> Integer.compare(b.decision.totalScore, a.decision.totalScore));
+                dedupedSignals.sort((a, b) -> Double.compare(b.decision.finalConviction, a.decision.finalConviction));
                 int removedDups = allSignals.size() - dedupedSignals.size();
                 writeScanLog("[DEDUP] Result: " + allSignals.size() + " → " + dedupedSignals.size()
                     + " unique signals (" + removedDups + " duplicate(s) removed)");
 
+                // ── Step 1.5: Take TOP 2 candidates only ──
+                final int TOP_CANDIDATES = 2;
+                List<RankedSignal> topCandidates = dedupedSignals.stream()
+                    .limit(TOP_CANDIDATES)
+                    .collect(Collectors.toList());
+                writeScanLog("[RANK] Taking TOP " + TOP_CANDIDATES + " candidates from " + dedupedSignals.size() + " unique signals");
+
                 // Log ranked list
-                writeScanLog("[PORTFOLIO] ── Ranked signals after dedup ──────────");
-                for (int i = 0; i < dedupedSignals.size(); i++) {
-                    RankedSignal sig = dedupedSignals.get(i);
+                writeScanLog("[PORTFOLIO] ── Ranked TOP candidates ──────────");
+                for (int i = 0; i < topCandidates.size(); i++) {
+                    RankedSignal sig = topCandidates.get(i);
                     String sector = LongTermCandidateFinder.getSectorForTicker(sig.ticker);
-                    writeScanLog(String.format("[RANK #%d] %s | %s | Score=%d/12 | Sector=%s",
-                        i + 1, sig.ticker, sig.strategy.id, sig.decision.totalScore, sector));
+                    writeScanLog(String.format("[RANK #%d] %s | %s | FinalConviction=%.2f | Tech=%.1f Mom=%.1f Fund=%.1f Cat=%.1f | Sector=%s",
+                        i + 1, sig.ticker, sig.strategy.id, sig.decision.finalConviction,
+                        sig.decision.totalScore * 0.35, sig.decision.momentumScore * 0.20,
+                        sig.decision.fundamentalScore * 0.25, sig.decision.catalystScore * 0.20, sector));
                 }
 
                 // ── Step 2: Portfolio constraints — sector cap + agent open cap + total open cap ──
@@ -1932,7 +2015,7 @@ public class AIToolAgent {
                 }
 
                 List<RankedSignal> topSignals = new ArrayList<>();
-                for (RankedSignal sig : dedupedSignals) {
+                for (RankedSignal sig : topCandidates) {
                     String sector = LongTermCandidateFinder.getSectorForTicker(sig.ticker);
                     // Check: total open cap
                     if (topSignals.size() + currentOpenTotal >= MAX_OPEN_POSITIONS_TOTAL) {
@@ -1956,23 +2039,23 @@ public class AIToolAgent {
                             + " at cap (" + sectorCurrent + "/" + sectorMax + ") — skipped");
                         continue;
                     }
-                    writeScanLog("[PORTFOLIO] ✅ " + sig.ticker + " | Score=" + sig.decision.totalScore
-                        + "/12 | " + sig.strategy.id + " | Sector=" + sector
+                    writeScanLog("[PORTFOLIO] ✅ " + sig.ticker + " | FinalConviction=" + String.format("%.2f", sig.decision.finalConviction)
+                        + " | " + sig.strategy.id + " | Sector=" + sector
                         + " (" + sectorCurrent + "/" + sectorMax + ")");
                     topSignals.add(sig);
                     sectorOpenCount.merge(sector, 1, Integer::sum); // reserve slot for this scan
                 }
-                writeScanLog("[PORTFOLIO] Filter result: " + dedupedSignals.size()
+                writeScanLog("[PORTFOLIO] Filter result: " + topCandidates.size()
                     + " → " + topSignals.size() + " signal(s) approved for execution");
 
                 RegimeLevel regime = checkMarketRegime();
                 double posMultiplier = (regime == RegimeLevel.HEALTHY) ? 1.0
                                      : (regime == RegimeLevel.WEAK)    ? 0.5 : 0.0;
-                sendRankedScanSummary(dedupedSignals, topSignals, regime, posMultiplier);
+                sendRankedScanSummary(topCandidates, topSignals, regime, posMultiplier);
                 writeScanLog("[PORTFOLIO] ── Step 3: Execution ──────────────────");
                 if (regime == RegimeLevel.VERY_WEAK) {
-                    lastScanSignalCount = dedupedSignals.size();
-                    writeScanLog("[REGIME] ⛔ Trade execution blocked — market in crash mode (" + dedupedSignals.size() + " signal(s) suppressed)");
+                    lastScanSignalCount = topCandidates.size();
+                    writeScanLog("[REGIME] ⛔ Trade execution blocked — market in crash mode (" + topCandidates.size() + " signal(s) suppressed)");
                 } else {
                     String regimeNote = (regime == RegimeLevel.WEAK) ? " [WEAK regime — 50% size]" : "";
                     writeScanLog("[EXECUTE] " + topSignals.size() + " signal(s) queued for execution" + regimeNote);
@@ -2124,6 +2207,14 @@ public class AIToolAgent {
         public int    catalystScore;         // 0-10  (Layer 3)
         public int    institutionalFlowScore; // 0-10  (Layer 4)
         public double finalConviction;       // 0-50  (weighted composite)
+
+        // ── META SCORE components ──
+        public double metaScore;              // 0-100 total meta score
+        public double metaTechnicalScore;     // 0-30
+        public double metaRegimeScore;        // 0-20
+        public double metaFundamentalScore;   // 0-20
+        public double metaFlowScore;          // 0-15
+        public double metaHistoricalScore;    // 0-15
 
         // Raw IFL data for snapshot persistence
         public FundamentalData fundamentalData;
@@ -3905,6 +3996,7 @@ public class AIToolAgent {
                             FundamentalData fd = decision.fundamentalData;
                             m.put("fd_marketCap", fd.marketCap);
                             m.put("fd_revenueGrowth", round2(fd.revenueGrowth));
+                            m.put("fd_epsGrowth", round2(fd.epsGrowth));
                             m.put("fd_eps", round2(fd.eps));
                             m.put("fd_profitMargin", round2(fd.profitMargin));
                             m.put("fd_operatingMargin", round2(fd.operatingMargin));
@@ -3913,6 +4005,7 @@ public class AIToolAgent {
                             m.put("fd_beta", round2(fd.beta));
                             m.put("fd_debtToEquity", round2(fd.debtToEquity));
                             m.put("fd_analystUpside", round2(fd.analystUpside));
+                            m.put("fd_institutionalScore", round2(fd.institutionalScore));
                             m.put("fd_sector", fd.sector);
                             m.put("fd_industry", fd.industry);
                         }
@@ -3983,6 +4076,34 @@ public class AIToolAgent {
             
             perf.winRate = perf.totalTrades > 0 ? (double) perf.wins / perf.totalTrades * 100 : 0;
             
+            // Calculate Expectancy: (WinRate × AvgWin) - (LossRate × AvgLoss)
+            double totalWinPct = 0.0;
+            double totalLossPct = 0.0;
+            int winCount = 0;
+            int lossCount = 0;
+            List<Trade> allTrades = systemState.tradeHistory.get(agentId);
+            if (allTrades != null) {
+                for (Trade t : allTrades) {
+                    if (t.status.equals("CLOSED_WIN")) {
+                        totalWinPct += t.profitLossPct;
+                        winCount++;
+                    } else if (t.status.equals("CLOSED_LOSS")) {
+                        totalLossPct += Math.abs(t.profitLossPct);
+                        lossCount++;
+                    }
+                }
+            }
+            perf.avgWin = winCount > 0 ? totalWinPct / winCount : 0.0;
+            perf.avgLoss = lossCount > 0 ? totalLossPct / lossCount : 0.0;
+            double winRateDecimal = perf.totalTrades > 0 ? (double) perf.wins / perf.totalTrades : 0.0;
+            double lossRateDecimal = perf.totalTrades > 0 ? (double) perf.losses / perf.totalTrades : 0.0;
+            perf.expectancy = (winRateDecimal * perf.avgWin) - (lossRateDecimal * perf.avgLoss);
+
+            // Store expectancy metrics in the trade for historical tracking
+            trade.avgWin = perf.avgWin;
+            trade.avgLoss = perf.avgLoss;
+            trade.expectancy = perf.expectancy;
+
             // Update daily history
             String today = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_LOCAL_DATE); // YYYY-MM-DD
             if (perf.dailyHistory == null) {
@@ -3998,6 +4119,18 @@ public class AIToolAgent {
             }
             dailyStats.updateWinRate();
             
+            // Update daily expectancy
+            List<Trade> dayTrades = new ArrayList<>();
+            if (allTrades != null) {
+                String todayStr = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_LOCAL_DATE);
+                for (Trade t : allTrades) {
+                    if (t.entryTime != null && t.entryTime.startsWith(todayStr)) {
+                        dayTrades.add(t);
+                    }
+                }
+            }
+            dailyStats.updateExpectancy(dayTrades);
+
             // Keep only last 3 trades for display
             perf.recentTrades.add(0, trade);
             if (perf.recentTrades.size() > 3) {
@@ -4005,7 +4138,6 @@ public class AIToolAgent {
             }
             
             // Calculate averages
-            List<Trade> allTrades = systemState.tradeHistory.get(agentId);
             if (allTrades != null && !allTrades.isEmpty()) {
                 double totalReturn = allTrades.stream().mapToDouble(t -> t.profitLossPct).sum();
                 int tradeDays = Math.max(1, allTrades.size());
@@ -4015,8 +4147,8 @@ public class AIToolAgent {
                 perf.avgMonthlyReturn = perf.avgDailyReturn * 22;
             }
             
-            // Determine if agent is winning (positive total P/L and win rate > 50%)
-            perf.isWinning = perf.totalProfitLoss > 0 && perf.winRate > 50;
+            // Determine if agent is winning (positive expectancy instead of just win rate)
+            perf.isWinning = perf.expectancy > 0.5 && perf.totalProfitLoss > 0; // Positive expectancy > 0.5% per trade
             
             // Check if agent has high win rate and notify via Discord
             checkAndNotifyHighWinRate(perf);
@@ -4032,10 +4164,10 @@ public class AIToolAgent {
     private static void checkAndNotifyHighWinRate(AgentPerformance perf) {
         // Only notify if:
         // 1. Agent has enough trades
-        // 2. Win rate exceeds threshold
+        // 2. Expectancy exceeds threshold (the REAL metric)
         // 3. We haven't already notified about this agent
-        if (perf.totalTrades >= MIN_TRADES_FOR_NOTIFICATION 
-            && perf.winRate >= WIN_RATE_NOTIFICATION_THRESHOLD
+        if (perf.totalTrades >= MIN_TRADES_FOR_NOTIFICATION
+            && perf.expectancy >= 1.0  // Positive expectancy > 1% per trade
             && !notifiedWinningAgents.contains(perf.agentId)) {
             
             notifiedWinningAgents.add(perf.agentId);

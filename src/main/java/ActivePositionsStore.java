@@ -31,6 +31,7 @@ public class ActivePositionsStore {
         public String entryDateNy;
         public String lastUpdatedNy;
         public String notes;
+        public String sector;  // Added for position limits
 
         public Position() {}
 
@@ -53,6 +54,10 @@ public class ActivePositionsStore {
     private final Object lock = new Object();
     private final Path dataFile;
     private final ObjectMapper om;
+
+    // Position limits
+    private static final int MAX_POSITIONS = 5;
+    private static final int MAX_PER_SECTOR = 1;
 
     public ActivePositionsStore(Path dataFile) {
         this.dataFile = dataFile;
@@ -98,13 +103,36 @@ public class ActivePositionsStore {
 
         synchronized (lock) {
             PositionsData data = load();
+
             // Check if already exists
             for (Position p : data.positions) {
                 if (p.symbol != null && p.symbol.equalsIgnoreCase(sym)) {
                     return false; // Already have position in this symbol
                 }
             }
+
+            // Check position limit
+            if (data.positions.size() >= MAX_POSITIONS) {
+                return false; // Max positions reached
+            }
+
+            // Get sector for the new position
+            String newSector = getSector(sym);
+
+            // Check sector cap
+            int sectorCount = 0;
+            for (Position p : data.positions) {
+                if (p.sector != null && p.sector.equalsIgnoreCase(newSector)) {
+                    sectorCount++;
+                }
+            }
+            if (sectorCount >= MAX_PER_SECTOR) {
+                return false; // Sector cap reached
+            }
+
             Position pos = new Position(sym, entryPrice, atrMultiplier);
+            pos.sector = newSector;
+
             // Compute initial stop using ATR
             try {
                 double atr = fetchCurrentAtr(sym);
@@ -123,6 +151,18 @@ public class ActivePositionsStore {
             persist(data);
             return true;
         }
+    }
+
+    private String getSector(String symbol) {
+        try {
+            FundamentalData fd = InstitutionalFlowCache.getFundamental(symbol);
+            if (fd != null && fd.sector != null && !fd.sector.isBlank()) {
+                return fd.sector.toUpperCase();
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        return "UNKNOWN";
     }
 
     public boolean removePosition(String symbol) {

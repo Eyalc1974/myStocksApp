@@ -81,6 +81,7 @@ public class InstitutionalFlowCache {
             ObjectNode node = JSON.createObjectNode();
             node.put("marketCap",              data.marketCap);
             node.put("revenueGrowth",          data.revenueGrowth);
+            node.put("epsGrowth",              data.epsGrowth);
             node.put("eps",                    data.eps);
             node.put("profitMargin",           data.profitMargin);
             node.put("operatingMargin",        data.operatingMargin);
@@ -89,6 +90,7 @@ public class InstitutionalFlowCache {
             node.put("beta",                   data.beta);
             node.put("debtToEquity",           data.debtToEquity);
             node.put("analystUpside",          data.analystUpside);
+            node.put("institutionalScore",     data.institutionalScore);
             node.put("sector",                 data.sector);
             node.put("industry",               data.industry);
             node.put("lastUpdatedEpochMs",     data.lastUpdatedEpochMs);
@@ -106,6 +108,7 @@ public class InstitutionalFlowCache {
             FundamentalData d = new FundamentalData();
             d.marketCap            = node.path("marketCap").asDouble(0);
             d.revenueGrowth        = node.path("revenueGrowth").asDouble(0);
+            d.epsGrowth            = node.path("epsGrowth").asDouble(0);
             d.eps                  = node.path("eps").asDouble(0);
             d.profitMargin         = node.path("profitMargin").asDouble(0);
             d.operatingMargin      = node.path("operatingMargin").asDouble(0);
@@ -114,6 +117,7 @@ public class InstitutionalFlowCache {
             d.beta                 = node.path("beta").asDouble(0);
             d.debtToEquity         = node.path("debtToEquity").asDouble(0);
             d.analystUpside        = node.path("analystUpside").asDouble(0);
+            d.institutionalScore   = node.path("institutionalScore").asDouble(0);
             d.sector               = node.path("sector").asText("");
             d.industry             = node.path("industry").asText("");
             d.lastUpdatedEpochMs   = node.path("lastUpdatedEpochMs").asLong(0);

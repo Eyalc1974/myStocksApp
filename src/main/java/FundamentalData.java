@@ -8,6 +8,7 @@ public class FundamentalData {
 
     public double marketCap;
     public double revenueGrowth;      // decimal (0.25 = +25%)
+    public double epsGrowth;          // decimal (0.15 = +15% YoY)
     public double eps;
     public double profitMargin;       // decimal
     public double operatingMargin;    // decimal
@@ -16,6 +17,7 @@ public class FundamentalData {
     public double beta;
     public double debtToEquity;
     public double analystUpside;      // computed: (target - current) / current
+    public double institutionalScore; // 0-10 institutional ownership quality
     public String sector;
     public String industry;
     public long lastUpdatedEpochMs;
@@ -26,23 +28,28 @@ public class FundamentalData {
         if (revenueGrowth > 0.20)      score += 2;
         else if (revenueGrowth > 0.10) score += 1;
 
-        if (eps > 0)                   score += 2;
+        if (epsGrowth > 0.15)          score += 2;
+        else if (epsGrowth > 0.10)     score += 1;
+
+        if (eps > 0)                   score += 1;
 
         if (profitMargin > 0.15)       score += 1;
-        else if (profitMargin > 0.10)  score += 1; // same points, wider gate
+        else if (profitMargin > 0.10)  score += 1;
 
         if (operatingMargin > 0.15)    score += 1;
 
         if (marketCap > 10_000_000_000.0)       score += 2;
         else if (marketCap > 5_000_000_000.0)   score += 1;
-        else if (marketCap > 2_000_000_000.0)   score += 1; // avoid micro-cap garbage
+        else if (marketCap > 2_000_000_000.0)   score += 1;
 
         if (currentPrice > 0 && analystTargetPrice > currentPrice * 1.05) score += 1;
 
         if (debtToEquity > 0 && debtToEquity < 0.5) score += 1;
-        else if (debtToEquity >= 0.5 && debtToEquity < 1.0) score += 1; // still acceptable
+        else if (debtToEquity >= 0.5 && debtToEquity < 1.0) score += 1;
 
-        // Penalty for extreme valuation (bubble territory)
+        if (institutionalScore > 7)    score += 1;
+        else if (institutionalScore > 5) score += 1;
+
         if (peRatio > 0 && peRatio > 100) score -= 1;
 
         return Math.max(0, Math.min(10, score));
@@ -53,6 +60,7 @@ public class FundamentalData {
         FundamentalData d = new FundamentalData();
         d.marketCap            = parseDoubleSafe(node.path("MarketCapitalization").asText("0"));
         d.revenueGrowth        = parseDoubleSafe(node.path("QuarterlyRevenueGrowthYOY").asText("0"));
+        d.epsGrowth            = parseDoubleSafe(node.path("QuarterlyEarningsGrowthYOY").asText("0"));
         d.eps                  = parseDoubleSafe(node.path("EPS").asText("0"));
         d.profitMargin         = parseDoubleSafe(node.path("ProfitMargin").asText("0"));
         d.operatingMargin      = parseDoubleSafe(node.path("OperatingMarginTTM").asText("0"));
@@ -60,6 +68,7 @@ public class FundamentalData {
         d.analystTargetPrice   = parseDoubleSafe(node.path("AnalystTargetPrice").asText("0"));
         d.beta                 = parseDoubleSafe(node.path("Beta").asText("0"));
         d.debtToEquity         = parseDoubleSafe(node.path("DebtToEquityRatio").asText("0"));
+        d.institutionalScore   = parseDoubleSafe(node.path("InstitutionalOwnership").asText("0")) / 10.0;
         d.sector               = node.path("Sector").asText("");
         d.industry             = node.path("Industry").asText("");
         d.lastUpdatedEpochMs   = System.currentTimeMillis();
