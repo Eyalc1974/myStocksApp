@@ -4439,11 +4439,25 @@ public class WebServer {
                         "    var d=await r.json();"+
                         "    var status=document.getElementById('scStatus');"+
                         "    var btn=document.getElementById('scBtn');"+
+                        "    var wrap=document.getElementById('scProgressWrap');"+
+                        "    var bar=document.getElementById('scProgressBar');"+
+                        "    var txt=document.getElementById('scProgressText');"+
+                        "    var pct=document.getElementById('scPct');"+
+                        "    var cur=document.getElementById('scCurrentTicker');"+
                         "    if(d.running){"+
                         "      status.textContent=' '+d.progress+' ('+d.currentTicker+')';"+
+                        "      if(wrap)wrap.style.display='block';"+
+                        "      var parts=(d.progress||'').split('/');"+
+                        "      var done=parseInt(parts[0])||0,tot=parseInt(parts[1])||1;"+
+                        "      var p=Math.round((done/tot)*100);"+
+                        "      if(bar)bar.style.width=p+'%';"+
+                        "      if(txt)txt.textContent=done+' / '+tot;"+
+                        "      if(pct)pct.textContent=p;"+
+                        "      if(cur)cur.textContent=d.currentTicker||'—';"+
                         "    }else{"+
                         "      if(scPollInterval){clearInterval(scPollInterval);scPollInterval=null;}"+
                         "      btn.disabled=false;btn.textContent='🚀 הרץ השוואה';status.textContent='';"+
+                        "      if(wrap)wrap.style.display='none';"+
                         "      if(d.results&&d.results.length>0)showStrategyCompareResults(d);"+
                         "    }"+
                         "  }catch(e){}"+
@@ -5978,6 +5992,17 @@ public class WebServer {
                 sb.append("<input id='scBalance' type='number' value='36000' min='1000' step='1000' style='width:120px;'/></div>");
                 sb.append("<button onclick='runStrategyCompare()' id='scBtn'>🚀 הרץ השוואה</button>");
                 sb.append("<span id='scStatus' style='color:#9ca3af;font-size:13px;'></span>");
+                sb.append("</div>");
+                // Progress bar (hidden when idle)
+                sb.append("<div id='scProgressWrap' style='margin-top:8px;display:none;'>");
+                sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;'>");
+                sb.append("<span style='font-size:12px;color:#9ca3af;'>Tickers scanned: <span id='scProgressText'>0 / 0</span></span>");
+                sb.append("<span style='font-size:12px;color:#8b5cf6;font-weight:600;'><span id='scPct'>0</span>%</span>");
+                sb.append("</div>");
+                sb.append("<div style='background:#1f2a44;border-radius:6px;height:10px;overflow:hidden;'>");
+                sb.append("<div id='scProgressBar' style='background:linear-gradient(90deg,#8b5cf6,#a78bfa);height:100%;width:0%;transition:width 0.4s ease;'></div>");
+                sb.append("</div>");
+                sb.append("<div style='margin-top:4px;font-size:11px;color:#6b7280;'>Current: <span id='scCurrentTicker' style='color:#fcd34d;'>—</span></div>");
                 sb.append("</div>");
                 sb.append("<div id='scResult' style='display:none;'></div>");
                 sb.append("</div>");
