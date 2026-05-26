@@ -1,1 +1,1040 @@
-2026-05-23 08:04:55 EDT  === LOG ROTATED (48h) ===
+2026-05-26 11:01:43 EDT  === LOG ROTATED (48h) ===
+2026-05-26 11:01:44 EDT  [DISCORD] ✅ Sent (HTTP 204): 🤖 **AITool Agents Started** Server started during market ho...
+2026-05-26 11:01:54 EDT  ════════════════════════════════════════
+2026-05-26 11:01:55 EDT  [SCAN START] Run #119 | Tickers: 94 | Agents: 16
+2026-05-26 11:01:55 EDT  [DISCORD] ✅ Sent (HTTP 204): 🚀 **Scan Started** — Run #119 Scanning **94** tickers | AV ...
+2026-05-26 11:01:55 EDT  [SCAN MODE] MASTER STRATEGY scoring — 3 strategies (threshold=10/12)
+2026-05-26 11:01:55 EDT  [PRE-FETCH] Starting parallel AV fetch: 94 tickers | 5 calls/min | ETA ~19 min
+2026-05-26 11:02:25 EDT  [PRE-FETCH] Status: 3/94 (3.2%) - Rate: 6.0 calls/min - Elapsed: 0.5 min
+2026-05-26 11:02:55 EDT  [PRE-FETCH] Status: 5/94 (5.3%) - Rate: 5.0 calls/min - Elapsed: 1.0 min
+2026-05-26 11:03:25 EDT  [PRE-FETCH] Status: 8/94 (8.5%) - Rate: 5.3 calls/min - Elapsed: 1.5 min
+2026-05-26 11:03:45 EDT  [PRE-FETCH] Progress: 10/94 (10.6%) - Latest: HUM
+2026-05-26 11:03:55 EDT  [PRE-FETCH] Status: 10/94 (10.6%) - Rate: 5.0 calls/min - Elapsed: 2.0 min
+2026-05-26 11:04:25 EDT  [PRE-FETCH] Status: 13/94 (13.8%) - Rate: 5.2 calls/min - Elapsed: 2.5 min
+2026-05-26 11:04:55 EDT  [PRE-FETCH] Status: 15/94 (16.0%) - Rate: 5.0 calls/min - Elapsed: 3.0 min
+2026-05-26 11:05:25 EDT  [PRE-FETCH] Status: 18/94 (19.1%) - Rate: 5.1 calls/min - Elapsed: 3.5 min
+2026-05-26 11:05:29 EDT  [DISCORD] ✅ Sent (HTTP 204): 🚀 **Full Scan Started** — 1 agents | 94 tickers Agents: MAS...
+2026-05-26 11:05:45 EDT  [PRE-FETCH] Progress: 20/94 (21.3%) - Latest: GOOGL
+2026-05-26 11:05:55 EDT  [PRE-FETCH] Status: 20/94 (21.3%) - Rate: 5.0 calls/min - Elapsed: 4.0 min
+2026-05-26 11:06:25 EDT  [PRE-FETCH] Status: 23/94 (24.5%) - Rate: 5.1 calls/min - Elapsed: 4.5 min
+2026-05-26 11:06:55 EDT  [PRE-FETCH] Status: 25/94 (26.6%) - Rate: 5.0 calls/min - Elapsed: 5.0 min
+2026-05-26 11:07:25 EDT  [PRE-FETCH] Status: 28/94 (29.8%) - Rate: 5.1 calls/min - Elapsed: 5.5 min
+2026-05-26 11:07:44 EDT  [PRE-FETCH] Progress: 30/94 (31.9%) - Latest: ALB
+2026-05-26 11:07:55 EDT  [PRE-FETCH] Status: 30/94 (31.9%) - Rate: 5.0 calls/min - Elapsed: 6.0 min
+2026-05-26 11:08:06 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **X** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX_M...
+2026-05-26 11:08:22 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **MCHP** | VIX + SPY Market Filter (Master) (`MASTER_7_VI...
+2026-05-26 11:08:25 EDT  [PRE-FETCH] Status: 33/94 (35.1%) - Rate: 5.1 calls/min - Elapsed: 6.5 min
+2026-05-26 11:08:55 EDT  [PRE-FETCH] Status: 35/94 (37.2%) - Rate: 5.0 calls/min - Elapsed: 7.0 min
+2026-05-26 11:09:25 EDT  [PRE-FETCH] Status: 38/94 (40.4%) - Rate: 5.1 calls/min - Elapsed: 7.5 min
+2026-05-26 11:09:45 EDT  [PRE-FETCH] Progress: 40/94 (42.6%) - Latest: AVB
+2026-05-26 11:09:55 EDT  [PRE-FETCH] Status: 40/94 (42.6%) - Rate: 5.0 calls/min - Elapsed: 8.0 min
+2026-05-26 11:10:25 EDT  [PRE-FETCH] Status: 43/94 (45.7%) - Rate: 5.1 calls/min - Elapsed: 8.5 min
+2026-05-26 11:10:55 EDT  [PRE-FETCH] Status: 45/94 (47.9%) - Rate: 5.0 calls/min - Elapsed: 9.0 min
+2026-05-26 11:11:15 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **NBIX** | VIX + SPY Market Filter (Master) (`MASTER_7_VI...
+2026-05-26 11:11:25 EDT  [PRE-FETCH] Status: 48/94 (51.1%) - Rate: 5.1 calls/min - Elapsed: 9.5 min
+2026-05-26 11:11:46 EDT  [PRE-FETCH] Progress: 50/94 (53.2%) - Latest: MSCI
+2026-05-26 11:11:48 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **ADI** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:11:55 EDT  [PRE-FETCH] Status: 50/94 (53.2%) - Rate: 5.0 calls/min - Elapsed: 10.0 min
+2026-05-26 11:12:04 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **CVS** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:12:25 EDT  [PRE-FETCH] Status: 53/94 (56.4%) - Rate: 5.0 calls/min - Elapsed: 10.5 min
+2026-05-26 11:12:34 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **NVDA** | VIX + SPY Market Filter (Master) (`MASTER_7_VI...
+2026-05-26 11:12:55 EDT  [PRE-FETCH] Status: 55/94 (58.5%) - Rate: 5.0 calls/min - Elapsed: 11.0 min
+2026-05-26 11:13:05 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **CAT** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:13:25 EDT  [PRE-FETCH] Status: 58/94 (61.7%) - Rate: 5.0 calls/min - Elapsed: 11.5 min
+2026-05-26 11:13:34 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **AVGO** | VIX + SPY Market Filter (Master) (`MASTER_7_VI...
+2026-05-26 11:13:45 EDT  [PRE-FETCH] Progress: 60/94 (63.8%) - Latest: HES
+2026-05-26 11:13:49 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **ILMN** | VIX + SPY Market Filter (Master) (`MASTER_7_VI...
+2026-05-26 11:13:55 EDT  [PRE-FETCH] Status: 60/94 (63.8%) - Rate: 5.0 calls/min - Elapsed: 12.0 min
+2026-05-26 11:14:05 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **AMAT** | VIX + SPY Market Filter (Master) (`MASTER_7_VI...
+2026-05-26 11:14:21 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **LRCX** | VIX + SPY Market Filter (Master) (`MASTER_7_VI...
+2026-05-26 11:14:25 EDT  [PRE-FETCH] Status: 63/94 (67.0%) - Rate: 5.0 calls/min - Elapsed: 12.5 min
+2026-05-26 11:14:37 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **MRO** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:14:55 EDT  [PRE-FETCH] Status: 65/94 (69.1%) - Rate: 5.0 calls/min - Elapsed: 13.0 min
+2026-05-26 11:15:09 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **IFF** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:15:25 EDT  [PRE-FETCH] Status: 68/94 (72.3%) - Rate: 5.0 calls/min - Elapsed: 13.5 min
+2026-05-26 11:15:26 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **AVB** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:15:44 EDT  [PRE-FETCH] Progress: 70/94 (74.5%) - Latest: SNAP
+2026-05-26 11:15:55 EDT  [PRE-FETCH] Status: 70/94 (74.5%) - Rate: 5.0 calls/min - Elapsed: 14.0 min
+2026-05-26 11:16:24 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **EQR** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:16:25 EDT  [PRE-FETCH] Status: 73/94 (77.7%) - Rate: 5.0 calls/min - Elapsed: 14.5 min
+2026-05-26 11:16:40 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **ESS** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:16:55 EDT  [PRE-FETCH] Status: 75/94 (79.8%) - Rate: 5.0 calls/min - Elapsed: 15.0 min
+2026-05-26 11:16:56 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **TFX** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:17:12 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **UNM** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:17:25 EDT  [PRE-FETCH] Status: 78/94 (83.0%) - Rate: 5.0 calls/min - Elapsed: 15.5 min
+2026-05-26 11:17:28 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **CSX** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:17:44 EDT  [PRE-FETCH] Progress: 80/94 (85.1%) - Latest: NOV
+2026-05-26 11:17:46 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **HPQ** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:17:55 EDT  [PRE-FETCH] Status: 80/94 (85.1%) - Rate: 5.0 calls/min - Elapsed: 16.0 min
+2026-05-26 11:18:02 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **MSCI** | VIX + SPY Market Filter (Master) (`MASTER_7_VI...
+2026-05-26 11:18:25 EDT  [PRE-FETCH] Status: 83/94 (88.3%) - Rate: 5.0 calls/min - Elapsed: 16.5 min
+2026-05-26 11:18:32 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **UNP** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:18:47 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **NSC** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:18:55 EDT  [PRE-FETCH] Status: 85/94 (90.4%) - Rate: 5.0 calls/min - Elapsed: 17.0 min
+2026-05-26 11:19:03 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **PSA** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:19:19 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **SLB** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:19:25 EDT  [PRE-FETCH] Status: 88/94 (93.6%) - Rate: 5.0 calls/min - Elapsed: 17.5 min
+2026-05-26 11:19:56 EDT  [PRE-FETCH] Status: 89/94 (94.7%) - Rate: 4.9 calls/min - Elapsed: 18.0 min
+2026-05-26 11:20:01 EDT  [PRE-FETCH] Progress: 90/94 (95.7%) - Latest: NDAQ
+2026-05-26 11:20:12 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **VTR** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:20:26 EDT  [PRE-FETCH] Status: 93/94 (98.9%) - Rate: 5.0 calls/min - Elapsed: 18.5 min
+2026-05-26 11:20:29 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **WELL** | VIX + SPY Market Filter (Master) (`MASTER_7_VI...
+2026-05-26 11:20:32 EDT  [PRE-FETCH] Progress: 94/94 (100.0%) - Latest: TRV
+2026-05-26 11:20:32 EDT  [PRE-FETCH] Done in 1117s — 94/94 tickers loaded
+2026-05-26 11:20:32 EDT  [SCORE|PULLBACK-MA20] CHK | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.0x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$7.09,dist=1048.54%,chg=+2570.8%) Momentum=0(RSI=99,CCI=291) R30=$5.30(upside=-93.5%) Trigger=$7.11 total=4/12
+2026-05-26 11:20:32 EDT  [MOVE-POTENTIAL] CHK | MASTER_5_PULLBACK_MA20 | upside=-93.5% to R30=$5.30 → score-2 → 2/12
+2026-05-26 11:20:32 EDT  [52W-STRUCTURE] CHK | MASTER_5_PULLBACK_MA20 | 0.0% from 52W high ($81.46) → +1 → 3/12
+2026-05-26 11:20:33 EDT  [SCORE|VOL-BREAKOUT] CHK | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.0x) Breakout=2(R30=$5.30,breakPct=+1437.0%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=99,chg=+2570.8%) Trigger=$5.33 total=6/12
+2026-05-26 11:20:33 EDT  [52W-STRUCTURE] CHK | MASTER_6_VOLUME_BREAKOUT | 0.0% from 52W high ($81.46) → +1 → 7/12
+2026-05-26 11:20:33 EDT  [⏳ TRIGGER-WAIT] CHK | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | OVEREXTENDED: $81.46 is >6% above breakout $5.33 — late chase
+2026-05-26 11:20:33 EDT  [SCORE|STRONG-TREND] CHK | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.0x) Momentum=2(near20dHi=+0.0%,RSI=99) Setup=0(upside=-93.5%) Trigger=$3.05 total=5/12
+2026-05-26 11:20:33 EDT  [MOVE-POTENTIAL] CHK | MASTER_8_STRONG_TREND | upside=-93.5% to R30=$5.30 → score-2 → 3/12
+2026-05-26 11:20:33 EDT  [52W-STRUCTURE] CHK | MASTER_8_STRONG_TREND | 0.0% from 52W high ($81.46) → +1 → 4/12
+2026-05-26 11:20:33 EDT  [❌ SCORE] CHK | MASTER_5_PULLBACK_MA20 — Score=3/12 < 10 (V=1 T=3 M=0 S=0)
+2026-05-26 11:20:34 EDT  [❌ SCORE] CHK | MASTER_8_STRONG_TREND — Score=4/12 < 10 (V=0 T=3 M=2 S=0)
+2026-05-26 11:20:34 EDT  [SCORE|PULLBACK-MA20] INTC | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$110.97,dist=11.10%,chg=+2.9%) Momentum=1(RSI=70,CCI=67) R30=$129.44(upside=5.0%) Trigger=$111.31 total=6/12
+2026-05-26 11:20:34 EDT  [52W-STRUCTURE] INTC | MASTER_5_PULLBACK_MA20 | -7.1% from 52W high ($132.75) → +1 → 7/12
+2026-05-26 11:20:34 EDT  [SCORE|VOL-BREAKOUT] INTC | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=0(R30=$129.44,breakPct=-4.8%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=70,chg=+2.9%) Trigger=$130.09 total=5/12
+2026-05-26 11:20:34 EDT  [52W-STRUCTURE] INTC | MASTER_6_VOLUME_BREAKOUT | -7.1% from 52W high ($132.75) → +1 → 6/12
+2026-05-26 11:20:34 EDT  [⏳ TRIGGER-WAIT] INTC | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $123.29 hasn't cleared breakout level $130.09 (need +5.5%)
+2026-05-26 11:20:34 EDT  [SCORE|STRONG-TREND] INTC | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=1(near20dHi=-7.1%,RSI=70) Setup=1(upside=5.0%) Trigger=$122.90 total=5/12
+2026-05-26 11:20:34 EDT  [52W-STRUCTURE] INTC | MASTER_8_STRONG_TREND | -7.1% from 52W high ($132.75) → +1 → 6/12
+2026-05-26 11:20:35 EDT  [❌ SCORE] INTC | MASTER_5_PULLBACK_MA20 — Score=7/12 < 10 (V=2 T=3 M=1 S=0)
+2026-05-26 11:20:35 EDT  [❌ SCORE] INTC | MASTER_8_STRONG_TREND — Score=6/12 < 10 (V=0 T=3 M=1 S=1)
+2026-05-26 11:20:35 EDT  [SCORE|PULLBACK-MA20] AMD | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$413.78,dist=18.99%,chg=+5.3%) Momentum=0(RSI=76,CCI=106) R30=$467.51(upside=-5.0%) Trigger=$415.02 total=5/12
+2026-05-26 11:20:35 EDT  [MOVE-POTENTIAL] AMD | MASTER_5_PULLBACK_MA20 | upside=-5.0% to R30=$467.51 → score-2 → 3/12
+2026-05-26 11:20:35 EDT  [52W-STRUCTURE] AMD | MASTER_5_PULLBACK_MA20 | -0.9% from 52W high ($496.89) → +1 → 4/12
+2026-05-26 11:20:35 EDT  [SCORE|VOL-BREAKOUT] AMD | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=2(R30=$467.51,breakPct=+5.3%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=76,chg=+5.3%) Trigger=$469.85 total=6/12
+2026-05-26 11:20:35 EDT  [52W-STRUCTURE] AMD | MASTER_6_VOLUME_BREAKOUT | -0.9% from 52W high ($496.89) → +1 → 7/12
+2026-05-26 11:20:35 EDT  [⏳ TRIGGER-WAIT] AMD | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | NO-VOL-CONFIRM: breakout at $492.35 lacks volume (rvol=0.32x < 1.5) — potential fake breakout
+2026-05-26 11:20:35 EDT  [SCORE|STRONG-TREND] AMD | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=2(near20dHi=-0.9%,RSI=76) Setup=0(upside=-5.0%) Trigger=$481.89 total=5/12
+2026-05-26 11:20:35 EDT  [MOVE-POTENTIAL] AMD | MASTER_8_STRONG_TREND | upside=-5.0% to R30=$467.51 → score-2 → 3/12
+2026-05-26 11:20:35 EDT  [52W-STRUCTURE] AMD | MASTER_8_STRONG_TREND | -0.9% from 52W high ($496.89) → +1 → 4/12
+2026-05-26 11:20:35 EDT  [❌ SCORE] AMD | MASTER_5_PULLBACK_MA20 — Score=4/12 < 10 (V=2 T=3 M=0 S=0)
+2026-05-26 11:20:35 EDT  [❌ SCORE] AMD | MASTER_8_STRONG_TREND — Score=4/12 < 10 (V=0 T=3 M=2 S=0)
+2026-05-26 11:20:35 EDT  [SCORE|PULLBACK-MA20] MU | MASTER_5_PULLBACK_MA20 | Volume=3(RVOL=0.6x,drying=YES) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$686.61,dist=28.44%,chg=+17.4%) Momentum=0(RSI=74,CCI=116) R30=$803.63(upside=-8.9%) Trigger=$688.67 total=6/12
+2026-05-26 11:20:35 EDT  [MOVE-POTENTIAL] MU | MASTER_5_PULLBACK_MA20 | upside=-8.9% to R30=$803.63 → score-2 → 4/12
+2026-05-26 11:20:35 EDT  [52W-STRUCTURE] MU | MASTER_5_PULLBACK_MA20 | -1.1% from 52W high ($891.27) → +1 → 5/12
+2026-05-26 11:20:35 EDT  [SCORE|VOL-BREAKOUT] MU | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.6x) Breakout=2(R30=$803.63,breakPct=+9.7%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=74,chg=+17.4%) Trigger=$807.65 total=7/12
+2026-05-26 11:20:35 EDT  [52W-STRUCTURE] MU | MASTER_6_VOLUME_BREAKOUT | -1.1% from 52W high ($891.27) → +1 → 8/12
+2026-05-26 11:20:35 EDT  [⏳ TRIGGER-WAIT] MU | MASTER_6_VOLUME_BREAKOUT | Score=8/12 | OVEREXTENDED: $881.86 is >6% above breakout $807.65 — late chase
+2026-05-26 11:20:35 EDT  [SCORE|STRONG-TREND] MU | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.6x) Momentum=2(near20dHi=-1.1%,RSI=74) Setup=0(upside=-8.9%) Trigger=$780.98 total=5/12
+2026-05-26 11:20:35 EDT  [MOVE-POTENTIAL] MU | MASTER_8_STRONG_TREND | upside=-8.9% to R30=$803.63 → score-2 → 3/12
+2026-05-26 11:20:35 EDT  [52W-STRUCTURE] MU | MASTER_8_STRONG_TREND | -1.1% from 52W high ($891.27) → +1 → 4/12
+2026-05-26 11:20:35 EDT  [❌ SCORE] MU | MASTER_5_PULLBACK_MA20 — Score=5/12 < 10 (V=3 T=3 M=0 S=0)
+2026-05-26 11:20:36 EDT  [❌ SCORE] MU | MASTER_8_STRONG_TREND — Score=4/12 < 10 (V=0 T=3 M=2 S=0)
+2026-05-26 11:20:36 EDT  [SCORE|PULLBACK-MA20] DDOG | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$184.04,dist=20.94%,chg=+0.1%) Momentum=1(RSI=84,CCI=77) R30=$222.32(upside=-0.1%) Trigger=$184.59 total=5/12
+2026-05-26 11:20:36 EDT  [MOVE-POTENTIAL] DDOG | MASTER_5_PULLBACK_MA20 | upside=-0.1% to R30=$222.32 → score-2 → 3/12
+2026-05-26 11:20:36 EDT  [52W-STRUCTURE] DDOG | MASTER_5_PULLBACK_MA20 | -1.0% from 52W high ($224.77) → +1 → 4/12
+2026-05-26 11:20:36 EDT  [SCORE|VOL-BREAKOUT] DDOG | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=3(R30=$222.32,breakPct=+0.1%) Trend=3(abvSMA200,abvSMA50) Momentum=0(RSI=84,chg=+0.1%) Trigger=$223.43 total=6/12
+2026-05-26 11:20:36 EDT  [52W-STRUCTURE] DDOG | MASTER_6_VOLUME_BREAKOUT | -1.0% from 52W high ($224.77) → +1 → 7/12
+2026-05-26 11:20:36 EDT  [⏳ TRIGGER-WAIT] DDOG | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | TRIGGER-WAIT: $222.57 hasn't cleared breakout level $223.43 (need +0.4%)
+2026-05-26 11:20:36 EDT  [SCORE|STRONG-TREND] DDOG | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=2(near20dHi=-1.0%,RSI=84) Setup=0(upside=-0.1%) Trigger=$224.99 total=5/12
+2026-05-26 11:20:36 EDT  [MOVE-POTENTIAL] DDOG | MASTER_8_STRONG_TREND | upside=-0.1% to R30=$222.32 → score-2 → 3/12
+2026-05-26 11:20:36 EDT  [52W-STRUCTURE] DDOG | MASTER_8_STRONG_TREND | -1.0% from 52W high ($224.77) → +1 → 4/12
+2026-05-26 11:20:36 EDT  [⏳ TRIGGER-WAIT] DDOG | MASTER_8_STRONG_TREND | Score=4/12 | TRIGGER-WAIT: $222.57 hasn't broken yesterday's high $224.99
+2026-05-26 11:20:36 EDT  [❌ SCORE] DDOG | MASTER_5_PULLBACK_MA20 — Score=4/12 < 10 (V=1 T=3 M=1 S=0)
+2026-05-26 11:20:37 EDT  [SCORE|PULLBACK-MA20] STX | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$761.02,dist=10.86%,chg=+3.8%) Momentum=1(RSI=71,CCI=84) R30=$834.01(upside=-1.1%) Trigger=$763.31 total=5/12
+2026-05-26 11:20:37 EDT  [MOVE-POTENTIAL] STX | MASTER_5_PULLBACK_MA20 | upside=-1.1% to R30=$834.01 → score-2 → 3/12
+2026-05-26 11:20:37 EDT  [52W-STRUCTURE] STX | MASTER_5_PULLBACK_MA20 | -1.1% from 52W high ($852.86) → +1 → 4/12
+2026-05-26 11:20:37 EDT  [SCORE|VOL-BREAKOUT] STX | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=3(R30=$834.01,breakPct=+1.2%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=71,chg=+3.8%) Trigger=$838.18 total=8/12
+2026-05-26 11:20:37 EDT  [52W-STRUCTURE] STX | MASTER_6_VOLUME_BREAKOUT | -1.1% from 52W high ($852.86) → +1 → 9/12
+2026-05-26 11:20:37 EDT  [⏳ TRIGGER-WAIT] STX | MASTER_6_VOLUME_BREAKOUT | Score=9/12 | NO-VOL-CONFIRM: breakout at $843.68 lacks volume (rvol=0.27x < 1.5) — potential fake breakout
+2026-05-26 11:20:37 EDT  [SCORE|STRONG-TREND] STX | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=3(near20dHi=-1.1%,RSI=71) Setup=0(upside=-1.1%) Trigger=$824.82 total=6/12
+2026-05-26 11:20:37 EDT  [MOVE-POTENTIAL] STX | MASTER_8_STRONG_TREND | upside=-1.1% to R30=$834.01 → score-2 → 4/12
+2026-05-26 11:20:37 EDT  [52W-STRUCTURE] STX | MASTER_8_STRONG_TREND | -1.1% from 52W high ($852.86) → +1 → 5/12
+2026-05-26 11:20:37 EDT  [❌ SCORE] STX | MASTER_5_PULLBACK_MA20 — Score=4/12 < 10 (V=1 T=3 M=1 S=0)
+2026-05-26 11:20:38 EDT  [❌ SCORE] STX | MASTER_8_STRONG_TREND — Score=5/12 < 10 (V=0 T=3 M=3 S=0)
+2026-05-26 11:20:40 EDT  [SCORE|PULLBACK-MA20] WDC | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$467.49,dist=13.50%,chg=+9.6%) Momentum=0(RSI=72,CCI=122) R30=$515.83(upside=-2.8%) Trigger=$468.89 total=5/12
+2026-05-26 11:20:40 EDT  [MOVE-POTENTIAL] WDC | MASTER_5_PULLBACK_MA20 | upside=-2.8% to R30=$515.83 → score-2 → 3/12
+2026-05-26 11:20:40 EDT  [52W-STRUCTURE] WDC | MASTER_5_PULLBACK_MA20 | -1.0% from 52W high ($536.12) → +1 → 4/12
+2026-05-26 11:20:40 EDT  [SCORE|VOL-BREAKOUT] WDC | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=3(R30=$515.83,breakPct=+2.9%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=72,chg=+9.6%) Trigger=$518.41 total=8/12
+2026-05-26 11:20:40 EDT  [52W-STRUCTURE] WDC | MASTER_6_VOLUME_BREAKOUT | -1.0% from 52W high ($536.12) → +1 → 9/12
+2026-05-26 11:20:40 EDT  [⏳ TRIGGER-WAIT] WDC | MASTER_6_VOLUME_BREAKOUT | Score=9/12 | NO-VOL-CONFIRM: breakout at $530.59 lacks volume (rvol=0.35x < 1.5) — potential fake breakout
+2026-05-26 11:20:40 EDT  [SCORE|STRONG-TREND] WDC | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=3(near20dHi=-1.0%,RSI=72) Setup=0(upside=-2.8%) Trigger=$490.48 total=6/12
+2026-05-26 11:20:40 EDT  [MOVE-POTENTIAL] WDC | MASTER_8_STRONG_TREND | upside=-2.8% to R30=$515.83 → score-2 → 4/12
+2026-05-26 11:20:40 EDT  [52W-STRUCTURE] WDC | MASTER_8_STRONG_TREND | -1.0% from 52W high ($536.12) → +1 → 5/12
+2026-05-26 11:20:40 EDT  [❌ SCORE] WDC | MASTER_5_PULLBACK_MA20 — Score=4/12 < 10 (V=2 T=3 M=0 S=0)
+2026-05-26 11:20:41 EDT  [❌ SCORE] WDC | MASTER_8_STRONG_TREND — Score=5/12 < 10 (V=0 T=3 M=3 S=0)
+2026-05-26 11:20:41 EDT  [SCORE|PULLBACK-MA20] ON | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.4x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$107.45,dist=19.74%,chg=+10.7%) Momentum=0(RSI=74,CCI=179) R30=$118.37(upside=-8.0%) Trigger=$107.77 total=5/12
+2026-05-26 11:20:41 EDT  [MOVE-POTENTIAL] ON | MASTER_5_PULLBACK_MA20 | upside=-8.0% to R30=$118.37 → score-2 → 3/12
+2026-05-26 11:20:41 EDT  [52W-STRUCTURE] ON | MASTER_5_PULLBACK_MA20 | -0.3% from 52W high ($129.04) → +1 → 4/12
+2026-05-26 11:20:41 EDT  [SCORE|VOL-BREAKOUT] ON | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.4x) Breakout=2(R30=$118.37,breakPct=+8.7%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=74,chg=+10.7%) Trigger=$118.96 total=7/12
+2026-05-26 11:20:41 EDT  [52W-STRUCTURE] ON | MASTER_6_VOLUME_BREAKOUT | -0.3% from 52W high ($129.04) → +1 → 8/12
+2026-05-26 11:20:41 EDT  [⏳ TRIGGER-WAIT] ON | MASTER_6_VOLUME_BREAKOUT | Score=8/12 | OVEREXTENDED: $128.66 is >6% above breakout $118.96 — late chase
+2026-05-26 11:20:41 EDT  [SCORE|STRONG-TREND] ON | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.4x) Momentum=2(near20dHi=-0.3%,RSI=74) Setup=0(upside=-8.0%) Trigger=$118.01 total=5/12
+2026-05-26 11:20:41 EDT  [MOVE-POTENTIAL] ON | MASTER_8_STRONG_TREND | upside=-8.0% to R30=$118.37 → score-2 → 3/12
+2026-05-26 11:20:41 EDT  [52W-STRUCTURE] ON | MASTER_8_STRONG_TREND | -0.3% from 52W high ($129.04) → +1 → 4/12
+2026-05-26 11:20:41 EDT  [❌ SCORE] ON | MASTER_5_PULLBACK_MA20 — Score=4/12 < 10 (V=2 T=3 M=0 S=0)
+2026-05-26 11:20:42 EDT  [❌ SCORE] ON | MASTER_8_STRONG_TREND — Score=4/12 < 10 (V=0 T=3 M=2 S=0)
+2026-05-26 11:20:43 EDT  [SCORE|PULLBACK-MA20] FTNT | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$110.31,dist=21.00%,chg=-0.3%) Momentum=1(RSI=87,CCI=87) R30=$133.93(upside=0.3%) Trigger=$110.64 total=5/12
+2026-05-26 11:20:43 EDT  [MOVE-POTENTIAL] FTNT | MASTER_5_PULLBACK_MA20 | upside=0.3% to R30=$133.93 → score-1 → 4/12
+2026-05-26 11:20:43 EDT  [52W-STRUCTURE] FTNT | MASTER_5_PULLBACK_MA20 | -0.5% from 52W high ($134.19) → +1 → 5/12
+2026-05-26 11:20:43 EDT  [SCORE|VOL-BREAKOUT] FTNT | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=2(R30=$133.93,breakPct=-0.3%) Trend=3(abvSMA200,abvSMA50) Momentum=0(RSI=87,chg=-0.3%) Trigger=$134.60 total=5/12
+2026-05-26 11:20:43 EDT  [52W-STRUCTURE] FTNT | MASTER_6_VOLUME_BREAKOUT | -0.5% from 52W high ($134.19) → +1 → 6/12
+2026-05-26 11:20:43 EDT  [⏳ TRIGGER-WAIT] FTNT | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $133.48 hasn't cleared breakout level $134.60 (need +0.8%)
+2026-05-26 11:20:43 EDT  [SCORE|STRONG-TREND] FTNT | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=2(near20dHi=-0.5%,RSI=87) Setup=0(upside=0.3%) Trigger=$134.32 total=5/12
+2026-05-26 11:20:43 EDT  [MOVE-POTENTIAL] FTNT | MASTER_8_STRONG_TREND | upside=0.3% to R30=$133.93 → score-1 → 4/12
+2026-05-26 11:20:43 EDT  [52W-STRUCTURE] FTNT | MASTER_8_STRONG_TREND | -0.5% from 52W high ($134.19) → +1 → 5/12
+2026-05-26 11:20:43 EDT  [⏳ TRIGGER-WAIT] FTNT | MASTER_8_STRONG_TREND | Score=5/12 | TRIGGER-WAIT: $133.48 hasn't broken yesterday's high $134.32
+2026-05-26 11:20:43 EDT  [❌ SCORE] FTNT | MASTER_5_PULLBACK_MA20 — Score=5/12 < 10 (V=1 T=3 M=1 S=0)
+2026-05-26 11:20:43 EDT  [SCORE|PULLBACK-MA20] HUM | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$275.21,dist=9.78%,chg=-1.9%) Momentum=1(RSI=75,CCI=64) R30=$310.55(upside=2.8%) Trigger=$276.03 total=5/12
+2026-05-26 11:20:43 EDT  [MOVE-POTENTIAL] HUM | MASTER_5_PULLBACK_MA20 | upside=2.8% to R30=$310.55 → score-1 → 4/12
+2026-05-26 11:20:43 EDT  [52W-STRUCTURE] HUM | MASTER_5_PULLBACK_MA20 | -4.3% from 52W high ($315.66) → +1 → 5/12
+2026-05-26 11:20:43 EDT  [SCORE|VOL-BREAKOUT] HUM | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$310.55,breakPct=-2.7%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=75,chg=-1.9%) Trigger=$312.10 total=4/12
+2026-05-26 11:20:43 EDT  [52W-STRUCTURE] HUM | MASTER_6_VOLUME_BREAKOUT | -4.3% from 52W high ($315.66) → +1 → 5/12
+2026-05-26 11:20:43 EDT  [⏳ TRIGGER-WAIT] HUM | MASTER_6_VOLUME_BREAKOUT | Score=5/12 | TRIGGER-WAIT: $302.11 hasn't cleared breakout level $312.10 (need +3.3%)
+2026-05-26 11:20:43 EDT  [SCORE|STRONG-TREND] HUM | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=1(near20dHi=-4.3%,RSI=75) Setup=0(upside=2.8%) Trigger=$309.52 total=4/12
+2026-05-26 11:20:43 EDT  [MOVE-POTENTIAL] HUM | MASTER_8_STRONG_TREND | upside=2.8% to R30=$310.55 → score-1 → 3/12
+2026-05-26 11:20:43 EDT  [52W-STRUCTURE] HUM | MASTER_8_STRONG_TREND | -4.3% from 52W high ($315.66) → +1 → 4/12
+2026-05-26 11:20:43 EDT  [⏳ TRIGGER-WAIT] HUM | MASTER_8_STRONG_TREND | Score=4/12 | TRIGGER-WAIT: $302.11 hasn't broken yesterday's high $309.52
+2026-05-26 11:20:43 EDT  [❌ SCORE] HUM | MASTER_5_PULLBACK_MA20 — Score=5/12 < 10 (V=1 T=3 M=1 S=0)
+2026-05-26 11:20:43 EDT  [SCORE|PULLBACK-MA20] TXN | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$293.56,dist=10.70%,chg=+5.1%) Momentum=0(RSI=77,CCI=140) R30=$309.21(upside=-4.8%) Trigger=$294.44 total=5/12
+2026-05-26 11:20:43 EDT  [MOVE-POTENTIAL] TXN | MASTER_5_PULLBACK_MA20 | upside=-4.8% to R30=$309.21 → score-2 → 3/12
+2026-05-26 11:20:43 EDT  [52W-STRUCTURE] TXN | MASTER_5_PULLBACK_MA20 | -0.4% from 52W high ($326.42) → +1 → 4/12
+2026-05-26 11:20:43 EDT  [SCORE|VOL-BREAKOUT] TXN | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=2(R30=$309.21,breakPct=+5.1%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=77,chg=+5.1%) Trigger=$310.76 total=6/12
+2026-05-26 11:20:43 EDT  [52W-STRUCTURE] TXN | MASTER_6_VOLUME_BREAKOUT | -0.4% from 52W high ($326.42) → +1 → 7/12
+2026-05-26 11:20:43 EDT  [⏳ TRIGGER-WAIT] TXN | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | NO-VOL-CONFIRM: breakout at $324.97 lacks volume (rvol=0.33x < 1.5) — potential fake breakout
+2026-05-26 11:20:43 EDT  [SCORE|STRONG-TREND] TXN | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=2(near20dHi=-0.4%,RSI=77) Setup=0(upside=-4.8%) Trigger=$315.89 total=5/12
+2026-05-26 11:20:43 EDT  [MOVE-POTENTIAL] TXN | MASTER_8_STRONG_TREND | upside=-4.8% to R30=$309.21 → score-2 → 3/12
+2026-05-26 11:20:43 EDT  [52W-STRUCTURE] TXN | MASTER_8_STRONG_TREND | -0.4% from 52W high ($326.42) → +1 → 4/12
+2026-05-26 11:20:43 EDT  [❌ SCORE] TXN | MASTER_5_PULLBACK_MA20 — Score=4/12 < 10 (V=2 T=3 M=0 S=0)
+2026-05-26 11:20:44 EDT  [❌ SCORE] TXN | MASTER_8_STRONG_TREND — Score=4/12 < 10 (V=0 T=3 M=2 S=0)
+2026-05-26 11:20:45 EDT  [SCORE|PULLBACK-MA20] X | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.0x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$52.43,dist=4.59%,chg=+0.0%) Momentum=1(RSI=70,CCI=49) R30=$54.85(upside=0.0%) Trigger=$52.59 total=5/12
+2026-05-26 11:20:45 EDT  [MOVE-POTENTIAL] X | MASTER_5_PULLBACK_MA20 | upside=0.0% to R30=$54.85 → score-1 → 4/12
+2026-05-26 11:20:45 EDT  [52W-STRUCTURE] X | MASTER_5_PULLBACK_MA20 | -0.1% from 52W high ($54.91) → +1 → 5/12
+2026-05-26 11:20:45 EDT  [SCORE|VOL-BREAKOUT] X | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.0x) Breakout=2(R30=$54.85,breakPct=-0.0%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=70,chg=+0.0%) Trigger=$55.12 total=7/12
+2026-05-26 11:20:45 EDT  [52W-STRUCTURE] X | MASTER_6_VOLUME_BREAKOUT | -0.1% from 52W high ($54.91) → +1 → 8/12
+2026-05-26 11:20:45 EDT  [⏳ TRIGGER-WAIT] X | MASTER_6_VOLUME_BREAKOUT | Score=8/12 | TRIGGER-WAIT: $54.84 hasn't cleared breakout level $55.12 (need +0.5%)
+2026-05-26 11:20:45 EDT  [SCORE|STRONG-TREND] X | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.0x) Momentum=3(near20dHi=-0.1%,RSI=70) Setup=0(upside=0.0%) Trigger=$54.94 total=6/12
+2026-05-26 11:20:45 EDT  [MOVE-POTENTIAL] X | MASTER_8_STRONG_TREND | upside=0.0% to R30=$54.85 → score-1 → 5/12
+2026-05-26 11:20:45 EDT  [52W-STRUCTURE] X | MASTER_8_STRONG_TREND | -0.1% from 52W high ($54.91) → +1 → 6/12
+2026-05-26 11:20:45 EDT  [⏳ TRIGGER-WAIT] X | MASTER_8_STRONG_TREND | Score=6/12 | TRIGGER-WAIT: $54.84 hasn't broken yesterday's high $54.94
+2026-05-26 11:20:45 EDT  [❌ SCORE] X | MASTER_5_PULLBACK_MA20 — Score=5/12 < 10 (V=1 T=3 M=1 S=0)
+2026-05-26 11:20:45 EDT  [SCORE|PULLBACK-MA20] MCHP | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$95.30,dist=4.79%,chg=+6.9%) Momentum=1(RSI=65,CCI=55) R30=$102.92(upside=3.1%) Trigger=$95.58 total=5/12
+2026-05-26 11:20:45 EDT  [52W-STRUCTURE] MCHP | MASTER_5_PULLBACK_MA20 | -5.7% from 52W high ($105.91) → +1 → 6/12
+2026-05-26 11:20:45 EDT  [SCORE|VOL-BREAKOUT] MCHP | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=0(R30=$102.92,breakPct=-3.0%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=65,chg=+6.9%) Trigger=$103.43 total=6/12
+2026-05-26 11:20:45 EDT  [52W-STRUCTURE] MCHP | MASTER_6_VOLUME_BREAKOUT | -5.7% from 52W high ($105.91) → +1 → 7/12
+2026-05-26 11:20:45 EDT  [⏳ TRIGGER-WAIT] MCHP | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | TRIGGER-WAIT: $99.86 hasn't cleared breakout level $103.43 (need +3.6%)
+2026-05-26 11:20:45 EDT  [SCORE|STRONG-TREND] MCHP | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=2(near20dHi=-5.7%,RSI=65) Setup=1(upside=3.1%) Trigger=$95.00 total=6/12
+2026-05-26 11:20:45 EDT  [52W-STRUCTURE] MCHP | MASTER_8_STRONG_TREND | -5.7% from 52W high ($105.91) → +1 → 7/12
+2026-05-26 11:20:46 EDT  [❌ SCORE] MCHP | MASTER_5_PULLBACK_MA20 — Score=8/12 < 10 (V=1 T=3 M=1 S=0)
+2026-05-26 11:20:46 EDT  [WATCHLIST] ❌ EXPIRED: MCHP | MASTER_5_PULLBACK_MA20 — score dropped below threshold
+2026-05-26 11:20:46 EDT  [❌ SCORE] MCHP | MASTER_8_STRONG_TREND — Score=9/12 < 10 (V=0 T=3 M=2 S=1)
+2026-05-26 11:20:46 EDT  [WATCHLIST] ❌ EXPIRED: MCHP | MASTER_8_STRONG_TREND — score dropped below threshold
+2026-05-26 11:20:46 EDT  [SCORE|PULLBACK-MA20] MRVL | MASTER_5_PULLBACK_MA20 | Volume=3(RVOL=0.7x,drying=YES) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$173.55,dist=17.85%,chg=+4.2%) Momentum=0(RSI=74,CCI=172) R30=$196.33(upside=-4.0%) Trigger=$174.07 total=6/12
+2026-05-26 11:20:46 EDT  [MOVE-POTENTIAL] MRVL | MASTER_5_PULLBACK_MA20 | upside=-4.0% to R30=$196.33 → score-2 → 4/12
+2026-05-26 11:20:46 EDT  [52W-STRUCTURE] MRVL | MASTER_5_PULLBACK_MA20 | -5.9% from 52W high ($217.45) → +1 → 5/12
+2026-05-26 11:20:46 EDT  [SCORE|VOL-BREAKOUT] MRVL | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.7x) Breakout=2(R30=$196.33,breakPct=+4.2%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=74,chg=+4.2%) Trigger=$197.31 total=7/12
+2026-05-26 11:20:46 EDT  [52W-STRUCTURE] MRVL | MASTER_6_VOLUME_BREAKOUT | -5.9% from 52W high ($217.45) → +1 → 8/12
+2026-05-26 11:20:46 EDT  [⏳ TRIGGER-WAIT] MRVL | MASTER_6_VOLUME_BREAKOUT | Score=8/12 | NO-VOL-CONFIRM: breakout at $204.53 lacks volume (rvol=0.72x < 1.5) — potential fake breakout
+2026-05-26 11:20:46 EDT  [SCORE|STRONG-TREND] MRVL | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.7x) Momentum=1(near20dHi=-5.9%,RSI=74) Setup=0(upside=-4.0%) Trigger=$198.59 total=4/12
+2026-05-26 11:20:46 EDT  [MOVE-POTENTIAL] MRVL | MASTER_8_STRONG_TREND | upside=-4.0% to R30=$196.33 → score-2 → 2/12
+2026-05-26 11:20:46 EDT  [52W-STRUCTURE] MRVL | MASTER_8_STRONG_TREND | -5.9% from 52W high ($217.45) → +1 → 3/12
+2026-05-26 11:20:46 EDT  [❌ SCORE] MRVL | MASTER_5_PULLBACK_MA20 — Score=5/12 < 10 (V=3 T=3 M=0 S=0)
+2026-05-26 11:20:47 EDT  [❌ SCORE] MRVL | MASTER_8_STRONG_TREND — Score=3/12 < 10 (V=0 T=3 M=1 S=0)
+2026-05-26 11:20:47 EDT  [SCORE|PULLBACK-MA20] DVA | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$184.26,dist=7.68%,chg=-0.1%) Momentum=1(RSI=71,CCI=49) R30=$200.54(upside=1.1%) Trigger=$184.82 total=5/12
+2026-05-26 11:20:47 EDT  [MOVE-POTENTIAL] DVA | MASTER_5_PULLBACK_MA20 | upside=1.1% to R30=$200.54 → score-1 → 4/12
+2026-05-26 11:20:47 EDT  [52W-STRUCTURE] DVA | MASTER_5_PULLBACK_MA20 | -2.1% from 52W high ($202.69) → +1 → 5/12
+2026-05-26 11:20:47 EDT  [SCORE|VOL-BREAKOUT] DVA | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=1(R30=$200.54,breakPct=-1.1%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=71,chg=-0.1%) Trigger=$201.54 total=5/12
+2026-05-26 11:20:47 EDT  [52W-STRUCTURE] DVA | MASTER_6_VOLUME_BREAKOUT | -2.1% from 52W high ($202.69) → +1 → 6/12
+2026-05-26 11:20:47 EDT  [⏳ TRIGGER-WAIT] DVA | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $198.42 hasn't cleared breakout level $201.54 (need +1.6%)
+2026-05-26 11:20:47 EDT  [SCORE|STRONG-TREND] DVA | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=3(near20dHi=-2.1%,RSI=71) Setup=0(upside=1.1%) Trigger=$202.76 total=6/12
+2026-05-26 11:20:47 EDT  [MOVE-POTENTIAL] DVA | MASTER_8_STRONG_TREND | upside=1.1% to R30=$200.54 → score-1 → 5/12
+2026-05-26 11:20:47 EDT  [52W-STRUCTURE] DVA | MASTER_8_STRONG_TREND | -2.1% from 52W high ($202.69) → +1 → 6/12
+2026-05-26 11:20:47 EDT  [⏳ TRIGGER-WAIT] DVA | MASTER_8_STRONG_TREND | Score=6/12 | TRIGGER-WAIT: $198.42 hasn't broken yesterday's high $202.76
+2026-05-26 11:20:47 EDT  [❌ SCORE] DVA | MASTER_5_PULLBACK_MA20 — Score=5/12 < 10 (V=1 T=3 M=1 S=0)
+2026-05-26 11:20:47 EDT  [SCORE|PULLBACK-MA20] DELL | MASTER_5_PULLBACK_MA20 | Volume=3(RVOL=0.7x,drying=YES) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$238.67,dist=26.19%,chg=+2.0%) Momentum=0(RSI=78,CCI=176) R30=$295.19(upside=-2.0%) Trigger=$239.38 total=6/12
+2026-05-26 11:20:47 EDT  [MOVE-POTENTIAL] DELL | MASTER_5_PULLBACK_MA20 | upside=-2.0% to R30=$295.19 → score-2 → 4/12
+2026-05-26 11:20:47 EDT  [52W-STRUCTURE] DELL | MASTER_5_PULLBACK_MA20 | -2.4% from 52W high ($308.64) → +1 → 5/12
+2026-05-26 11:20:47 EDT  [SCORE|VOL-BREAKOUT] DELL | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.7x) Breakout=3(R30=$295.19,breakPct=+2.0%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=78,chg=+2.0%) Trigger=$296.67 total=7/12
+2026-05-26 11:20:47 EDT  [52W-STRUCTURE] DELL | MASTER_6_VOLUME_BREAKOUT | -2.4% from 52W high ($308.64) → +1 → 8/12
+2026-05-26 11:20:47 EDT  [⏳ TRIGGER-WAIT] DELL | MASTER_6_VOLUME_BREAKOUT | Score=8/12 | NO-VOL-CONFIRM: breakout at $301.18 lacks volume (rvol=0.72x < 1.5) — potential fake breakout
+2026-05-26 11:20:47 EDT  [SCORE|STRONG-TREND] DELL | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.7x) Momentum=2(near20dHi=-2.4%,RSI=78) Setup=0(upside=-2.0%) Trigger=$298.62 total=5/12
+2026-05-26 11:20:47 EDT  [MOVE-POTENTIAL] DELL | MASTER_8_STRONG_TREND | upside=-2.0% to R30=$295.19 → score-2 → 3/12
+2026-05-26 11:20:47 EDT  [52W-STRUCTURE] DELL | MASTER_8_STRONG_TREND | -2.4% from 52W high ($308.64) → +1 → 4/12
+2026-05-26 11:20:47 EDT  [❌ SCORE] DELL | MASTER_5_PULLBACK_MA20 — Score=5/12 < 10 (V=3 T=3 M=0 S=0)
+2026-05-26 11:20:48 EDT  [❌ SCORE] DELL | MASTER_8_STRONG_TREND — Score=4/12 < 10 (V=0 T=3 M=2 S=0)
+2026-05-26 11:20:48 EDT  [SCORE|PULLBACK-MA20] HPE | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$31.65,dist=19.77%,chg=+0.9%) Momentum=0(RSI=79,CCI=156) R30=$37.58(upside=-0.9%) Trigger=$31.75 total=4/12
+2026-05-26 11:20:48 EDT  [MOVE-POTENTIAL] HPE | MASTER_5_PULLBACK_MA20 | upside=-0.9% to R30=$37.58 → score-2 → 2/12
+2026-05-26 11:20:48 EDT  [52W-STRUCTURE] HPE | MASTER_5_PULLBACK_MA20 | -0.9% from 52W high ($38.25) → +1 → 3/12
+2026-05-26 11:20:48 EDT  [SCORE|VOL-BREAKOUT] HPE | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=3(R30=$37.58,breakPct=+0.9%) Trend=3(abvSMA200,abvSMA50) Momentum=0(RSI=79,chg=+0.9%) Trigger=$37.77 total=6/12
+2026-05-26 11:20:48 EDT  [52W-STRUCTURE] HPE | MASTER_6_VOLUME_BREAKOUT | -0.9% from 52W high ($38.25) → +1 → 7/12
+2026-05-26 11:20:48 EDT  [⏳ TRIGGER-WAIT] HPE | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | NO-VOL-CONFIRM: breakout at $37.91 lacks volume (rvol=0.23x < 1.5) — potential fake breakout
+2026-05-26 11:20:48 EDT  [SCORE|STRONG-TREND] HPE | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=2(near20dHi=-0.9%,RSI=79) Setup=0(upside=-0.9%) Trigger=$37.78 total=5/12
+2026-05-26 11:20:48 EDT  [MOVE-POTENTIAL] HPE | MASTER_8_STRONG_TREND | upside=-0.9% to R30=$37.58 → score-2 → 3/12
+2026-05-26 11:20:48 EDT  [52W-STRUCTURE] HPE | MASTER_8_STRONG_TREND | -0.9% from 52W high ($38.25) → +1 → 4/12
+2026-05-26 11:20:48 EDT  [❌ SCORE] HPE | MASTER_5_PULLBACK_MA20 — Score=3/12 < 10 (V=1 T=3 M=0 S=0)
+2026-05-26 11:20:49 EDT  [❌ SCORE] HPE | MASTER_8_STRONG_TREND — Score=4/12 < 10 (V=0 T=3 M=2 S=0)
+2026-05-26 11:20:49 EDT  [NULL] CDNS — insufficient data for scoring
+2026-05-26 11:20:49 EDT  [SCORE|PULLBACK-MA20] SNPS | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$503.53,dist=6.60%,chg=+2.3%) Momentum=0(RSI=72,CCI=153) R30=$524.74(upside=-2.2%) Trigger=$505.05 total=4/12
+2026-05-26 11:20:49 EDT  [MOVE-POTENTIAL] SNPS | MASTER_5_PULLBACK_MA20 | upside=-2.2% to R30=$524.74 → score-2 → 2/12
+2026-05-26 11:20:49 EDT  [SCORE|VOL-BREAKOUT] SNPS | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=3(R30=$524.74,breakPct=+2.3%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=72,chg=+2.3%) Trigger=$527.36 total=8/12
+2026-05-26 11:20:49 EDT  [⏳ TRIGGER-WAIT] SNPS | MASTER_6_VOLUME_BREAKOUT | Score=8/12 | NO-VOL-CONFIRM: breakout at $536.79 lacks volume (rvol=0.25x < 1.5) — potential fake breakout
+2026-05-26 11:20:49 EDT  [SCORE|STRONG-TREND] SNPS | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=2(near20dHi=-0.4%,RSI=72) Setup=0(upside=-2.2%) Trigger=$534.64 total=5/12
+2026-05-26 11:20:49 EDT  [MOVE-POTENTIAL] SNPS | MASTER_8_STRONG_TREND | upside=-2.2% to R30=$524.74 → score-2 → 3/12
+2026-05-26 11:20:49 EDT  [❌ SCORE] SNPS | MASTER_5_PULLBACK_MA20 — Score=2/12 < 10 (V=1 T=3 M=0 S=0)
+2026-05-26 11:20:50 EDT  [❌ SCORE] SNPS | MASTER_8_STRONG_TREND — Score=3/12 < 10 (V=0 T=3 M=2 S=0)
+2026-05-26 11:20:50 EDT  [SCORE|PULLBACK-MA20] GOOGL | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=3(SMA20=$387.26,dist=0.37%,chg=+0.8%) Momentum=2(RSI=59,CCI=-6) R30=$402.62(upside=4.3%) Trigger=$388.42 total=9/12
+2026-05-26 11:20:50 EDT  [52W-STRUCTURE] GOOGL | MASTER_5_PULLBACK_MA20 | -5.6% from 52W high ($408.61) → +1 → 10/12
+2026-05-26 11:20:50 EDT  [⏳ TRIGGER-WAIT] GOOGL | MASTER_5_PULLBACK_MA20 | Score=10/12 | TRIGGER-WAIT: $385.84 still below SMA20 $387.26 — not reclaimed yet
+2026-05-26 11:20:50 EDT  [SCORE|VOL-BREAKOUT] GOOGL | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=0(R30=$402.62,breakPct=-4.2%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=59,chg=+0.8%) Trigger=$404.63 total=5/12
+2026-05-26 11:20:50 EDT  [52W-STRUCTURE] GOOGL | MASTER_6_VOLUME_BREAKOUT | -5.6% from 52W high ($408.61) → +1 → 6/12
+2026-05-26 11:20:50 EDT  [⏳ TRIGGER-WAIT] GOOGL | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $385.84 hasn't cleared breakout level $404.63 (need +4.9%)
+2026-05-26 11:20:50 EDT  [SCORE|STRONG-TREND] GOOGL | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=2(near20dHi=-5.6%,RSI=59) Setup=1(upside=4.3%) Trigger=$389.13 total=6/12
+2026-05-26 11:20:50 EDT  [52W-STRUCTURE] GOOGL | MASTER_8_STRONG_TREND | -5.6% from 52W high ($408.61) → +1 → 7/12
+2026-05-26 11:20:50 EDT  [⏳ TRIGGER-WAIT] GOOGL | MASTER_8_STRONG_TREND | Score=7/12 | TRIGGER-WAIT: $385.84 hasn't broken yesterday's high $389.13
+2026-05-26 11:20:51 EDT  [WATCHLIST] ➕ NEW: GOOGL | MASTER_5_PULLBACK_MA20 | Score=12/12 | ScanPrice=$385.84 | Trigger=$388.42 | Need +0.7% to fire
+2026-05-26 11:20:51 EDT  [SCORE|PULLBACK-MA20] NUE | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$228.54,dist=4.69%,chg=+3.1%) Momentum=0(RSI=71,CCI=149) R30=$234.22(upside=-2.1%) Trigger=$229.22 total=4/12
+2026-05-26 11:20:51 EDT  [MOVE-POTENTIAL] NUE | MASTER_5_PULLBACK_MA20 | upside=-2.1% to R30=$234.22 → score-2 → 2/12
+2026-05-26 11:20:51 EDT  [52W-STRUCTURE] NUE | MASTER_5_PULLBACK_MA20 | -0.3% from 52W high ($239.86) → +1 → 3/12
+2026-05-26 11:20:51 EDT  [SCORE|VOL-BREAKOUT] NUE | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=3(R30=$234.22,breakPct=+2.2%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=71,chg=+3.1%) Trigger=$235.39 total=8/12
+2026-05-26 11:20:51 EDT  [52W-STRUCTURE] NUE | MASTER_6_VOLUME_BREAKOUT | -0.3% from 52W high ($239.86) → +1 → 9/12
+2026-05-26 11:20:51 EDT  [⏳ TRIGGER-WAIT] NUE | MASTER_6_VOLUME_BREAKOUT | Score=9/12 | NO-VOL-CONFIRM: breakout at $239.26 lacks volume (rvol=0.24x < 1.5) — potential fake breakout
+2026-05-26 11:20:51 EDT  [SCORE|STRONG-TREND] NUE | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=3(near20dHi=-0.3%,RSI=71) Setup=0(upside=-2.1%) Trigger=$233.28 total=6/12
+2026-05-26 11:20:51 EDT  [MOVE-POTENTIAL] NUE | MASTER_8_STRONG_TREND | upside=-2.1% to R30=$234.22 → score-2 → 4/12
+2026-05-26 11:20:51 EDT  [52W-STRUCTURE] NUE | MASTER_8_STRONG_TREND | -0.3% from 52W high ($239.86) → +1 → 5/12
+2026-05-26 11:20:51 EDT  [❌ SCORE] NUE | MASTER_5_PULLBACK_MA20 — Score=3/12 < 10 (V=1 T=3 M=0 S=0)
+2026-05-26 11:20:51 EDT  [❌ SCORE] NUE | MASTER_8_STRONG_TREND — Score=5/12 < 10 (V=0 T=3 M=3 S=0)
+2026-05-26 11:20:52 EDT  [SCORE|PULLBACK-MA20] UNH | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$380.83,dist=0.59%,chg=-2.5%) Momentum=2(RSI=58,CCI=4) R30=$401.16(upside=6.0%) Trigger=$381.97 total=8/12
+2026-05-26 11:20:52 EDT  [52W-STRUCTURE] UNH | MASTER_5_PULLBACK_MA20 | -6.3% from 52W high ($404.15) → +1 → 9/12
+2026-05-26 11:20:52 EDT  [⏳ TRIGGER-WAIT] UNH | MASTER_5_PULLBACK_MA20 | Score=9/12 | TRIGGER-WAIT: $378.58 still below SMA20 $380.83 — not reclaimed yet
+2026-05-26 11:20:52 EDT  [SCORE|VOL-BREAKOUT] UNH | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=0(R30=$401.16,breakPct=-5.6%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=58,chg=-2.5%) Trigger=$403.17 total=5/12
+2026-05-26 11:20:52 EDT  [52W-STRUCTURE] UNH | MASTER_6_VOLUME_BREAKOUT | -6.3% from 52W high ($404.15) → +1 → 6/12
+2026-05-26 11:20:52 EDT  [⏳ TRIGGER-WAIT] UNH | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $378.58 hasn't cleared breakout level $403.17 (need +6.5%)
+2026-05-26 11:20:52 EDT  [SCORE|STRONG-TREND] UNH | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=2(near20dHi=-6.3%,RSI=58) Setup=2(upside=6.0%) Trigger=$390.93 total=7/12
+2026-05-26 11:20:52 EDT  [52W-STRUCTURE] UNH | MASTER_8_STRONG_TREND | -6.3% from 52W high ($404.15) → +1 → 8/12
+2026-05-26 11:20:52 EDT  [⏳ TRIGGER-WAIT] UNH | MASTER_8_STRONG_TREND | Score=8/12 | TRIGGER-WAIT: $378.58 hasn't broken yesterday's high $390.93
+2026-05-26 11:20:53 EDT  [WATCHLIST] ➕ NEW: UNH | MASTER_5_PULLBACK_MA20 | Score=11/12 | ScanPrice=$378.58 | Trigger=$381.97 | Need +0.9% to fire
+2026-05-26 11:20:53 EDT  [WATCHLIST] ➕ NEW: UNH | MASTER_8_STRONG_TREND | Score=10/12 | ScanPrice=$378.58 | Trigger=$390.93 | Need +3.3% to fire
+2026-05-26 11:20:53 EDT  [SCORE|PULLBACK-MA20] SWKS | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$69.85,dist=20.73%,chg=+2.3%) Momentum=0(RSI=76,CCI=184) R30=$82.42(upside=-2.3%) Trigger=$70.06 total=4/12
+2026-05-26 11:20:53 EDT  [MOVE-POTENTIAL] SWKS | MASTER_5_PULLBACK_MA20 | upside=-2.3% to R30=$82.42 → score-2 → 2/12
+2026-05-26 11:20:53 EDT  [52W-STRUCTURE] SWKS | MASTER_5_PULLBACK_MA20 | -7.2% from 52W high ($90.90) → +1 → 3/12
+2026-05-26 11:20:53 EDT  [SCORE|VOL-BREAKOUT] SWKS | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=3(R30=$82.42,breakPct=+2.3%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=76,chg=+2.3%) Trigger=$82.83 total=7/12
+2026-05-26 11:20:53 EDT  [52W-STRUCTURE] SWKS | MASTER_6_VOLUME_BREAKOUT | -7.2% from 52W high ($90.90) → +1 → 8/12
+2026-05-26 11:20:53 EDT  [⏳ TRIGGER-WAIT] SWKS | MASTER_6_VOLUME_BREAKOUT | Score=8/12 | NO-VOL-CONFIRM: breakout at $84.33 lacks volume (rvol=0.23x < 1.5) — potential fake breakout
+2026-05-26 11:20:53 EDT  [SCORE|STRONG-TREND] SWKS | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=2(near20dHi=-0.5%,RSI=76) Setup=0(upside=-2.3%) Trigger=$82.54 total=5/12
+2026-05-26 11:20:53 EDT  [MOVE-POTENTIAL] SWKS | MASTER_8_STRONG_TREND | upside=-2.3% to R30=$82.42 → score-2 → 3/12
+2026-05-26 11:20:53 EDT  [52W-STRUCTURE] SWKS | MASTER_8_STRONG_TREND | -7.2% from 52W high ($90.90) → +1 → 4/12
+2026-05-26 11:20:53 EDT  [❌ SCORE] SWKS | MASTER_5_PULLBACK_MA20 — Score=3/12 < 10 (V=1 T=3 M=0 S=0)
+2026-05-26 11:20:54 EDT  [❌ SCORE] SWKS | MASTER_8_STRONG_TREND — Score=4/12 < 10 (V=0 T=3 M=2 S=0)
+2026-05-26 11:20:55 EDT  [SCORE|PULLBACK-MA20] NBIX | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$148.05,dist=5.76%,chg=-0.1%) Momentum=1(RSI=69,CCI=55) R30=$161.32(upside=3.0%) Trigger=$148.49 total=5/12
+2026-05-26 11:20:55 EDT  [52W-STRUCTURE] NBIX | MASTER_5_PULLBACK_MA20 | -3.6% from 52W high ($162.39) → +1 → 6/12
+2026-05-26 11:20:55 EDT  [SCORE|VOL-BREAKOUT] NBIX | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$161.32,breakPct=-2.9%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=69,chg=-0.1%) Trigger=$162.13 total=5/12
+2026-05-26 11:20:55 EDT  [52W-STRUCTURE] NBIX | MASTER_6_VOLUME_BREAKOUT | -3.6% from 52W high ($162.39) → +1 → 6/12
+2026-05-26 11:20:55 EDT  [⏳ TRIGGER-WAIT] NBIX | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $156.57 hasn't cleared breakout level $162.13 (need +3.5%)
+2026-05-26 11:20:55 EDT  [SCORE|STRONG-TREND] NBIX | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=2(near20dHi=-3.6%,RSI=69) Setup=1(upside=3.0%) Trigger=$158.79 total=6/12
+2026-05-26 11:20:55 EDT  [52W-STRUCTURE] NBIX | MASTER_8_STRONG_TREND | -3.6% from 52W high ($162.39) → +1 → 7/12
+2026-05-26 11:20:55 EDT  [⏳ TRIGGER-WAIT] NBIX | MASTER_8_STRONG_TREND | Score=7/12 | TRIGGER-WAIT: $156.57 hasn't broken yesterday's high $158.79
+2026-05-26 11:20:55 EDT  [❌ SCORE] NBIX | MASTER_5_PULLBACK_MA20 — Score=6/12 < 10 (V=1 T=3 M=1 S=0)
+2026-05-26 11:20:56 EDT  [SCORE|PULLBACK-MA20] CSCO | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$103.27,dist=13.78%,chg=-2.4%) Momentum=1(RSI=74,CCI=86) R30=$120.41(upside=2.5%) Trigger=$103.58 total=5/12
+2026-05-26 11:20:56 EDT  [MOVE-POTENTIAL] CSCO | MASTER_5_PULLBACK_MA20 | upside=2.5% to R30=$120.41 → score-1 → 4/12
+2026-05-26 11:20:56 EDT  [52W-STRUCTURE] CSCO | MASTER_5_PULLBACK_MA20 | -2.7% from 52W high ($120.79) → +1 → 5/12
+2026-05-26 11:20:56 EDT  [SCORE|VOL-BREAKOUT] CSCO | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=0(R30=$120.41,breakPct=-2.4%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=74,chg=-2.4%) Trigger=$121.01 total=4/12
+2026-05-26 11:20:56 EDT  [52W-STRUCTURE] CSCO | MASTER_6_VOLUME_BREAKOUT | -2.7% from 52W high ($120.79) → +1 → 5/12
+2026-05-26 11:20:56 EDT  [⏳ TRIGGER-WAIT] CSCO | MASTER_6_VOLUME_BREAKOUT | Score=5/12 | TRIGGER-WAIT: $117.50 hasn't cleared breakout level $121.01 (need +3.0%)
+2026-05-26 11:20:56 EDT  [SCORE|STRONG-TREND] CSCO | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=2(near20dHi=-2.7%,RSI=74) Setup=0(upside=2.5%) Trigger=$120.91 total=5/12
+2026-05-26 11:20:56 EDT  [MOVE-POTENTIAL] CSCO | MASTER_8_STRONG_TREND | upside=2.5% to R30=$120.41 → score-1 → 4/12
+2026-05-26 11:20:56 EDT  [52W-STRUCTURE] CSCO | MASTER_8_STRONG_TREND | -2.7% from 52W high ($120.79) → +1 → 5/12
+2026-05-26 11:20:56 EDT  [⏳ TRIGGER-WAIT] CSCO | MASTER_8_STRONG_TREND | Score=5/12 | TRIGGER-WAIT: $117.50 hasn't broken yesterday's high $120.91
+2026-05-26 11:20:56 EDT  [❌ SCORE] CSCO | MASTER_5_PULLBACK_MA20 — Score=5/12 < 10 (V=1 T=3 M=1 S=0)
+2026-05-26 11:20:57 EDT  [SCORE|PULLBACK-MA20] ADI | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$408.40,dist=3.28%,chg=+6.2%) Momentum=1(RSI=60,CCI=48) R30=$432.39(upside=2.5%) Trigger=$409.63 total=6/12
+2026-05-26 11:20:57 EDT  [MOVE-POTENTIAL] ADI | MASTER_5_PULLBACK_MA20 | upside=2.5% to R30=$432.39 → score-1 → 5/12
+2026-05-26 11:20:57 EDT  [52W-STRUCTURE] ADI | MASTER_5_PULLBACK_MA20 | -3.2% from 52W high ($435.72) → +1 → 6/12
+2026-05-26 11:20:57 EDT  [SCORE|VOL-BREAKOUT] ADI | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=0(R30=$432.39,breakPct=-2.4%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=60,chg=+6.2%) Trigger=$434.55 total=6/12
+2026-05-26 11:20:57 EDT  [52W-STRUCTURE] ADI | MASTER_6_VOLUME_BREAKOUT | -3.2% from 52W high ($435.72) → +1 → 7/12
+2026-05-26 11:20:57 EDT  [⏳ TRIGGER-WAIT] ADI | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | TRIGGER-WAIT: $421.80 hasn't cleared breakout level $434.55 (need +3.0%)
+2026-05-26 11:20:57 EDT  [SCORE|STRONG-TREND] ADI | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=2(near20dHi=-3.2%,RSI=60) Setup=0(upside=2.5%) Trigger=$401.13 total=5/12
+2026-05-26 11:20:57 EDT  [MOVE-POTENTIAL] ADI | MASTER_8_STRONG_TREND | upside=2.5% to R30=$432.39 → score-1 → 4/12
+2026-05-26 11:20:57 EDT  [52W-STRUCTURE] ADI | MASTER_8_STRONG_TREND | -3.2% from 52W high ($435.72) → +1 → 5/12
+2026-05-26 11:20:57 EDT  [❌ SCORE] ADI | MASTER_5_PULLBACK_MA20 — Score=6/12 < 10 (V=2 T=3 M=1 S=0)
+2026-05-26 11:20:57 EDT  [WATCHLIST] ❌ EXPIRED: ADI | MASTER_5_PULLBACK_MA20 — score dropped below threshold
+2026-05-26 11:20:57 EDT  [❌ SCORE] ADI | MASTER_8_STRONG_TREND — Score=5/12 < 10 (V=0 T=3 M=2 S=0)
+2026-05-26 11:20:57 EDT  [WATCHLIST] ❌ EXPIRED: ADI | MASTER_8_STRONG_TREND — score dropped below threshold
+2026-05-26 11:20:58 EDT  [SCORE|PULLBACK-MA20] CVS | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=1(SMA20=$89.90,dist=1.95%,chg=-1.7%) Momentum=2(RSI=60,CCI=28) R30=$98.11(upside=7.0%) Trigger=$90.17 total=7/12
+2026-05-26 11:20:58 EDT  [52W-STRUCTURE] CVS | MASTER_5_PULLBACK_MA20 | -6.9% from 52W high ($98.43) → +1 → 8/12
+2026-05-26 11:20:58 EDT  [SCORE|VOL-BREAKOUT] CVS | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$98.11,breakPct=-6.6%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=60,chg=-1.7%) Trigger=$98.60 total=5/12
+2026-05-26 11:20:58 EDT  [52W-STRUCTURE] CVS | MASTER_6_VOLUME_BREAKOUT | -6.9% from 52W high ($98.43) → +1 → 6/12
+2026-05-26 11:20:58 EDT  [⏳ TRIGGER-WAIT] CVS | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $91.65 hasn't cleared breakout level $98.60 (need +7.6%)
+2026-05-26 11:20:58 EDT  [SCORE|STRONG-TREND] CVS | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=2(near20dHi=-6.9%,RSI=60) Setup=2(upside=7.0%) Trigger=$94.24 total=7/12
+2026-05-26 11:20:58 EDT  [52W-STRUCTURE] CVS | MASTER_8_STRONG_TREND | -6.9% from 52W high ($98.43) → +1 → 8/12
+2026-05-26 11:20:58 EDT  [⏳ TRIGGER-WAIT] CVS | MASTER_8_STRONG_TREND | Score=8/12 | TRIGGER-WAIT: $91.65 hasn't broken yesterday's high $94.24
+2026-05-26 11:20:58 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **HES** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:20:58 EDT  [✅ SIGNAL] CVS | MASTER_5_PULLBACK_MA20 | Score=10/12 🔥CONFLUENCE(+2) (V=1 T=3 M=2 S=1) | Conviction=38.8/50 | Entry=$91.65 SL=$85.89 TP=$102.65
+2026-05-26 11:20:58 EDT  [WATCHLIST] ➕ NEW: CVS | MASTER_8_STRONG_TREND | Score=10/12 | ScanPrice=$91.65 | Trigger=$94.24 | Need +2.8% to fire
+2026-05-26 11:20:59 EDT  [SCORE|PULLBACK-MA20] SWN | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=4.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$6.49,dist=9.49%,chg=+0.0%) Momentum=0(RSI=71,CCI=104) R30=$7.15(upside=0.6%) Trigger=$6.51 total=4/12
+2026-05-26 11:20:59 EDT  [MOVE-POTENTIAL] SWN | MASTER_5_PULLBACK_MA20 | upside=0.6% to R30=$7.15 → score-1 → 3/12
+2026-05-26 11:20:59 EDT  [52W-STRUCTURE] SWN | MASTER_5_PULLBACK_MA20 | -8.8% from 52W high ($7.80) → +1 → 4/12
+2026-05-26 11:20:59 EDT  [SCORE|VOL-BREAKOUT] SWN | MASTER_6_VOLUME_BREAKOUT | Volume=3(RVOL=4.1x) Breakout=1(R30=$7.15,breakPct=-0.6%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=71,chg=+0.0%) Trigger=$7.19 total=8/12
+2026-05-26 11:20:59 EDT  [52W-STRUCTURE] SWN | MASTER_6_VOLUME_BREAKOUT | -8.8% from 52W high ($7.80) → +1 → 9/12
+2026-05-26 11:20:59 EDT  [⏳ TRIGGER-WAIT] SWN | MASTER_6_VOLUME_BREAKOUT | Score=9/12 | TRIGGER-WAIT: $7.11 hasn't cleared breakout level $7.19 (need +1.1%)
+2026-05-26 11:20:59 EDT  [SCORE|STRONG-TREND] SWN | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=3(RVOL=4.1x) Momentum=3(near20dHi=-2.1%,RSI=71) Setup=0(upside=0.6%) Trigger=$7.27 total=9/12
+2026-05-26 11:20:59 EDT  [MOVE-POTENTIAL] SWN | MASTER_8_STRONG_TREND | upside=0.6% to R30=$7.15 → score-1 → 8/12
+2026-05-26 11:20:59 EDT  [52W-STRUCTURE] SWN | MASTER_8_STRONG_TREND | -8.8% from 52W high ($7.80) → +1 → 9/12
+2026-05-26 11:20:59 EDT  [⏳ TRIGGER-WAIT] SWN | MASTER_8_STRONG_TREND | Score=9/12 | TRIGGER-WAIT: $7.11 hasn't broken yesterday's high $7.27
+2026-05-26 11:20:59 EDT  [❌ SCORE] SWN | MASTER_5_PULLBACK_MA20 — Score=6/12 < 10 (V=1 T=3 M=0 S=0)
+2026-05-26 11:20:59 EDT  [WATCHLIST] ➕ NEW: SWN | MASTER_6_VOLUME_BREAKOUT | Score=11/12 | ScanPrice=$7.11 | Trigger=$7.19 | Need +1.1% to fire
+2026-05-26 11:20:59 EDT  [WATCHLIST] ➕ NEW: SWN | MASTER_8_STRONG_TREND | Score=11/12 | ScanPrice=$7.11 | Trigger=$7.27 | Need +2.2% to fire
+2026-05-26 11:20:59 EDT  [SCORE|PULLBACK-MA20] NVDA | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.4x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$214.78,dist=1.14%,chg=+0.9%) Momentum=2(RSI=55,CCI=11) R30=$235.74(upside=8.5%) Trigger=$215.42 total=9/12
+2026-05-26 11:20:59 EDT  [52W-STRUCTURE] NVDA | MASTER_5_PULLBACK_MA20 | -8.2% from 52W high ($236.54) → +1 → 10/12
+2026-05-26 11:20:59 EDT  [SCORE|VOL-BREAKOUT] NVDA | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.4x) Breakout=0(R30=$235.74,breakPct=-7.9%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=55,chg=+0.9%) Trigger=$236.92 total=5/12
+2026-05-26 11:20:59 EDT  [52W-STRUCTURE] NVDA | MASTER_6_VOLUME_BREAKOUT | -8.2% from 52W high ($236.54) → +1 → 6/12
+2026-05-26 11:20:59 EDT  [⏳ TRIGGER-WAIT] NVDA | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $217.22 hasn't cleared breakout level $236.92 (need +9.1%)
+2026-05-26 11:20:59 EDT  [SCORE|STRONG-TREND] NVDA | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.4x) Momentum=1(near20dHi=-8.2%,RSI=55) Setup=3(upside=8.5%) Trigger=$221.23 total=7/12
+2026-05-26 11:20:59 EDT  [52W-STRUCTURE] NVDA | MASTER_8_STRONG_TREND | -8.2% from 52W high ($236.54) → +1 → 8/12
+2026-05-26 11:20:59 EDT  [⏳ TRIGGER-WAIT] NVDA | MASTER_8_STRONG_TREND | Score=8/12 | TRIGGER-WAIT: $217.22 hasn't broken yesterday's high $221.23
+2026-05-26 11:21:00 EDT  [✅ SIGNAL] NVDA | MASTER_5_PULLBACK_MA20 | Score=12/12 🔥CONFLUENCE(+2) (V=2 T=3 M=2 S=2) | Conviction=46.7/50 | Entry=$217.22 SL=$198.91 TP=$243.28
+2026-05-26 11:21:00 EDT  [WATCHLIST] ➕ NEW: NVDA | MASTER_8_STRONG_TREND | Score=10/12 | ScanPrice=$217.22 | Trigger=$221.23 | Need +1.8% to fire
+2026-05-26 11:21:00 EDT  [SCORE|PULLBACK-MA20] ALB | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.3x,drying=no) Trend=2(abvSMA200) Setup=0(SMA20=$188.57,dist=5.26%,chg=+4.1%) Momentum=2(RSI=45,CCI=-62) R30=$215.62(upside=20.7%) Trigger=$189.13 total=6/12
+2026-05-26 11:21:00 EDT  [MOVE-POTENTIAL] ALB | MASTER_5_PULLBACK_MA20 | upside=20.7% to R30=$215.62 → score+1 → 7/12
+2026-05-26 11:21:00 EDT  [⏳ TRIGGER-WAIT] ALB | MASTER_5_PULLBACK_MA20 | Score=7/12 | TRIGGER-WAIT: $178.64 still below SMA20 $188.57 — not reclaimed yet
+2026-05-26 11:21:00 EDT  [SCORE|VOL-BREAKOUT] ALB | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=0(R30=$215.62,breakPct=-17.2%) Trend=2(abvSMA200) Momentum=2(RSI=45,chg=+4.1%) Trigger=$216.70 total=4/12
+2026-05-26 11:21:00 EDT  [⏳ TRIGGER-WAIT] ALB | MASTER_6_VOLUME_BREAKOUT | Score=4/12 | TRIGGER-WAIT: $178.64 hasn't cleared breakout level $216.70 (need +21.3%)
+2026-05-26 11:21:00 EDT  [SCORE|STRONG-TREND] ALB | MASTER_8_STRONG_TREND | Trend=1(abvSMA50=N,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=0(near20dHi=-19.2%,RSI=45) Setup=3(upside=20.7%) Trigger=$175.39 total=4/12
+2026-05-26 11:21:00 EDT  [MOVE-POTENTIAL] ALB | MASTER_8_STRONG_TREND | upside=20.7% to R30=$215.62 → score+1 → 5/12
+2026-05-26 11:21:01 EDT  [❌ SCORE] ALB | MASTER_8_STRONG_TREND — Score=5/12 < 10 (V=0 T=1 M=0 S=3)
+2026-05-26 11:21:01 EDT  [WATCHLIST] ❌ EXPIRED: ALB | MASTER_8_STRONG_TREND — score dropped below threshold
+2026-05-26 11:21:01 EDT  [SCORE|PULLBACK-MA20] CAT | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$885.29,dist=2.39%,chg=+3.0%) Momentum=1(RSI=61,CCI=30) R30=$926.93(upside=2.3%) Trigger=$887.95 total=5/12
+2026-05-26 11:21:01 EDT  [MOVE-POTENTIAL] CAT | MASTER_5_PULLBACK_MA20 | upside=2.3% to R30=$926.93 → score-1 → 4/12
+2026-05-26 11:21:01 EDT  [52W-STRUCTURE] CAT | MASTER_5_PULLBACK_MA20 | -2.7% from 52W high ($931.35) → +1 → 5/12
+2026-05-26 11:21:01 EDT  [SCORE|VOL-BREAKOUT] CAT | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=0(R30=$926.93,breakPct=-2.2%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=61,chg=+3.0%) Trigger=$931.56 total=6/12
+2026-05-26 11:21:01 EDT  [52W-STRUCTURE] CAT | MASTER_6_VOLUME_BREAKOUT | -2.7% from 52W high ($931.35) → +1 → 7/12
+2026-05-26 11:21:01 EDT  [⏳ TRIGGER-WAIT] CAT | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | TRIGGER-WAIT: $906.44 hasn't cleared breakout level $931.56 (need +2.8%)
+2026-05-26 11:21:01 EDT  [SCORE|STRONG-TREND] CAT | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=3(near20dHi=-2.7%,RSI=61) Setup=0(upside=2.3%) Trigger=$894.73 total=6/12
+2026-05-26 11:21:01 EDT  [MOVE-POTENTIAL] CAT | MASTER_8_STRONG_TREND | upside=2.3% to R30=$926.93 → score-1 → 5/12
+2026-05-26 11:21:01 EDT  [52W-STRUCTURE] CAT | MASTER_8_STRONG_TREND | -2.7% from 52W high ($931.35) → +1 → 6/12
+2026-05-26 11:21:01 EDT  [❌ SCORE] CAT | MASTER_5_PULLBACK_MA20 — Score=5/12 < 10 (V=1 T=3 M=1 S=0)
+2026-05-26 11:21:01 EDT  [WATCHLIST] ❌ EXPIRED: CAT | MASTER_5_PULLBACK_MA20 — score dropped below threshold
+2026-05-26 11:21:02 EDT  [❌ SCORE] CAT | MASTER_8_STRONG_TREND — Score=6/12 < 10 (V=0 T=3 M=3 S=0)
+2026-05-26 11:21:02 EDT  [WATCHLIST] ❌ EXPIRED: CAT | MASTER_8_STRONG_TREND — score dropped below threshold
+2026-05-26 11:21:02 EDT  [SCORE|PULLBACK-MA20] QRVO | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$93.69,dist=15.65%,chg=+1.8%) Momentum=0(RSI=76,CCI=184) R30=$106.43(upside=-1.8%) Trigger=$93.97 total=4/12
+2026-05-26 11:21:02 EDT  [MOVE-POTENTIAL] QRVO | MASTER_5_PULLBACK_MA20 | upside=-1.8% to R30=$106.43 → score-2 → 2/12
+2026-05-26 11:21:02 EDT  [52W-STRUCTURE] QRVO | MASTER_5_PULLBACK_MA20 | -0.5% from 52W high ($108.94) → +1 → 3/12
+2026-05-26 11:21:02 EDT  [SCORE|VOL-BREAKOUT] QRVO | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=3(R30=$106.43,breakPct=+1.8%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=76,chg=+1.8%) Trigger=$106.96 total=7/12
+2026-05-26 11:21:02 EDT  [52W-STRUCTURE] QRVO | MASTER_6_VOLUME_BREAKOUT | -0.5% from 52W high ($108.94) → +1 → 8/12
+2026-05-26 11:21:02 EDT  [⏳ TRIGGER-WAIT] QRVO | MASTER_6_VOLUME_BREAKOUT | Score=8/12 | NO-VOL-CONFIRM: breakout at $108.35 lacks volume (rvol=0.20x < 1.5) — potential fake breakout
+2026-05-26 11:21:02 EDT  [SCORE|STRONG-TREND] QRVO | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=2(near20dHi=-0.5%,RSI=76) Setup=0(upside=-1.8%) Trigger=$106.57 total=5/12
+2026-05-26 11:21:02 EDT  [MOVE-POTENTIAL] QRVO | MASTER_8_STRONG_TREND | upside=-1.8% to R30=$106.43 → score-2 → 3/12
+2026-05-26 11:21:02 EDT  [52W-STRUCTURE] QRVO | MASTER_8_STRONG_TREND | -0.5% from 52W high ($108.94) → +1 → 4/12
+2026-05-26 11:21:02 EDT  [❌ SCORE] QRVO | MASTER_5_PULLBACK_MA20 — Score=3/12 < 10 (V=1 T=3 M=0 S=0)
+2026-05-26 11:21:03 EDT  [❌ SCORE] QRVO | MASTER_8_STRONG_TREND — Score=4/12 < 10 (V=0 T=3 M=2 S=0)
+2026-05-26 11:21:03 EDT  [SCORE|PULLBACK-MA20] AVGO | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$419.77,dist=2.87%,chg=+4.3%) Momentum=1(RSI=60,CCI=75) R30=$439.79(upside=1.8%) Trigger=$421.03 total=6/12
+2026-05-26 11:21:03 EDT  [MOVE-POTENTIAL] AVGO | MASTER_5_PULLBACK_MA20 | upside=1.8% to R30=$439.79 → score-1 → 5/12
+2026-05-26 11:21:03 EDT  [52W-STRUCTURE] AVGO | MASTER_5_PULLBACK_MA20 | -2.4% from 52W high ($442.36) → +1 → 6/12
+2026-05-26 11:21:03 EDT  [SCORE|VOL-BREAKOUT] AVGO | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=0(R30=$439.79,breakPct=-1.8%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=60,chg=+4.3%) Trigger=$441.99 total=6/12
+2026-05-26 11:21:03 EDT  [52W-STRUCTURE] AVGO | MASTER_6_VOLUME_BREAKOUT | -2.4% from 52W high ($442.36) → +1 → 7/12
+2026-05-26 11:21:03 EDT  [⏳ TRIGGER-WAIT] AVGO | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | TRIGGER-WAIT: $431.82 hasn't cleared breakout level $441.99 (need +2.4%)
+2026-05-26 11:21:03 EDT  [SCORE|STRONG-TREND] AVGO | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=3(near20dHi=-2.4%,RSI=60) Setup=0(upside=1.8%) Trigger=$420.41 total=6/12
+2026-05-26 11:21:03 EDT  [MOVE-POTENTIAL] AVGO | MASTER_8_STRONG_TREND | upside=1.8% to R30=$439.79 → score-1 → 5/12
+2026-05-26 11:21:03 EDT  [52W-STRUCTURE] AVGO | MASTER_8_STRONG_TREND | -2.4% from 52W high ($442.36) → +1 → 6/12
+2026-05-26 11:21:03 EDT  [❌ SCORE] AVGO | MASTER_5_PULLBACK_MA20 — Score=6/12 < 10 (V=2 T=3 M=1 S=0)
+2026-05-26 11:21:04 EDT  [❌ SCORE] AVGO | MASTER_8_STRONG_TREND — Score=6/12 < 10 (V=0 T=3 M=3 S=0)
+2026-05-26 11:21:04 EDT  [WATCHLIST] ❌ EXPIRED: AVGO | MASTER_8_STRONG_TREND — score dropped below threshold
+2026-05-26 11:21:04 EDT  [SCORE|PULLBACK-MA20] ILMN | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$139.55,dist=4.82%,chg=+1.3%) Momentum=1(RSI=65,CCI=59) R30=$145.70(upside=-0.4%) Trigger=$139.97 total=5/12
+2026-05-26 11:21:04 EDT  [MOVE-POTENTIAL] ILMN | MASTER_5_PULLBACK_MA20 | upside=-0.4% to R30=$145.70 → score-2 → 3/12
+2026-05-26 11:21:04 EDT  [52W-STRUCTURE] ILMN | MASTER_5_PULLBACK_MA20 | -5.9% from 52W high ($155.53) → +1 → 4/12
+2026-05-26 11:21:04 EDT  [SCORE|VOL-BREAKOUT] ILMN | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=3(R30=$145.70,breakPct=+0.4%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=65,chg=+1.3%) Trigger=$146.43 total=9/12
+2026-05-26 11:21:04 EDT  [52W-STRUCTURE] ILMN | MASTER_6_VOLUME_BREAKOUT | -5.9% from 52W high ($155.53) → +1 → 10/12
+2026-05-26 11:21:04 EDT  [⏳ TRIGGER-WAIT] ILMN | MASTER_6_VOLUME_BREAKOUT | Score=10/12 | TRIGGER-WAIT: $146.28 hasn't cleared breakout level $146.43 (need +0.1%)
+2026-05-26 11:21:04 EDT  [SCORE|STRONG-TREND] ILMN | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=3(near20dHi=-2.6%,RSI=65) Setup=0(upside=-0.4%) Trigger=$146.64 total=6/12
+2026-05-26 11:21:04 EDT  [MOVE-POTENTIAL] ILMN | MASTER_8_STRONG_TREND | upside=-0.4% to R30=$145.70 → score-2 → 4/12
+2026-05-26 11:21:04 EDT  [52W-STRUCTURE] ILMN | MASTER_8_STRONG_TREND | -5.9% from 52W high ($155.53) → +1 → 5/12
+2026-05-26 11:21:04 EDT  [⏳ TRIGGER-WAIT] ILMN | MASTER_8_STRONG_TREND | Score=5/12 | TRIGGER-WAIT: $146.28 hasn't broken yesterday's high $146.64
+2026-05-26 11:21:04 EDT  [❌ SCORE] ILMN | MASTER_5_PULLBACK_MA20 — Score=4/12 < 10 (V=1 T=3 M=1 S=0)
+2026-05-26 11:21:05 EDT  [WATCHLIST] 🔄 UPDATED: ILMN | MASTER_6_VOLUME_BREAKOUT | Score=10/12 | ScanPrice=$146.28 | Trigger=$146.43 | Gap=0.1% | Scan#2/3
+2026-05-26 11:21:05 EDT  [SCORE|PULLBACK-MA20] AMAT | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$418.67,dist=8.39%,chg=+5.0%) Momentum=0(RSI=64,CCI=103) R30=$443.62(upside=-2.2%) Trigger=$419.93 total=4/12
+2026-05-26 11:21:05 EDT  [MOVE-POTENTIAL] AMAT | MASTER_5_PULLBACK_MA20 | upside=-2.2% to R30=$443.62 → score-2 → 2/12
+2026-05-26 11:21:05 EDT  [52W-STRUCTURE] AMAT | MASTER_5_PULLBACK_MA20 | -0.4% from 52W high ($455.83) → +1 → 3/12
+2026-05-26 11:21:05 EDT  [SCORE|VOL-BREAKOUT] AMAT | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=3(R30=$443.62,breakPct=+2.3%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=64,chg=+5.0%) Trigger=$445.84 total=9/12
+2026-05-26 11:21:05 EDT  [52W-STRUCTURE] AMAT | MASTER_6_VOLUME_BREAKOUT | -0.4% from 52W high ($455.83) → +1 → 10/12
+2026-05-26 11:21:05 EDT  [⏳ TRIGGER-WAIT] AMAT | MASTER_6_VOLUME_BREAKOUT | Score=10/12 | NO-VOL-CONFIRM: breakout at $453.82 lacks volume (rvol=0.29x < 1.5) — potential fake breakout
+2026-05-26 11:21:05 EDT  [SCORE|STRONG-TREND] AMAT | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=3(near20dHi=-0.4%,RSI=64) Setup=0(upside=-2.2%) Trigger=$438.56 total=6/12
+2026-05-26 11:21:05 EDT  [MOVE-POTENTIAL] AMAT | MASTER_8_STRONG_TREND | upside=-2.2% to R30=$443.62 → score-2 → 4/12
+2026-05-26 11:21:05 EDT  [52W-STRUCTURE] AMAT | MASTER_8_STRONG_TREND | -0.4% from 52W high ($455.83) → +1 → 5/12
+2026-05-26 11:21:05 EDT  [❌ SCORE] AMAT | MASTER_5_PULLBACK_MA20 — Score=3/12 < 10 (V=1 T=3 M=0 S=0)
+2026-05-26 11:21:06 EDT  [WATCHLIST] 🔄 UPDATED: AMAT | MASTER_6_VOLUME_BREAKOUT | Score=10/12 | ScanPrice=$453.82 | Trigger=$445.84 | Gap=-1.8% | Scan#2/3
+2026-05-26 11:21:06 EDT  [❌ SCORE] AMAT | MASTER_8_STRONG_TREND — Score=5/12 < 10 (V=0 T=3 M=3 S=0)
+2026-05-26 11:21:06 EDT  [SCORE|PULLBACK-MA20] LRCX | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$283.07,dist=12.74%,chg=+4.5%) Momentum=0(RSI=68,CCI=121) R30=$305.35(upside=-4.3%) Trigger=$283.92 total=4/12
+2026-05-26 11:21:06 EDT  [MOVE-POTENTIAL] LRCX | MASTER_5_PULLBACK_MA20 | upside=-4.3% to R30=$305.35 → score-2 → 2/12
+2026-05-26 11:21:06 EDT  [52W-STRUCTURE] LRCX | MASTER_5_PULLBACK_MA20 | -0.6% from 52W high ($320.93) → +1 → 3/12
+2026-05-26 11:21:06 EDT  [SCORE|VOL-BREAKOUT] LRCX | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=2(R30=$305.35,breakPct=+4.5%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=68,chg=+4.5%) Trigger=$306.88 total=8/12
+2026-05-26 11:21:06 EDT  [52W-STRUCTURE] LRCX | MASTER_6_VOLUME_BREAKOUT | -0.6% from 52W high ($320.93) → +1 → 9/12
+2026-05-26 11:21:06 EDT  [⏳ TRIGGER-WAIT] LRCX | MASTER_6_VOLUME_BREAKOUT | Score=9/12 | NO-VOL-CONFIRM: breakout at $319.13 lacks volume (rvol=0.23x < 1.5) — potential fake breakout
+2026-05-26 11:21:06 EDT  [SCORE|STRONG-TREND] LRCX | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=3(near20dHi=-0.6%,RSI=68) Setup=0(upside=-4.3%) Trigger=$310.29 total=6/12
+2026-05-26 11:21:06 EDT  [MOVE-POTENTIAL] LRCX | MASTER_8_STRONG_TREND | upside=-4.3% to R30=$305.35 → score-2 → 4/12
+2026-05-26 11:21:06 EDT  [52W-STRUCTURE] LRCX | MASTER_8_STRONG_TREND | -0.6% from 52W high ($320.93) → +1 → 5/12
+2026-05-26 11:21:06 EDT  [❌ SCORE] LRCX | MASTER_5_PULLBACK_MA20 — Score=3/12 < 10 (V=1 T=3 M=0 S=0)
+2026-05-26 11:21:07 EDT  [❌ SCORE] LRCX | MASTER_8_STRONG_TREND — Score=5/12 < 10 (V=0 T=3 M=3 S=0)
+2026-05-26 11:21:07 EDT  [SCORE|PULLBACK-MA20] MRO | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=4.8x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=1(SMA20=$28.04,dist=1.83%,chg=+0.0%) Momentum=2(RSI=56,CCI=36) R30=$28.99(upside=1.5%) Trigger=$28.12 total=7/12
+2026-05-26 11:21:07 EDT  [MOVE-POTENTIAL] MRO | MASTER_5_PULLBACK_MA20 | upside=1.5% to R30=$28.99 → score-1 → 6/12
+2026-05-26 11:21:07 EDT  [52W-STRUCTURE] MRO | MASTER_5_PULLBACK_MA20 | -5.0% from 52W high ($30.06) → +1 → 7/12
+2026-05-26 11:21:07 EDT  [SCORE|VOL-BREAKOUT] MRO | MASTER_6_VOLUME_BREAKOUT | Volume=3(RVOL=4.8x) Breakout=0(R30=$28.99,breakPct=-1.5%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=56,chg=+0.0%) Trigger=$29.13 total=8/12
+2026-05-26 11:21:07 EDT  [52W-STRUCTURE] MRO | MASTER_6_VOLUME_BREAKOUT | -5.0% from 52W high ($30.06) → +1 → 9/12
+2026-05-26 11:21:07 EDT  [⏳ TRIGGER-WAIT] MRO | MASTER_6_VOLUME_BREAKOUT | Score=9/12 | TRIGGER-WAIT: $28.55 hasn't cleared breakout level $29.13 (need +2.0%)
+2026-05-26 11:21:07 EDT  [SCORE|STRONG-TREND] MRO | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=3(RVOL=4.8x) Momentum=3(near20dHi=-2.8%,RSI=56) Setup=0(upside=1.5%) Trigger=$29.40 total=9/12
+2026-05-26 11:21:07 EDT  [MOVE-POTENTIAL] MRO | MASTER_8_STRONG_TREND | upside=1.5% to R30=$28.99 → score-1 → 8/12
+2026-05-26 11:21:07 EDT  [52W-STRUCTURE] MRO | MASTER_8_STRONG_TREND | -5.0% from 52W high ($30.06) → +1 → 9/12
+2026-05-26 11:21:07 EDT  [⏳ TRIGGER-WAIT] MRO | MASTER_8_STRONG_TREND | Score=9/12 | TRIGGER-WAIT: $28.55 hasn't broken yesterday's high $29.40
+2026-05-26 11:21:08 EDT  [❌ SCORE] MRO | MASTER_5_PULLBACK_MA20 — Score=9/12 < 10 (V=1 T=3 M=2 S=1)
+2026-05-26 11:21:08 EDT  [WATCHLIST] 🔄 UPDATED: MRO | MASTER_6_VOLUME_BREAKOUT | Score=11/12 | ScanPrice=$28.55 | Trigger=$29.13 | Gap=2.0% | Scan#2/3
+2026-05-26 11:21:08 EDT  [WATCHLIST] 🔄 UPDATED: MRO | MASTER_8_STRONG_TREND | Score=11/12 | ScanPrice=$28.55 | Trigger=$29.40 | Gap=3.0% | Scan#2/3
+2026-05-26 11:21:10 EDT  [SCORE|PULLBACK-MA20] MAS | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$69.19,dist=1.37%,chg=+1.5%) Momentum=3(RSI=51,CCI=-31) R30=$75.40(upside=10.5%) Trigger=$69.40 total=9/12
+2026-05-26 11:21:10 EDT  [MOVE-POTENTIAL] MAS | MASTER_5_PULLBACK_MA20 | upside=10.5% to R30=$75.40 → score+1 → 10/12
+2026-05-26 11:21:10 EDT  [⏳ TRIGGER-WAIT] MAS | MASTER_5_PULLBACK_MA20 | Score=10/12 | TRIGGER-WAIT: $68.24 still below SMA20 $69.19 — not reclaimed yet
+2026-05-26 11:21:10 EDT  [SCORE|VOL-BREAKOUT] MAS | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$75.40,breakPct=-9.5%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=51,chg=+1.5%) Trigger=$75.78 total=6/12
+2026-05-26 11:21:10 EDT  [⏳ TRIGGER-WAIT] MAS | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $68.24 hasn't cleared breakout level $75.78 (need +11.0%)
+2026-05-26 11:21:11 EDT  [SCORE|STRONG-TREND] MAS | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=1(near20dHi=-9.0%,RSI=51) Setup=3(upside=10.5%) Trigger=$67.72 total=7/12
+2026-05-26 11:21:11 EDT  [MOVE-POTENTIAL] MAS | MASTER_8_STRONG_TREND | upside=10.5% to R30=$75.40 → score+1 → 8/12
+2026-05-26 11:21:12 EDT  [WATCHLIST] 🔄 UPDATED: MAS | MASTER_5_PULLBACK_MA20 | Score=12/12 | ScanPrice=$68.24 | Trigger=$69.40 | Gap=1.7% | Scan#2/3
+2026-05-26 11:21:12 EDT  [✅ SIGNAL] MAS | MASTER_8_STRONG_TREND | Score=10/12 🔥CONFLUENCE(+2) (V=0 T=3 M=1 S=3) | Conviction=36.9/50 | Entry=$68.24 SL=$62.62 TP=$78.48
+2026-05-26 11:21:12 EDT  [WATCHLIST] ✅ CONFIRMED: MAS | MASTER_8_STRONG_TREND — trigger fired, trade executed
+2026-05-26 11:21:12 EDT  [SCORE|PULLBACK-MA20] IFF | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=1(SMA20=$74.72,dist=1.83%,chg=+1.1%) Momentum=3(RSI=54,CCI=23) R30=$82.93(upside=9.0%) Trigger=$74.94 total=8/12
+2026-05-26 11:21:12 EDT  [52W-STRUCTURE] IFF | MASTER_5_PULLBACK_MA20 | -9.9% from 52W high ($84.45) → +1 → 9/12
+2026-05-26 11:21:12 EDT  [SCORE|VOL-BREAKOUT] IFF | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$82.93,breakPct=-8.2%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=54,chg=+1.1%) Trigger=$83.34 total=6/12
+2026-05-26 11:21:12 EDT  [52W-STRUCTURE] IFF | MASTER_6_VOLUME_BREAKOUT | -9.9% from 52W high ($84.45) → +1 → 7/12
+2026-05-26 11:21:12 EDT  [⏳ TRIGGER-WAIT] IFF | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | TRIGGER-WAIT: $76.09 hasn't cleared breakout level $83.34 (need +9.5%)
+2026-05-26 11:21:12 EDT  [SCORE|STRONG-TREND] IFF | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=1(near20dHi=-9.3%,RSI=54) Setup=3(upside=9.0%) Trigger=$76.60 total=7/12
+2026-05-26 11:21:12 EDT  [52W-STRUCTURE] IFF | MASTER_8_STRONG_TREND | -9.9% from 52W high ($84.45) → +1 → 8/12
+2026-05-26 11:21:12 EDT  [⏳ TRIGGER-WAIT] IFF | MASTER_8_STRONG_TREND | Score=8/12 | TRIGGER-WAIT: $76.09 hasn't broken yesterday's high $76.60
+2026-05-26 11:21:13 EDT  [✅ SIGNAL] IFF | MASTER_5_PULLBACK_MA20 | Score=11/12 🔥CONFLUENCE(+2) (V=1 T=3 M=3 S=1) | Conviction=41.0/50 | Entry=$76.09 SL=$69.43 TP=$85.22
+2026-05-26 11:21:13 EDT  [WATCHLIST] ✅ CONFIRMED: IFF | MASTER_5_PULLBACK_MA20 — trigger fired, trade executed
+2026-05-26 11:21:13 EDT  [WATCHLIST] ➕ NEW: IFF | MASTER_8_STRONG_TREND | Score=10/12 | ScanPrice=$76.09 | Trigger=$76.60 | Need +0.7% to fire
+2026-05-26 11:21:14 EDT  [❌ ATR] AVB | MASTER_5_PULLBACK_MA20 | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:14 EDT  [❌ ATR] AVB | MASTER_6_VOLUME_BREAKOUT | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:14 EDT  [❌ ATR] AVB | MASTER_8_STRONG_TREND | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:14 EDT  [❌ SCORE] AVB | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:14 EDT  [❌ SCORE] AVB | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:14 EDT  [❌ SCORE] AVB | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:15 EDT  [SCORE|PULLBACK-MA20] SBUX | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$104.98,dist=3.02%,chg=-1.3%) Momentum=2(RSI=45,CCI=-90) R30=$106.82(upside=4.9%) Trigger=$105.29 total=6/12
+2026-05-26 11:21:15 EDT  [52W-STRUCTURE] SBUX | MASTER_5_PULLBACK_MA20 | -6.5% from 52W high ($108.88) → +1 → 7/12
+2026-05-26 11:21:15 EDT  [⏳ TRIGGER-WAIT] SBUX | MASTER_5_PULLBACK_MA20 | Score=7/12 | TRIGGER-WAIT: $101.81 still below SMA20 $104.98 — not reclaimed yet
+2026-05-26 11:21:15 EDT  [SCORE|VOL-BREAKOUT] SBUX | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=0(R30=$106.82,breakPct=-4.7%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=45,chg=-1.3%) Trigger=$107.35 total=4/12
+2026-05-26 11:21:15 EDT  [52W-STRUCTURE] SBUX | MASTER_6_VOLUME_BREAKOUT | -6.5% from 52W high ($108.88) → +1 → 5/12
+2026-05-26 11:21:15 EDT  [⏳ TRIGGER-WAIT] SBUX | MASTER_6_VOLUME_BREAKOUT | Score=5/12 | TRIGGER-WAIT: $101.81 hasn't cleared breakout level $107.35 (need +5.4%)
+2026-05-26 11:21:15 EDT  [SCORE|STRONG-TREND] SBUX | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=1(near20dHi=-6.5%,RSI=45) Setup=1(upside=4.9%) Trigger=$104.40 total=5/12
+2026-05-26 11:21:15 EDT  [52W-STRUCTURE] SBUX | MASTER_8_STRONG_TREND | -6.5% from 52W high ($108.88) → +1 → 6/12
+2026-05-26 11:21:15 EDT  [⏳ TRIGGER-WAIT] SBUX | MASTER_8_STRONG_TREND | Score=6/12 | TRIGGER-WAIT: $101.81 hasn't broken yesterday's high $104.40
+2026-05-26 11:21:16 EDT  [SCORE|PULLBACK-MA20] CVE | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.4x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=1(SMA20=$29.70,dist=2.37%,chg=-3.5%) Momentum=3(RSI=51,CCI=-35) R30=$31.80(upside=9.7%) Trigger=$29.79 total=9/12
+2026-05-26 11:21:16 EDT  [52W-STRUCTURE] CVE | MASTER_5_PULLBACK_MA20 | -9.6% from 52W high ($32.07) → +1 → 10/12
+2026-05-26 11:21:16 EDT  [⏳ TRIGGER-WAIT] CVE | MASTER_5_PULLBACK_MA20 | Score=10/12 | TRIGGER-WAIT: $29.00 still below SMA20 $29.70 — not reclaimed yet
+2026-05-26 11:21:16 EDT  [SCORE|VOL-BREAKOUT] CVE | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.4x) Breakout=0(R30=$31.80,breakPct=-8.8%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=51,chg=-3.5%) Trigger=$31.96 total=5/12
+2026-05-26 11:21:16 EDT  [52W-STRUCTURE] CVE | MASTER_6_VOLUME_BREAKOUT | -9.6% from 52W high ($32.07) → +1 → 6/12
+2026-05-26 11:21:16 EDT  [⏳ TRIGGER-WAIT] CVE | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $29.00 hasn't cleared breakout level $31.96 (need +10.2%)
+2026-05-26 11:21:16 EDT  [SCORE|STRONG-TREND] CVE | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.4x) Momentum=1(near20dHi=-9.6%,RSI=51) Setup=3(upside=9.7%) Trigger=$30.62 total=7/12
+2026-05-26 11:21:16 EDT  [52W-STRUCTURE] CVE | MASTER_8_STRONG_TREND | -9.6% from 52W high ($32.07) → +1 → 8/12
+2026-05-26 11:21:16 EDT  [⏳ TRIGGER-WAIT] CVE | MASTER_8_STRONG_TREND | Score=8/12 | TRIGGER-WAIT: $29.00 hasn't broken yesterday's high $30.62
+2026-05-26 11:21:16 EDT  [WATCHLIST] ➕ NEW: CVE | MASTER_5_PULLBACK_MA20 | Score=12/12 | ScanPrice=$29.00 | Trigger=$29.79 | Need +2.7% to fire
+2026-05-26 11:21:16 EDT  [WATCHLIST] ➕ NEW: CVE | MASTER_8_STRONG_TREND | Score=10/12 | ScanPrice=$29.00 | Trigger=$30.62 | Need +5.6% to fire
+2026-05-26 11:21:16 EDT  [SCORE|PULLBACK-MA20] MTCH | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=1(SMA20=$36.46,dist=2.76%,chg=-1.0%) Momentum=2(RSI=49,CCI=-64) R30=$38.67(upside=9.1%) Trigger=$36.57 total=7/12
+2026-05-26 11:21:16 EDT  [52W-STRUCTURE] MTCH | MASTER_5_PULLBACK_MA20 | -9.6% from 52W high ($39.20) → +1 → 8/12
+2026-05-26 11:21:16 EDT  [⏳ TRIGGER-WAIT] MTCH | MASTER_5_PULLBACK_MA20 | Score=8/12 | TRIGGER-WAIT: $35.45 still below SMA20 $36.46 — not reclaimed yet
+2026-05-26 11:21:16 EDT  [SCORE|VOL-BREAKOUT] MTCH | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$38.67,breakPct=-8.3%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=49,chg=-1.0%) Trigger=$38.86 total=4/12
+2026-05-26 11:21:16 EDT  [52W-STRUCTURE] MTCH | MASTER_6_VOLUME_BREAKOUT | -9.6% from 52W high ($39.20) → +1 → 5/12
+2026-05-26 11:21:16 EDT  [⏳ TRIGGER-WAIT] MTCH | MASTER_6_VOLUME_BREAKOUT | Score=5/12 | TRIGGER-WAIT: $35.45 hasn't cleared breakout level $38.86 (need +9.6%)
+2026-05-26 11:21:16 EDT  [SCORE|STRONG-TREND] MTCH | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=0(near20dHi=-9.0%,RSI=49) Setup=3(upside=9.1%) Trigger=$36.01 total=6/12
+2026-05-26 11:21:16 EDT  [52W-STRUCTURE] MTCH | MASTER_8_STRONG_TREND | -9.6% from 52W high ($39.20) → +1 → 7/12
+2026-05-26 11:21:16 EDT  [⏳ TRIGGER-WAIT] MTCH | MASTER_8_STRONG_TREND | Score=7/12 | TRIGGER-WAIT: $35.45 hasn't broken yesterday's high $36.01
+2026-05-26 11:21:17 EDT  [WATCHLIST] ➕ NEW: MTCH | MASTER_5_PULLBACK_MA20 | Score=10/12 | ScanPrice=$35.45 | Trigger=$36.57 | Need +3.1% to fire
+2026-05-26 11:21:17 EDT  [❌ ATR] EQR | MASTER_5_PULLBACK_MA20 | ATR%=1.9% < required 2.0%
+2026-05-26 11:21:17 EDT  [❌ ATR] EQR | MASTER_6_VOLUME_BREAKOUT | ATR%=1.9% < required 2.0%
+2026-05-26 11:21:17 EDT  [❌ ATR] EQR | MASTER_8_STRONG_TREND | ATR%=1.9% < required 2.0%
+2026-05-26 11:21:17 EDT  [❌ SCORE] EQR | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:17 EDT  [❌ SCORE] EQR | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:17 EDT  [❌ SCORE] EQR | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:18 EDT  [❌ ATR] ESS | MASTER_5_PULLBACK_MA20 | ATR%=1.9% < required 2.0%
+2026-05-26 11:21:18 EDT  [❌ ATR] ESS | MASTER_6_VOLUME_BREAKOUT | ATR%=1.9% < required 2.0%
+2026-05-26 11:21:18 EDT  [❌ ATR] ESS | MASTER_8_STRONG_TREND | ATR%=1.9% < required 2.0%
+2026-05-26 11:21:18 EDT  [❌ SCORE] ESS | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:18 EDT  [❌ SCORE] ESS | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:18 EDT  [❌ SCORE] ESS | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:18 EDT  [SCORE|PULLBACK-MA20] TFX | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$129.42,dist=3.23%,chg=+0.6%) Momentum=2(RSI=58,CCI=47) R30=$138.81(upside=3.9%) Trigger=$129.81 total=6/12
+2026-05-26 11:21:18 EDT  [52W-STRUCTURE] TFX | MASTER_5_PULLBACK_MA20 | -4.3% from 52W high ($139.67) → +1 → 7/12
+2026-05-26 11:21:18 EDT  [SCORE|VOL-BREAKOUT] TFX | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$138.81,breakPct=-3.7%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=58,chg=+0.6%) Trigger=$139.50 total=5/12
+2026-05-26 11:21:18 EDT  [52W-STRUCTURE] TFX | MASTER_6_VOLUME_BREAKOUT | -4.3% from 52W high ($139.67) → +1 → 6/12
+2026-05-26 11:21:18 EDT  [⏳ TRIGGER-WAIT] TFX | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $133.61 hasn't cleared breakout level $139.50 (need +4.4%)
+2026-05-26 11:21:18 EDT  [SCORE|STRONG-TREND] TFX | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=3(near20dHi=-2.1%,RSI=58) Setup=1(upside=3.9%) Trigger=$134.96 total=7/12
+2026-05-26 11:21:18 EDT  [52W-STRUCTURE] TFX | MASTER_8_STRONG_TREND | -4.3% from 52W high ($139.67) → +1 → 8/12
+2026-05-26 11:21:18 EDT  [⏳ TRIGGER-WAIT] TFX | MASTER_8_STRONG_TREND | Score=8/12 | TRIGGER-WAIT: $133.61 hasn't broken yesterday's high $134.96
+2026-05-26 11:21:19 EDT  [❌ SCORE] TFX | MASTER_5_PULLBACK_MA20 — Score=9/12 < 10 (V=1 T=3 M=2 S=0)
+2026-05-26 11:21:19 EDT  [WATCHLIST] ➕ NEW: TFX | MASTER_8_STRONG_TREND | Score=10/12 | ScanPrice=$133.61 | Trigger=$134.96 | Need +1.0% to fire
+2026-05-26 11:21:19 EDT  [❌ ATR] UNM | MASTER_5_PULLBACK_MA20 | ATR%=1.9% < required 2.0%
+2026-05-26 11:21:19 EDT  [❌ ATR] UNM | MASTER_6_VOLUME_BREAKOUT | ATR%=1.9% < required 2.0%
+2026-05-26 11:21:19 EDT  [❌ ATR] UNM | MASTER_8_STRONG_TREND | ATR%=1.9% < required 2.0%
+2026-05-26 11:21:19 EDT  [❌ SCORE] UNM | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:19 EDT  [❌ SCORE] UNM | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:19 EDT  [❌ SCORE] UNM | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:19 EDT  [❌ ATR] CSX | MASTER_5_PULLBACK_MA20 | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:19 EDT  [❌ ATR] CSX | MASTER_6_VOLUME_BREAKOUT | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:19 EDT  [❌ ATR] CSX | MASTER_8_STRONG_TREND | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:19 EDT  [❌ SCORE] CSX | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:19 EDT  [❌ SCORE] CSX | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:19 EDT  [❌ SCORE] CSX | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:20 EDT  [SCORE|PULLBACK-MA20] HPQ | MASTER_5_PULLBACK_MA20 | Volume=3(RVOL=0.8x,drying=YES) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$21.43,dist=13.29%,chg=-3.8%) Momentum=0(RSI=68,CCI=183) R30=$25.24(upside=4.0%) Trigger=$21.49 total=6/12
+2026-05-26 11:21:20 EDT  [SCORE|VOL-BREAKOUT] HPQ | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.8x) Breakout=0(R30=$25.24,breakPct=-3.8%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=68,chg=-3.8%) Trigger=$25.37 total=5/12
+2026-05-26 11:21:20 EDT  [⏳ TRIGGER-WAIT] HPQ | MASTER_6_VOLUME_BREAKOUT | Score=5/12 | TRIGGER-WAIT: $24.28 hasn't cleared breakout level $25.37 (need +4.5%)
+2026-05-26 11:21:20 EDT  [SCORE|STRONG-TREND] HPQ | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.8x) Momentum=2(near20dHi=-5.0%,RSI=68) Setup=1(upside=4.0%) Trigger=$25.59 total=6/12
+2026-05-26 11:21:20 EDT  [⏳ TRIGGER-WAIT] HPQ | MASTER_8_STRONG_TREND | Score=6/12 | TRIGGER-WAIT: $24.28 hasn't broken yesterday's high $25.59
+2026-05-26 11:21:20 EDT  [❌ SCORE] HPQ | MASTER_5_PULLBACK_MA20 — Score=6/12 < 10 (V=3 T=3 M=0 S=0)
+2026-05-26 11:21:20 EDT  [SCORE|PULLBACK-MA20] MSCI | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$583.17,dist=0.89%,chg=-0.0%) Momentum=2(RSI=57,CCI=25) R30=$608.04(upside=3.3%) Trigger=$584.91 total=8/12
+2026-05-26 11:21:20 EDT  [52W-STRUCTURE] MSCI | MASTER_5_PULLBACK_MA20 | -6.1% from 52W high ($626.28) → +1 → 9/12
+2026-05-26 11:21:20 EDT  [SCORE|VOL-BREAKOUT] MSCI | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=0(R30=$608.04,breakPct=-3.2%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=57,chg=-0.0%) Trigger=$611.08 total=5/12
+2026-05-26 11:21:20 EDT  [52W-STRUCTURE] MSCI | MASTER_6_VOLUME_BREAKOUT | -6.1% from 52W high ($626.28) → +1 → 6/12
+2026-05-26 11:21:20 EDT  [⏳ TRIGGER-WAIT] MSCI | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $588.33 hasn't cleared breakout level $611.08 (need +3.9%)
+2026-05-26 11:21:20 EDT  [SCORE|STRONG-TREND] MSCI | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=3(near20dHi=-2.4%,RSI=57) Setup=1(upside=3.3%) Trigger=$592.03 total=7/12
+2026-05-26 11:21:20 EDT  [52W-STRUCTURE] MSCI | MASTER_8_STRONG_TREND | -6.1% from 52W high ($626.28) → +1 → 8/12
+2026-05-26 11:21:20 EDT  [⏳ TRIGGER-WAIT] MSCI | MASTER_8_STRONG_TREND | Score=8/12 | TRIGGER-WAIT: $588.33 hasn't broken yesterday's high $592.03
+2026-05-26 11:21:21 EDT  [✅ SIGNAL] MSCI | MASTER_5_PULLBACK_MA20 | Score=11/12 🔥CONFLUENCE(+2) (V=1 T=3 M=2 S=2) | Conviction=42.0/50 | Entry=$588.33 SL=$550.90 TP=$658.93
+2026-05-26 11:21:21 EDT  [WATCHLIST] ✅ CONFIRMED: MSCI | MASTER_5_PULLBACK_MA20 — trigger fired, trade executed
+2026-05-26 11:21:21 EDT  [WATCHLIST] 🔄 UPDATED: MSCI | MASTER_8_STRONG_TREND | Score=10/12 | ScanPrice=$588.33 | Trigger=$592.03 | Gap=0.6% | Scan#2/3
+2026-05-26 11:21:21 EDT  [SCORE|PULLBACK-MA20] CI | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=1(blwSMA200,abvSMA50) Setup=1(SMA20=$286.95,dist=1.93%,chg=-1.7%) Momentum=2(RSI=48,CCI=-60) R30=$300.71(upside=6.9%) Trigger=$287.81 total=5/12
+2026-05-26 11:21:21 EDT  [⏳ TRIGGER-WAIT] CI | MASTER_5_PULLBACK_MA20 | Score=5/12 | TRIGGER-WAIT: $281.41 still below SMA20 $286.95 — not reclaimed yet
+2026-05-26 11:21:21 EDT  [SCORE|VOL-BREAKOUT] CI | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=0(R30=$300.71,breakPct=-6.4%) Trend=1(blwSMA200,abvSMA50) Momentum=1(RSI=48,chg=-1.7%) Trigger=$302.21 total=2/12
+2026-05-26 11:21:21 EDT  [⏳ TRIGGER-WAIT] CI | MASTER_6_VOLUME_BREAKOUT | Score=2/12 | TRIGGER-WAIT: $281.41 hasn't cleared breakout level $302.21 (need +7.4%)
+2026-05-26 11:21:21 EDT  [SCORE|STRONG-TREND] CI | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=0(near20dHi=-7.2%,RSI=48) Setup=2(upside=6.9%) Trigger=$286.84 total=5/12
+2026-05-26 11:21:21 EDT  [⏳ TRIGGER-WAIT] CI | MASTER_8_STRONG_TREND | Score=5/12 | TRIGGER-WAIT: $281.41 hasn't broken yesterday's high $286.84
+2026-05-26 11:21:21 EDT  [❌ ATR] UNP | MASTER_5_PULLBACK_MA20 | ATR%=2.0% < required 2.0%
+2026-05-26 11:21:21 EDT  [❌ ATR] UNP | MASTER_6_VOLUME_BREAKOUT | ATR%=2.0% < required 2.0%
+2026-05-26 11:21:21 EDT  [❌ ATR] UNP | MASTER_8_STRONG_TREND | ATR%=2.0% < required 2.0%
+2026-05-26 11:21:21 EDT  [❌ SCORE] UNP | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:21 EDT  [❌ SCORE] UNP | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:21 EDT  [❌ SCORE] UNP | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:21 EDT  [❌ ATR] NSC | MASTER_5_PULLBACK_MA20 | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:21 EDT  [❌ ATR] NSC | MASTER_6_VOLUME_BREAKOUT | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:21 EDT  [❌ ATR] NSC | MASTER_8_STRONG_TREND | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:21 EDT  [❌ SCORE] NSC | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:21 EDT  [❌ SCORE] NSC | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:21 EDT  [❌ SCORE] NSC | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:22 EDT  [SCORE|PULLBACK-MA20] PSA | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$302.71,dist=1.31%,chg=+0.5%) Momentum=2(RSI=56,CCI=42) R30=$312.17(upside=1.8%) Trigger=$303.62 total=8/12
+2026-05-26 11:21:22 EDT  [MOVE-POTENTIAL] PSA | MASTER_5_PULLBACK_MA20 | upside=1.8% to R30=$312.17 → score-1 → 7/12
+2026-05-26 11:21:22 EDT  [52W-STRUCTURE] PSA | MASTER_5_PULLBACK_MA20 | -2.2% from 52W high ($313.51) → +1 → 8/12
+2026-05-26 11:21:22 EDT  [SCORE|VOL-BREAKOUT] PSA | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$312.17,breakPct=-1.8%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=56,chg=+0.5%) Trigger=$313.73 total=5/12
+2026-05-26 11:21:22 EDT  [52W-STRUCTURE] PSA | MASTER_6_VOLUME_BREAKOUT | -2.2% from 52W high ($313.51) → +1 → 6/12
+2026-05-26 11:21:22 EDT  [⏳ TRIGGER-WAIT] PSA | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $306.67 hasn't cleared breakout level $313.73 (need +2.3%)
+2026-05-26 11:21:22 EDT  [SCORE|STRONG-TREND] PSA | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=3(near20dHi=-2.1%,RSI=56) Setup=0(upside=1.8%) Trigger=$308.93 total=6/12
+2026-05-26 11:21:22 EDT  [MOVE-POTENTIAL] PSA | MASTER_8_STRONG_TREND | upside=1.8% to R30=$312.17 → score-1 → 5/12
+2026-05-26 11:21:22 EDT  [52W-STRUCTURE] PSA | MASTER_8_STRONG_TREND | -2.2% from 52W high ($313.51) → +1 → 6/12
+2026-05-26 11:21:22 EDT  [⏳ TRIGGER-WAIT] PSA | MASTER_8_STRONG_TREND | Score=6/12 | TRIGGER-WAIT: $306.67 hasn't broken yesterday's high $308.93
+2026-05-26 11:21:23 EDT  [❌ SCORE] PSA | MASTER_5_PULLBACK_MA20 — Score=8/12 < 10 (V=1 T=3 M=2 S=2)
+2026-05-26 11:21:23 EDT  [WATCHLIST] ❌ EXPIRED: PSA | MASTER_5_PULLBACK_MA20 — score dropped below threshold
+2026-05-26 11:21:23 EDT  [SCORE|PULLBACK-MA20] SLB | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$55.96,dist=3.83%,chg=+1.4%) Momentum=0(RSI=66,CCI=117) R30=$57.28(upside=-1.4%) Trigger=$56.12 total=4/12
+2026-05-26 11:21:23 EDT  [MOVE-POTENTIAL] SLB | MASTER_5_PULLBACK_MA20 | upside=-1.4% to R30=$57.28 → score-2 → 2/12
+2026-05-26 11:21:23 EDT  [52W-STRUCTURE] SLB | MASTER_5_PULLBACK_MA20 | -1.2% from 52W high ($58.81) → +1 → 3/12
+2026-05-26 11:21:23 EDT  [SCORE|VOL-BREAKOUT] SLB | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=3(R30=$57.28,breakPct=+1.4%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=66,chg=+1.4%) Trigger=$57.57 total=9/12
+2026-05-26 11:21:23 EDT  [52W-STRUCTURE] SLB | MASTER_6_VOLUME_BREAKOUT | -1.2% from 52W high ($58.81) → +1 → 10/12
+2026-05-26 11:21:23 EDT  [⏳ TRIGGER-WAIT] SLB | MASTER_6_VOLUME_BREAKOUT | Score=10/12 | NO-VOL-CONFIRM: breakout at $58.10 lacks volume (rvol=0.29x < 1.5) — potential fake breakout
+2026-05-26 11:21:23 EDT  [SCORE|STRONG-TREND] SLB | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=3(near20dHi=-1.2%,RSI=66) Setup=0(upside=-1.4%) Trigger=$57.94 total=6/12
+2026-05-26 11:21:23 EDT  [MOVE-POTENTIAL] SLB | MASTER_8_STRONG_TREND | upside=-1.4% to R30=$57.28 → score-2 → 4/12
+2026-05-26 11:21:23 EDT  [52W-STRUCTURE] SLB | MASTER_8_STRONG_TREND | -1.2% from 52W high ($58.81) → +1 → 5/12
+2026-05-26 11:21:23 EDT  [❌ SCORE] SLB | MASTER_5_PULLBACK_MA20 — Score=3/12 < 10 (V=1 T=3 M=0 S=0)
+2026-05-26 11:21:24 EDT  [WATCHLIST] 🔄 UPDATED: SLB | MASTER_6_VOLUME_BREAKOUT | Score=10/12 | ScanPrice=$58.10 | Trigger=$57.57 | Gap=-0.9% | Scan#2/3
+2026-05-26 11:21:24 EDT  [❌ SCORE] SLB | MASTER_8_STRONG_TREND — Score=5/12 < 10 (V=0 T=3 M=3 S=0)
+2026-05-26 11:21:25 EDT  [SCORE|PULLBACK-MA20] PINS | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=1(blwSMA200,abvSMA50) Setup=1(SMA20=$20.05,dist=2.81%,chg=+1.0%) Momentum=3(RSI=48,CCI=-43) R30=$22.28(upside=14.3%) Trigger=$20.11 total=6/12
+2026-05-26 11:21:25 EDT  [MOVE-POTENTIAL] PINS | MASTER_5_PULLBACK_MA20 | upside=14.3% to R30=$22.28 → score+1 → 7/12
+2026-05-26 11:21:25 EDT  [⏳ TRIGGER-WAIT] PINS | MASTER_5_PULLBACK_MA20 | Score=7/12 | TRIGGER-WAIT: $19.49 still below SMA20 $20.05 — not reclaimed yet
+2026-05-26 11:21:25 EDT  [SCORE|VOL-BREAKOUT] PINS | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$22.28,breakPct=-12.5%) Trend=1(blwSMA200,abvSMA50) Momentum=2(RSI=48,chg=+1.0%) Trigger=$22.39 total=3/12
+2026-05-26 11:21:25 EDT  [⏳ TRIGGER-WAIT] PINS | MASTER_6_VOLUME_BREAKOUT | Score=3/12 | TRIGGER-WAIT: $19.49 hasn't cleared breakout level $22.39 (need +14.9%)
+2026-05-26 11:21:25 EDT  [SCORE|STRONG-TREND] PINS | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=0(near20dHi=-21.1%,RSI=48) Setup=3(upside=14.3%) Trigger=$19.34 total=6/12
+2026-05-26 11:21:25 EDT  [MOVE-POTENTIAL] PINS | MASTER_8_STRONG_TREND | upside=14.3% to R30=$22.28 → score+1 → 7/12
+2026-05-26 11:21:25 EDT  [❌ SCORE] PINS | MASTER_8_STRONG_TREND — Score=9/12 < 10 (V=0 T=3 M=0 S=3)
+2026-05-26 11:21:26 EDT  [SCORE|PULLBACK-MA20] VTR | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=3(SMA20=$87.96,dist=0.09%,chg=-0.2%) Momentum=3(RSI=55,CCI=37) R30=$90.35(upside=2.6%) Trigger=$88.22 total=10/12
+2026-05-26 11:21:26 EDT  [MOVE-POTENTIAL] VTR | MASTER_5_PULLBACK_MA20 | upside=2.6% to R30=$90.35 → score-1 → 9/12
+2026-05-26 11:21:26 EDT  [52W-STRUCTURE] VTR | MASTER_5_PULLBACK_MA20 | -3.3% from 52W high ($91.06) → +1 → 10/12
+2026-05-26 11:21:26 EDT  [SCORE|VOL-BREAKOUT] VTR | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$90.35,breakPct=-2.6%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=55,chg=-0.2%) Trigger=$90.80 total=5/12
+2026-05-26 11:21:26 EDT  [52W-STRUCTURE] VTR | MASTER_6_VOLUME_BREAKOUT | -3.3% from 52W high ($91.06) → +1 → 6/12
+2026-05-26 11:21:26 EDT  [⏳ TRIGGER-WAIT] VTR | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $88.03 hasn't cleared breakout level $90.80 (need +3.1%)
+2026-05-26 11:21:26 EDT  [SCORE|STRONG-TREND] VTR | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=2(near20dHi=-3.3%,RSI=55) Setup=0(upside=2.6%) Trigger=$89.36 total=5/12
+2026-05-26 11:21:26 EDT  [MOVE-POTENTIAL] VTR | MASTER_8_STRONG_TREND | upside=2.6% to R30=$90.35 → score-1 → 4/12
+2026-05-26 11:21:26 EDT  [52W-STRUCTURE] VTR | MASTER_8_STRONG_TREND | -3.3% from 52W high ($91.06) → +1 → 5/12
+2026-05-26 11:21:26 EDT  [⏳ TRIGGER-WAIT] VTR | MASTER_8_STRONG_TREND | Score=5/12 | TRIGGER-WAIT: $88.03 hasn't broken yesterday's high $89.36
+2026-05-26 11:21:27 EDT  [✅ SIGNAL] VTR | MASTER_5_PULLBACK_MA20 | Score=10/12 (V=1 T=3 M=3 S=3) | Conviction=40.8/50 | Entry=$88.03 SL=$83.52 TP=$98.60
+2026-05-26 11:21:28 EDT  [SCORE|PULLBACK-MA20] WELL | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$215.94,dist=0.65%,chg=+0.5%) Momentum=2(RSI=56,CCI=72) R30=$220.14(upside=1.3%) Trigger=$216.59 total=8/12
+2026-05-26 11:21:28 EDT  [MOVE-POTENTIAL] WELL | MASTER_5_PULLBACK_MA20 | upside=1.3% to R30=$220.14 → score-1 → 7/12
+2026-05-26 11:21:28 EDT  [52W-STRUCTURE] WELL | MASTER_5_PULLBACK_MA20 | -2.0% from 52W high ($221.68) → +1 → 8/12
+2026-05-26 11:21:28 EDT  [SCORE|VOL-BREAKOUT] WELL | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=1(R30=$220.14,breakPct=-1.3%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=56,chg=+0.5%) Trigger=$221.24 total=6/12
+2026-05-26 11:21:28 EDT  [52W-STRUCTURE] WELL | MASTER_6_VOLUME_BREAKOUT | -2.0% from 52W high ($221.68) → +1 → 7/12
+2026-05-26 11:21:28 EDT  [⏳ TRIGGER-WAIT] WELL | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | TRIGGER-WAIT: $217.34 hasn't cleared breakout level $221.24 (need +1.8%)
+2026-05-26 11:21:28 EDT  [SCORE|STRONG-TREND] WELL | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=3(near20dHi=-2.0%,RSI=56) Setup=0(upside=1.3%) Trigger=$218.62 total=6/12
+2026-05-26 11:21:28 EDT  [MOVE-POTENTIAL] WELL | MASTER_8_STRONG_TREND | upside=1.3% to R30=$220.14 → score-1 → 5/12
+2026-05-26 11:21:28 EDT  [52W-STRUCTURE] WELL | MASTER_8_STRONG_TREND | -2.0% from 52W high ($221.68) → +1 → 6/12
+2026-05-26 11:21:28 EDT  [⏳ TRIGGER-WAIT] WELL | MASTER_8_STRONG_TREND | Score=6/12 | TRIGGER-WAIT: $217.34 hasn't broken yesterday's high $218.62
+2026-05-26 11:21:29 EDT  [✅ SIGNAL] WELL | MASTER_5_PULLBACK_MA20 | Score=10/12 🔥CONFLUENCE(+2) (V=1 T=3 M=2 S=2) | Conviction=42.5/50 | Entry=$217.34 SL=$205.21 TP=$243.42
+2026-05-26 11:21:29 EDT  [SCORE|PULLBACK-MA20] NEM | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=1(SMA20=$111.68,dist=0.65%,chg=+3.1%) Momentum=3(RSI=49,CCI=-15) R30=$120.70(upside=8.8%) Trigger=$112.02 total=8/12
+2026-05-26 11:21:29 EDT  [⏳ TRIGGER-WAIT] NEM | MASTER_5_PULLBACK_MA20 | Score=8/12 | TRIGGER-WAIT: $110.95 still below SMA20 $111.68 — not reclaimed yet
+2026-05-26 11:21:29 EDT  [SCORE|VOL-BREAKOUT] NEM | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=0(R30=$120.70,breakPct=-8.1%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=49,chg=+3.1%) Trigger=$121.30 total=5/12
+2026-05-26 11:21:29 EDT  [⏳ TRIGGER-WAIT] NEM | MASTER_6_VOLUME_BREAKOUT | Score=5/12 | TRIGGER-WAIT: $110.95 hasn't cleared breakout level $121.30 (need +9.3%)
+2026-05-26 11:21:29 EDT  [SCORE|STRONG-TREND] NEM | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=0(near20dHi=-8.5%,RSI=49) Setup=3(upside=8.8%) Trigger=$109.17 total=6/12
+2026-05-26 11:21:29 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **MO** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX_...
+2026-05-26 11:21:30 EDT  [❌ SCORE] NEM | MASTER_8_STRONG_TREND — Score=6/12 < 10 (V=0 T=3 M=0 S=3)
+2026-05-26 11:21:30 EDT  [❌ ATR] HES | MASTER_5_PULLBACK_MA20 | ATR%=1.9% < required 2.0%
+2026-05-26 11:21:30 EDT  [❌ ATR] HES | MASTER_6_VOLUME_BREAKOUT | ATR%=1.9% < required 2.0%
+2026-05-26 11:21:30 EDT  [❌ ATR] HES | MASTER_8_STRONG_TREND | ATR%=1.9% < required 2.0%
+2026-05-26 11:21:30 EDT  [❌ SCORE] HES | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:30 EDT  [❌ SCORE] HES | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:30 EDT  [❌ SCORE] HES | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:30 EDT  [SCORE|PULLBACK-MA20] NEE | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.3x,drying=no) Trend=2(abvSMA200) Setup=0(SMA20=$93.30,dist=5.72%,chg=-0.7%) Momentum=1(RSI=38,CCI=-110) R30=$97.88(upside=11.3%) Trigger=$93.58 total=5/12
+2026-05-26 11:21:30 EDT  [MOVE-POTENTIAL] NEE | MASTER_5_PULLBACK_MA20 | upside=11.3% to R30=$97.88 → score+1 → 6/12
+2026-05-26 11:21:30 EDT  [⏳ TRIGGER-WAIT] NEE | MASTER_5_PULLBACK_MA20 | Score=6/12 | TRIGGER-WAIT: $87.96 still below SMA20 $93.30 — not reclaimed yet
+2026-05-26 11:21:30 EDT  [SCORE|VOL-BREAKOUT] NEE | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=0(R30=$97.88,breakPct=-10.1%) Trend=2(abvSMA200) Momentum=0(RSI=38,chg=-0.7%) Trigger=$98.37 total=2/12
+2026-05-26 11:21:30 EDT  [⏳ TRIGGER-WAIT] NEE | MASTER_6_VOLUME_BREAKOUT | Score=2/12 | TRIGGER-WAIT: $87.96 hasn't cleared breakout level $98.37 (need +11.8%)
+2026-05-26 11:21:30 EDT  [SCORE|STRONG-TREND] NEE | MASTER_8_STRONG_TREND | Trend=1(abvSMA50=N,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=0(near20dHi=-10.9%,RSI=38) Setup=3(upside=11.3%) Trigger=$89.93 total=4/12
+2026-05-26 11:21:30 EDT  [MOVE-POTENTIAL] NEE | MASTER_8_STRONG_TREND | upside=11.3% to R30=$97.88 → score+1 → 5/12
+2026-05-26 11:21:30 EDT  [⏳ TRIGGER-WAIT] NEE | MASTER_8_STRONG_TREND | Score=5/12 | TRIGGER-WAIT: $87.96 hasn't broken yesterday's high $89.93
+2026-05-26 11:21:30 EDT  [❌ ATR] MO | MASTER_5_PULLBACK_MA20 | ATR%=2.0% < required 2.0%
+2026-05-26 11:21:30 EDT  [❌ ATR] MO | MASTER_6_VOLUME_BREAKOUT | ATR%=2.0% < required 2.0%
+2026-05-26 11:21:30 EDT  [❌ ATR] MO | MASTER_8_STRONG_TREND | ATR%=2.0% < required 2.0%
+2026-05-26 11:21:30 EDT  [❌ SCORE] MO | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:30 EDT  [❌ SCORE] MO | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:30 EDT  [❌ SCORE] MO | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:30 EDT  [SCORE|PULLBACK-MA20] BKR | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$66.39,dist=1.49%,chg=+2.0%) Momentum=2(RSI=58,CCI=24) R30=$69.67(upside=3.4%) Trigger=$66.59 total=9/12
+2026-05-26 11:21:31 EDT  [52W-STRUCTURE] BKR | MASTER_5_PULLBACK_MA20 | -4.3% from 52W high ($70.41) → +1 → 10/12
+2026-05-26 11:21:31 EDT  [SCORE|VOL-BREAKOUT] BKR | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=0(R30=$69.67,breakPct=-3.3%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=58,chg=+2.0%) Trigger=$70.02 total=6/12
+2026-05-26 11:21:31 EDT  [52W-STRUCTURE] BKR | MASTER_6_VOLUME_BREAKOUT | -4.3% from 52W high ($70.41) → +1 → 7/12
+2026-05-26 11:21:31 EDT  [⏳ TRIGGER-WAIT] BKR | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | TRIGGER-WAIT: $67.38 hasn't cleared breakout level $70.02 (need +3.9%)
+2026-05-26 11:21:31 EDT  [SCORE|STRONG-TREND] BKR | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=2(near20dHi=-3.7%,RSI=58) Setup=1(upside=3.4%) Trigger=$66.57 total=6/12
+2026-05-26 11:21:31 EDT  [52W-STRUCTURE] BKR | MASTER_8_STRONG_TREND | -4.3% from 52W high ($70.41) → +1 → 7/12
+2026-05-26 11:21:32 EDT  [✅ SIGNAL] BKR | MASTER_5_PULLBACK_MA20 | Score=12/12 🔥CONFLUENCE(+2) (V=2 T=3 M=2 S=2) | Conviction=42.9/50 | Entry=$67.38 SL=$62.65 TP=$75.47
+2026-05-26 11:21:32 EDT  [❌ SCORE] BKR | MASTER_8_STRONG_TREND — Score=9/12 < 10 (V=0 T=3 M=2 S=1)
+2026-05-26 11:21:32 EDT  [SCORE|PULLBACK-MA20] DLR | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$194.35,dist=0.55%,chg=+0.6%) Momentum=3(RSI=51,CCI=-15) R30=$203.91(upside=5.5%) Trigger=$194.93 total=9/12
+2026-05-26 11:21:32 EDT  [52W-STRUCTURE] DLR | MASTER_5_PULLBACK_MA20 | -7.1% from 52W high ($208.14) → +1 → 10/12
+2026-05-26 11:21:32 EDT  [⏳ TRIGGER-WAIT] DLR | MASTER_5_PULLBACK_MA20 | Score=10/12 | TRIGGER-WAIT: $193.27 still below SMA20 $194.35 — not reclaimed yet
+2026-05-26 11:21:32 EDT  [SCORE|VOL-BREAKOUT] DLR | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=0(R30=$203.91,breakPct=-5.2%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=51,chg=+0.6%) Trigger=$204.93 total=5/12
+2026-05-26 11:21:32 EDT  [52W-STRUCTURE] DLR | MASTER_6_VOLUME_BREAKOUT | -7.1% from 52W high ($208.14) → +1 → 6/12
+2026-05-26 11:21:32 EDT  [⏳ TRIGGER-WAIT] DLR | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $193.27 hasn't cleared breakout level $204.93 (need +6.0%)
+2026-05-26 11:21:32 EDT  [SCORE|STRONG-TREND] DLR | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=2(near20dHi=-4.1%,RSI=51) Setup=2(upside=5.5%) Trigger=$195.08 total=7/12
+2026-05-26 11:21:32 EDT  [52W-STRUCTURE] DLR | MASTER_8_STRONG_TREND | -7.1% from 52W high ($208.14) → +1 → 8/12
+2026-05-26 11:21:32 EDT  [⏳ TRIGGER-WAIT] DLR | MASTER_8_STRONG_TREND | Score=8/12 | TRIGGER-WAIT: $193.27 hasn't broken yesterday's high $195.08
+2026-05-26 11:21:32 EDT  [WATCHLIST] 🔄 UPDATED: DLR | MASTER_5_PULLBACK_MA20 | Score=12/12 | ScanPrice=$193.27 | Trigger=$194.93 | Gap=0.9% | Scan#2/3
+2026-05-26 11:21:32 EDT  [WATCHLIST] ➕ NEW: DLR | MASTER_8_STRONG_TREND | Score=10/12 | ScanPrice=$193.27 | Trigger=$195.08 | Need +0.9% to fire
+2026-05-26 11:21:32 EDT  [SCORE|PULLBACK-MA20] WMB | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=1(SMA20=$75.83,dist=1.86%,chg=-1.6%) Momentum=2(RSI=57,CCI=60) R30=$79.40(upside=2.8%) Trigger=$76.06 total=7/12
+2026-05-26 11:21:32 EDT  [MOVE-POTENTIAL] WMB | MASTER_5_PULLBACK_MA20 | upside=2.8% to R30=$79.40 → score-1 → 6/12
+2026-05-26 11:21:32 EDT  [52W-STRUCTURE] WMB | MASTER_5_PULLBACK_MA20 | -3.5% from 52W high ($80.08) → +1 → 7/12
+2026-05-26 11:21:32 EDT  [SCORE|VOL-BREAKOUT] WMB | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$79.40,breakPct=-2.7%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=57,chg=-1.6%) Trigger=$79.80 total=5/12
+2026-05-26 11:21:32 EDT  [52W-STRUCTURE] WMB | MASTER_6_VOLUME_BREAKOUT | -3.5% from 52W high ($80.08) → +1 → 6/12
+2026-05-26 11:21:32 EDT  [⏳ TRIGGER-WAIT] WMB | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $77.24 hasn't cleared breakout level $79.80 (need +3.3%)
+2026-05-26 11:21:32 EDT  [SCORE|STRONG-TREND] WMB | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=2(near20dHi=-3.5%,RSI=57) Setup=0(upside=2.8%) Trigger=$78.70 total=5/12
+2026-05-26 11:21:32 EDT  [MOVE-POTENTIAL] WMB | MASTER_8_STRONG_TREND | upside=2.8% to R30=$79.40 → score-1 → 4/12
+2026-05-26 11:21:32 EDT  [52W-STRUCTURE] WMB | MASTER_8_STRONG_TREND | -3.5% from 52W high ($80.08) → +1 → 5/12
+2026-05-26 11:21:32 EDT  [⏳ TRIGGER-WAIT] WMB | MASTER_8_STRONG_TREND | Score=5/12 | TRIGGER-WAIT: $77.24 hasn't broken yesterday's high $78.70
+2026-05-26 11:21:33 EDT  [❌ SCORE] WMB | MASTER_5_PULLBACK_MA20 — Score=7/12 < 10 (V=1 T=3 M=2 S=1)
+2026-05-26 11:21:33 EDT  [SCORE|PULLBACK-MA20] FDX | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$381.24,dist=5.26%,chg=+1.8%) Momentum=0(RSI=62,CCI=120) R30=$403.31(upside=0.5%) Trigger=$382.38 total=4/12
+2026-05-26 11:21:33 EDT  [MOVE-POTENTIAL] FDX | MASTER_5_PULLBACK_MA20 | upside=0.5% to R30=$403.31 → score-1 → 3/12
+2026-05-26 11:21:33 EDT  [52W-STRUCTURE] FDX | MASTER_5_PULLBACK_MA20 | -0.7% from 52W high ($404.03) → +1 → 4/12
+2026-05-26 11:21:33 EDT  [SCORE|VOL-BREAKOUT] FDX | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=1(R30=$403.31,breakPct=-0.5%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=62,chg=+1.8%) Trigger=$405.33 total=7/12
+2026-05-26 11:21:33 EDT  [52W-STRUCTURE] FDX | MASTER_6_VOLUME_BREAKOUT | -0.7% from 52W high ($404.03) → +1 → 8/12
+2026-05-26 11:21:33 EDT  [⏳ TRIGGER-WAIT] FDX | MASTER_6_VOLUME_BREAKOUT | Score=8/12 | TRIGGER-WAIT: $401.28 hasn't cleared breakout level $405.33 (need +1.0%)
+2026-05-26 11:21:33 EDT  [SCORE|STRONG-TREND] FDX | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=3(near20dHi=-0.7%,RSI=62) Setup=0(upside=0.5%) Trigger=$399.20 total=6/12
+2026-05-26 11:21:33 EDT  [MOVE-POTENTIAL] FDX | MASTER_8_STRONG_TREND | upside=0.5% to R30=$403.31 → score-1 → 5/12
+2026-05-26 11:21:33 EDT  [52W-STRUCTURE] FDX | MASTER_8_STRONG_TREND | -0.7% from 52W high ($404.03) → +1 → 6/12
+2026-05-26 11:21:33 EDT  [❌ SCORE] FDX | MASTER_5_PULLBACK_MA20 — Score=4/12 < 10 (V=1 T=3 M=0 S=0)
+2026-05-26 11:21:34 EDT  [❌ SCORE] FDX | MASTER_8_STRONG_TREND — Score=6/12 < 10 (V=0 T=3 M=3 S=0)
+2026-05-26 11:21:34 EDT  [WATCHLIST] ❌ EXPIRED: FDX | MASTER_8_STRONG_TREND — score dropped below threshold
+2026-05-26 11:21:34 EDT  [SCORE|PULLBACK-MA20] CARR | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$64.94,dist=0.03%,chg=+2.9%) Momentum=3(RSI=54,CCI=-12) R30=$67.90(upside=4.5%) Trigger=$65.13 total=9/12
+2026-05-26 11:21:34 EDT  [SCORE|VOL-BREAKOUT] CARR | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=0(R30=$67.90,breakPct=-4.3%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=54,chg=+2.9%) Trigger=$68.24 total=6/12
+2026-05-26 11:21:34 EDT  [⏳ TRIGGER-WAIT] CARR | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $64.96 hasn't cleared breakout level $68.24 (need +5.0%)
+2026-05-26 11:21:34 EDT  [SCORE|STRONG-TREND] CARR | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=2(near20dHi=-5.9%,RSI=54) Setup=1(upside=4.5%) Trigger=$64.01 total=6/12
+2026-05-26 11:21:35 EDT  [❌ SCORE] CARR | MASTER_5_PULLBACK_MA20 — Score=9/12 < 10 (V=1 T=3 M=3 S=2)
+2026-05-26 11:21:35 EDT  [WATCHLIST] ❌ EXPIRED: CARR | MASTER_5_PULLBACK_MA20 — score dropped below threshold
+2026-05-26 11:21:35 EDT  [❌ SCORE] CARR | MASTER_8_STRONG_TREND — Score=6/12 < 10 (V=0 T=3 M=2 S=1)
+2026-05-26 11:21:35 EDT  [❌ ATR] ENB | MASTER_5_PULLBACK_MA20 | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:35 EDT  [❌ ATR] ENB | MASTER_6_VOLUME_BREAKOUT | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:35 EDT  [❌ ATR] ENB | MASTER_8_STRONG_TREND | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:35 EDT  [❌ SCORE] ENB | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:35 EDT  [❌ SCORE] ENB | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:35 EDT  [❌ SCORE] ENB | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:35 EDT  [SCORE|PULLBACK-MA20] VLO | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$247.66,dist=1.02%,chg=-0.7%) Momentum=3(RSI=50,CCI=-21) R30=$262.62(upside=7.1%) Trigger=$248.40 total=9/12
+2026-05-26 11:21:35 EDT  [52W-STRUCTURE] VLO | MASTER_5_PULLBACK_MA20 | -7.1% from 52W high ($263.75) → +1 → 10/12
+2026-05-26 11:21:35 EDT  [⏳ TRIGGER-WAIT] VLO | MASTER_5_PULLBACK_MA20 | Score=10/12 | TRIGGER-WAIT: $245.12 still below SMA20 $247.66 — not reclaimed yet
+2026-05-26 11:21:35 EDT  [SCORE|VOL-BREAKOUT] VLO | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=0(R30=$262.62,breakPct=-6.7%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=50,chg=-0.7%) Trigger=$263.93 total=5/12
+2026-05-26 11:21:35 EDT  [52W-STRUCTURE] VLO | MASTER_6_VOLUME_BREAKOUT | -7.1% from 52W high ($263.75) → +1 → 6/12
+2026-05-26 11:21:35 EDT  [⏳ TRIGGER-WAIT] VLO | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $245.12 hasn't cleared breakout level $263.93 (need +7.7%)
+2026-05-26 11:21:35 EDT  [SCORE|STRONG-TREND] VLO | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=1(near20dHi=-7.1%,RSI=50) Setup=2(upside=7.1%) Trigger=$247.67 total=6/12
+2026-05-26 11:21:35 EDT  [52W-STRUCTURE] VLO | MASTER_8_STRONG_TREND | -7.1% from 52W high ($263.75) → +1 → 7/12
+2026-05-26 11:21:35 EDT  [⏳ TRIGGER-WAIT] VLO | MASTER_8_STRONG_TREND | Score=7/12 | TRIGGER-WAIT: $245.12 hasn't broken yesterday's high $247.67
+2026-05-26 11:21:35 EDT  [WATCHLIST] ➕ NEW: VLO | MASTER_5_PULLBACK_MA20 | Score=12/12 | ScanPrice=$245.12 | Trigger=$248.40 | Need +1.3% to fire
+2026-05-26 11:21:35 EDT  [SCORE|PULLBACK-MA20] SNAP | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=1(blwSMA200,abvSMA50) Setup=2(SMA20=$5.83,dist=0.92%,chg=+1.0%) Momentum=3(RSI=53,CCI=-18) R30=$6.29(upside=8.9%) Trigger=$5.85 total=7/12
+2026-05-26 11:21:35 EDT  [⏳ TRIGGER-WAIT] SNAP | MASTER_5_PULLBACK_MA20 | Score=7/12 | TRIGGER-WAIT: $5.77 still below SMA20 $5.83 — not reclaimed yet
+2026-05-26 11:21:35 EDT  [SCORE|VOL-BREAKOUT] SNAP | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$6.29,breakPct=-8.2%) Trend=1(blwSMA200,abvSMA50) Momentum=2(RSI=53,chg=+1.0%) Trigger=$6.32 total=3/12
+2026-05-26 11:21:35 EDT  [⏳ TRIGGER-WAIT] SNAP | MASTER_6_VOLUME_BREAKOUT | Score=3/12 | TRIGGER-WAIT: $5.77 hasn't cleared breakout level $6.32 (need +9.5%)
+2026-05-26 11:21:35 EDT  [SCORE|STRONG-TREND] SNAP | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=1(near20dHi=-9.1%,RSI=53) Setup=3(upside=8.9%) Trigger=$5.85 total=7/12
+2026-05-26 11:21:35 EDT  [⏳ TRIGGER-WAIT] SNAP | MASTER_8_STRONG_TREND | Score=7/12 | TRIGGER-WAIT: $5.77 hasn't broken yesterday's high $5.85
+2026-05-26 11:21:36 EDT  [❌ ATR] KO | MASTER_5_PULLBACK_MA20 | ATR%=1.5% < required 2.0%
+2026-05-26 11:21:36 EDT  [❌ ATR] KO | MASTER_6_VOLUME_BREAKOUT | ATR%=1.5% < required 2.0%
+2026-05-26 11:21:36 EDT  [❌ ATR] KO | MASTER_8_STRONG_TREND | ATR%=1.5% < required 2.0%
+2026-05-26 11:21:36 EDT  [❌ SCORE] KO | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:36 EDT  [❌ SCORE] KO | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:36 EDT  [❌ SCORE] KO | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:36 EDT  [SCORE|PULLBACK-MA20] ETN | MASTER_5_PULLBACK_MA20 | Volume=3(RVOL=0.8x,drying=YES) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$404.79,dist=3.32%,chg=+2.6%) Momentum=2(RSI=47,CCI=-64) R30=$433.01(upside=10.6%) Trigger=$406.01 total=8/12
+2026-05-26 11:21:36 EDT  [MOVE-POTENTIAL] ETN | MASTER_5_PULLBACK_MA20 | upside=10.6% to R30=$433.01 → score+1 → 9/12
+2026-05-26 11:21:36 EDT  [⏳ TRIGGER-WAIT] ETN | MASTER_5_PULLBACK_MA20 | Score=9/12 | TRIGGER-WAIT: $391.35 still below SMA20 $404.79 — not reclaimed yet
+2026-05-26 11:21:36 EDT  [SCORE|VOL-BREAKOUT] ETN | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.8x) Breakout=0(R30=$433.01,breakPct=-9.6%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=47,chg=+2.6%) Trigger=$435.18 total=5/12
+2026-05-26 11:21:36 EDT  [⏳ TRIGGER-WAIT] ETN | MASTER_6_VOLUME_BREAKOUT | Score=5/12 | TRIGGER-WAIT: $391.35 hasn't cleared breakout level $435.18 (need +11.2%)
+2026-05-26 11:21:36 EDT  [SCORE|STRONG-TREND] ETN | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.8x) Momentum=0(near20dHi=-10.1%,RSI=47) Setup=3(upside=10.6%) Trigger=$385.33 total=6/12
+2026-05-26 11:21:36 EDT  [MOVE-POTENTIAL] ETN | MASTER_8_STRONG_TREND | upside=10.6% to R30=$433.01 → score+1 → 7/12
+2026-05-26 11:21:37 EDT  [WATCHLIST] 🔄 UPDATED: ETN | MASTER_5_PULLBACK_MA20 | Score=11/12 | ScanPrice=$391.35 | Trigger=$406.01 | Gap=3.7% | Scan#2/3
+2026-05-26 11:21:37 EDT  [❌ SCORE] ETN | MASTER_8_STRONG_TREND — Score=9/12 < 10 (V=0 T=3 M=0 S=3)
+2026-05-26 11:21:37 EDT  [WATCHLIST] ❌ EXPIRED: ETN | MASTER_8_STRONG_TREND — score dropped below threshold
+2026-05-26 11:21:37 EDT  [❌ ATR] AFL | MASTER_5_PULLBACK_MA20 | ATR%=1.7% < required 2.0%
+2026-05-26 11:21:37 EDT  [❌ ATR] AFL | MASTER_6_VOLUME_BREAKOUT | ATR%=1.7% < required 2.0%
+2026-05-26 11:21:37 EDT  [❌ ATR] AFL | MASTER_8_STRONG_TREND | ATR%=1.7% < required 2.0%
+2026-05-26 11:21:37 EDT  [❌ SCORE] AFL | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:37 EDT  [❌ SCORE] AFL | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:37 EDT  [❌ SCORE] AFL | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:38 EDT  [SCORE|PULLBACK-MA20] WMT | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.4x,drying=no) Trend=2(abvSMA200) Setup=0(SMA20=$129.16,dist=7.93%,chg=-1.1%) Momentum=0(RSI=32,CCI=-166) R30=$134.20(upside=12.9%) Trigger=$129.55 total=4/12
+2026-05-26 11:21:38 EDT  [MOVE-POTENTIAL] WMT | MASTER_5_PULLBACK_MA20 | upside=12.9% to R30=$134.20 → score+1 → 5/12
+2026-05-26 11:21:38 EDT  [⏳ TRIGGER-WAIT] WMT | MASTER_5_PULLBACK_MA20 | Score=5/12 | TRIGGER-WAIT: $118.92 still below SMA20 $129.16 — not reclaimed yet
+2026-05-26 11:21:38 EDT  [SCORE|VOL-BREAKOUT] WMT | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.4x) Breakout=0(R30=$134.20,breakPct=-11.4%) Trend=2(abvSMA200) Momentum=0(RSI=32,chg=-1.1%) Trigger=$134.87 total=2/12
+2026-05-26 11:21:38 EDT  [⏳ TRIGGER-WAIT] WMT | MASTER_6_VOLUME_BREAKOUT | Score=2/12 | TRIGGER-WAIT: $118.92 hasn't cleared breakout level $134.87 (need +13.4%)
+2026-05-26 11:21:38 EDT  [SCORE|STRONG-TREND] WMT | MASTER_8_STRONG_TREND | Trend=1(abvSMA50=N,SMA20>50=Y) Volume=0(RVOL=0.4x) Momentum=0(near20dHi=-12.0%,RSI=32) Setup=3(upside=12.9%) Trigger=$122.07 total=4/12
+2026-05-26 11:21:38 EDT  [MOVE-POTENTIAL] WMT | MASTER_8_STRONG_TREND | upside=12.9% to R30=$134.20 → score+1 → 5/12
+2026-05-26 11:21:38 EDT  [⏳ TRIGGER-WAIT] WMT | MASTER_8_STRONG_TREND | Score=5/12 | TRIGGER-WAIT: $118.92 hasn't broken yesterday's high $122.07
+2026-05-26 11:21:38 EDT  [NULL] BK — insufficient data for scoring
+2026-05-26 11:21:38 EDT  [SCORE|PULLBACK-MA20] BG | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=2(abvSMA200) Setup=1(SMA20=$124.53,dist=2.49%,chg=+0.6%) Momentum=2(RSI=44,CCI=-88) R30=$130.38(upside=7.4%) Trigger=$124.90 total=6/12
+2026-05-26 11:21:38 EDT  [52W-STRUCTURE] BG | MASTER_5_PULLBACK_MA20 | -9.3% from 52W high ($133.93) → +1 → 7/12
+2026-05-26 11:21:38 EDT  [⏳ TRIGGER-WAIT] BG | MASTER_5_PULLBACK_MA20 | Score=7/12 | TRIGGER-WAIT: $121.43 still below SMA20 $124.53 — not reclaimed yet
+2026-05-26 11:21:38 EDT  [SCORE|VOL-BREAKOUT] BG | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$130.38,breakPct=-6.9%) Trend=2(abvSMA200) Momentum=0(RSI=44,chg=+0.6%) Trigger=$131.03 total=2/12
+2026-05-26 11:21:38 EDT  [52W-STRUCTURE] BG | MASTER_6_VOLUME_BREAKOUT | -9.3% from 52W high ($133.93) → +1 → 3/12
+2026-05-26 11:21:38 EDT  [⏳ TRIGGER-WAIT] BG | MASTER_6_VOLUME_BREAKOUT | Score=3/12 | TRIGGER-WAIT: $121.43 hasn't cleared breakout level $131.03 (need +7.9%)
+2026-05-26 11:21:38 EDT  [SCORE|STRONG-TREND] BG | MASTER_8_STRONG_TREND | Trend=0(abvSMA50=N,SMA20>50=N) Volume=0(RVOL=0.1x) Momentum=0(near20dHi=-9.3%,RSI=44) Setup=2(upside=7.4%) Trigger=$121.08 total=2/12
+2026-05-26 11:21:38 EDT  [52W-STRUCTURE] BG | MASTER_8_STRONG_TREND | -9.3% from 52W high ($133.93) → +1 → 3/12
+2026-05-26 11:21:39 EDT  [❌ SCORE] BG | MASTER_8_STRONG_TREND — Score=3/12 < 10 (V=0 T=0 M=0 S=2)
+2026-05-26 11:21:40 EDT  [❌ ATR] SPG | MASTER_5_PULLBACK_MA20 | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:40 EDT  [❌ ATR] SPG | MASTER_6_VOLUME_BREAKOUT | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:40 EDT  [❌ ATR] SPG | MASTER_8_STRONG_TREND | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:40 EDT  [❌ SCORE] SPG | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:40 EDT  [❌ SCORE] SPG | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:40 EDT  [❌ SCORE] SPG | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:40 EDT  [SCORE|PULLBACK-MA20] SU | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$66.99,dist=1.21%,chg=-1.7%) Momentum=3(RSI=50,CCI=-30) R30=$69.73(upside=5.4%) Trigger=$67.19 total=9/12
+2026-05-26 11:21:40 EDT  [52W-STRUCTURE] SU | MASTER_5_PULLBACK_MA20 | -5.8% from 52W high ($70.29) → +1 → 10/12
+2026-05-26 11:21:40 EDT  [⏳ TRIGGER-WAIT] SU | MASTER_5_PULLBACK_MA20 | Score=10/12 | TRIGGER-WAIT: $66.18 still below SMA20 $66.99 — not reclaimed yet
+2026-05-26 11:21:40 EDT  [SCORE|VOL-BREAKOUT] SU | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=0(R30=$69.73,breakPct=-5.1%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=50,chg=-1.7%) Trigger=$70.08 total=4/12
+2026-05-26 11:21:40 EDT  [52W-STRUCTURE] SU | MASTER_6_VOLUME_BREAKOUT | -5.8% from 52W high ($70.29) → +1 → 5/12
+2026-05-26 11:21:40 EDT  [⏳ TRIGGER-WAIT] SU | MASTER_6_VOLUME_BREAKOUT | Score=5/12 | TRIGGER-WAIT: $66.18 hasn't cleared breakout level $70.08 (need +5.9%)
+2026-05-26 11:21:40 EDT  [SCORE|STRONG-TREND] SU | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=1(near20dHi=-5.8%,RSI=50) Setup=2(upside=5.4%) Trigger=$68.21 total=6/12
+2026-05-26 11:21:40 EDT  [52W-STRUCTURE] SU | MASTER_8_STRONG_TREND | -5.8% from 52W high ($70.29) → +1 → 7/12
+2026-05-26 11:21:40 EDT  [⏳ TRIGGER-WAIT] SU | MASTER_8_STRONG_TREND | Score=7/12 | TRIGGER-WAIT: $66.18 hasn't broken yesterday's high $68.21
+2026-05-26 11:21:41 EDT  [WATCHLIST] ➕ NEW: SU | MASTER_5_PULLBACK_MA20 | Score=12/12 | ScanPrice=$66.18 | Trigger=$67.19 | Need +1.5% to fire
+2026-05-26 11:21:41 EDT  [SCORE|PULLBACK-MA20] JCI | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$141.21,dist=0.87%,chg=+1.2%) Momentum=3(RSI=50,CCI=-20) R30=$146.03(upside=4.3%) Trigger=$141.63 total=9/12
+2026-05-26 11:21:41 EDT  [52W-STRUCTURE] JCI | MASTER_5_PULLBACK_MA20 | -5.0% from 52W high ($147.32) → +1 → 10/12
+2026-05-26 11:21:41 EDT  [⏳ TRIGGER-WAIT] JCI | MASTER_5_PULLBACK_MA20 | Score=10/12 | TRIGGER-WAIT: $139.98 still below SMA20 $141.21 — not reclaimed yet
+2026-05-26 11:21:41 EDT  [SCORE|VOL-BREAKOUT] JCI | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$146.03,breakPct=-4.1%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=50,chg=+1.2%) Trigger=$146.76 total=6/12
+2026-05-26 11:21:41 EDT  [52W-STRUCTURE] JCI | MASTER_6_VOLUME_BREAKOUT | -5.0% from 52W high ($147.32) → +1 → 7/12
+2026-05-26 11:21:41 EDT  [⏳ TRIGGER-WAIT] JCI | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | TRIGGER-WAIT: $139.98 hasn't cleared breakout level $146.76 (need +4.8%)
+2026-05-26 11:21:41 EDT  [SCORE|STRONG-TREND] JCI | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=2(near20dHi=-5.0%,RSI=50) Setup=1(upside=4.3%) Trigger=$140.33 total=6/12
+2026-05-26 11:21:41 EDT  [52W-STRUCTURE] JCI | MASTER_8_STRONG_TREND | -5.0% from 52W high ($147.32) → +1 → 7/12
+2026-05-26 11:21:41 EDT  [⏳ TRIGGER-WAIT] JCI | MASTER_8_STRONG_TREND | Score=7/12 | TRIGGER-WAIT: $139.98 hasn't broken yesterday's high $140.33
+2026-05-26 11:21:42 EDT  [WATCHLIST] 🔄 UPDATED: JCI | MASTER_5_PULLBACK_MA20 | Score=12/12 | ScanPrice=$139.98 | Trigger=$141.63 | Gap=1.2% | Scan#2/3
+2026-05-26 11:21:42 EDT  [SCORE|PULLBACK-MA20] NOV | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$20.40,dist=3.87%,chg=+1.9%) Momentum=1(RSI=61,CCI=90) R30=$21.17(upside=-0.1%) Trigger=$20.47 total=5/12
+2026-05-26 11:21:42 EDT  [MOVE-POTENTIAL] NOV | MASTER_5_PULLBACK_MA20 | upside=-0.1% to R30=$21.17 → score-2 → 3/12
+2026-05-26 11:21:42 EDT  [52W-STRUCTURE] NOV | MASTER_5_PULLBACK_MA20 | -0.9% from 52W high ($21.38) → +1 → 4/12
+2026-05-26 11:21:42 EDT  [SCORE|VOL-BREAKOUT] NOV | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=3(R30=$21.17,breakPct=+0.1%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=61,chg=+1.9%) Trigger=$21.28 total=9/12
+2026-05-26 11:21:42 EDT  [52W-STRUCTURE] NOV | MASTER_6_VOLUME_BREAKOUT | -0.9% from 52W high ($21.38) → +1 → 10/12
+2026-05-26 11:21:42 EDT  [⏳ TRIGGER-WAIT] NOV | MASTER_6_VOLUME_BREAKOUT | Score=10/12 | TRIGGER-WAIT: $21.20 hasn't cleared breakout level $21.28 (need +0.4%)
+2026-05-26 11:21:42 EDT  [SCORE|STRONG-TREND] NOV | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=3(near20dHi=-0.9%,RSI=61) Setup=0(upside=-0.1%) Trigger=$20.91 total=6/12
+2026-05-26 11:21:43 EDT  [MOVE-POTENTIAL] NOV | MASTER_8_STRONG_TREND | upside=-0.1% to R30=$21.17 → score-2 → 4/12
+2026-05-26 11:21:43 EDT  [52W-STRUCTURE] NOV | MASTER_8_STRONG_TREND | -0.9% from 52W high ($21.38) → +1 → 5/12
+2026-05-26 11:21:43 EDT  [❌ SCORE] NOV | MASTER_5_PULLBACK_MA20 — Score=4/12 < 10 (V=1 T=3 M=1 S=0)
+2026-05-26 11:21:43 EDT  [WATCHLIST] ⌛ EXPIRED: NOV | MASTER_6_VOLUME_BREAKOUT — waited 3 scans without trigger firing
+2026-05-26 11:21:43 EDT  [❌ SCORE] NOV | MASTER_8_STRONG_TREND — Score=5/12 < 10 (V=0 T=3 M=3 S=0)
+2026-05-26 11:21:44 EDT  [SCORE|PULLBACK-MA20] ZION | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.3x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=1(SMA20=$61.84,dist=1.97%,chg=+1.5%) Momentum=2(RSI=60,CCI=51) R30=$63.99(upside=1.5%) Trigger=$62.03 total=7/12
+2026-05-26 11:21:44 EDT  [MOVE-POTENTIAL] ZION | MASTER_5_PULLBACK_MA20 | upside=1.5% to R30=$63.99 → score-1 → 6/12
+2026-05-26 11:21:44 EDT  [52W-STRUCTURE] ZION | MASTER_5_PULLBACK_MA20 | -4.7% from 52W high ($66.18) → +1 → 7/12
+2026-05-26 11:21:44 EDT  [SCORE|VOL-BREAKOUT] ZION | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=1(R30=$63.99,breakPct=-1.5%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=60,chg=+1.5%) Trigger=$64.31 total=7/12
+2026-05-26 11:21:44 EDT  [52W-STRUCTURE] ZION | MASTER_6_VOLUME_BREAKOUT | -4.7% from 52W high ($66.18) → +1 → 8/12
+2026-05-26 11:21:44 EDT  [⏳ TRIGGER-WAIT] ZION | MASTER_6_VOLUME_BREAKOUT | Score=8/12 | TRIGGER-WAIT: $63.06 hasn't cleared breakout level $64.31 (need +2.0%)
+2026-05-26 11:21:44 EDT  [SCORE|STRONG-TREND] ZION | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=3(near20dHi=-2.7%,RSI=60) Setup=0(upside=1.5%) Trigger=$62.44 total=6/12
+2026-05-26 11:21:44 EDT  [MOVE-POTENTIAL] ZION | MASTER_8_STRONG_TREND | upside=1.5% to R30=$63.99 → score-1 → 5/12
+2026-05-26 11:21:44 EDT  [52W-STRUCTURE] ZION | MASTER_8_STRONG_TREND | -4.7% from 52W high ($66.18) → +1 → 6/12
+2026-05-26 11:21:44 EDT  [❌ SCORE] ZION | MASTER_5_PULLBACK_MA20 — Score=9/12 < 10 (V=1 T=3 M=2 S=1)
+2026-05-26 11:21:44 EDT  [WATCHLIST] ⌛ EXPIRED: ZION | MASTER_6_VOLUME_BREAKOUT — waited 3 scans without trigger firing
+2026-05-26 11:21:44 EDT  [❌ SCORE] ZION | MASTER_8_STRONG_TREND — Score=8/12 < 10 (V=0 T=3 M=3 S=0)
+2026-05-26 11:21:45 EDT  [SCORE|PULLBACK-MA20] ALL | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$216.87,dist=1.18%,chg=-1.1%) Momentum=3(RSI=47,CCI=-36) R30=$224.58(upside=4.8%) Trigger=$217.52 total=9/12
+2026-05-26 11:21:45 EDT  [52W-STRUCTURE] ALL | MASTER_5_PULLBACK_MA20 | -5.8% from 52W high ($227.62) → +1 → 10/12
+2026-05-26 11:21:45 EDT  [⏳ TRIGGER-WAIT] ALL | MASTER_5_PULLBACK_MA20 | Score=10/12 | TRIGGER-WAIT: $214.32 still below SMA20 $216.87 — not reclaimed yet
+2026-05-26 11:21:45 EDT  [SCORE|VOL-BREAKOUT] ALL | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$224.58,breakPct=-4.6%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=47,chg=-1.1%) Trigger=$225.70 total=4/12
+2026-05-26 11:21:45 EDT  [52W-STRUCTURE] ALL | MASTER_6_VOLUME_BREAKOUT | -5.8% from 52W high ($227.62) → +1 → 5/12
+2026-05-26 11:21:45 EDT  [⏳ TRIGGER-WAIT] ALL | MASTER_6_VOLUME_BREAKOUT | Score=5/12 | TRIGGER-WAIT: $214.32 hasn't cleared breakout level $225.70 (need +5.3%)
+2026-05-26 11:21:45 EDT  [SCORE|STRONG-TREND] ALL | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=1(near20dHi=-5.8%,RSI=47) Setup=1(upside=4.8%) Trigger=$218.03 total=5/12
+2026-05-26 11:21:45 EDT  [52W-STRUCTURE] ALL | MASTER_8_STRONG_TREND | -5.8% from 52W high ($227.62) → +1 → 6/12
+2026-05-26 11:21:45 EDT  [⏳ TRIGGER-WAIT] ALL | MASTER_8_STRONG_TREND | Score=6/12 | TRIGGER-WAIT: $214.32 hasn't broken yesterday's high $218.03
+2026-05-26 11:21:45 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **BKR** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:21:45 EDT  [WATCHLIST] ➕ NEW: ALL | MASTER_5_PULLBACK_MA20 | Score=10/12 | ScanPrice=$214.32 | Trigger=$217.52 | Need +1.5% to fire
+2026-05-26 11:21:45 EDT  [SCORE|PULLBACK-MA20] AME | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=2(SMA20=$229.93,dist=0.76%,chg=+1.6%) Momentum=3(RSI=50,CCI=-43) R30=$241.38(upside=5.8%) Trigger=$230.62 total=9/12
+2026-05-26 11:21:45 EDT  [52W-STRUCTURE] AME | MASTER_5_PULLBACK_MA20 | -6.2% from 52W high ($243.18) → +1 → 10/12
+2026-05-26 11:21:45 EDT  [⏳ TRIGGER-WAIT] AME | MASTER_5_PULLBACK_MA20 | Score=10/12 | TRIGGER-WAIT: $228.18 still below SMA20 $229.93 — not reclaimed yet
+2026-05-26 11:21:45 EDT  [SCORE|VOL-BREAKOUT] AME | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$241.38,breakPct=-5.5%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=50,chg=+1.6%) Trigger=$242.59 total=5/12
+2026-05-26 11:21:45 EDT  [52W-STRUCTURE] AME | MASTER_6_VOLUME_BREAKOUT | -6.2% from 52W high ($243.18) → +1 → 6/12
+2026-05-26 11:21:45 EDT  [⏳ TRIGGER-WAIT] AME | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $228.18 hasn't cleared breakout level $242.59 (need +6.3%)
+2026-05-26 11:21:45 EDT  [SCORE|STRONG-TREND] AME | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=1(near20dHi=-6.2%,RSI=50) Setup=2(upside=5.8%) Trigger=$225.80 total=6/12
+2026-05-26 11:21:45 EDT  [52W-STRUCTURE] AME | MASTER_8_STRONG_TREND | -6.2% from 52W high ($243.18) → +1 → 7/12
+2026-05-26 11:21:46 EDT  [WATCHLIST] ⌛ EXPIRED: AME | MASTER_5_PULLBACK_MA20 — waited 3 scans without trigger firing
+2026-05-26 11:21:46 EDT  [❌ SCORE] AME | MASTER_8_STRONG_TREND — Score=9/12 < 10 (V=0 T=3 M=1 S=2)
+2026-05-26 11:21:46 EDT  [❌ ATR] LIN | MASTER_5_PULLBACK_MA20 | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:46 EDT  [❌ ATR] LIN | MASTER_6_VOLUME_BREAKOUT | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:46 EDT  [❌ ATR] LIN | MASTER_8_STRONG_TREND | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:46 EDT  [❌ SCORE] LIN | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:46 EDT  [❌ SCORE] LIN | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:46 EDT  [❌ SCORE] LIN | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:47 EDT  [SCORE|PULLBACK-MA20] PPG | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=1(SMA20=$106.55,dist=2.73%,chg=+1.5%) Momentum=3(RSI=55,CCI=73) R30=$114.85(upside=4.9%) Trigger=$106.86 total=8/12
+2026-05-26 11:21:47 EDT  [SCORE|VOL-BREAKOUT] PPG | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=0(R30=$114.85,breakPct=-4.7%) Trend=3(abvSMA200,abvSMA50) Momentum=3(RSI=55,chg=+1.5%) Trigger=$115.42 total=6/12
+2026-05-26 11:21:47 EDT  [⏳ TRIGGER-WAIT] PPG | MASTER_6_VOLUME_BREAKOUT | Score=6/12 | TRIGGER-WAIT: $109.45 hasn't cleared breakout level $115.42 (need +5.5%)
+2026-05-26 11:21:47 EDT  [SCORE|STRONG-TREND] PPG | MASTER_8_STRONG_TREND | Trend=2(abvSMA50=Y,SMA20>50=N) Volume=0(RVOL=0.2x) Momentum=2(near20dHi=-3.9%,RSI=55) Setup=1(upside=4.9%) Trigger=$108.10 total=5/12
+2026-05-26 11:21:47 EDT  [❌ SCORE] PPG | MASTER_5_PULLBACK_MA20 — Score=8/12 < 10 (V=1 T=3 M=3 S=1)
+2026-05-26 11:21:47 EDT  [WATCHLIST] ❌ EXPIRED: PPG | MASTER_5_PULLBACK_MA20 — score dropped below threshold
+2026-05-26 11:21:47 EDT  [❌ SCORE] PPG | MASTER_8_STRONG_TREND — Score=5/12 < 10 (V=0 T=2 M=2 S=1)
+2026-05-26 11:21:47 EDT  [SCORE|PULLBACK-MA20] MSFT | MASTER_5_PULLBACK_MA20 | Volume=2(RVOL=0.3x,drying=no) Trend=1(blwSMA200,abvSMA50) Setup=3(SMA20=$416.11,dist=0.34%,chg=-0.9%) Momentum=3(RSI=51,CCI=-2) R30=$432.92(upside=4.4%) Trigger=$417.35 total=9/12
+2026-05-26 11:21:47 EDT  [⏳ TRIGGER-WAIT] MSFT | MASTER_5_PULLBACK_MA20 | Score=9/12 | TRIGGER-WAIT: $414.68 still below SMA20 $416.11 — not reclaimed yet
+2026-05-26 11:21:47 EDT  [SCORE|VOL-BREAKOUT] MSFT | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.3x) Breakout=0(R30=$432.92,breakPct=-4.2%) Trend=1(blwSMA200,abvSMA50) Momentum=2(RSI=51,chg=-0.9%) Trigger=$435.08 total=3/12
+2026-05-26 11:21:47 EDT  [⏳ TRIGGER-WAIT] MSFT | MASTER_6_VOLUME_BREAKOUT | Score=3/12 | TRIGGER-WAIT: $414.68 hasn't cleared breakout level $435.08 (need +4.9%)
+2026-05-26 11:21:47 EDT  [SCORE|STRONG-TREND] MSFT | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.3x) Momentum=2(near20dHi=-4.2%,RSI=51) Setup=1(upside=4.4%) Trigger=$424.82 total=6/12
+2026-05-26 11:21:47 EDT  [⏳ TRIGGER-WAIT] MSFT | MASTER_8_STRONG_TREND | Score=6/12 | TRIGGER-WAIT: $414.68 hasn't broken yesterday's high $424.82
+2026-05-26 11:21:48 EDT  [❌ ATR] USB | MASTER_5_PULLBACK_MA20 | ATR%=2.0% < required 2.0%
+2026-05-26 11:21:48 EDT  [❌ ATR] USB | MASTER_6_VOLUME_BREAKOUT | ATR%=2.0% < required 2.0%
+2026-05-26 11:21:48 EDT  [❌ ATR] USB | MASTER_8_STRONG_TREND | ATR%=2.0% < required 2.0%
+2026-05-26 11:21:48 EDT  [❌ SCORE] USB | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:48 EDT  [WATCHLIST] ❌ EXPIRED: USB | MASTER_5_PULLBACK_MA20 — score dropped below threshold
+2026-05-26 11:21:48 EDT  [❌ SCORE] USB | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:48 EDT  [❌ SCORE] USB | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:48 EDT  [SCORE|PULLBACK-MA20] DIS | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=1(blwSMA200,abvSMA50) Setup=2(SMA20=$103.97,dist=1.34%,chg=-0.4%) Momentum=3(RSI=48,CCI=-36) R30=$108.66(upside=5.9%) Trigger=$104.29 total=7/12
+2026-05-26 11:21:48 EDT  [⏳ TRIGGER-WAIT] DIS | MASTER_5_PULLBACK_MA20 | Score=7/12 | TRIGGER-WAIT: $102.58 still below SMA20 $103.97 — not reclaimed yet
+2026-05-26 11:21:48 EDT  [SCORE|VOL-BREAKOUT] DIS | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=0(R30=$108.66,breakPct=-5.6%) Trend=1(blwSMA200,abvSMA50) Momentum=1(RSI=48,chg=-0.4%) Trigger=$109.20 total=2/12
+2026-05-26 11:21:48 EDT  [⏳ TRIGGER-WAIT] DIS | MASTER_6_VOLUME_BREAKOUT | Score=2/12 | TRIGGER-WAIT: $102.58 hasn't cleared breakout level $109.20 (need +6.5%)
+2026-05-26 11:21:48 EDT  [SCORE|STRONG-TREND] DIS | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=0(near20dHi=-7.2%,RSI=48) Setup=2(upside=5.9%) Trigger=$104.60 total=5/12
+2026-05-26 11:21:48 EDT  [⏳ TRIGGER-WAIT] DIS | MASTER_8_STRONG_TREND | Score=5/12 | TRIGGER-WAIT: $102.58 hasn't broken yesterday's high $104.60
+2026-05-26 11:21:49 EDT  [SCORE|PULLBACK-MA20] MET | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=0(SMA20=$80.22,dist=4.58%,chg=-0.2%) Momentum=0(RSI=71,CCI=134) R30=$84.30(upside=0.5%) Trigger=$80.46 total=4/12
+2026-05-26 11:21:49 EDT  [MOVE-POTENTIAL] MET | MASTER_5_PULLBACK_MA20 | upside=0.5% to R30=$84.30 → score-1 → 3/12
+2026-05-26 11:21:49 EDT  [52W-STRUCTURE] MET | MASTER_5_PULLBACK_MA20 | -1.6% from 52W high ($85.29) → +1 → 4/12
+2026-05-26 11:21:49 EDT  [SCORE|VOL-BREAKOUT] MET | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=2(R30=$84.30,breakPct=-0.5%) Trend=3(abvSMA200,abvSMA50) Momentum=1(RSI=71,chg=-0.2%) Trigger=$84.72 total=6/12
+2026-05-26 11:21:49 EDT  [52W-STRUCTURE] MET | MASTER_6_VOLUME_BREAKOUT | -1.6% from 52W high ($85.29) → +1 → 7/12
+2026-05-26 11:21:49 EDT  [⏳ TRIGGER-WAIT] MET | MASTER_6_VOLUME_BREAKOUT | Score=7/12 | TRIGGER-WAIT: $83.89 hasn't cleared breakout level $84.72 (need +1.0%)
+2026-05-26 11:21:49 EDT  [SCORE|STRONG-TREND] MET | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=3(near20dHi=-1.6%,RSI=71) Setup=0(upside=0.5%) Trigger=$85.38 total=6/12
+2026-05-26 11:21:49 EDT  [MOVE-POTENTIAL] MET | MASTER_8_STRONG_TREND | upside=0.5% to R30=$84.30 → score-1 → 5/12
+2026-05-26 11:21:49 EDT  [52W-STRUCTURE] MET | MASTER_8_STRONG_TREND | -1.6% from 52W high ($85.29) → +1 → 6/12
+2026-05-26 11:21:49 EDT  [⏳ TRIGGER-WAIT] MET | MASTER_8_STRONG_TREND | Score=6/12 | TRIGGER-WAIT: $83.89 hasn't broken yesterday's high $85.38
+2026-05-26 11:21:49 EDT  [❌ SCORE] MET | MASTER_5_PULLBACK_MA20 — Score=4/12 < 10 (V=1 T=3 M=0 S=0)
+2026-05-26 11:21:51 EDT  [❌ ATR] EPD | MASTER_5_PULLBACK_MA20 | ATR%=2.0% < required 2.0%
+2026-05-26 11:21:51 EDT  [❌ ATR] EPD | MASTER_6_VOLUME_BREAKOUT | ATR%=2.0% < required 2.0%
+2026-05-26 11:21:51 EDT  [❌ ATR] EPD | MASTER_8_STRONG_TREND | ATR%=2.0% < required 2.0%
+2026-05-26 11:21:51 EDT  [❌ SCORE] EPD | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:51 EDT  [❌ SCORE] EPD | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:51 EDT  [❌ SCORE] EPD | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:51 EDT  [SCORE|PULLBACK-MA20] NDAQ | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.1x,drying=no) Trend=3(abvSMA200,abvSMA50) Setup=3(SMA20=$90.50,dist=0.15%,chg=-0.4%) Momentum=3(RSI=54,CCI=10) R30=$92.60(upside=2.2%) Trigger=$90.77 total=10/12
+2026-05-26 11:21:51 EDT  [MOVE-POTENTIAL] NDAQ | MASTER_5_PULLBACK_MA20 | upside=2.2% to R30=$92.60 → score-1 → 9/12
+2026-05-26 11:21:51 EDT  [SCORE|VOL-BREAKOUT] NDAQ | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.1x) Breakout=0(R30=$92.60,breakPct=-2.1%) Trend=3(abvSMA200,abvSMA50) Momentum=2(RSI=54,chg=-0.4%) Trigger=$93.06 total=5/12
+2026-05-26 11:21:51 EDT  [⏳ TRIGGER-WAIT] NDAQ | MASTER_6_VOLUME_BREAKOUT | Score=5/12 | TRIGGER-WAIT: $90.64 hasn't cleared breakout level $93.06 (need +2.7%)
+2026-05-26 11:21:51 EDT  [SCORE|STRONG-TREND] NDAQ | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.1x) Momentum=2(near20dHi=-3.2%,RSI=54) Setup=0(upside=2.2%) Trigger=$92.04 total=5/12
+2026-05-26 11:21:51 EDT  [MOVE-POTENTIAL] NDAQ | MASTER_8_STRONG_TREND | upside=2.2% to R30=$92.60 → score-1 → 4/12
+2026-05-26 11:21:51 EDT  [⏳ TRIGGER-WAIT] NDAQ | MASTER_8_STRONG_TREND | Score=4/12 | TRIGGER-WAIT: $90.64 hasn't broken yesterday's high $92.04
+2026-05-26 11:21:51 EDT  [❌ SCORE] NDAQ | MASTER_5_PULLBACK_MA20 — Score=9/12 < 10 (V=1 T=3 M=3 S=3)
+2026-05-26 11:21:52 EDT  [SCORE|PULLBACK-MA20] MCO | MASTER_5_PULLBACK_MA20 | Volume=1(RVOL=0.2x,drying=no) Trend=1(blwSMA200,abvSMA50) Setup=3(SMA20=$448.16,dist=0.34%,chg=+0.1%) Momentum=3(RSI=52,CCI=7) R30=$466.72(upside=3.8%) Trigger=$449.51 total=8/12
+2026-05-26 11:21:52 EDT  [SCORE|VOL-BREAKOUT] MCO | MASTER_6_VOLUME_BREAKOUT | Volume=0(RVOL=0.2x) Breakout=0(R30=$466.72,breakPct=-3.6%) Trend=1(blwSMA200,abvSMA50) Momentum=2(RSI=52,chg=+0.1%) Trigger=$469.05 total=3/12
+2026-05-26 11:21:52 EDT  [⏳ TRIGGER-WAIT] MCO | MASTER_6_VOLUME_BREAKOUT | Score=3/12 | TRIGGER-WAIT: $449.70 hasn't cleared breakout level $469.05 (need +4.3%)
+2026-05-26 11:21:52 EDT  [SCORE|STRONG-TREND] MCO | MASTER_8_STRONG_TREND | Trend=3(abvSMA50=Y,SMA20>50=Y) Volume=0(RVOL=0.2x) Momentum=2(near20dHi=-4.4%,RSI=52) Setup=1(upside=3.8%) Trigger=$453.30 total=6/12
+2026-05-26 11:21:52 EDT  [⏳ TRIGGER-WAIT] MCO | MASTER_8_STRONG_TREND | Score=6/12 | TRIGGER-WAIT: $449.70 hasn't broken yesterday's high $453.30
+2026-05-26 11:21:52 EDT  [❌ SCORE] MCO | MASTER_5_PULLBACK_MA20 — Score=8/12 < 10 (V=1 T=1 M=3 S=3)
+2026-05-26 11:21:52 EDT  [❌ ATR] WBD | MASTER_5_PULLBACK_MA20 | ATR%=0.9% < required 2.0%
+2026-05-26 11:21:52 EDT  [❌ ATR] WBD | MASTER_6_VOLUME_BREAKOUT | ATR%=0.9% < required 2.0%
+2026-05-26 11:21:52 EDT  [❌ ATR] WBD | MASTER_8_STRONG_TREND | ATR%=0.9% < required 2.0%
+2026-05-26 11:21:52 EDT  [❌ SCORE] WBD | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:52 EDT  [❌ SCORE] WBD | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:52 EDT  [❌ SCORE] WBD | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:53 EDT  [❌ ATR] TRV | MASTER_5_PULLBACK_MA20 | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:53 EDT  [❌ ATR] TRV | MASTER_6_VOLUME_BREAKOUT | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:53 EDT  [❌ ATR] TRV | MASTER_8_STRONG_TREND | ATR%=1.8% < required 2.0%
+2026-05-26 11:21:53 EDT  [❌ SCORE] TRV | MASTER_5_PULLBACK_MA20 — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:53 EDT  [❌ SCORE] TRV | MASTER_6_VOLUME_BREAKOUT — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:53 EDT  [❌ SCORE] TRV | MASTER_8_STRONG_TREND — Score=0/12 < 10 (V=0 T=0 M=0 S=0)
+2026-05-26 11:21:53 EDT  ────────────────────────────────────────
+2026-05-26 11:21:53 EDT  [PORTFOLIO] ── Step 1: Dedup ─────────────────────────
+2026-05-26 11:21:53 EDT  [PORTFOLIO] Raw signals before dedup: 8
+2026-05-26 11:21:53 EDT  [DEDUP] Result: 8 → 8 unique signals (0 duplicate(s) removed)
+2026-05-26 11:21:53 EDT  [RANK] Taking TOP 2 candidates from 8 unique signals
+2026-05-26 11:21:53 EDT  [PORTFOLIO] ── Ranked TOP candidates ──────────
+2026-05-26 11:21:53 EDT  [RANK #1] NVDA | MASTER_5_PULLBACK_MA20 | FinalConviction=46.67 | Tech=4.2 Mom=0.4 Fund=2.5 Cat=2.0 | Sector=TECHNOLOGY
+2026-05-26 11:21:53 EDT  [RANK #2] BKR | MASTER_5_PULLBACK_MA20 | FinalConviction=42.92 | Tech=4.2 Mom=0.4 Fund=1.8 Cat=2.0 | Sector=ENERGY
+2026-05-26 11:21:53 EDT  [PORTFOLIO] ── Step 2: Portfolio filter ─────────────
+2026-05-26 11:21:53 EDT  [PORTFOLIO] Current open positions: 46/5
+2026-05-26 11:21:53 EDT  [PORTFOLIO] Open by sector: INDUSTRIALS=5 REAL_ESTATE=8 HEALTHCARE=8 CONSUMER_STAPLES=2 ENERGY=8 MATERIALS=3 TECHNOLOGY=9 FINANCIALS=3
+2026-05-26 11:21:53 EDT  [PORTFOLIO] ❌ NVDA | Portfolio full (46/5) — skipped
+2026-05-26 11:21:53 EDT  [PORTFOLIO] ❌ BKR | Portfolio full (46/5) — skipped
+2026-05-26 11:21:53 EDT  [PORTFOLIO] Filter result: 2 → 0 signal(s) approved for execution
+2026-05-26 11:22:07 EDT  [REGIME] SPY $750.73 | SMA20=$733.36 | Change=0.68% | BelowSMA20=0.0% | Above20=YES → ✅ HEALTHY (full size)
+2026-05-26 11:22:07 EDT  [DISCORD] ✅ Sent (HTTP 204): 📊 **Swing Scan — Top 0 Signal(s)** 🔔 Check once before ope...
+2026-05-26 11:22:07 EDT  [PORTFOLIO] ── Step 3: Execution ──────────────────
+2026-05-26 11:22:07 EDT  [EXECUTE] 0 signal(s) queued for execution
+2026-05-26 11:22:07 EDT  ────────────────────────────────────────
+2026-05-26 11:22:07 EDT  [SCAN END] Run #119 | Signals: 0 | Tickers scanned: 94
+2026-05-26 11:22:08 EDT  ════════════════════════════════════════
+2026-05-26 11:22:09 EDT  ────────────────────────────────────────
+2026-05-26 11:22:09 EDT  [MONITOR START] Checking 46 open position(s) live
+2026-05-26 11:22:09 EDT  [MONITOR ⏳ HOLD] SU | MASTER_5_PULLBACK_MA20 | live=$66.25 | SL=$64.78 | TP=$79.79
+2026-05-26 11:22:15 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **WMB** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:22:22 EDT  [MONITOR ⏳ HOLD] NDAQ | MASTER_5_PULLBACK_MA20 | live=$90.79 | SL=$86.40 | TP=$103.92
+2026-05-26 11:22:31 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **FDX** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:22:35 EDT  [MONITOR ⏳ HOLD] INTC | MASTER_7_VIX_MARKET_FILTER | live=$122.88 | SL=$118.04 | TP=$143.28
+2026-05-26 11:22:48 EDT  [MONITOR ⏳ HOLD] X | MASTER_7_VIX_MARKET_FILTER | live=$54.84 | SL=$52.12 | TP=$58.91
+2026-05-26 11:23:00 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **ENB** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:23:00 EDT  [MONITOR ⏳ HOLD] CVS | MASTER_7_VIX_MARKET_FILTER | live=$91.81 | SL=$88.74 | TP=$101.08
+2026-05-26 11:23:13 EDT  [MONITOR ⏳ HOLD] NBIX | MASTER_7_VIX_MARKET_FILTER | live=$156.15 | SL=$154.73 | TP=$167.71
+2026-05-26 11:23:26 EDT  [MONITOR 🏆 BREAK-EVEN] GOOGL | MASTER_7_VIX_MARKET_FILTER | profit=$+198.50 >= $25 → stop raised to break-even $386.91
+2026-05-26 11:23:26 EDT  [MONITOR ⏳ HOLD] GOOGL | MASTER_7_VIX_MARKET_FILTER | live=$388.90 | SL=$386.91 | TP=$417.38
+2026-05-26 11:23:39 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **HIGH WIN RATE AGENT DETECTED!** Agent: **VIX + SPY Mark...
+2026-05-26 11:23:41 EDT  [DISCORD] ✅ Sent (HTTP 204): ✅ **SELL — STOP_LOSS** ━━━━━━━━━━━━━━━━━━━━ **MO**  Entry: $...
+2026-05-26 11:23:42 EDT  [DISCORD] ✅ Sent (HTTP 204): ✅ **SELL — 🛑 STOP LOSS HIT** ━━━━━━━━━━━━━━━━━━━━ **MO**  E...
+2026-05-26 11:23:42 EDT  [MONITOR 🛑 STOP] MO | MASTER_7_VIX_MARKET_FILTER | live=$72.42 <= SL=$73.51 | P/L=$+0.00
+2026-05-26 11:23:44 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **KO** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX_...
+2026-05-26 11:23:55 EDT  [MONITOR ⏳ HOLD] VTR | MASTER_7_VIX_MARKET_FILTER | live=$88.01 | SL=$84.74 | TP=$93.91
+2026-05-26 11:24:01 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **ETN** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:24:08 EDT  [MONITOR ⏳ HOLD] WMB | MASTER_7_VIX_MARKET_FILTER | live=$77.12 | SL=$74.06 | TP=$83.16
+2026-05-26 11:24:17 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **AFL** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:24:20 EDT  [MONITOR ⏳ HOLD] MRO | MASTER_7_VIX_MARKET_FILTER | live=$28.55 | SL=$27.40 | TP=$30.28
+2026-05-26 11:24:33 EDT  [MONITOR ⏳ HOLD] ENB | MASTER_7_VIX_MARKET_FILTER | live=$57.11 | SL=$57.01 | TP=$60.43
+2026-05-26 11:24:46 EDT  [DISCORD] ✅ Sent (HTTP 204): ✅ **SELL — STOP_LOSS** ━━━━━━━━━━━━━━━━━━━━ **UNH**  Entry: ...
+2026-05-26 11:24:47 EDT  [DISCORD] ✅ Sent (HTTP 204): ✅ **SELL — 🛑 STOP LOSS HIT** ━━━━━━━━━━━━━━━━━━━━ **UNH**  ...
+2026-05-26 11:24:47 EDT  [MONITOR 🛑 STOP] UNH | MASTER_7_VIX_MARKET_FILTER | live=$379.71 <= SL=$383.68 | P/L=$+0.00
+2026-05-26 11:24:59 EDT  [MONITOR ⏳ HOLD] ESS | MASTER_7_VIX_MARKET_FILTER | live=$277.09 | SL=$274.50 | TP=$290.97
+2026-05-26 11:25:12 EDT  [MONITOR 🏆 BREAK-EVEN] UNP | MASTER_7_VIX_MARKET_FILTER | profit=$+225.27 >= $25 → stop raised to break-even $269.08
+2026-05-26 11:25:12 EDT  [MONITOR ⏳ HOLD] UNP | MASTER_7_VIX_MARKET_FILTER | live=$271.33 | SL=$269.08 | TP=$285.22
+2026-05-26 11:25:15 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **SPG** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:25:25 EDT  [MONITOR ⏳ HOLD] ILMN | MASTER_7_VIX_MARKET_FILTER | live=$145.18 | SL=$140.72 | TP=$156.93
+2026-05-26 11:25:38 EDT  [MONITOR ⏳ HOLD] X | MASTER_7_VIX_MARKET_FILTER | live=$54.84 | SL=$52.12 | TP=$58.91
+2026-05-26 11:25:51 EDT  [MONITOR ⏳ HOLD] MCHP | MASTER_7_VIX_MARKET_FILTER | live=$98.70 | SL=$91.52 | TP=$111.95
+2026-05-26 11:26:01 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **NOV** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:26:04 EDT  [MONITOR ⏳ HOLD] NBIX | MASTER_7_VIX_MARKET_FILTER | live=$156.38 | SL=$148.25 | TP=$169.16
+2026-05-26 11:26:16 EDT  [MONITOR ⏳ HOLD] ADI | MASTER_7_VIX_MARKET_FILTER | live=$420.03 | SL=$390.61 | TP=$464.76
+2026-05-26 11:26:19 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **ZION** | VIX + SPY Market Filter (Master) (`MASTER_7_VI...
+2026-05-26 11:26:29 EDT  [MONITOR ⏳ HOLD] CVS | MASTER_7_VIX_MARKET_FILTER | live=$91.81 | SL=$87.13 | TP=$98.64
+2026-05-26 11:26:42 EDT  [MONITOR ⏳ HOLD] NVDA | MASTER_7_VIX_MARKET_FILTER | live=$214.06 | SL=$201.29 | TP=$237.91
+2026-05-26 11:26:55 EDT  [MONITOR ⏳ HOLD] CAT | MASTER_7_VIX_MARKET_FILTER | live=$903.92 | SL=$849.76 | TP=$990.01
+2026-05-26 11:27:03 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **LIN** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:27:08 EDT  [MONITOR ⏳ HOLD] AVGO | MASTER_7_VIX_MARKET_FILTER | live=$427.68 | SL=$400.60 | TP=$476.39
+2026-05-26 11:27:20 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **PPG** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:27:20 EDT  [MONITOR ⏳ HOLD] ILMN | MASTER_7_VIX_MARKET_FILTER | live=$145.23 | SL=$135.52 | TP=$161.85
+2026-05-26 11:27:33 EDT  [MONITOR ⏳ HOLD] AMAT | MASTER_7_VIX_MARKET_FILTER | live=$451.53 | SL=$417.48 | TP=$507.82
+2026-05-26 11:27:46 EDT  [MONITOR ⏳ HOLD] LRCX | MASTER_7_VIX_MARKET_FILTER | live=$317.53 | SL=$291.21 | TP=$360.78
+2026-05-26 11:27:50 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **USB** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:27:59 EDT  [MONITOR ⏳ HOLD] MRO | MASTER_7_VIX_MARKET_FILTER | live=$28.55 | SL=$27.40 | TP=$30.28
+2026-05-26 11:28:12 EDT  [MONITOR ⏳ HOLD] IFF | MASTER_7_VIX_MARKET_FILTER | live=$75.83 | SL=$70.73 | TP=$84.05
+2026-05-26 11:28:24 EDT  [MONITOR ⏳ HOLD] AVB | MASTER_7_VIX_MARKET_FILTER | live=$186.59 | SL=$179.84 | TP=$197.86
+2026-05-26 11:28:34 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **EPD** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:28:37 EDT  [MONITOR ⏳ HOLD] EQR | MASTER_7_VIX_MARKET_FILTER | live=$66.51 | SL=$64.06 | TP=$70.56
+2026-05-26 11:28:50 EDT  [MONITOR ⏳ HOLD] ESS | MASTER_7_VIX_MARKET_FILTER | live=$277.44 | SL=$266.95 | TP=$293.95
+2026-05-26 11:28:50 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **NDAQ** | VIX + SPY Market Filter (Master) (`MASTER_7_VI...
+2026-05-26 11:29:03 EDT  [MONITOR ⏳ HOLD] TFX | MASTER_7_VIX_MARKET_FILTER | live=$133.19 | SL=$124.32 | TP=$146.09
+2026-05-26 11:29:06 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **MCO** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:29:16 EDT  [MONITOR ⏳ HOLD] UNM | MASTER_7_VIX_MARKET_FILTER | live=$84.08 | SL=$80.84 | TP=$89.07
+2026-05-26 11:29:29 EDT  [MONITOR ⏳ HOLD] CSX | MASTER_7_VIX_MARKET_FILTER | live=$46.25 | SL=$44.56 | TP=$49.03
+2026-05-26 11:29:37 EDT  [DISCORD] ✅ Sent (HTTP 204): 🏆 **TRV** | VIX + SPY Market Filter (Master) (`MASTER_7_VIX...
+2026-05-26 11:29:41 EDT  [MONITOR ⏳ HOLD] HPQ | MASTER_7_VIX_MARKET_FILTER | live=$24.41 | SL=$22.32 | TP=$27.53
+2026-05-26 11:29:54 EDT  [MONITOR ⏳ HOLD] MSCI | MASTER_7_VIX_MARKET_FILTER | live=$584.36 | SL=$555.76 | TP=$630.64
+2026-05-26 11:30:07 EDT  [MONITOR ⏳ HOLD] UNP | MASTER_7_VIX_MARKET_FILTER | live=$271.27 | SL=$260.29 | TP=$287.40
+2026-05-26 11:30:20 EDT  [MONITOR ⏳ HOLD] NSC | MASTER_7_VIX_MARKET_FILTER | live=$318.68 | SL=$306.99 | TP=$337.55
+2026-05-26 11:30:33 EDT  [MONITOR ⏳ HOLD] PSA | MASTER_7_VIX_MARKET_FILTER | live=$305.96 | SL=$292.94 | TP=$327.16
+2026-05-26 11:30:45 EDT  [MONITOR ⏳ HOLD] SLB | MASTER_7_VIX_MARKET_FILTER | live=$58.14 | SL=$55.19 | TP=$62.83
+2026-05-26 11:30:58 EDT  [MONITOR ⏳ HOLD] VTR | MASTER_7_VIX_MARKET_FILTER | live=$87.97 | SL=$84.40 | TP=$93.44
+2026-05-26 11:31:11 EDT  [MONITOR ⏳ HOLD] WELL | MASTER_7_VIX_MARKET_FILTER | live=$216.17 | SL=$207.50 | TP=$231.74
+2026-05-26 11:31:24 EDT  [MONITOR ⏳ HOLD] HES | MASTER_7_VIX_MARKET_FILTER | live=$148.97 | SL=$143.26 | TP=$157.91
+2026-05-26 11:31:37 EDT  [MONITOR ⏳ HOLD] MO | MASTER_7_VIX_MARKET_FILTER | live=$72.17 | SL=$69.47 | TP=$76.71
+2026-05-26 11:31:50 EDT  [MONITOR ⏳ HOLD] BKR | MASTER_7_VIX_MARKET_FILTER | live=$67.29 | SL=$63.56 | TP=$73.02
+2026-05-26 11:32:03 EDT  [MONITOR END] Done checking 46 position(s)
+2026-05-26 11:32:03 EDT  ────────────────────────────────────────
+2026-05-26 11:32:04 EDT  [REGIME] SPY $750.26 | SMA20=$733.34 | Change=0.62% | BelowSMA20=0.0% | Above20=YES → ✅ HEALTHY (full size)

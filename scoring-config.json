@@ -552,11 +552,11 @@
       "agentId" : "MASTER_5_PULLBACK_MA20",
       "agentName" : "Pullback to MA20 (Master)",
       "type" : "MASTER",
-      "cumulativeWins" : 37,
-      "cumulativeTrades" : 51,
-      "cumulativeProfitLoss" : 30439.636169898964,
+      "cumulativeWins" : 50,
+      "cumulativeTrades" : 90,
+      "cumulativeProfitLoss" : 46245.50500367589,
       "firstSavedDate" : "2026-05-01",
-      "lastUpdatedDate" : "2026-05-11",
+      "lastUpdatedDate" : "2026-05-26",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-05-01",
@@ -600,6 +600,30 @@
         "trades" : 12,
         "winRate" : 66.66666666666667,
         "profitLoss" : 12593.508024271276
+      }, {
+        "date" : "2026-05-26",
+        "wins" : 13,
+        "trades" : 39,
+        "winRate" : 33.333333333333336,
+        "profitLoss" : 15805.868833776924
+      } ]
+    },
+    "MASTER_7_VIX_MARKET_FILTER" : {
+      "agentId" : "MASTER_7_VIX_MARKET_FILTER",
+      "agentName" : "VIX + SPY Market Filter (Master)",
+      "type" : "MARKET_FILTER",
+      "cumulativeWins" : 39,
+      "cumulativeTrades" : 52,
+      "cumulativeProfitLoss" : 12324.328255472587,
+      "firstSavedDate" : "2026-05-26",
+      "lastUpdatedDate" : "2026-05-26",
+      "notifyOnTrade" : false,
+      "dailySnapshots" : [ {
+        "date" : "2026-05-26",
+        "wins" : 39,
+        "trades" : 52,
+        "winRate" : 75.0,
+        "profitLoss" : 12324.328255472587
       } ]
     }
   }
