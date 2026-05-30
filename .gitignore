@@ -9,3 +9,4 @@ monitoring-stocks.txt
 *.log
 *.tmp
 .DS_Store
+target/
