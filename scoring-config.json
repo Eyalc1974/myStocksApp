@@ -552,11 +552,11 @@
       "agentId" : "MASTER_5_PULLBACK_MA20",
       "agentName" : "Pullback to MA20 (Master)",
       "type" : "MASTER",
-      "cumulativeWins" : 50,
-      "cumulativeTrades" : 90,
-      "cumulativeProfitLoss" : 46245.50500367589,
+      "cumulativeWins" : 89,
+      "cumulativeTrades" : 208,
+      "cumulativeProfitLoss" : 93287.6487390745,
       "firstSavedDate" : "2026-05-01",
-      "lastUpdatedDate" : "2026-05-26",
+      "lastUpdatedDate" : "2026-05-29",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-05-01",
@@ -606,17 +606,35 @@
         "trades" : 39,
         "winRate" : 33.333333333333336,
         "profitLoss" : 15805.868833776924
+      }, {
+        "date" : "2026-05-27",
+        "wins" : 13,
+        "trades" : 39,
+        "winRate" : 33.333333333333336,
+        "profitLoss" : 15805.868833776924
+      }, {
+        "date" : "2026-05-28",
+        "wins" : 13,
+        "trades" : 39,
+        "winRate" : 33.333333333333336,
+        "profitLoss" : 15805.868833776924
+      }, {
+        "date" : "2026-05-29",
+        "wins" : 13,
+        "trades" : 40,
+        "winRate" : 32.5,
+        "profitLoss" : 15430.406067844755
       } ]
     },
     "MASTER_7_VIX_MARKET_FILTER" : {
       "agentId" : "MASTER_7_VIX_MARKET_FILTER",
       "agentName" : "VIX + SPY Market Filter (Master)",
       "type" : "MARKET_FILTER",
-      "cumulativeWins" : 39,
-      "cumulativeTrades" : 52,
-      "cumulativeProfitLoss" : 12324.328255472587,
+      "cumulativeWins" : 165,
+      "cumulativeTrades" : 257,
+      "cumulativeProfitLoss" : 54186.27179897321,
       "firstSavedDate" : "2026-05-26",
-      "lastUpdatedDate" : "2026-05-26",
+      "lastUpdatedDate" : "2026-05-29",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-05-26",
@@ -624,6 +642,24 @@
         "trades" : 52,
         "winRate" : 75.0,
         "profitLoss" : 12324.328255472587
+      }, {
+        "date" : "2026-05-27",
+        "wins" : 41,
+        "trades" : 66,
+        "winRate" : 62.121212121212125,
+        "profitLoss" : 12781.868255472582
+      }, {
+        "date" : "2026-05-28",
+        "wins" : 41,
+        "trades" : 66,
+        "winRate" : 62.121212121212125,
+        "profitLoss" : 12781.868255472582
+      }, {
+        "date" : "2026-05-29",
+        "wins" : 44,
+        "trades" : 73,
+        "winRate" : 60.273972602739725,
+        "profitLoss" : 16298.20703255546
       } ]
     }
   }

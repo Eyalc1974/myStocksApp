@@ -5518,6 +5518,21 @@ public class WebServer {
             }
         });
         
+        // Get full scan status
+        server.createContext("/api/full-scan/status", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                
+                Map<String, Object> status = new LinkedHashMap<>();
+                status.put("running", AIToolAgent.isTopAgentsFullScanRunning());
+                status.put("progress", AIToolAgent.getTopAgentsFullScanProgress());
+                status.put("total", AIToolAgent.getTopAgentsFullScanTotal());
+                status.put("statusMessage", AIToolAgent.getTopAgentsFullScanStatus());
+                
+                respondJson(ex, status, 200);
+            }
+        });
+        
         // Get saved swing scan results
         server.createContext("/api/swing-scan/results", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
@@ -6913,6 +6928,31 @@ public class WebServer {
                 sb.append("  }");
                 sb.append("}");
                 sb.append("initSwingScanner();");
+                // Full scan polling
+                sb.append("var fullScanPollInterval = null;");
+                sb.append("async function pollFullScanStatus() {");
+                sb.append("  try {");
+                sb.append("    var r = await fetch('/api/full-scan/status');");
+                sb.append("    var s = await r.json();");
+                sb.append("    if (!s.running) {");
+                sb.append("      if (fullScanPollInterval) { clearInterval(fullScanPollInterval); fullScanPollInterval = null; }");
+                sb.append("      location.reload();");
+                sb.append("      return;");
+                sb.append("    }");
+                sb.append("    // Reload page to show updated progress");
+                sb.append("    location.reload();");
+                sb.append("  } catch(e) { console.log('Full scan poll error:', e); }");
+                sb.append("}");
+                sb.append("async function initFullScanner() {");
+                sb.append("  var urlParams = new URLSearchParams(window.location.search);");
+                sb.append("  if (urlParams.get('fullScanStarted') === 'true') {");
+                sb.append("    fullScanPollInterval = setInterval(pollFullScanStatus, 3000);");
+                sb.append("    // Remove the parameter from URL");
+                sb.append("    var newUrl = window.location.pathname;");
+                sb.append("    window.history.replaceState({}, document.title, newUrl);");
+                sb.append("  }");
+                sb.append("}");
+                sb.append("initFullScanner();");
                 sb.append("</script>");
                 sb.append("</div>");
 

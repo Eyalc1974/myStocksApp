@@ -608,7 +608,7 @@ public class AIToolAgent {
                     trade.profitLoss    = (exitPrice - trade.entryPrice) * trade.quantity;
                     trade.profitLossPct = trade.entryPrice > 0
                         ? ((exitPrice - trade.entryPrice) / trade.entryPrice) * 100 : 0;
-                    trade.status        = trade.profitLoss >= MIN_PROFIT_FOR_WIN ? "CLOSED_WIN" : "CLOSED_LOSS";
+                    trade.status        = trade.profitLoss >= 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
                     trade.closeReason   = "MAX_HOLD_DAYS";
                     trade.exitTime      = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
                     writeScanLog(String.format(
@@ -661,7 +661,7 @@ public class AIToolAgent {
                     trade.profitLoss    = (exitPrice - trade.entryPrice) * trade.quantity;
                     trade.profitLossPct = trade.entryPrice > 0
                         ? ((exitPrice - trade.entryPrice) / trade.entryPrice) * 100 : 0;
-                    trade.status        = trade.profitLoss >= MIN_PROFIT_FOR_WIN ? "CLOSED_WIN" : "CLOSED_LOSS";
+                    trade.status        = trade.profitLoss >= 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
                     trade.closeReason   = "MAX_HOLD_DAYS";
                     trade.exitTime      = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
                     writeScanLog(String.format(
@@ -753,7 +753,7 @@ public class AIToolAgent {
                                 double remainingProfit = (remainingExitPrice - trade.entryPrice) * remainingQty;
                                 trade.profitLoss = partialProfit + remainingProfit;
                                 trade.profitLossPct = (trade.profitLoss / (trade.entryPrice * trade.quantity)) * 100;
-                                trade.status = trade.profitLoss >= MIN_PROFIT_FOR_WIN ? "CLOSED_WIN" : "CLOSED_LOSS";
+                                trade.status = trade.profitLoss >= 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
                                 trade.closeReason = "PARTIAL_1R";
                                 partialExit1RUsed = true;
                                 System.out.println("[AIToolAgent] PARTIAL_1R: " + trade.ticker +
@@ -782,7 +782,7 @@ public class AIToolAgent {
                                 trade.closeReason = "TAKE_PROFIT";
                             } else if (holdDays >= maxHold) {
                                 double priceChange = currentPrice - trade.entryPrice;
-                                trade.status    = priceChange >= MIN_PROFIT_FOR_WIN ? "CLOSED_WIN" : "CLOSED_LOSS";
+                                trade.status    = priceChange >= 0 ? "CLOSED_WIN" : "CLOSED_LOSS";
                                 trade.exitPrice = currentPrice;
                                 trade.closeReason = "MAX_HOLD_DAYS";
                             } else {
