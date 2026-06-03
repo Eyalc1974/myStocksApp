@@ -7122,20 +7122,20 @@ public class WebServer {
                 
                 // Pinned master strategies always shown at the bottom (only active trading masters)
                 java.util.Set<String> PINNED_MASTERS = new java.util.LinkedHashSet<>(java.util.Arrays.asList("MASTER_5_PULLBACK_MA20","MASTER_6_VOLUME_BREAKOUT","MASTER_8_STRONG_TREND"));
-                // Top agents (≥70% win rate AND ≥3 trades) — these get pre-checked
-                java.util.Set<String> topAgentIds = new java.util.HashSet<>();
-                for (AIToolAgent.AgentPerformance tp : AIToolAgent.getTop5Agents()) topAgentIds.add(tp.agentId);
+                // Filtered agents (success rate > 50% + INST_SWING_V1) — these get pre-checked (same as scheduled runs)
+                java.util.Set<String> filteredAgentIds = new java.util.HashSet<>();
+                for (String agentId : AIToolAgent.getFilteredAgentsForScheduledRun()) filteredAgentIds.add(agentId);
 
-                sb.append("<div style='color:#c4b5fd;font-size:12px;margin-bottom:8px;'>Select agents to run (🏆 = ≥70% win rate pre-checked, others unchecked):</div>");
+                sb.append("<div style='color:#c4b5fd;font-size:12px;margin-bottom:8px;'>Select agents to run (✅ = >50% win rate or INST_SWING_V1 pre-checked, others unchecked):</div>");
                 sb.append("<form method='post' action='/aitool-full-scan' style='margin:0;'>");
 
                 int agentIdx = 0;
-                // 1. Show ALL loaded variant agents (sorted: top performers first, then alphabetical)
+                // 1. Show ALL loaded variant agents (sorted: filtered agents first, then alphabetical)
                 List<AIToolAgent.AgentPerformance> allAgentPerfs = AIToolAgent.getAllPerformances();
                 allAgentPerfs.sort((a, b) -> {
-                    boolean aTop = topAgentIds.contains(a.agentId);
-                    boolean bTop = topAgentIds.contains(b.agentId);
-                    if (aTop != bTop) return aTop ? -1 : 1;
+                    boolean aFiltered = filteredAgentIds.contains(a.agentId);
+                    boolean bFiltered = filteredAgentIds.contains(b.agentId);
+                    if (aFiltered != bFiltered) return aFiltered ? -1 : 1;
                     return a.agentId.compareTo(b.agentId);
                 });
                 sb.append("<div style='color:#9ca3af;font-size:11px;margin-bottom:4px;'>📊 Variant Agents:</div>");
@@ -7143,15 +7143,15 @@ public class WebServer {
                     if (PINNED_MASTERS.contains(p.agentId)) continue; // shown separately below
                     AIToolAgent.AgentConfig pCfg = AIToolAgent.getAgentConfig(p.agentId);
                     if (pCfg == null || pCfg.disabled || "MOMENTUM".equals(pCfg.type) || pCfg.masterStrategy) continue; // skip disabled / momentum / master agents
-                    boolean isTopAgent = topAgentIds.contains(p.agentId);
-                    String bgColor = isTopAgent ? "#1a2e1a" : (agentIdx % 2 == 0 ? "#2d2a5e" : "#1e1b4b");
-                    String border = isTopAgent ? "border:1px solid #22c55e;" : "border:1px solid transparent;";
+                    boolean isFilteredAgent = filteredAgentIds.contains(p.agentId);
+                    String bgColor = isFilteredAgent ? "#1a2e1a" : (agentIdx % 2 == 0 ? "#2d2a5e" : "#1e1b4b");
+                    String border = isFilteredAgent ? "border:1px solid #22c55e;" : "border:1px solid transparent;";
                     sb.append("<div style='display:flex;align-items:center;gap:8px;padding:6px 8px;background:").append(bgColor).append(";").append(border).append("border-radius:4px;margin-bottom:4px;'>");
                     sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(p.agentId)).append("' style='width:16px;height:16px;'");
-                    if (isTopAgent) sb.append(" checked");
+                    if (isFilteredAgent) sb.append(" checked");
                     sb.append(" />");
                     sb.append("<span style='color:#e5e7eb;font-weight:500;flex:1;'>");
-                    if (isTopAgent) sb.append("🏆 ");
+                    if (isFilteredAgent) sb.append("✅ ");
                     sb.append(escapeHtml(p.agentId)).append("</span>");
                     sb.append("<span style='color:#a78bfa;font-size:11px;'>").append(p.type != null ? p.type : "").append("</span>");
                     if (p.totalTrades > 0) {
@@ -7208,7 +7208,7 @@ public class WebServer {
                     if (!isFilter) agentIdx++;
                 }
 
-                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:8px;margin-bottom:8px;'>💡 Select agents to run. Top performers pre-checked. Pinned masters must be manually checked. Leave all unchecked to auto-run top 5.</div>");
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:8px;margin-bottom:8px;'>💡 Select agents to run. Agents with >50% win rate or INST_SWING_V1 are pre-checked. Pinned masters must be manually checked. Leave all unchecked to auto-run filtered agents.</div>");
                 sb.append("<button type='submit' style='background:#7c3aed;margin-top:4px;'>🚀 Start Full Scan with Selected Agents</button>");
                 sb.append("</form>");
                 

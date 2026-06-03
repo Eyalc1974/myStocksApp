@@ -1,1 +1,10 @@
-2026-05-30 07:22:13 EDT  === LOG ROTATED (48h) ===
+2026-06-03 00:45:25 EDT  === LOG ROTATED (48h) ===
+2026-06-03 00:45:25 EDT  ════════════════════════════════════════
+2026-06-03 00:45:25 EDT  [SCAN START] Run #126 | Tickers: 65 | Agents: 17
+2026-06-03 00:45:28 EDT  [DISCORD] ✅ Sent (HTTP 204): 🚀 **Scan Started** — Run #126 Scanning **65** tickers | AV ...
+2026-06-03 00:45:28 EDT  [SCAN MODE] MASTER STRATEGY scoring — 3 strategies (threshold=10/12)
+2026-06-03 00:45:28 EDT  [PRE-FETCH] Starting parallel AV fetch: 65 tickers | 5 calls/min | ETA ~13 min
+2026-06-03 00:45:58 EDT  [PRE-FETCH] Status: 3/65 (4.6%) - Rate: 6.0 calls/min - Elapsed: 0.5 min
+2026-06-03 00:46:28 EDT  [PRE-FETCH] Status: 5/65 (7.7%) - Rate: 5.0 calls/min - Elapsed: 1.0 min
+2026-06-03 00:46:58 EDT  [PRE-FETCH] Status: 8/65 (12.3%) - Rate: 5.3 calls/min - Elapsed: 1.5 min
+2026-06-03 00:47:17 EDT  [PRE-FETCH] Progress: 10/65 (15.4%) - Latest: X

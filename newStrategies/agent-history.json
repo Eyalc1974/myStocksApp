@@ -1,5 +1,5 @@
 {
-  "lastUpdated" : "2026-05-29T09:51:42.3362641-04:00[America/New_York]",
+  "lastUpdated" : "2026-06-02T13:23:23.3005946-04:00[America/New_York]",
   "tradeHistory" : {
     "I5_VWAP_RETEST" : [ {
       "id" : "8d4a37e7",
@@ -549,12 +549,12 @@
       "ticker" : "NDAQ",
       "action" : "BUY",
       "entryPrice" : 90.7838,
-      "exitPrice" : 91.0,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 93.73,
+      "profitLoss" : 294.62000000000046,
+      "profitLossPct" : 3.245292662347252,
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-20T11:39:17.3647103-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:37:15.4221731-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T11:57:47.7097481-04:00[America/New_York]"
     }, {
       "id" : "db115751",
       "ticker" : "WMT",
@@ -1465,86 +1465,86 @@
       "exitPrice" : 54.84,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:08:06.3280902-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:37:29.0359813-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.1726563-04:00[America/New_York]"
     }, {
       "id" : "59353922",
       "ticker" : "MCHP",
       "action" : "BUY",
       "entryPrice" : 99.695,
-      "exitPrice" : 96.04,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 91.52176293092079,
+      "profitLoss" : -817.3237069079207,
+      "profitLossPct" : -8.19824170628337,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-26T11:08:22.8218771-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:37:42.4233947-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T14:45:22.7685932-04:00[America/New_York]"
     }, {
       "id" : "e0269475",
       "ticker" : "NBIX",
       "action" : "BUY",
       "entryPrice" : 156.6131,
-      "exitPrice" : 156.39,
+      "exitPrice" : 156.6131,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:11:15.9265315-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:37:55.6421207-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.2051681-04:00[America/New_York]"
     }, {
       "id" : "737d7646",
       "ticker" : "ADI",
       "action" : "BUY",
       "entryPrice" : 420.2715,
-      "exitPrice" : 419.01,
+      "exitPrice" : 420.2715,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:11:48.2254321-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:38:09.5490031-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.2369502-04:00[America/New_York]"
     }, {
       "id" : "12bbf01b",
       "ticker" : "CVS",
       "action" : "BUY",
       "entryPrice" : 91.73,
-      "exitPrice" : 92.97,
+      "exitPrice" : 91.73,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:12:04.6149351-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:38:23.4880256-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.2808695-04:00[America/New_York]"
     }, {
       "id" : "58bd75e2",
       "ticker" : "NVDA",
       "action" : "BUY",
       "entryPrice" : 215.94,
-      "exitPrice" : 214.25,
+      "exitPrice" : 215.94,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:12:34.620354-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:38:37.8855381-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.3065565-04:00[America/New_York]"
     }, {
       "id" : "9dcf02a9",
       "ticker" : "CAT",
       "action" : "BUY",
       "entryPrice" : 905.86,
-      "exitPrice" : 887.67,
+      "exitPrice" : 905.86,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:13:05.5283561-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:38:52.2864768-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.321396-04:00[America/New_York]"
     }, {
       "id" : "f1b21102",
       "ticker" : "AVGO",
       "action" : "BUY",
       "entryPrice" : 430.915,
-      "exitPrice" : 426.58,
+      "exitPrice" : 430.915,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:13:34.5780697-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:39:06.4063925-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.3357114-04:00[America/New_York]"
     }, {
       "id" : "a36f5c7d",
       "ticker" : "ILMN",
@@ -1561,23 +1561,23 @@
       "ticker" : "AMAT",
       "action" : "BUY",
       "entryPrice" : 453.6119,
-      "exitPrice" : 449.68,
+      "exitPrice" : 453.6119,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:14:05.7633924-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:39:35.1316432-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.3400334-04:00[America/New_York]"
     }, {
       "id" : "6ee61a04",
       "ticker" : "LRCX",
       "action" : "BUY",
       "entryPrice" : 319.04,
-      "exitPrice" : 318.0,
+      "exitPrice" : 319.04,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:14:21.5776624-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:39:49.3414587-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.3490248-04:00[America/New_York]"
     }, {
       "id" : "42ad051a",
       "ticker" : "MRO",
@@ -1586,97 +1586,97 @@
       "exitPrice" : 28.55,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:14:37.695757-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:40:03.6275831-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.3581505-04:00[America/New_York]"
     }, {
       "id" : "ae9aa22f",
       "ticker" : "IFF",
       "action" : "BUY",
       "entryPrice" : 76.0565,
-      "exitPrice" : 78.03,
+      "exitPrice" : 76.0565,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:15:09.4374329-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:40:17.6126141-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.3657228-04:00[America/New_York]"
     }, {
       "id" : "9f66388c",
       "ticker" : "AVB",
       "action" : "BUY",
       "entryPrice" : 186.66,
-      "exitPrice" : 184.83,
+      "exitPrice" : 186.66,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:15:26.77134-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:40:31.5557826-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.3725297-04:00[America/New_York]"
     }, {
       "id" : "51d40e4d",
       "ticker" : "EQR",
       "action" : "BUY",
       "entryPrice" : 66.567,
-      "exitPrice" : 66.26,
+      "exitPrice" : 66.567,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:16:24.5973151-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:40:45.232358-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.3803011-04:00[America/New_York]"
     }, {
       "id" : "5e656703",
       "ticker" : "ESS",
       "action" : "BUY",
       "entryPrice" : 277.315,
-      "exitPrice" : 276.44,
+      "exitPrice" : 277.315,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:16:40.9115605-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:40:59.229053-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.3882363-04:00[America/New_York]"
     }, {
       "id" : "9371f632",
       "ticker" : "TFX",
       "action" : "BUY",
       "entryPrice" : 133.0297,
-      "exitPrice" : 129.66,
+      "exitPrice" : 133.0297,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:16:56.7717531-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:41:13.1987374-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.3923974-04:00[America/New_York]"
     }, {
       "id" : "77ed6dc0",
       "ticker" : "UNM",
       "action" : "BUY",
       "entryPrice" : 84.0288,
-      "exitPrice" : 82.45,
+      "exitPrice" : 84.0288,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:17:12.7303128-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:41:27.19897-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.4015205-04:00[America/New_York]"
     }, {
       "id" : "1a933156",
       "ticker" : "CSX",
       "action" : "BUY",
       "entryPrice" : 46.2508,
-      "exitPrice" : 45.81,
+      "exitPrice" : 46.2508,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:17:28.8162011-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:41:42.101139-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.4058461-04:00[America/New_York]"
     }, {
       "id" : "52c6b437",
       "ticker" : "HPQ",
       "action" : "BUY",
       "entryPrice" : 24.405,
-      "exitPrice" : 25.01,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 27.528252786576957,
+      "profitLoss" : 312.32527865769555,
+      "profitLossPct" : 12.797593880667712,
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:17:46.058187-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:41:56.0461968-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T12:04:36.3481901-04:00[America/New_York]"
     }, {
       "id" : "db372d19",
       "ticker" : "MSCI",
@@ -1693,34 +1693,34 @@
       "ticker" : "UNP",
       "action" : "BUY",
       "entryPrice" : 271.13,
-      "exitPrice" : 267.0,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 260.29176568236136,
+      "profitLoss" : -1083.8234317638637,
+      "profitLossPct" : -3.9974308699290515,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-26T11:18:32.2339665-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:42:23.9990177-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T12:04:50.4578767-04:00[America/New_York]"
     }, {
       "id" : "a6205c98",
       "ticker" : "NSC",
       "action" : "BUY",
       "entryPrice" : 318.44,
-      "exitPrice" : 307.88,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 306.9871722463299,
+      "profitLoss" : -1145.2827753670078,
+      "profitLossPct" : -3.596541814366938,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-26T11:18:47.0874716-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:42:38.0799882-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T12:05:04.5278831-04:00[America/New_York]"
     }, {
       "id" : "e0129463",
       "ticker" : "PSA",
       "action" : "BUY",
       "entryPrice" : 306.628,
-      "exitPrice" : 309.25,
+      "exitPrice" : 306.628,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:19:03.2300737-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:42:52.0247684-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.4097724-04:00[America/New_York]"
     }, {
       "id" : "9c1ce3d2",
       "ticker" : "SLB",
@@ -1737,23 +1737,23 @@
       "ticker" : "VTR",
       "action" : "BUY",
       "entryPrice" : 88.013,
-      "exitPrice" : 85.79,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 84.39626197326854,
+      "profitLoss" : -361.67380267314684,
+      "profitLossPct" : -4.109322516823047,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-26T11:20:12.0720475-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:43:22.1194588-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T12:05:31.3629747-04:00[America/New_York]"
     }, {
       "id" : "3babd9c0",
       "ticker" : "WELL",
       "action" : "BUY",
       "entryPrice" : 217.1999,
-      "exitPrice" : 210.29,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 207.50348961541715,
+      "profitLoss" : -969.6410384582862,
+      "profitLossPct" : -4.464279396345423,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-26T11:20:29.0145226-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:43:36.3806918-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T12:05:45.6440747-04:00[America/New_York]"
     }, {
       "id" : "edc780d3",
       "ticker" : "HES",
@@ -1762,31 +1762,31 @@
       "exitPrice" : 148.97,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:20:58.4414767-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:43:50.4613622-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.5696927-04:00[America/New_York]"
     }, {
       "id" : "e8ac96a4",
       "ticker" : "MO",
       "action" : "BUY",
       "entryPrice" : 72.37,
-      "exitPrice" : 71.97,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 69.47352610770189,
+      "profitLoss" : -289.64738922981184,
+      "profitLossPct" : -4.002312964347269,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-26T11:21:29.7707292-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:44:04.5200393-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T12:06:15.6755229-04:00[America/New_York]"
     }, {
       "id" : "3e30d08a",
       "ticker" : "BKR",
       "action" : "BUY",
       "entryPrice" : 67.3423,
-      "exitPrice" : 64.71,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 63.55921270109264,
+      "profitLoss" : -378.30872989073544,
+      "profitLossPct" : -5.617698384087497,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-26T11:21:45.1802208-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:44:18.148228-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T12:06:29.7504005-04:00[America/New_York]"
     }, {
       "id" : "2ed3cca9",
       "ticker" : "WMB",
@@ -1803,45 +1803,45 @@
       "ticker" : "FDX",
       "action" : "BUY",
       "entryPrice" : 399.92,
-      "exitPrice" : 411.4,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 377.73076596831794,
+      "profitLoss" : -2218.9234031682076,
+      "profitLossPct" : -5.548418191558831,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-26T11:22:31.3865637-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:44:32.2122155-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T12:06:43.6515883-04:00[America/New_York]"
     }, {
       "id" : "14b0ed60",
       "ticker" : "ENB",
       "action" : "BUY",
       "entryPrice" : 57.145,
-      "exitPrice" : 55.56,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 55.082843710641086,
+      "profitLoss" : -206.21562893589171,
+      "profitLossPct" : -3.608638182446263,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-26T11:23:00.7780526-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:44:46.3993441-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T12:06:58.482049-04:00[America/New_York]"
     }, {
       "id" : "2bd708d4",
       "ticker" : "KO",
       "action" : "BUY",
       "entryPrice" : 80.5086,
-      "exitPrice" : 80.41,
+      "exitPrice" : 80.5086,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:23:44.8163002-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:45:00.4977631-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.6306485-04:00[America/New_York]"
     }, {
       "id" : "70fd08f4",
       "ticker" : "ETN",
       "action" : "BUY",
       "entryPrice" : 408.4666,
-      "exitPrice" : 401.94,
+      "exitPrice" : 408.4666,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:24:01.0298025-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:45:14.5858073-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.6681706-04:00[America/New_York]"
     }, {
       "id" : "0e142d9c",
       "ticker" : "AFL",
@@ -1858,45 +1858,45 @@
       "ticker" : "SPG",
       "action" : "BUY",
       "entryPrice" : 206.7834,
-      "exitPrice" : 206.77,
+      "exitPrice" : 206.7834,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:25:15.4402489-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:45:28.781741-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.6902104-04:00[America/New_York]"
     }, {
       "id" : "f191ec20",
       "ticker" : "NOV",
       "action" : "BUY",
       "entryPrice" : 21.225,
-      "exitPrice" : 20.26,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 20.04840648937923,
+      "profitLoss" : -117.65935106207728,
+      "profitLossPct" : -5.543432323301638,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-26T11:26:01.3860973-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:45:42.737158-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T12:07:50.5781832-04:00[America/New_York]"
     }, {
       "id" : "1be0f1f9",
       "ticker" : "ZION",
       "action" : "BUY",
       "entryPrice" : 63.03,
-      "exitPrice" : 62.24,
+      "exitPrice" : 63.03,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:26:19.4120153-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:46:02.7961715-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.7364239-04:00[America/New_York]"
     }, {
       "id" : "9ee77ed8",
       "ticker" : "LIN",
       "action" : "BUY",
       "entryPrice" : 515.66,
-      "exitPrice" : 501.98,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 496.59938802264753,
+      "profitLoss" : -1906.0611977352437,
+      "profitLossPct" : -3.696352631065516,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-26T11:27:03.5746427-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:46:16.2084236-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T12:08:17.5802299-04:00[America/New_York]"
     }, {
       "id" : "83fe94fa",
       "ticker" : "PPG",
@@ -1913,45 +1913,45 @@
       "ticker" : "USB",
       "action" : "BUY",
       "entryPrice" : 54.915,
-      "exitPrice" : 54.45,
+      "exitPrice" : 54.915,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:27:50.3076124-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:46:53.9067201-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.7880706-04:00[America/New_York]"
     }, {
       "id" : "81510858",
       "ticker" : "EPD",
       "action" : "BUY",
       "entryPrice" : 38.8158,
-      "exitPrice" : 37.5,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 37.28715954242802,
+      "profitLoss" : -152.86404575719814,
+      "profitLossPct" : -3.938191297286108,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-26T11:28:34.9946627-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:47:07.8720051-04:00[America/New_York]"
+      "exitTime" : "2026-06-01T14:52:25.4275651-04:00[America/New_York]"
     }, {
       "id" : "a234cda3",
       "ticker" : "NDAQ",
       "action" : "BUY",
       "entryPrice" : 90.7643,
-      "exitPrice" : 91.0,
+      "exitPrice" : 90.7643,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:28:50.9951037-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:47:21.7691382-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.8388542-04:00[America/New_York]"
     }, {
       "id" : "196f4957",
       "ticker" : "MCO",
       "action" : "BUY",
       "entryPrice" : 449.805,
-      "exitPrice" : 450.45,
+      "exitPrice" : 449.805,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-26T11:29:06.8389841-04:00[America/New_York]",
-      "exitTime" : "2026-05-29T05:47:35.7042246-04:00[America/New_York]"
+      "exitTime" : "2026-06-02T12:52:31.8824564-04:00[America/New_York]"
     }, {
       "id" : "f5a03ac5",
       "ticker" : "TRV",
@@ -2067,12 +2067,12 @@
       "ticker" : "TXN",
       "action" : "BUY",
       "entryPrice" : 314.665,
-      "exitPrice" : 0.0,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 293.35265498073005,
+      "profitLoss" : -2131.234501926997,
+      "profitLossPct" : -6.773026875969672,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-29T09:48:19.6050906-04:00[America/New_York]",
-      "exitTime" : null
+      "exitTime" : "2026-06-01T14:54:59.9722684-04:00[America/New_York]"
     }, {
       "id" : "e8a6dd6c",
       "ticker" : "NBIX",
@@ -2155,12 +2155,13 @@
       "ticker" : "IFF",
       "action" : "BUY",
       "entryPrice" : 79.98,
-      "exitPrice" : 0.0,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 74.49658143775282,
+      "profitLoss" : -548.3418562247181,
+      "profitLossPct" : -6.855987199608878,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-29T09:51:40.0650887-04:00[America/New_York]",
-      "exitTime" : null
-    } ]
+      "exitTime" : "2026-06-01T12:13:01.570879-04:00[America/New_York]"
+    } ],
+    "INST_SWING_V1" : [ ]
   }
 }

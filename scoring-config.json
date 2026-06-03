@@ -552,11 +552,11 @@
       "agentId" : "MASTER_5_PULLBACK_MA20",
       "agentName" : "Pullback to MA20 (Master)",
       "type" : "MASTER",
-      "cumulativeWins" : 89,
-      "cumulativeTrades" : 208,
-      "cumulativeProfitLoss" : 93287.6487390745,
+      "cumulativeWins" : 117,
+      "cumulativeTrades" : 290,
+      "cumulativeProfitLoss" : 124737.700874764,
       "firstSavedDate" : "2026-05-01",
-      "lastUpdatedDate" : "2026-05-29",
+      "lastUpdatedDate" : "2026-06-02",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-05-01",
@@ -624,17 +624,29 @@
         "trades" : 40,
         "winRate" : 32.5,
         "profitLoss" : 15430.406067844755
+      }, {
+        "date" : "2026-06-01",
+        "wins" : 14,
+        "trades" : 41,
+        "winRate" : 34.146341463414636,
+        "profitLoss" : 15725.026067844756
+      }, {
+        "date" : "2026-06-02",
+        "wins" : 14,
+        "trades" : 41,
+        "winRate" : 34.146341463414636,
+        "profitLoss" : 15725.026067844756
       } ]
     },
     "MASTER_7_VIX_MARKET_FILTER" : {
       "agentId" : "MASTER_7_VIX_MARKET_FILTER",
       "agentName" : "VIX + SPY Market Filter (Master)",
       "type" : "MARKET_FILTER",
-      "cumulativeWins" : 165,
-      "cumulativeTrades" : 257,
-      "cumulativeProfitLoss" : 54186.27179897321,
+      "cumulativeWins" : 280,
+      "cumulativeTrades" : 444,
+      "cumulativeProfitLoss" : 74768.01028364072,
       "firstSavedDate" : "2026-05-26",
-      "lastUpdatedDate" : "2026-05-29",
+      "lastUpdatedDate" : "2026-06-02",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-05-26",
@@ -660,6 +672,18 @@
         "trades" : 73,
         "winRate" : 60.273972602739725,
         "profitLoss" : 16298.20703255546
+      }, {
+        "date" : "2026-06-01",
+        "wins" : 44,
+        "trades" : 73,
+        "winRate" : 60.273972602739725,
+        "profitLoss" : 16298.20703255546
+      }, {
+        "date" : "2026-06-02",
+        "wins" : 71,
+        "trades" : 114,
+        "winRate" : 62.280701754385966,
+        "profitLoss" : 4283.531452112047
       } ]
     }
   }

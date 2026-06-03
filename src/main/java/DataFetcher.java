@@ -23,14 +23,14 @@ public class DataFetcher {
             .build();
 
     // משתנים סטטיים חדשים
-    private static final String NEWS_API_KEY = "DH6B36IUFEU8MFGY"; // TODO: replace with real premium key or env var
-    private static final String NEWS_API_URL = "https://api.premiumnews.com/news/";
+    private static final String NEWS_API_KEY = readAlphaVantageApiKeyFromEnv();
+    private static final String NEWS_API_URL = "https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=";
 
     // הוספת מתודות חדשות:
     public static String fetchSentimentData(String ticker) {
         // קריאה ל-API חיצוני לנתוני סנטימנט
         // לדוגמה: /sentiment?symbol=AAPL&apikey=...
-        String url = NEWS_API_URL + "sentiment?symbol=" + ticker + "&apikey=" + NEWS_API_KEY;
+        String url = NEWS_API_URL + ticker + "&sort=LATEST&limit=50" + entitlementQueryParam() + "&apikey=" + NEWS_API_KEY;
         // לוגיקת קריאה לרשת והחזרת JSON (אופציונלי בלבד)
         try {
             return makeApiCall(url);
@@ -153,7 +153,7 @@ public class DataFetcher {
 
     public static String fetchLatestNews(String ticker) {
         // קריאה ל-API חיצוני לנתוני חדשות
-        String url = NEWS_API_URL + "latest_news?symbol=" + ticker + "&limit=10&apikey=" + NEWS_API_KEY;
+        String url = "https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=" + ticker + "&sort=LATEST&limit=10" + entitlementQueryParam() + "&apikey=" + NEWS_API_KEY;
         // לוגיקת קריאה לרשת והחזרת JSON (אופציונלי בלבד)
         try {
             return makeApiCall(url);

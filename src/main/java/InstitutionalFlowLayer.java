@@ -73,12 +73,14 @@ public class InstitutionalFlowLayer {
         double momentum    = normalize(decision.momentumScore, 3);          // RSI/CCI component
         double fundamental = normalize(decision.fundamentalScore, 10);      // Layer 2
         double catalyst    = normalize(decision.catalystScore, 10);          // Layer 3
+        double instFlow    = normalize(decision.institutionalFlowScore, 10); // Layer 4
 
         decision.finalConviction =
-              technical   * 1.75
-            + momentum    * 1.0
+              technical   * 1.0
+            + momentum    * 0.75
             + fundamental * 1.25
-            + catalyst    * 1.0;
+            + catalyst    * 1.75
+            + instFlow    * 1.25;
 
         // Hard veto: if fundamental score is 0 or 1 and catalyst is also weak,
         // this is likely a random pump — slash conviction

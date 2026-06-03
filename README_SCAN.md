@@ -99,17 +99,20 @@ The AI Trading System performs automated scans of the stock market to identify h
 
 **Formula**:
 ```
-Final Conviction = (Technical × 0.35) + (Momentum × 0.20) + (Fundamentals × 0.25) + (Catalyst × 0.20)
+Final Conviction = (Technical × 1.0) + (Momentum × 0.75) + (Fundamentals × 1.25) + (Catalyst × 1.75) + (Institutional Flow × 1.25)
 ```
 
-**Scale**: 0-50 points (each component normalized to 0-10 before weighting)
+**Scale**: 0-60 points (each component normalized to 0-10 before weighting)
 
 **Example**:
-- Technical: 10/12 → normalized 8.33 → weighted 8.33 × 1.75 = 14.58
-- Momentum: 3/3 → normalized 10 → weighted 10 × 1.0 = 10.0
+- Technical: 10/12 → normalized 8.33 → weighted 8.33 × 1.0 = 8.33
+- Momentum: 3/3 → normalized 10 → weighted 10 × 0.75 = 7.5
 - Fundamentals: 8/10 → normalized 8 → weighted 8 × 1.25 = 10.0
-- Catalyst: 9/10 → normalized 9 → weighted 9 × 1.0 = 9.0
-- **Final Conviction = 43.58/50**
+- Catalyst: 9/10 → normalized 9 → weighted 9 × 1.75 = 15.75
+- Institutional Flow: 7/10 → normalized 7 → weighted 7 × 1.25 = 8.75
+- **Final Conviction = 50.33/60**
+
+**Rationale**: Higher weight on catalyst (35%) and institutional flow (25%) to capture stocks with real narratives and smart money footprints, not just technical setups.
 
 ---
 
