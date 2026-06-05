@@ -347,6 +347,15 @@ public class AIToolAgent {
         
         // Daily history - tracks wins/losses per day
         public Map<String, DailyStats> dailyHistory = new LinkedHashMap<>(); // date -> stats
+        
+        // Professional trading metrics
+        public double maxDrawdown = 0.0;        // Maximum peak-to-trough decline
+        public double sharpeRatio = 0.0;      // Risk-adjusted return metric
+        public double profitFactor = 0.0;       // Gross profit / Gross loss
+        public double startingCapital = 10000.0; // Virtual starting capital
+        public double currentCapital = 10000.0; // Current virtual capital after all trades
+        public double peakCapital = 10000.0;    // Highest capital value reached (for drawdown calc)
+        public double positionSize = 1000.0;    // Fixed position size per trade ($1,000 default)
     }
 
     public static class PendingSignal {
@@ -543,40 +552,16 @@ public class AIToolAgent {
 
     /**
      * Get filtered agents for scheduled runs:
-     * - Agents with success rate > 50%
-     * - Always include INST_SWING_V1 (Institutional Swing Agent)
+     * Currently only includes MASTER_7_VIX_MARKET_FILTER as the default selection.
      */
     public static List<String> getFilteredAgentsForScheduledRun() {
         List<String> filtered = new ArrayList<>();
 
         synchronized (LOCK) {
-            if (systemState == null || systemState.performance == null) {
-                return filtered;
-            }
-
-            for (Map.Entry<String, AgentPerformance> entry : systemState.performance.entrySet()) {
-                String agentId = entry.getKey();
-                AgentPerformance perf = entry.getValue();
-
-                // Always include INST_SWING_V1
-                if ("INST_SWING_V1".equals(agentId)) {
-                    AgentConfig cfg = systemState.agents.get(agentId);
-                    if (cfg != null && !cfg.disabled) {
-                        filtered.add(agentId);
-                    }
-                    continue;
-                }
-
-                // Include agents with success rate > 50% and at least 3 trades
-                if (perf.totalTrades >= 3) {
-                    double winRate = (perf.totalTrades > 0) ? (perf.wins * 100.0 / perf.totalTrades) : 0;
-                    if (winRate > 50.0) {
-                        AgentConfig cfg = systemState.agents.get(agentId);
-                        if (cfg != null && !cfg.disabled) {
-                            filtered.add(agentId);
-                        }
-                    }
-                }
+            // Only include MASTER_7_VIX_MARKET_FILTER by default
+            AgentConfig cfg = systemState != null && systemState.agents != null ? systemState.agents.get("MASTER_7_VIX_MARKET_FILTER") : null;
+            if (cfg != null && !cfg.disabled) {
+                filtered.add("MASTER_7_VIX_MARKET_FILTER");
             }
         }
 
@@ -4257,6 +4242,17 @@ public class AIToolAgent {
             perf.totalTrades++;
             perf.totalProfitLoss += trade.profitLoss;
             
+            // Update virtual capital tracking
+            perf.currentCapital += trade.profitLoss;
+            if (perf.currentCapital > perf.peakCapital) {
+                perf.peakCapital = perf.currentCapital;
+            }
+            // Calculate max drawdown
+            double drawdown = (perf.peakCapital - perf.currentCapital) / perf.peakCapital * 100;
+            if (drawdown > perf.maxDrawdown) {
+                perf.maxDrawdown = drawdown;
+            }
+            
             if (trade.status.equals("CLOSED_WIN")) {
                 perf.wins++;
             } else if (trade.status.equals("CLOSED_LOSS")) {
@@ -4268,6 +4264,8 @@ public class AIToolAgent {
             // Calculate Expectancy: (WinRate × AvgWin) - (LossRate × AvgLoss)
             double totalWinPct = 0.0;
             double totalLossPct = 0.0;
+            double totalWinPL = 0.0;
+            double totalLossPL = 0.0;
             int winCount = 0;
             int lossCount = 0;
             List<Trade> allTrades = systemState.tradeHistory.get(agentId);
@@ -4275,9 +4273,11 @@ public class AIToolAgent {
                 for (Trade t : allTrades) {
                     if (t.status.equals("CLOSED_WIN")) {
                         totalWinPct += t.profitLossPct;
+                        totalWinPL += t.profitLoss;
                         winCount++;
                     } else if (t.status.equals("CLOSED_LOSS")) {
                         totalLossPct += Math.abs(t.profitLossPct);
+                        totalLossPL += Math.abs(t.profitLoss);
                         lossCount++;
                     }
                 }
@@ -4287,6 +4287,25 @@ public class AIToolAgent {
             double winRateDecimal = perf.totalTrades > 0 ? (double) perf.wins / perf.totalTrades : 0.0;
             double lossRateDecimal = perf.totalTrades > 0 ? (double) perf.losses / perf.totalTrades : 0.0;
             perf.expectancy = (winRateDecimal * perf.avgWin) - (lossRateDecimal * perf.avgLoss);
+            
+            // Calculate Profit Factor: Gross Profit / Gross Loss
+            perf.profitFactor = totalLossPL > 0 ? totalWinPL / totalLossPL : (totalWinPL > 0 ? Double.MAX_VALUE : 0.0);
+            
+            // Calculate Sharpe Ratio (simplified: Return / StdDev of returns)
+            if (allTrades != null && allTrades.size() >= 2) {
+                double[] returns = allTrades.stream()
+                    .filter(t -> t.status.equals("CLOSED_WIN") || t.status.equals("CLOSED_LOSS"))
+                    .mapToDouble(t -> t.profitLossPct)
+                    .toArray();
+                if (returns.length > 0) {
+                    double mean = java.util.Arrays.stream(returns).average().orElse(0);
+                    double variance = java.util.Arrays.stream(returns)
+                        .map(r -> Math.pow(r - mean, 2))
+                        .average().orElse(0);
+                    double stdDev = Math.sqrt(variance);
+                    perf.sharpeRatio = stdDev > 0 ? (mean / stdDev) * Math.sqrt(252) : 0; // Annualized
+                }
+            }
 
             // Store expectancy metrics in the trade for historical tracking
             trade.avgWin = perf.avgWin;
@@ -4966,7 +4985,17 @@ public class AIToolAgent {
                 result.add(copy);
             }
         }
-        result.sort((a, b) -> Double.compare(b.winRate, a.winRate));
+        // Sort by professional metrics: expectancy (primary), then profit factor, then sharpe ratio
+        result.sort((a, b) -> {
+            // Primary: Expectancy (the REAL metric)
+            int expCompare = Double.compare(b.expectancy, a.expectancy);
+            if (expCompare != 0) return expCompare;
+            // Secondary: Profit Factor (risk/reward ratio)
+            int pfCompare = Double.compare(b.profitFactor, a.profitFactor);
+            if (pfCompare != 0) return pfCompare;
+            // Tertiary: Sharpe Ratio (risk-adjusted returns)
+            return Double.compare(b.sharpeRatio, a.sharpeRatio);
+        });
         return result.subList(0, Math.min(maxResults, result.size()));
     }
 
@@ -5130,11 +5159,16 @@ public class AIToolAgent {
             .filter(p -> p.totalTrades >= 3)
             .collect(Collectors.toList());
         
-        // Sort by combined score: winRate * log(trades+1) to balance both factors
+        // Sort by professional metrics: expectancy (primary), then profit factor, then sharpe ratio
         qualified.sort((a, b) -> {
-            double scoreA = a.winRate * Math.log(a.totalTrades + 1);
-            double scoreB = b.winRate * Math.log(b.totalTrades + 1);
-            return Double.compare(scoreB, scoreA);
+            // Primary: Expectancy (the REAL metric)
+            int expCompare = Double.compare(b.expectancy, a.expectancy);
+            if (expCompare != 0) return expCompare;
+            // Secondary: Profit Factor (risk/reward ratio)
+            int pfCompare = Double.compare(b.profitFactor, a.profitFactor);
+            if (pfCompare != 0) return pfCompare;
+            // Tertiary: Sharpe Ratio (risk-adjusted returns)
+            return Double.compare(b.sharpeRatio, a.sharpeRatio);
         });
         
         // Return top 5

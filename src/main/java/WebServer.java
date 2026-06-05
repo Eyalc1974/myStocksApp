@@ -7122,11 +7122,11 @@ public class WebServer {
                 
                 // Pinned master strategies always shown at the bottom (only active trading masters)
                 java.util.Set<String> PINNED_MASTERS = new java.util.LinkedHashSet<>(java.util.Arrays.asList("MASTER_5_PULLBACK_MA20","MASTER_6_VOLUME_BREAKOUT","MASTER_8_STRONG_TREND"));
-                // Filtered agents (success rate > 50% + INST_SWING_V1) — these get pre-checked (same as scheduled runs)
+                // Filtered agents (MASTER_7_VIX_MARKET_FILTER only) — these get pre-checked (same as scheduled runs)
                 java.util.Set<String> filteredAgentIds = new java.util.HashSet<>();
                 for (String agentId : AIToolAgent.getFilteredAgentsForScheduledRun()) filteredAgentIds.add(agentId);
 
-                sb.append("<div style='color:#c4b5fd;font-size:12px;margin-bottom:8px;'>Select agents to run (✅ = >50% win rate or INST_SWING_V1 pre-checked, others unchecked):</div>");
+                sb.append("<div style='color:#c4b5fd;font-size:12px;margin-bottom:8px;'>Select agents to run (✅ = MASTER_7_VIX_MARKET_FILTER pre-checked, others unchecked):</div>");
                 sb.append("<form method='post' action='/aitool-full-scan' style='margin:0;'>");
 
                 int agentIdx = 0;
@@ -7146,27 +7146,27 @@ public class WebServer {
                     boolean isFilteredAgent = filteredAgentIds.contains(p.agentId);
                     String bgColor = isFilteredAgent ? "#1a2e1a" : (agentIdx % 2 == 0 ? "#2d2a5e" : "#1e1b4b");
                     String border = isFilteredAgent ? "border:1px solid #22c55e;" : "border:1px solid transparent;";
-                    sb.append("<div style='display:flex;align-items:center;gap:8px;padding:6px 8px;background:").append(bgColor).append(";").append(border).append("border-radius:4px;margin-bottom:4px;'>");
-                    sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(p.agentId)).append("' style='width:16px;height:16px;'");
+                    sb.append("<div style='display:flex;align-items:center;gap:4px;padding:4px 6px;background:").append(bgColor).append(";").append(border).append("border-radius:4px;margin-bottom:2px;'>");
+                    sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(p.agentId)).append("' style='width:14px;height:14px;'");
                     if (isFilteredAgent) sb.append(" checked");
                     sb.append(" />");
-                    sb.append("<span style='color:#e5e7eb;font-weight:500;flex:1;'>");
+                    sb.append("<span style='color:#e5e7eb;font-weight:500;font-size:12px;'>");
                     if (isFilteredAgent) sb.append("✅ ");
                     sb.append(escapeHtml(p.agentId)).append("</span>");
-                    sb.append("<span style='color:#a78bfa;font-size:11px;'>").append(p.type != null ? p.type : "").append("</span>");
+                    sb.append("<span style='color:#a78bfa;font-size:10px;'>").append(p.type != null ? p.type : "").append("</span>");
                     if (p.totalTrades > 0) {
                         String wrColor = p.winRate >= 70 ? "#22c55e" : "#eab308";
-                        sb.append("<span style='color:").append(wrColor).append(";font-weight:600;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
-                        sb.append("<span style='color:#9ca3af;font-size:11px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades</span>");
+                        sb.append("<span style='color:").append(wrColor).append(";font-weight:600;font-size:11px;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
+                        sb.append("<span style='color:#9ca3af;font-size:10px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades</span>");
                     } else {
                         long openCnt = p.recentTrades != null ? p.recentTrades.stream().filter(t -> "OPEN".equals(t.status)).count() : 0;
                         if (openCnt > 0) {
-                            sb.append("<span style='color:#facc15;font-size:11px;'>🕐 ").append(openCnt).append(" open</span>");
+                            sb.append("<span style='color:#facc15;font-size:10px;'>🕐 ").append(openCnt).append(" open</span>");
                         } else {
-                            sb.append("<span style='color:#6b7280;font-size:11px;'>No trades yet</span>");
+                            sb.append("<span style='color:#6b7280;font-size:10px;'>No trades yet</span>");
                         }
                     }
-                    sb.append("<a href='/agent-detail?id=").append(urlEncode(p.agentId)).append("' style='color:#60a5fa;font-size:11px;text-decoration:none;' title='Agent detail page'>📋</a>");
+                    sb.append("<a href='/agent-detail?id=").append(urlEncode(p.agentId)).append("' style='color:#60a5fa;font-size:10px;text-decoration:none;' title='Agent detail page'>📋</a>");
                     sb.append("</div>");
                     agentIdx++;
                 }
@@ -7181,29 +7181,29 @@ public class WebServer {
                     boolean isFilter = masterCfg != null && !masterCfg.masterStrategy;
                     String bgPinned = isFilter ? "#2a1a0e" : "#1a1a2e";
                     String borderPinned = isFilter ? "border:1px solid #f59e0b;" : "border:1px solid #6366f1;";
-                    sb.append("<div style='display:flex;align-items:center;gap:8px;padding:6px 8px;background:").append(bgPinned).append(";").append(borderPinned).append("border-radius:4px;margin-bottom:4px;'>");
+                    sb.append("<div style='display:flex;align-items:center;gap:4px;padding:4px 6px;background:").append(bgPinned).append(";").append(borderPinned).append("border-radius:4px;margin-bottom:2px;'>");
                     if (!isFilter) {
-                        sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(masterId)).append("' style='width:16px;height:16px;' />");
+                        sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(masterId)).append("' style='width:14px;height:14px;' />");
                     } else {
-                        sb.append("<input type='checkbox' disabled title='Market filter — not a trading strategy' style='width:16px;height:16px;opacity:0.4;' />");
+                        sb.append("<input type='checkbox' disabled title='Market filter — not a trading strategy' style='width:14px;height:14px;opacity:0.4;' />");
                     }
-                    sb.append("<span style='color:#e5e7eb;font-weight:500;flex:1;'>").append(escapeHtml(masterName)).append("</span>");
-                    sb.append("<span style='color:#818cf8;font-size:11px;'>").append(escapeHtml(masterType)).append("</span>");
+                    sb.append("<span style='color:#e5e7eb;font-weight:500;font-size:12px;'>").append(escapeHtml(masterName)).append("</span>");
+                    sb.append("<span style='color:#818cf8;font-size:10px;'>").append(escapeHtml(masterType)).append("</span>");
                     if (masterPerf != null && masterPerf.totalTrades > 0) {
                         String wrColor2 = masterPerf.winRate >= 70 ? "#22c55e" : "#eab308";
-                        sb.append("<span style='color:").append(wrColor2).append(";font-weight:600;'>").append(String.format("%.1f%%", masterPerf.winRate)).append("</span>");
-                        sb.append("<span style='color:#9ca3af;font-size:11px;'>").append(masterPerf.wins).append("/").append(masterPerf.totalTrades).append(" trades</span>");
+                        sb.append("<span style='color:").append(wrColor2).append(";font-weight:600;font-size:11px;'>").append(String.format("%.1f%%", masterPerf.winRate)).append("</span>");
+                        sb.append("<span style='color:#9ca3af;font-size:10px;'>").append(masterPerf.wins).append("/").append(masterPerf.totalTrades).append(" trades</span>");
                     } else if (!isFilter && masterPerf != null) {
                         long openCntM = masterPerf.recentTrades != null ? masterPerf.recentTrades.stream().filter(t -> "OPEN".equals(t.status)).count() : 0;
                         if (openCntM > 0) {
-                            sb.append("<span style='color:#facc15;font-size:11px;'>🕐 ").append(openCntM).append(" open</span>");
+                            sb.append("<span style='color:#facc15;font-size:10px;'>🕐 ").append(openCntM).append(" open</span>");
                         } else {
-                            sb.append("<span style='color:#6b7280;font-size:11px;'>No trades yet</span>");
+                            sb.append("<span style='color:#6b7280;font-size:10px;'>No trades yet</span>");
                         }
                     } else {
-                        sb.append("<span style='color:#6b7280;font-size:11px;'>").append(isFilter ? "Market Filter" : "No trades yet").append("</span>");
+                        sb.append("<span style='color:#6b7280;font-size:10px;'>").append(isFilter ? "Market Filter" : "No trades yet").append("</span>");
                     }
-                    sb.append("<a href='/agent-detail?id=").append(urlEncode(masterId)).append("' style='color:#60a5fa;font-size:11px;text-decoration:none;' title='Agent detail page'>📋</a>");
+                    sb.append("<a href='/agent-detail?id=").append(urlEncode(masterId)).append("' style='color:#60a5fa;font-size:10px;text-decoration:none;' title='Agent detail page'>📋</a>");
                     sb.append("</div>");
                     if (!isFilter) agentIdx++;
                 }
@@ -7271,6 +7271,301 @@ public class WebServer {
                     sb.append("</div>");
                 }
                 sb.append("</div>");
+                sb.append("</div>");
+
+                // ── 📡 Buy Recommendations ──
+                {
+                    List<AIToolAgent.ScanRecommendation> recs = new ArrayList<>(AIToolAgent.getRecentRecommendations());
+                    // Sort: best R:R first, then highest score, then newest timestamp
+                    recs.sort((a, b) -> {
+                        double rrA = (a.entryPrice > 0 && a.entryPrice > a.stopLoss)
+                            ? (a.takeProfit - a.entryPrice) / (a.entryPrice - a.stopLoss) : 0;
+                        double rrB = (b.entryPrice > 0 && b.entryPrice > b.stopLoss)
+                            ? (b.takeProfit - b.entryPrice) / (b.entryPrice - b.stopLoss) : 0;
+                        if (Math.abs(rrB - rrA) > 0.01) return Double.compare(rrB, rrA);
+                        if (b.score != a.score) return Integer.compare(b.score, a.score);
+                        return (b.timestamp != null ? b.timestamp : "").compareTo(a.timestamp != null ? a.timestamp : "");
+                    });
+                    sb.append("<div class='card'>");
+                    sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;'>");
+                    sb.append("<div class='title' style='margin:0;'>📡 Buy Recommendations</div>");
+                    if (!recs.isEmpty()) {
+                        sb.append("<span style='color:#9ca3af;font-size:12px;'>").append(recs.size()).append(" signal(s) — best R:R first</span>");
+                    }
+                    sb.append("</div>");
+                    if (recs.isEmpty()) {
+                        sb.append("<div style='color:#6b7280;text-align:center;padding:20px;font-size:13px;'>")
+                          .append("No buy signals yet — run a scan to see recommendations here.")
+                          .append("</div>");
+                    } else {
+                        // Split into top 5 + others
+                        List<AIToolAgent.ScanRecommendation> top5 = recs.subList(0, Math.min(5, recs.size()));
+                        List<AIToolAgent.ScanRecommendation> others = recs.size() > 5 ? recs.subList(5, recs.size()) : new ArrayList<>();
+
+                        // ── helper rendered as a lambda-style block via a local method call ──
+                        // We render cards inline for both sections
+                        sb.append("<div style='color:#fcd34d;font-size:11px;font-weight:700;margin-bottom:6px;'>🏅 TOP PICKS (best R:R)</div>");
+                        sb.append("<div style='display:flex;flex-direction:column;gap:8px;'>");
+                        for (AIToolAgent.ScanRecommendation r : top5) {
+                            double cappedSL   = r.entryPrice * 0.98;
+                            double effectiveSL = Math.max(r.stopLoss, cappedSL); // tighter of strategy vs capped
+                            double slPct  = r.entryPrice > 0 ? ((r.entryPrice - effectiveSL) / r.entryPrice) * 100 : 0;
+                            double tpPct  = r.entryPrice > 0 ? ((r.takeProfit - r.entryPrice) / r.entryPrice) * 100 : 0;
+                            double rr     = slPct > 0 ? tpPct / slPct : 0;
+                            String rrColor = rr >= 2.0 ? "#22c55e" : rr >= 1.5 ? "#eab308" : "#9ca3af";
+                            double entryZoneHigh = r.entryPrice * 1.01;
+                            long elapsedMin = r.signalTimeMs > 0 ? (System.currentTimeMillis() - r.signalTimeMs) / 60000 : 999;
+                            boolean isExpired = elapsedMin >= 10;
+                            String borderColor = isExpired ? "#4b5563" : "#22c55e";
+                            sb.append("<div style='background:#0f1f35;border:1px solid #1f3a5f;border-left:4px solid ").append(borderColor).append(";")
+                              .append("border-radius:6px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;'>");
+                            sb.append("<div style='min-width:180px;'>");
+                            if (isExpired) {
+                                sb.append("<span style='font-size:18px;font-weight:800;color:#6b7280;'>⏸ ").append(escapeHtml(r.ticker)).append("</span>");
+                                sb.append(" <span style='background:#374151;color:#9ca3af;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;'>EXPIRED</span>");
+                            } else {
+                                sb.append("<span style='font-size:18px;font-weight:800;color:#22c55e;'>✅ ").append(escapeHtml(r.ticker)).append("</span>");
+                                sb.append(" <span style='background:#14532d;color:#86efac;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;'>VALID ").append(10 - elapsedMin).append("m left</span>");
+                            }
+                            sb.append("<div style='color:#6b7280;font-size:11px;margin-top:2px;'>").append(escapeHtml(r.timestamp))
+                              .append(" &nbsp;·&nbsp; Run #").append(r.runNumber).append("</div>");
+                            sb.append("</div>");
+                            sb.append("<div style='min-width:160px;'>");
+                            sb.append("<div style='color:#a78bfa;font-size:12px;font-weight:600;'>").append(escapeHtml(r.agentId)).append("</div>");
+                            if (r.score > 0) {
+                                String scoreColor = r.score >= 11 ? "#22c55e" : r.score >= 10 ? "#eab308" : "#9ca3af";
+                                sb.append("<div style='color:").append(scoreColor).append(";font-size:12px;font-weight:700;'>Score: ").append(r.score).append("/12</div>");
+                            }
+                            sb.append("</div>");
+                            sb.append("<div style='display:flex;gap:16px;flex-wrap:wrap;font-size:13px;'>");
+                            sb.append("<div><div style='color:#9ca3af;font-size:10px;'>ENTRY ZONE</div>")
+                              .append("<div style='color:#93c5fd;font-weight:700;'>$").append(String.format("%.2f", r.entryPrice))
+                              .append(" <span style='color:#6b7280;font-weight:400;'>– $").append(String.format("%.2f", entryZoneHigh)).append("</span></div></div>");
+                            sb.append("<div><div style='color:#9ca3af;font-size:10px;'>SL <span style='color:#f59e0b;'>(max $20 risk)</span></div>")
+                              .append("<div style='color:#ef4444;font-weight:700;'>$").append(String.format("%.2f", effectiveSL))
+                              .append(" <span style='font-size:10px;color:#ef4444;'>-").append(String.format("%.1f%%", slPct)).append("</span></div></div>");
+                            sb.append("<div><div style='color:#9ca3af;font-size:10px;'>TAKE PROFIT</div>")
+                              .append("<div style='color:#22c55e;font-weight:700;'>$").append(String.format("%.2f", r.takeProfit))
+                              .append(" <span style='font-size:10px;color:#22c55e;'>+").append(String.format("%.1f%%", tpPct)).append("</span></div></div>");
+                            sb.append("<div><div style='color:#9ca3af;font-size:10px;'>R:R</div>")
+                              .append("<div style='color:").append(rrColor).append(";font-weight:700;'>1:")
+                              .append(String.format("%.1f", rr)).append("</div></div>");
+                            sb.append("</div></div>");
+                        }
+                        sb.append("</div>");
+
+                        if (!others.isEmpty()) {
+                            sb.append("<div style='margin-top:14px;'>");
+                            sb.append("<details><summary style='cursor:pointer;color:#9ca3af;font-size:12px;font-weight:600;padding:4px 0;'>▶ Other signals (").append(others.size()).append(")</summary>");
+                            sb.append("<div style='display:flex;flex-direction:column;gap:6px;margin-top:8px;'>");
+                            for (AIToolAgent.ScanRecommendation r : others) {
+                                double cappedSL   = r.entryPrice * 0.98;
+                                double effectiveSL = Math.max(r.stopLoss, cappedSL);
+                                double slPct  = r.entryPrice > 0 ? ((r.entryPrice - effectiveSL) / r.entryPrice) * 100 : 0;
+                                double tpPct  = r.entryPrice > 0 ? ((r.takeProfit - r.entryPrice) / r.entryPrice) * 100 : 0;
+                                double rr     = slPct > 0 ? tpPct / slPct : 0;
+                                String rrColor = rr >= 2.0 ? "#22c55e" : rr >= 1.5 ? "#eab308" : "#9ca3af";
+                                long elapsedMin = r.signalTimeMs > 0 ? (System.currentTimeMillis() - r.signalTimeMs) / 60000 : 999;
+                                boolean isExpired = elapsedMin >= 10;
+                                sb.append("<div style='background:#0d1a2e;border:1px solid #1f3a5f;border-left:3px solid ")
+                                  .append(isExpired ? "#374151" : "#6366f1").append(";border-radius:5px;padding:8px 12px;")
+                                  .append("display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;'>");
+                                sb.append("<span style='font-weight:700;color:").append(isExpired ? "#6b7280" : "#93c5fd").append(";min-width:60px;'>")
+                                  .append(escapeHtml(r.ticker)).append("</span>");
+                                sb.append("<span style='color:#a78bfa;'>").append(escapeHtml(r.agentId)).append("</span>");
+                                sb.append("<span style='color:#9ca3af;'>Entry: <b style='color:#93c5fd;'>$").append(String.format("%.2f", r.entryPrice)).append("</b></span>");
+                                sb.append("<span style='color:#9ca3af;'>SL: <b style='color:#ef4444;'>$").append(String.format("%.2f", effectiveSL)).append("</b></span>");
+                                sb.append("<span style='color:#9ca3af;'>TP: <b style='color:#22c55e;'>$").append(String.format("%.2f", r.takeProfit)).append("</b></span>");
+                                sb.append("<span style='color:").append(rrColor).append(";font-weight:700;'>R:R 1:").append(String.format("%.1f", rr)).append("</span>");
+                                if (isExpired) sb.append(" <span style='color:#6b7280;font-size:10px;'>EXPIRED</span>");
+                                else sb.append(" <span style='color:#86efac;font-size:10px;'>").append(10 - elapsedMin).append("m</span>");
+                                sb.append("</div>");
+                            }
+                            sb.append("</div></details></div>");
+                        }
+                    }
+                    sb.append("</div>");
+                }
+
+                // Saved Configurations with Cumulative Tracking Section
+                sb.append("<div class='card'>");
+                sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;'>");
+                sb.append("<div class='title' style='margin-bottom:0;'>💾 Saved Configurations & Cumulative Tracking</div>");
+                sb.append("<form method='post' action='/aitool-clear-trackers' style='margin:0;' onsubmit=\"return confirm('Clear ALL tracked agents? This cannot be undone.')\">");
+                sb.append("<button type='submit' style='background:#7f1d1d;border:1px solid #ef4444;color:#fca5a5;padding:5px 12px;font-size:12px;border-radius:6px;cursor:pointer;'>🗑️ Clear All</button>");
+                sb.append("</form>");
+                sb.append("</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>Track your best performing agents over time. Agents with >75% win rate are auto-saved daily.</div>");
+                
+                // Show saved trackers with cumulative stats
+                Map<String, ScoringConfig.SavedAgentTracker> trackers = ScoringConfig.getSavedAgentTrackers();
+                String currentSavedAgent = ScoringConfig.getActiveAgentConfig();
+                
+                if (trackers != null && !trackers.isEmpty()) {
+                    sb.append("<div style='margin-bottom:16px;'>");
+                    sb.append("<div style='font-weight:600;margin-bottom:10px;color:#22c55e;'>📊 Your Tracked Agents (Cumulative Stats):</div>");
+                    sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
+                    sb.append("<thead><tr style='background:#1f2a44;'>");
+                    sb.append("<th style='padding:10px;text-align:left;'>Agent</th>");
+                    sb.append("<th style='padding:10px;text-align:center;'>Cumulative</th>");
+                    sb.append("<th style='padding:10px;text-align:center;'>Win Rate</th>");
+                    sb.append("<th style='padding:10px;text-align:right;'>Total P/L</th>");
+                    sb.append("<th style='padding:10px;text-align:center;'>Since</th>");
+                    sb.append("<th style='padding:10px;text-align:center;'>Actions</th>");
+                    sb.append("</tr></thead><tbody>");
+                    
+                    for (ScoringConfig.SavedAgentTracker tracker : trackers.values()) {
+                        double cumWinRate = tracker.cumulativeTrades > 0 ? (tracker.cumulativeWins * 100.0 / tracker.cumulativeTrades) : 0;
+                        String winColor = cumWinRate >= 75 ? "#22c55e" : cumWinRate >= 50 ? "#eab308" : "#ef4444";
+                        boolean isActive = tracker.agentId.equals(currentSavedAgent);
+                        String rowBg = isActive ? "background:rgba(34,197,94,0.15);" : "";
+                        
+                        sb.append("<tr style='border-bottom:1px solid #1f2a44;").append(rowBg).append("'>");
+                        sb.append("<td style='padding:10px;'>");
+                        if (isActive) sb.append("✅ ");
+                        sb.append("<b>").append(escapeHtml(tracker.agentId)).append("</b>");
+                        if (tracker.type != null) sb.append("<div style='color:#6b7280;font-size:11px;'>").append(escapeHtml(tracker.type)).append("</div>");
+                        sb.append("</td>");
+                        sb.append("<td style='padding:10px;text-align:center;font-weight:600;'>").append(tracker.cumulativeWins).append("/").append(tracker.cumulativeTrades).append("</td>");
+                        sb.append("<td style='padding:10px;text-align:center;color:").append(winColor).append(";font-weight:700;'>").append(String.format("%.1f%%", cumWinRate)).append("</td>");
+                        sb.append("<td style='padding:10px;text-align:right;color:").append(tracker.cumulativeProfitLoss >= 0 ? "#22c55e" : "#ef4444").append(";'>$").append(String.format("%.2f", tracker.cumulativeProfitLoss)).append("</td>");
+                        sb.append("<td style='padding:10px;text-align:center;color:#6b7280;font-size:11px;'>").append(tracker.firstSavedDate != null ? tracker.firstSavedDate : "-").append("</td>");
+                        sb.append("<td style='padding:10px;text-align:center;'>");
+                        sb.append("<div style='display:flex;gap:6px;justify-content:center;'>");
+                        // Set as active button
+                        if (!isActive) {
+                            sb.append("<form method='post' action='/aitool-save-config' style='margin:0;'>");
+                            sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(tracker.agentId)).append("' />");
+                            sb.append("<button type='submit' style='background:#3b82f6;color:#fff;padding:4px 8px;font-size:11px;'>Use</button>");
+                            sb.append("</form>");
+                        }
+                        // Delete button
+                        sb.append("<form method='post' action='/aitool-delete-tracker' style='margin:0;'>");
+                        sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(tracker.agentId)).append("' />");
+                        sb.append("<button type='submit' style='background:#ef4444;color:#fff;padding:4px 8px;font-size:11px;'>🗑️</button>");
+                        sb.append("</form>");
+                        sb.append("</div>");
+                        sb.append("</td>");
+                        sb.append("</tr>");
+                    }
+                    sb.append("</tbody></table>");
+                    sb.append("</div>");
+                } else {
+                    sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;margin-bottom:16px;color:#6b7280;'>");
+                    sb.append("No tracked agents yet. Save an agent below to start tracking cumulative performance.");
+                    sb.append("</div>");
+                }
+                
+                // List top agents to save (>70% win rate highlighted)
+                sb.append("<div id='top-agents' style='font-weight:600;margin-bottom:10px;color:#93c5fd;'>🏆 Top Performing Agents (click to track):</div>");
+                sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;'>");
+                List<AIToolAgent.AgentPerformance> topAgents = new ArrayList<>(performances);
+                // Sort by professional metrics: expectancy (primary), then profit factor, then sharpe ratio
+                topAgents.sort((a, b) -> {
+                    // Primary: Expectancy (the REAL metric)
+                    int expCompare = Double.compare(b.expectancy, a.expectancy);
+                    if (expCompare != 0) return expCompare;
+                    // Secondary: Profit Factor (risk/reward ratio)
+                    int pfCompare = Double.compare(b.profitFactor, a.profitFactor);
+                    if (pfCompare != 0) return pfCompare;
+                    // Tertiary: Sharpe Ratio (risk-adjusted returns)
+                    return Double.compare(b.sharpeRatio, a.sharpeRatio);
+                });
+                int savedCount = 0;
+                for (AIToolAgent.AgentPerformance p : topAgents) {
+                    if (savedCount >= 10) break;
+                    if (p.totalTrades < 3) continue;
+                    boolean isWinner = p.winRate >= 70;
+                    boolean isTracked = trackers != null && trackers.containsKey(p.agentId);
+                    boolean notifyEnabled = ScoringConfig.isTradeNotificationEnabled(p.agentId);
+                    boolean isLocked = AIToolAgent.isAgentLocked(p.agentId);
+                    boolean codeVersionChanged = AIToolAgent.hasCodeVersionChanged(p.agentId);
+                    String winColor = p.winRate >= 70 ? "#22c55e" : p.winRate >= 50 ? "#eab308" : "#ef4444";
+                    String borderColor = isLocked ? "#f59e0b" : (isTracked ? "#22c55e" : (isWinner ? "#22c55e" : "#1f2a44"));
+                    sb.append("<div style='position:relative;'>");
+                    sb.append("<form method='post' action='/aitool-track-agent' style='margin:0;'>");
+                    sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(p.agentId)).append("' />");
+                    sb.append("<button type='submit' style='width:100%;text-align:left;background:#0b1220;border:2px solid ").append(borderColor).append(";border-radius:8px;padding:12px;padding-right:").append(isTracked ? "80px" : "44px").append(";cursor:pointer;outline:none;'>");
+                    sb.append("<div style='display:flex;justify-content:space-between;align-items:center;'>");
+                    sb.append("<div style='font-weight:600;color:#e5e7eb;'>");
+                    if (isLocked) sb.append("🔒 ");
+                    if (isWinner) sb.append("🏆 ");
+                    if (isTracked) sb.append("✓ ");
+                    sb.append(escapeHtml(p.agentId)).append("</div>");
+                    sb.append("<div style='display:flex;align-items:center;gap:8px;'>");
+                    sb.append("<span style='color:").append(winColor).append(";font-weight:700;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
+                    sb.append("</div>");
+                    sb.append("</div>");
+                    sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-top:4px;'>");
+                    sb.append("<span style='color:#9ca3af;font-size:12px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades | P/L: $").append(String.format("%.2f", p.totalProfitLoss)).append("</span>");
+                    sb.append("<a href='/agent-detail?id=").append(urlEncode(p.agentId)).append("' style='color:#60a5fa;font-size:11px;padding:2px 6px;background:#1e3a5f;border-radius:4px;text-decoration:none;' onclick='event.stopPropagation();'>📋 Detail</a>");
+                    sb.append("</div>");
+                    // Show code version warning if locked and code changed
+                    if (isLocked && codeVersionChanged) {
+                        AIToolAgent.AgentConfig cfg = AIToolAgent.getAgentConfig(p.agentId);
+                        sb.append("<div style='color:#f59e0b;font-size:11px;margin-top:4px;'>⚠️ Code changed since lock (was: ").append(cfg != null && cfg.codeVersion != null ? cfg.codeVersion : "?").append(")</div>");
+                    }
+                    sb.append("</button>");
+                    sb.append("</form>");
+                    // Lock/Unlock toggle button (key icon) - show for agents with >70% win rate
+                    if (p.winRate >= 70) {
+                        sb.append("<form method='post' action='/aitool-toggle-lock' style='position:absolute;top:8px;right:").append(isTracked ? "44px" : "8px").append(";margin:0;z-index:10;' onclick='event.stopPropagation();'>");
+                        sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(p.agentId)).append("' />");
+                        sb.append("<button type='submit' title='").append(isLocked ? "Unlock agent (allow evolution)" : "Lock agent (prevent evolution)").append("' style='background:").append(isLocked ? "#f59e0b" : "#374151").append(";border:2px solid ").append(isLocked ? "#d97706" : "#4b5563").append(";border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 4px rgba(0,0,0,0.3);'>");
+                        sb.append(isLocked ? "🔐" : "🔑");
+                        sb.append("</button>");
+                        sb.append("</form>");
+                    }
+                    // Notification toggle button (ring icon) - only show if tracked
+                    if (isTracked) {
+                        sb.append("<form method='post' action='/aitool-toggle-notify' style='position:absolute;top:8px;right:8px;margin:0;z-index:10;' onclick='event.stopPropagation();'>");
+                        sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(p.agentId)).append("' />");
+                        sb.append("<button type='submit' title='").append(notifyEnabled ? "Disable" : "Enable").append(" Discord notifications for trades' style='background:").append(notifyEnabled ? "#22c55e" : "#374151").append(";border:2px solid ").append(notifyEnabled ? "#16a34a" : "#4b5563").append(";border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 4px rgba(0,0,0,0.3);'>");
+                        sb.append(notifyEnabled ? "🔔" : "🔕");
+                        sb.append("</button>");
+                        sb.append("</form>");
+                    }
+                    sb.append("</div>");
+                    savedCount++;
+                }
+                sb.append("</div>");
+                sb.append("</div>");
+
+                // Scan Detail Log Viewer
+                sb.append("<div class='card'><div class='title'>🔍 Scan Detail Log — Operations Trace</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:8px;'>Live log from <code>newStrategies/scan-detail.log</code> — auto-cleaned every 48h. Shows every agent decision: PASS, REJECT (with reason), MONITOR checks, EOD closes.</div>");
+                java.nio.file.Path scanLogPath = java.nio.file.Paths.get("newStrategies", "scan-detail.log");
+                if (!java.nio.file.Files.exists(scanLogPath)) {
+                    sb.append("<div style='color:#6b7280;padding:16px;text-align:center;'>No scan log yet — will appear after the first agent run.</div>");
+                } else {
+                    try {
+                        java.util.List<String> logLines = java.nio.file.Files.readAllLines(scanLogPath, java.nio.charset.StandardCharsets.UTF_8);
+                        // Show last 500 lines (newest at top)
+                        int start = Math.max(0, logLines.size() - 500);
+                        java.util.List<String> recent = logLines.subList(start, logLines.size());
+                        sb.append("<div style='margin-bottom:8px;color:#9ca3af;font-size:12px;'>Showing last ")
+                          .append(recent.size()).append(" of ").append(logLines.size()).append(" lines</div>");
+                        sb.append("<div style='background:#0d1117;border-radius:6px;padding:12px;max-height:500px;overflow-y:auto;font-family:monospace;font-size:11px;line-height:1.6;'>");
+                        for (int li = recent.size() - 1; li >= 0; li--) {
+                            String line = escapeHtml(recent.get(li));
+                            String color = "#e5e7eb";
+                            if (line.contains("✅ SIGNAL") || line.contains("PARTIAL") || line.contains("TAKE_PROFIT")) color = "#22c55e";
+                            else if (line.contains("❌ REJECT") || line.contains("STOP") || line.contains("FETCH FAIL") || line.contains("ERROR")) color = "#ef4444";
+                            else if (line.contains("MONITOR") && line.contains("HOLD")) color = "#60a5fa";
+                            else if (line.contains("MONITOR")) color = "#f59e0b";
+                            else if (line.contains("REGIME") && line.contains("VERY WEAK")) color = "#ef4444";
+                            else if (line.contains("REGIME") && line.contains("WEAK")) color = "#f59e0b";
+                            else if (line.contains("REGIME") && line.contains("HEALTHY")) color = "#22c55e";
+                            else if (line.contains("SCAN START") || line.contains("SCAN END") || line.contains("EOD")) color = "#a78bfa";
+                            else if (line.contains("═") || line.contains("─")) color = "#374151";
+                            else if (line.contains("SKIP")) color = "#6b7280";
+                            sb.append("<div style='color:").append(color).append(";'>").append(line).append("</div>");
+                        }
+                        sb.append("</div>");
+                    } catch (Exception e) {
+                        sb.append("<div style='color:#ef4444;'>Error reading log: ").append(escapeHtml(e.getMessage())).append("</div>");
+                    }
+                }
                 sb.append("</div>");
 
                 // Open Positions Section — top 20, deduplicated by ticker
@@ -7394,8 +7689,17 @@ public class WebServer {
                 sb.append("<th style='padding:10px 8px;text-align:center;border-bottom:1px solid #1f2a44;'>Config</th>");
                 sb.append("</tr></thead><tbody>");
 
-                // Sort by win rate descending (best performers first)
-                performances.sort((a, b) -> Double.compare(b.winRate, a.winRate));
+                // Sort by professional metrics: expectancy (primary), then profit factor, then sharpe ratio
+                performances.sort((a, b) -> {
+                    // Primary: Expectancy (the REAL metric)
+                    int expCompare = Double.compare(b.expectancy, a.expectancy);
+                    if (expCompare != 0) return expCompare;
+                    // Secondary: Profit Factor (risk/reward ratio)
+                    int pfCompare = Double.compare(b.profitFactor, a.profitFactor);
+                    if (pfCompare != 0) return pfCompare;
+                    // Tertiary: Sharpe Ratio (risk-adjusted returns)
+                    return Double.compare(b.sharpeRatio, a.sharpeRatio);
+                });
 
                 // Limit to top 10 agents
                 int maxRows = 10;
@@ -7648,157 +7952,6 @@ public class WebServer {
                 }
                 sb.append("</div>");
 
-                // ── 📡 Buy Recommendations ──
-                {
-                    List<AIToolAgent.ScanRecommendation> recs = new ArrayList<>(AIToolAgent.getRecentRecommendations());
-                    // Sort: best R:R first, then highest score, then newest timestamp
-                    recs.sort((a, b) -> {
-                        double rrA = (a.entryPrice > 0 && a.entryPrice > a.stopLoss)
-                            ? (a.takeProfit - a.entryPrice) / (a.entryPrice - a.stopLoss) : 0;
-                        double rrB = (b.entryPrice > 0 && b.entryPrice > b.stopLoss)
-                            ? (b.takeProfit - b.entryPrice) / (b.entryPrice - b.stopLoss) : 0;
-                        if (Math.abs(rrB - rrA) > 0.01) return Double.compare(rrB, rrA);
-                        if (b.score != a.score) return Integer.compare(b.score, a.score);
-                        return (b.timestamp != null ? b.timestamp : "").compareTo(a.timestamp != null ? a.timestamp : "");
-                    });
-                    sb.append("<div class='card'>");
-                    sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;'>");
-                    sb.append("<div class='title' style='margin:0;'>📡 Buy Recommendations</div>");
-                    if (!recs.isEmpty()) {
-                        sb.append("<span style='color:#9ca3af;font-size:12px;'>").append(recs.size()).append(" signal(s) — best R:R first</span>");
-                    }
-                    sb.append("</div>");
-                    if (recs.isEmpty()) {
-                        sb.append("<div style='color:#6b7280;text-align:center;padding:20px;font-size:13px;'>")
-                          .append("No buy signals yet — run a scan to see recommendations here.")
-                          .append("</div>");
-                    } else {
-                        // Split into top 5 + others
-                        List<AIToolAgent.ScanRecommendation> top5 = recs.subList(0, Math.min(5, recs.size()));
-                        List<AIToolAgent.ScanRecommendation> others = recs.size() > 5 ? recs.subList(5, recs.size()) : new ArrayList<>();
-
-                        // ── helper rendered as a lambda-style block via a local method call ──
-                        // We render cards inline for both sections
-                        sb.append("<div style='color:#fcd34d;font-size:11px;font-weight:700;margin-bottom:6px;'>🏅 TOP PICKS (best R:R)</div>");
-                        sb.append("<div style='display:flex;flex-direction:column;gap:8px;'>");
-                        for (AIToolAgent.ScanRecommendation r : top5) {
-                            double cappedSL   = r.entryPrice * 0.98;
-                            double effectiveSL = Math.max(r.stopLoss, cappedSL); // tighter of strategy vs capped
-                            double slPct  = r.entryPrice > 0 ? ((r.entryPrice - effectiveSL) / r.entryPrice) * 100 : 0;
-                            double tpPct  = r.entryPrice > 0 ? ((r.takeProfit - r.entryPrice) / r.entryPrice) * 100 : 0;
-                            double rr     = slPct > 0 ? tpPct / slPct : 0;
-                            String rrColor = rr >= 2.0 ? "#22c55e" : rr >= 1.5 ? "#eab308" : "#9ca3af";
-                            double entryZoneHigh = r.entryPrice * 1.01;
-                            long elapsedMin = r.signalTimeMs > 0 ? (System.currentTimeMillis() - r.signalTimeMs) / 60000 : 999;
-                            boolean isExpired = elapsedMin >= 10;
-                            String borderColor = isExpired ? "#4b5563" : "#22c55e";
-                            sb.append("<div style='background:#0f1f35;border:1px solid #1f3a5f;border-left:4px solid ").append(borderColor).append(";")
-                              .append("border-radius:6px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;'>");
-                            sb.append("<div style='min-width:180px;'>");
-                            if (isExpired) {
-                                sb.append("<span style='font-size:18px;font-weight:800;color:#6b7280;'>⏸ ").append(escapeHtml(r.ticker)).append("</span>");
-                                sb.append(" <span style='background:#374151;color:#9ca3af;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;'>EXPIRED</span>");
-                            } else {
-                                sb.append("<span style='font-size:18px;font-weight:800;color:#22c55e;'>✅ ").append(escapeHtml(r.ticker)).append("</span>");
-                                sb.append(" <span style='background:#14532d;color:#86efac;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;'>VALID ").append(10 - elapsedMin).append("m left</span>");
-                            }
-                            sb.append("<div style='color:#6b7280;font-size:11px;margin-top:2px;'>").append(escapeHtml(r.timestamp))
-                              .append(" &nbsp;·&nbsp; Run #").append(r.runNumber).append("</div>");
-                            sb.append("</div>");
-                            sb.append("<div style='min-width:160px;'>");
-                            sb.append("<div style='color:#a78bfa;font-size:12px;font-weight:600;'>").append(escapeHtml(r.agentId)).append("</div>");
-                            if (r.score > 0) {
-                                String scoreColor = r.score >= 11 ? "#22c55e" : r.score >= 10 ? "#eab308" : "#9ca3af";
-                                sb.append("<div style='color:").append(scoreColor).append(";font-size:12px;font-weight:700;'>Score: ").append(r.score).append("/12</div>");
-                            }
-                            sb.append("</div>");
-                            sb.append("<div style='display:flex;gap:16px;flex-wrap:wrap;font-size:13px;'>");
-                            sb.append("<div><div style='color:#9ca3af;font-size:10px;'>ENTRY ZONE</div>")
-                              .append("<div style='color:#93c5fd;font-weight:700;'>$").append(String.format("%.2f", r.entryPrice))
-                              .append(" <span style='color:#6b7280;font-weight:400;'>– $").append(String.format("%.2f", entryZoneHigh)).append("</span></div></div>");
-                            sb.append("<div><div style='color:#9ca3af;font-size:10px;'>SL <span style='color:#f59e0b;'>(max $20 risk)</span></div>")
-                              .append("<div style='color:#ef4444;font-weight:700;'>$").append(String.format("%.2f", effectiveSL))
-                              .append(" <span style='font-size:10px;color:#ef4444;'>-").append(String.format("%.1f%%", slPct)).append("</span></div></div>");
-                            sb.append("<div><div style='color:#9ca3af;font-size:10px;'>TAKE PROFIT</div>")
-                              .append("<div style='color:#22c55e;font-weight:700;'>$").append(String.format("%.2f", r.takeProfit))
-                              .append(" <span style='font-size:10px;color:#22c55e;'>+").append(String.format("%.1f%%", tpPct)).append("</span></div></div>");
-                            sb.append("<div><div style='color:#9ca3af;font-size:10px;'>R:R</div>")
-                              .append("<div style='color:").append(rrColor).append(";font-weight:700;'>1:")
-                              .append(String.format("%.1f", rr)).append("</div></div>");
-                            sb.append("</div></div>");
-                        }
-                        sb.append("</div>");
-
-                        if (!others.isEmpty()) {
-                            sb.append("<div style='margin-top:14px;'>");
-                            sb.append("<details><summary style='cursor:pointer;color:#9ca3af;font-size:12px;font-weight:600;padding:4px 0;'>▶ Other signals (").append(others.size()).append(")</summary>");
-                            sb.append("<div style='display:flex;flex-direction:column;gap:6px;margin-top:8px;'>");
-                            for (AIToolAgent.ScanRecommendation r : others) {
-                                double cappedSL   = r.entryPrice * 0.98;
-                                double effectiveSL = Math.max(r.stopLoss, cappedSL);
-                                double slPct  = r.entryPrice > 0 ? ((r.entryPrice - effectiveSL) / r.entryPrice) * 100 : 0;
-                                double tpPct  = r.entryPrice > 0 ? ((r.takeProfit - r.entryPrice) / r.entryPrice) * 100 : 0;
-                                double rr     = slPct > 0 ? tpPct / slPct : 0;
-                                String rrColor = rr >= 2.0 ? "#22c55e" : rr >= 1.5 ? "#eab308" : "#9ca3af";
-                                long elapsedMin = r.signalTimeMs > 0 ? (System.currentTimeMillis() - r.signalTimeMs) / 60000 : 999;
-                                boolean isExpired = elapsedMin >= 10;
-                                sb.append("<div style='background:#0d1a2e;border:1px solid #1f3a5f;border-left:3px solid ")
-                                  .append(isExpired ? "#374151" : "#6366f1").append(";border-radius:5px;padding:8px 12px;")
-                                  .append("display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;'>");
-                                sb.append("<span style='font-weight:700;color:").append(isExpired ? "#6b7280" : "#93c5fd").append(";min-width:60px;'>")
-                                  .append(escapeHtml(r.ticker)).append("</span>");
-                                sb.append("<span style='color:#a78bfa;'>").append(escapeHtml(r.agentId)).append("</span>");
-                                sb.append("<span style='color:#9ca3af;'>Entry: <b style='color:#93c5fd;'>$").append(String.format("%.2f", r.entryPrice)).append("</b></span>");
-                                sb.append("<span style='color:#9ca3af;'>SL: <b style='color:#ef4444;'>$").append(String.format("%.2f", effectiveSL)).append("</b></span>");
-                                sb.append("<span style='color:#9ca3af;'>TP: <b style='color:#22c55e;'>$").append(String.format("%.2f", r.takeProfit)).append("</b></span>");
-                                sb.append("<span style='color:").append(rrColor).append(";font-weight:700;'>R:R 1:").append(String.format("%.1f", rr)).append("</span>");
-                                if (isExpired) sb.append(" <span style='color:#6b7280;font-size:10px;'>EXPIRED</span>");
-                                else sb.append(" <span style='color:#86efac;font-size:10px;'>").append(10 - elapsedMin).append("m</span>");
-                                sb.append("</div>");
-                            }
-                            sb.append("</div></details></div>");
-                        }
-                    }
-                    sb.append("</div>");
-                }
-
-                // Scan Detail Log Viewer
-                sb.append("<div class='card'><div class='title'>🔍 Scan Detail Log — Operations Trace</div>");
-                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:8px;'>Live log from <code>newStrategies/scan-detail.log</code> — auto-cleaned every 48h. Shows every agent decision: PASS, REJECT (with reason), MONITOR checks, EOD closes.</div>");
-                java.nio.file.Path scanLogPath = java.nio.file.Paths.get("newStrategies", "scan-detail.log");
-                if (!java.nio.file.Files.exists(scanLogPath)) {
-                    sb.append("<div style='color:#6b7280;padding:16px;text-align:center;'>No scan log yet — will appear after the first agent run.</div>");
-                } else {
-                    try {
-                        java.util.List<String> logLines = java.nio.file.Files.readAllLines(scanLogPath, java.nio.charset.StandardCharsets.UTF_8);
-                        // Show last 500 lines (newest at top)
-                        int start = Math.max(0, logLines.size() - 500);
-                        java.util.List<String> recent = logLines.subList(start, logLines.size());
-                        sb.append("<div style='margin-bottom:8px;color:#9ca3af;font-size:12px;'>Showing last ")
-                          .append(recent.size()).append(" of ").append(logLines.size()).append(" lines</div>");
-                        sb.append("<div style='background:#0d1117;border-radius:6px;padding:12px;max-height:500px;overflow-y:auto;font-family:monospace;font-size:11px;line-height:1.6;'>");
-                        for (int li = recent.size() - 1; li >= 0; li--) {
-                            String line = escapeHtml(recent.get(li));
-                            String color = "#e5e7eb";
-                            if (line.contains("✅ SIGNAL") || line.contains("PARTIAL") || line.contains("TAKE_PROFIT")) color = "#22c55e";
-                            else if (line.contains("❌ REJECT") || line.contains("STOP") || line.contains("FETCH FAIL") || line.contains("ERROR")) color = "#ef4444";
-                            else if (line.contains("MONITOR") && line.contains("HOLD")) color = "#60a5fa";
-                            else if (line.contains("MONITOR")) color = "#f59e0b";
-                            else if (line.contains("REGIME") && line.contains("VERY WEAK")) color = "#ef4444";
-                            else if (line.contains("REGIME") && line.contains("WEAK")) color = "#f59e0b";
-                            else if (line.contains("REGIME") && line.contains("HEALTHY")) color = "#22c55e";
-                            else if (line.contains("SCAN START") || line.contains("SCAN END") || line.contains("EOD")) color = "#a78bfa";
-                            else if (line.contains("═") || line.contains("─")) color = "#374151";
-                            else if (line.contains("SKIP")) color = "#6b7280";
-                            sb.append("<div style='color:").append(color).append(";'>").append(line).append("</div>");
-                        }
-                        sb.append("</div>");
-                    } catch (Exception e) {
-                        sb.append("<div style='color:#ef4444;'>Error reading log: ").append(escapeHtml(e.getMessage())).append("</div>");
-                    }
-                }
-                sb.append("</div>");
-
                 // Source files info
                 sb.append("<div class='card'><div class='title'>📁 Agent Sources</div>");
                 sb.append("<div style='color:#9ca3af;font-size:13px;'>");
@@ -7807,143 +7960,6 @@ public class WebServer {
                 sb.append("<div>• <b>intraday-variants.json</b> - 6 intraday VWAP strategies</div>");
                 sb.append("<div>• <b>swing-variants.json</b> - 10 swing trading strategies</div>");
                 sb.append("<div>• <b>newStrategies/</b> - Evolved agent configurations (auto-generated)</div>");
-                sb.append("</div>");
-                sb.append("</div>");
-
-                // Evolution log removed (agent evolution logic has been removed)
-
-
-                // Saved Configurations with Cumulative Tracking Section
-                sb.append("<div class='card'>");
-                sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;'>");
-                sb.append("<div class='title' style='margin-bottom:0;'>💾 Saved Configurations & Cumulative Tracking</div>");
-                sb.append("<form method='post' action='/aitool-clear-trackers' style='margin:0;' onsubmit=\"return confirm('Clear ALL tracked agents? This cannot be undone.')\">");
-                sb.append("<button type='submit' style='background:#7f1d1d;border:1px solid #ef4444;color:#fca5a5;padding:5px 12px;font-size:12px;border-radius:6px;cursor:pointer;'>🗑️ Clear All</button>");
-                sb.append("</form>");
-                sb.append("</div>");
-                sb.append("<div style='color:#9ca3af;margin-bottom:12px;'>Track your best performing agents over time. Agents with >75% win rate are auto-saved daily.</div>");
-                
-                // Show saved trackers with cumulative stats
-                Map<String, ScoringConfig.SavedAgentTracker> trackers = ScoringConfig.getSavedAgentTrackers();
-                String currentSavedAgent = ScoringConfig.getActiveAgentConfig();
-                
-                if (trackers != null && !trackers.isEmpty()) {
-                    sb.append("<div style='margin-bottom:16px;'>");
-                    sb.append("<div style='font-weight:600;margin-bottom:10px;color:#22c55e;'>📊 Your Tracked Agents (Cumulative Stats):</div>");
-                    sb.append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
-                    sb.append("<thead><tr style='background:#1f2a44;'>");
-                    sb.append("<th style='padding:10px;text-align:left;'>Agent</th>");
-                    sb.append("<th style='padding:10px;text-align:center;'>Cumulative</th>");
-                    sb.append("<th style='padding:10px;text-align:center;'>Win Rate</th>");
-                    sb.append("<th style='padding:10px;text-align:right;'>Total P/L</th>");
-                    sb.append("<th style='padding:10px;text-align:center;'>Since</th>");
-                    sb.append("<th style='padding:10px;text-align:center;'>Actions</th>");
-                    sb.append("</tr></thead><tbody>");
-                    
-                    for (ScoringConfig.SavedAgentTracker tracker : trackers.values()) {
-                        double cumWinRate = tracker.cumulativeTrades > 0 ? (tracker.cumulativeWins * 100.0 / tracker.cumulativeTrades) : 0;
-                        String winColor = cumWinRate >= 75 ? "#22c55e" : cumWinRate >= 50 ? "#eab308" : "#ef4444";
-                        boolean isActive = tracker.agentId.equals(currentSavedAgent);
-                        String rowBg = isActive ? "background:rgba(34,197,94,0.15);" : "";
-                        
-                        sb.append("<tr style='border-bottom:1px solid #1f2a44;").append(rowBg).append("'>");
-                        sb.append("<td style='padding:10px;'>");
-                        if (isActive) sb.append("✅ ");
-                        sb.append("<b>").append(escapeHtml(tracker.agentId)).append("</b>");
-                        if (tracker.type != null) sb.append("<div style='color:#6b7280;font-size:11px;'>").append(escapeHtml(tracker.type)).append("</div>");
-                        sb.append("</td>");
-                        sb.append("<td style='padding:10px;text-align:center;font-weight:600;'>").append(tracker.cumulativeWins).append("/").append(tracker.cumulativeTrades).append("</td>");
-                        sb.append("<td style='padding:10px;text-align:center;color:").append(winColor).append(";font-weight:700;'>").append(String.format("%.1f%%", cumWinRate)).append("</td>");
-                        sb.append("<td style='padding:10px;text-align:right;color:").append(tracker.cumulativeProfitLoss >= 0 ? "#22c55e" : "#ef4444").append(";'>$").append(String.format("%.2f", tracker.cumulativeProfitLoss)).append("</td>");
-                        sb.append("<td style='padding:10px;text-align:center;color:#6b7280;font-size:11px;'>").append(tracker.firstSavedDate != null ? tracker.firstSavedDate : "-").append("</td>");
-                        sb.append("<td style='padding:10px;text-align:center;'>");
-                        sb.append("<div style='display:flex;gap:6px;justify-content:center;'>");
-                        // Set as active button
-                        if (!isActive) {
-                            sb.append("<form method='post' action='/aitool-save-config' style='margin:0;'>");
-                            sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(tracker.agentId)).append("' />");
-                            sb.append("<button type='submit' style='background:#3b82f6;color:#fff;padding:4px 8px;font-size:11px;'>Use</button>");
-                            sb.append("</form>");
-                        }
-                        // Delete button
-                        sb.append("<form method='post' action='/aitool-delete-tracker' style='margin:0;'>");
-                        sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(tracker.agentId)).append("' />");
-                        sb.append("<button type='submit' style='background:#ef4444;color:#fff;padding:4px 8px;font-size:11px;'>🗑️</button>");
-                        sb.append("</form>");
-                        sb.append("</div>");
-                        sb.append("</td>");
-                        sb.append("</tr>");
-                    }
-                    sb.append("</tbody></table>");
-                    sb.append("</div>");
-                } else {
-                    sb.append("<div style='background:#0b1220;border:1px solid #1f2a44;border-radius:8px;padding:12px;margin-bottom:16px;color:#6b7280;'>");
-                    sb.append("No tracked agents yet. Save an agent below to start tracking cumulative performance.");
-                    sb.append("</div>");
-                }
-                
-                // List top agents to save (>70% win rate highlighted)
-                sb.append("<div id='top-agents' style='font-weight:600;margin-bottom:10px;color:#93c5fd;'>🏆 Top Performing Agents (click to track):</div>");
-                sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;'>");
-                List<AIToolAgent.AgentPerformance> topAgents = new ArrayList<>(performances);
-                topAgents.sort((a, b) -> Double.compare(b.winRate, a.winRate));
-                int savedCount = 0;
-                for (AIToolAgent.AgentPerformance p : topAgents) {
-                    if (savedCount >= 10) break;
-                    if (p.totalTrades < 3) continue;
-                    boolean isWinner = p.winRate >= 70;
-                    boolean isTracked = trackers != null && trackers.containsKey(p.agentId);
-                    boolean notifyEnabled = ScoringConfig.isTradeNotificationEnabled(p.agentId);
-                    boolean isLocked = AIToolAgent.isAgentLocked(p.agentId);
-                    boolean codeVersionChanged = AIToolAgent.hasCodeVersionChanged(p.agentId);
-                    String winColor = p.winRate >= 70 ? "#22c55e" : p.winRate >= 50 ? "#eab308" : "#ef4444";
-                    String borderColor = isLocked ? "#f59e0b" : (isTracked ? "#22c55e" : (isWinner ? "#22c55e" : "#1f2a44"));
-                    sb.append("<div style='position:relative;'>");
-                    sb.append("<form method='post' action='/aitool-track-agent' style='margin:0;'>");
-                    sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(p.agentId)).append("' />");
-                    sb.append("<button type='submit' style='width:100%;text-align:left;background:#0b1220;border:2px solid ").append(borderColor).append(";border-radius:8px;padding:12px;padding-right:").append(isTracked ? "80px" : "44px").append(";cursor:pointer;outline:none;'>");
-                    sb.append("<div style='display:flex;justify-content:space-between;align-items:center;'>");
-                    sb.append("<div style='font-weight:600;color:#e5e7eb;'>");
-                    if (isLocked) sb.append("🔒 ");
-                    if (isWinner) sb.append("🏆 ");
-                    if (isTracked) sb.append("✓ ");
-                    sb.append(escapeHtml(p.agentId)).append("</div>");
-                    sb.append("<div style='display:flex;align-items:center;gap:8px;'>");
-                    sb.append("<span style='color:").append(winColor).append(";font-weight:700;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
-                    sb.append("</div>");
-                    sb.append("</div>");
-                    sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-top:4px;'>");
-                    sb.append("<span style='color:#9ca3af;font-size:12px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades | P/L: $").append(String.format("%.2f", p.totalProfitLoss)).append("</span>");
-                    sb.append("<a href='/agent-detail?id=").append(urlEncode(p.agentId)).append("' style='color:#60a5fa;font-size:11px;padding:2px 6px;background:#1e3a5f;border-radius:4px;text-decoration:none;' onclick='event.stopPropagation();'>📋 Detail</a>");
-                    sb.append("</div>");
-                    // Show code version warning if locked and code changed
-                    if (isLocked && codeVersionChanged) {
-                        AIToolAgent.AgentConfig cfg = AIToolAgent.getAgentConfig(p.agentId);
-                        sb.append("<div style='color:#f59e0b;font-size:11px;margin-top:4px;'>⚠️ Code changed since lock (was: ").append(cfg != null && cfg.codeVersion != null ? cfg.codeVersion : "?").append(")</div>");
-                    }
-                    sb.append("</button>");
-                    sb.append("</form>");
-                    // Lock/Unlock toggle button (key icon) - show for agents with >70% win rate
-                    if (p.winRate >= 70) {
-                        sb.append("<form method='post' action='/aitool-toggle-lock' style='position:absolute;top:8px;right:").append(isTracked ? "44px" : "8px").append(";margin:0;z-index:10;' onclick='event.stopPropagation();'>");
-                        sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(p.agentId)).append("' />");
-                        sb.append("<button type='submit' title='").append(isLocked ? "Unlock agent (allow evolution)" : "Lock agent (prevent evolution)").append("' style='background:").append(isLocked ? "#f59e0b" : "#374151").append(";border:2px solid ").append(isLocked ? "#d97706" : "#4b5563").append(";border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 4px rgba(0,0,0,0.3);'>");
-                        sb.append(isLocked ? "🔐" : "🔑");
-                        sb.append("</button>");
-                        sb.append("</form>");
-                    }
-                    // Notification toggle button (ring icon) - only show if tracked
-                    if (isTracked) {
-                        sb.append("<form method='post' action='/aitool-toggle-notify' style='position:absolute;top:8px;right:8px;margin:0;z-index:10;' onclick='event.stopPropagation();'>");
-                        sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(p.agentId)).append("' />");
-                        sb.append("<button type='submit' title='").append(notifyEnabled ? "Disable" : "Enable").append(" Discord notifications for trades' style='background:").append(notifyEnabled ? "#22c55e" : "#374151").append(";border:2px solid ").append(notifyEnabled ? "#16a34a" : "#4b5563").append(";border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 4px rgba(0,0,0,0.3);'>");
-                        sb.append(notifyEnabled ? "🔔" : "🔕");
-                        sb.append("</button>");
-                        sb.append("</form>");
-                    }
-                    sb.append("</div>");
-                    savedCount++;
-                }
                 sb.append("</div>");
                 sb.append("</div>");
 
@@ -8146,34 +8162,57 @@ public class WebServer {
                 int wins = perf != null ? perf.wins : 0;
                 int losses = perf != null ? perf.losses : 0;
                 double totalPL = perf != null ? perf.totalProfitLoss : 0;
+                double currentCapital = perf != null ? perf.currentCapital : 10000.0;
+                double maxDrawdown = perf != null ? perf.maxDrawdown : 0.0;
+                double sharpeRatio = perf != null ? perf.sharpeRatio : 0.0;
+                double profitFactor = perf != null ? perf.profitFactor : 0.0;
+                double expectancy = perf != null ? perf.expectancy : 0.0;
                 String wrColor = winRate >= 70 ? "#22c55e" : winRate >= 50 ? "#eab308" : "#ef4444";
-                sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px;'>");
-                // Win rate
-                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;text-align:center;'>");
-                sb.append("<div style='font-size:28px;font-weight:700;color:").append(wrColor).append(";'>").append(String.format("%.1f%%", winRate)).append("</div>");
-                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>Win Rate</div></div>");
-                // Wins
-                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;text-align:center;'>");
-                sb.append("<div style='font-size:28px;font-weight:700;color:#22c55e;'>").append(wins).append("</div>");
-                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>✅ Wins</div></div>");
-                // Losses
-                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;text-align:center;'>");
-                sb.append("<div style='font-size:28px;font-weight:700;color:#ef4444;'>").append(losses).append("</div>");
-                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>❌ Losses</div></div>");
+                sb.append("<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px;'>");
+                // Current Capital (NEW - Professional metric)
+                String capColor = currentCapital >= 10000 ? "#22c55e" : "#ef4444";
+                sb.append("<div style='background:#0f172a;border:1px solid #3b82f6;border-radius:8px;padding:12px;text-align:center;'>");
+                sb.append("<div style='font-size:22px;font-weight:700;color:").append(capColor).append(";'>$").append(String.format("%.0f", currentCapital)).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:2px;'>💰 Capital</div></div>");
+                // Net Profit (NEW - Professional metric)
+                String netPLColor = totalPL >= 0 ? "#22c55e" : "#ef4444";
+                sb.append("<div style='background:#0f172a;border:1px solid #3b82f6;border-radius:8px;padding:12px;text-align:center;'>");
+                sb.append("<div style='font-size:22px;font-weight:700;color:").append(netPLColor).append(";'>$").append(String.format("%+.0f", totalPL)).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:2px;'>📈 Net Profit</div></div>");
+                // Expectancy (NEW - Professional metric)
+                String expColor = expectancy >= 0.5 ? "#22c55e" : expectancy >= 0 ? "#eab308" : "#ef4444";
+                sb.append("<div style='background:#0f172a;border:1px solid #3b82f6;border-radius:8px;padding:12px;text-align:center;'>");
+                sb.append("<div style='font-size:22px;font-weight:700;color:").append(expColor).append(";'>").append(String.format("%.2f%%", expectancy)).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:2px;'>🎯 Expectancy</div></div>");
+                // Max Drawdown (NEW - Professional metric)
+                String ddColor = maxDrawdown <= 10 ? "#22c55e" : maxDrawdown <= 20 ? "#eab308" : "#ef4444";
+                sb.append("<div style='background:#0f172a;border:1px solid #3b82f6;border-radius:8px;padding:12px;text-align:center;'>");
+                sb.append("<div style='font-size:22px;font-weight:700;color:").append(ddColor).append(";'>").append(String.format("%.1f%%", maxDrawdown)).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:2px;'>📉 Max DD</div></div>");
+                // Sharpe Ratio (NEW - Professional metric)
+                String sharpeColor = sharpeRatio >= 1.5 ? "#22c55e" : sharpeRatio >= 1.0 ? "#eab308" : "#9ca3af";
+                sb.append("<div style='background:#0f172a;border:1px solid #3b82f6;border-radius:8px;padding:12px;text-align:center;'>");
+                sb.append("<div style='font-size:22px;font-weight:700;color:").append(sharpeColor).append(";'>").append(String.format("%.2f", sharpeRatio)).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:2px;'>⚡ Sharpe</div></div>");
+                // Profit Factor (NEW - Professional metric)
+                String pfColor = profitFactor >= 2.0 ? "#22c55e" : profitFactor >= 1.5 ? "#eab308" : profitFactor >= 1.0 ? "#f97316" : "#ef4444";
+                String pfDisplay = profitFactor >= 100 ? "∞" : String.format("%.2f", profitFactor);
+                sb.append("<div style='background:#0f172a;border:1px solid #3b82f6;border-radius:8px;padding:12px;text-align:center;'>");
+                sb.append("<div style='font-size:22px;font-weight:700;color:").append(pfColor).append(";'>").append(pfDisplay).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:2px;'>⚖️ Profit Factor</div></div>");
+                // Win rate (legacy - still shown)
+                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:12px;text-align:center;'>");
+                sb.append("<div style='font-size:22px;font-weight:700;color:").append(wrColor).append(";'>").append(String.format("%.1f%%", winRate)).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:2px;'>Win Rate</div></div>");
                 // Total trades
-                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;text-align:center;'>");
-                sb.append("<div style='font-size:28px;font-weight:700;color:#a78bfa;'>").append(totalTrades).append("</div>");
-                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>Total Trades</div></div>");
-                // P/L
-                String plColor = totalPL >= 0 ? "#22c55e" : "#ef4444";
-                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;text-align:center;'>");
-                sb.append("<div style='font-size:24px;font-weight:700;color:").append(plColor).append(";'>$").append(String.format("%+.2f", totalPL)).append("</div>");
-                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>Total P/L</div></div>");
-                // Open positions (OPEN trades don't count toward totalTrades until closed)
+                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:12px;text-align:center;'>");
+                sb.append("<div style='font-size:22px;font-weight:700;color:#a78bfa;'>").append(totalTrades).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:2px;'>Trades</div></div>");
+                // Open positions
                 int openPosCount = (int) allTrades.stream().filter(t -> "OPEN".equals(t.status)).count();
-                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:14px;text-align:center;'>");
-                sb.append("<div style='font-size:28px;font-weight:700;color:#facc15;'>").append(openPosCount).append("</div>");
-                sb.append("<div style='color:#9ca3af;font-size:12px;margin-top:4px;'>🕐 Open</div></div>");
+                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:12px;text-align:center;'>");
+                sb.append("<div style='font-size:22px;font-weight:700;color:#facc15;'>").append(openPosCount).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:2px;'>🕐 Open</div></div>");
                 sb.append("</div>");
 
                 // ── Win/Loss breakdown bar ──
@@ -8749,7 +8788,17 @@ public class WebServer {
                 // List available agents
                 List<AIToolAgent.AgentPerformance> agentPerfs = AIToolAgent.getAllPerformances();
                 if (agentPerfs != null && !agentPerfs.isEmpty()) {
-                    agentPerfs.sort((a, b) -> Double.compare(b.winRate, a.winRate));
+                    // Sort by professional metrics: expectancy (primary), then profit factor, then sharpe ratio
+                    agentPerfs.sort((a, b) -> {
+                        // Primary: Expectancy (the REAL metric)
+                        int expCompare = Double.compare(b.expectancy, a.expectancy);
+                        if (expCompare != 0) return expCompare;
+                        // Secondary: Profit Factor (risk/reward ratio)
+                        int pfCompare = Double.compare(b.profitFactor, a.profitFactor);
+                        if (pfCompare != 0) return pfCompare;
+                        // Tertiary: Sharpe Ratio (risk-adjusted returns)
+                        return Double.compare(b.sharpeRatio, a.sharpeRatio);
+                    });
                     sb.append("<div style='margin-top:12px;'>");
                     sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:6px;'>Top performing agents (click to copy ID):</div>");
                     sb.append("<div style='display:flex;flex-wrap:wrap;gap:6px;'>");
