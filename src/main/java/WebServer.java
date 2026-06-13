@@ -1354,8 +1354,8 @@ public class WebServer {
                 "<a href=\"/\">Home</a> · " +
                 "<a href=\"/dashboard\">Stock Quick Analysis</a> · " +
                 "<a href=\"/about\">About</a> · " +
-                "<a href=\"/favorites\">SwingLongAiAgent</a> · " +
-                "<a href=\"/alpha-agent\">MomentumAiAgent</a> · " +
+                "<a href=\"/backtest\">📊 BackTest</a> · " +
+                "<a href=\"/agent-backtest\">🕰️ Agent Backtest</a> · " +
                 "<a href=\"/aitool\">🤖 AITool</a> · " +
                 "<a href=\"/monitoring\">Monitoring Stocks - History</a> · " +
                                 "<a href=\"/finder\">FINDER</a> · " +
@@ -2674,19 +2674,9 @@ public class WebServer {
                         "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>סיכום מהיר של ניתוח המניה - ציון סופי, המלצה, ומדדים עיקריים במבט אחד.</div>" +
                         "</div>" +
                         
-                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #f59e0b;'>" +
-                        "<div style='font-weight:600;color:#fcd34d;margin-bottom:4px;'>⭐ SwingLongAiAgent</div>" +
-                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>סריקת מניות מועדפות ומציאת ההתאמה הטובה ביותר לאסטרטגיה שהגדרת בדף Settings.</div>" +
-                        "</div>" +
-                        
                         "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #8b5cf6;'>" +
                         "<div style='font-weight:600;color:#c4b5fd;margin-bottom:4px;'>💼 Manage Portfolio</div>" +
                         "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>ניהול תיק השקעות - מעקב אחר פוזיציות, רווח/הפסד, והיסטוריית עסקאות.</div>" +
-                        "</div>" +
-                        
-                        "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #ec4899;'>" +
-                        "<div style='font-weight:600;color:#f9a8d4;margin-bottom:4px;'>🤖 MomentumAiAgent</div>" +
-                        "<div style='font-size:12px;color:#9ca3af;' dir='rtl'>סוכן AI חכם לניתוח מניות, שאלות על השוק, והמלצות מותאמות אישית.</div>" +
                         "</div>" +
                         
                         "<div style='background:#0b1220;padding:12px;border-radius:8px;border-left:3px solid #06b6d4;'>" +
@@ -4130,7 +4120,7 @@ public class WebServer {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, htmlPage(""), 200); return; }
 
                 StringBuilder sb = new StringBuilder();
-                sb.append("<div class='card'><div class='title'>MomentumAiAgent - Strategy Tools</div>");
+                sb.append("<div class='card'><div class='title'>Strategy Tools</div>");
                 sb.append("<div style='color:#9ca3af;margin-bottom:10px;'>כלים לבדיקת אסטרטגיות מסחר על נתונים היסטוריים</div>");
                 sb.append(modelsUsedNamesOnlyHtml());
 
@@ -5265,6 +5255,132 @@ public class WebServer {
                     respondJson(ex, out, 200);
                 } catch (Exception e) {
                     respondJson(ex, Map.of("error", "Backtest failed: " + e.getMessage()), 500);
+                }
+            }
+        });
+
+        // ---------------- Agent Backtest API Endpoint ----------------
+        server.createContext("/api/agent-backtest", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                
+                String agentId = qp.getOrDefault("agentId", "").trim();
+                String startDate = qp.getOrDefault("startDate", "").trim();
+                String endDate = qp.getOrDefault("endDate", "").trim();
+                double initialCapital = 100000;
+                String tickersParam = qp.get("tickers");
+                
+                try { initialCapital = Double.parseDouble(qp.getOrDefault("initialCapital", "100000")); } catch (Exception ignore) {}
+                
+                if (agentId.isEmpty()) {
+                    respondJson(ex, Map.of("error", "Missing agentId parameter"), 400);
+                    return;
+                }
+                
+                if (startDate.isEmpty()) {
+                    // Default to 1 year ago
+                    LocalDate oneYearAgo = LocalDate.now().minusYears(1);
+                    startDate = oneYearAgo.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                }
+                
+                if (endDate.isEmpty()) {
+                    // Default to today
+                    endDate = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                }
+                
+                List<String> tickerUniverse = null;
+                if (tickersParam != null && !tickersParam.isEmpty()) {
+                    tickerUniverse = Arrays.asList(tickersParam.split(","));
+                }
+
+                try {
+                    AgentBacktester.AgentBacktestResult result = AgentBacktester.backtestAgent(
+                        agentId, startDate, endDate, tickerUniverse, initialCapital
+                    );
+                    
+                    Map<String, Object> out = new LinkedHashMap<>();
+                    out.put("agentId", result.agentId);
+                    out.put("agentName", result.agentName);
+                    out.put("startDate", result.startDate);
+                    out.put("endDate", result.endDate);
+                    out.put("totalTrades", result.totalTrades);
+                    out.put("winningTrades", result.winningTrades);
+                    out.put("losingTrades", result.losingTrades);
+                    out.put("winRate", result.winRate);
+                    out.put("totalProfit", result.totalProfit);
+                    out.put("totalLoss", result.totalLoss);
+                    out.put("netProfit", result.netProfit);
+                    out.put("profitFactor", result.profitFactor);
+                    out.put("avgWin", result.avgWin);
+                    out.put("avgLoss", result.avgLoss);
+                    out.put("maxDrawdown", result.maxDrawdown);
+                    out.put("expectancy", result.expectancy);
+                    out.put("sharpeRatio", result.sharpeRatio);
+                    out.put("cagr", result.cagr);
+                    
+                    // Trades
+                    List<Map<String, Object>> trades = new ArrayList<>();
+                    for (AgentBacktester.BacktestTrade t : result.trades) {
+                        Map<String, Object> tr = new LinkedHashMap<>();
+                        tr.put("entryDate", t.entryDate);
+                        tr.put("exitDate", t.exitDate);
+                        tr.put("ticker", t.ticker);
+                        tr.put("agentId", t.agentId);
+                        tr.put("agentName", t.agentName);
+                        tr.put("entryPrice", t.entryPrice);
+                        tr.put("exitPrice", t.exitPrice);
+                        tr.put("profitPct", t.profitPct);
+                        tr.put("profitAmount", t.profitAmount);
+                        tr.put("daysHeld", t.daysHeld);
+                        tr.put("exitReason", t.exitReason);
+                        tr.put("setupType", t.setupType);
+                        trades.add(tr);
+                    }
+                    out.put("trades", trades);
+                    
+                    // Trades by month
+                    out.put("tradesByMonth", result.tradesByMonth);
+                    
+                    // Profit by ticker
+                    out.put("profitByTicker", result.profitByTicker);
+                    
+                    if (result.error != null) {
+                        out.put("error", result.error);
+                    }
+                    
+                    respondJson(ex, out, 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", "Agent backtest failed: " + e.getMessage()), 500);
+                }
+            }
+        });
+
+        // ---------------- Get Available Agents API Endpoint ----------------
+        server.createContext("/api/agents", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                
+                try {
+                    List<Map<String, String>> agents = AgentBacktester.getAvailableAgents();
+                    respondJson(ex, Map.of("agents", agents), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", "Failed to get agents: " + e.getMessage()), 500);
+                }
+            }
+        });
+
+        // ---------------- Get Universe Tickers API Endpoint ----------------
+        server.createContext("/api/universe-tickers", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                
+                try {
+                    List<String> tickers = LongTermCandidateFinder.getUniverseTickers();
+                    String tickerString = String.join(",", tickers);
+                    respondJson(ex, Map.of("tickers", tickerString, "count", tickers.size()), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", "Failed to get universe tickers: " + e.getMessage()), 500);
                 }
             }
         });
@@ -6428,6 +6544,436 @@ public class WebServer {
             }
         });
 
+        // BackTest page - Historical strategy testing
+        server.createContext("/backtest", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) {
+                    respondHtml(ex, htmlPage(""), 200); return;
+                }
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("<div class='card'><div class='title'>📊 BackTest Engine | מנוע בדיקה היסטורית</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>Test trading strategies on historical data (2022-2026). Calculate Win Rate, Profit Factor, Expectancy, Max Drawdown, CAGR, Sharpe.</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:16px;' dir='rtl'>בדוק אסטרטגיות על נתונים היסטוריים. חשב Win Rate, Profit Factor, Expectancy, Max Drawdown, CAGR, Sharpe.</div>");
+
+                // Backtest form
+                sb.append("<form method='post' action='/backtest-run' style='margin-bottom:20px;'>");
+                sb.append("<div style='display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;'>");
+                
+                sb.append("<div>");
+                sb.append("<label style='display:block;color:#a78bfa;font-size:12px;margin-bottom:4px;'>Agent</label>");
+                sb.append("<select name='agent' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("<option value='FUND_MOMENTUM_V1'>FUND_MOMENTUM_V1</option>");
+                sb.append("<option value='QUALITY_GROWTH_V1'>QUALITY_GROWTH_V1</option>");
+                sb.append("</select>");
+                sb.append("</div>");
+                
+                sb.append("<div>");
+                sb.append("<label style='display:block;color:#a78bfa;font-size:12px;margin-bottom:4px;'>Tickers (comma separated)</label>");
+                sb.append("<input type='text' id='backtestTickers' name='tickers' placeholder='AAPL,MSFT,GOOGL,AMZN,NVDA,META,TSLA,JPM,JNJ,UNH,XOM,CAT,HD,PG,NEE,LIN,AMT,DIS,NFLX' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("<button type='button' onclick='loadUniverseTickers(\"backtestTickers\")' style='margin-top:4px;padding:6px 12px;background:#4c1d95;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;'>📋 Load All Universe Tickers</button>");
+                sb.append("</div>");
+                
+                sb.append("<div>");
+                sb.append("<label style='display:block;color:#a78bfa;font-size:12px;margin-bottom:4px;'>Start Date</label>");
+                sb.append("<input type='date' name='startDate' value='2022-01-01' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("</div>");
+                
+                sb.append("<div>");
+                sb.append("<label style='display:block;color:#a78bfa;font-size:12px;margin-bottom:4px;'>End Date</label>");
+                sb.append("<input type='date' name='endDate' value='2026-06-13' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("</div>");
+                
+                sb.append("<div>");
+                sb.append("<label style='display:block;color:#a78bfa;font-size:12px;margin-bottom:4px;'>Stop Loss %</label>");
+                sb.append("<input type='number' name='stopLoss' value='5' step='0.5' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("</div>");
+                
+                sb.append("<div>");
+                sb.append("<label style='display:block;color:#a78bfa;font-size:12px;margin-bottom:4px;'>Take Profit %</label>");
+                sb.append("<input type='number' name='takeProfit' value='10' step='0.5' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("</div>");
+                
+                sb.append("<div>");
+                sb.append("<label style='display:block;color:#a78bfa;font-size:12px;margin-bottom:4px;'>Max Days Held</label>");
+                sb.append("<input type='number' name='maxDays' value='7' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("</div>");
+                
+                sb.append("<div>");
+                sb.append("<label style='display:block;color:#a78bfa;font-size:12px;margin-bottom:4px;'>Or use sector tickers</label>");
+                sb.append("<select name='sector' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("<option value=''>Custom tickers</option>");
+                sb.append("<option value='all'>All sectors (500+ tickers)</option>");
+                sb.append("<option value='Technology'>Technology</option>");
+                sb.append("<option value='Financials'>Financials</option>");
+                sb.append("<option value='Healthcare'>Healthcare</option>");
+                sb.append("</select>");
+                sb.append("</div>");
+                
+                sb.append("</div>");
+                
+                sb.append("<button type='submit' style='background:#7c3aed;padding:10px 20px;border:none;border-radius:6px;color:#fff;font-weight:600;cursor:pointer;'>🚀 Run Backtest</button>");
+                sb.append("</form>");
+
+                sb.append("<script>"+
+                        "async function loadUniverseTickers(inputId){"+
+                        "  console.log('Loading universe tickers for:', inputId);"+
+                        "  try{"+
+                        "    var r=await fetch('/api/universe-tickers');"+
+                        "    console.log('Response status:', r.status);"+
+                        "    var d=await r.json();"+
+                        "    console.log('Response data:', d);"+
+                        "    if(d.tickers){"+
+                        "      document.getElementById(inputId).value=d.tickers;"+
+                        "      alert('Loaded '+d.count+' universe tickers');"+
+                        "    }else{"+
+                        "      alert('No tickers found in response');"+
+                        "    }"+
+                        "  }catch(e){console.error('Error loading universe tickers:', e);alert('Failed to load universe tickers: '+e.message);}"+
+                        "}"+
+                        "</script>");
+                
+                // Strategy Laboratory section
+                sb.append("<div style='background:#0d1b30;border:1px solid #1e3a5f;border-radius:10px;padding:14px;margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;color:#93c5fd;margin-bottom:8px;'>🧪 Strategy Laboratory</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:12px;'>Automatically test parameter combinations on 500 stocks over 4 years. Returns results in ~10 minutes.</div>");
+                sb.append("<form method='post' action='/backtest-lab' style='margin-bottom:12px;'>");
+                sb.append("<div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;'>");
+                sb.append("<input type='number' name='rsiMin' placeholder='RSI Min' value='50' style='padding:6px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:4px;color:#e5e7eb;'>");
+                sb.append("<input type='number' name='rsiMax' placeholder='RSI Max' value='70' style='padding:6px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:4px;color:#e5e7eb;'>");
+                sb.append("<input type='number' name='rvolMin' placeholder='RVOL Min' value='1.5' step='0.1' style='padding:6px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:4px;color:#e5e7eb;'>");
+                sb.append("<input type='number' name='revenueGrowthMin' placeholder='Revenue Growth %' value='15' style='padding:6px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:4px;color:#e5e7eb;'>");
+                sb.append("<input type='number' name='epsGrowthMin' placeholder='EPS Growth %' value='20' style='padding:6px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:4px;color:#e5e7eb;'>");
+                sb.append("<input type='number' name='stopLoss' placeholder='Stop Loss %' value='5' style='padding:6px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:4px;color:#e5e7eb;'>");
+                sb.append("</div>");
+                sb.append("<button type='submit' style='background:#f59e0b;padding:8px 16px;border:none;border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:13px;'>🧪 Run Strategy Lab</button>");
+                sb.append("</form>");
+                sb.append("</div>");
+
+                // Recent backtests section
+                sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:12px;'>");
+                sb.append("<div style='font-weight:600;color:#a78bfa;margin-bottom:8px;'>📋 Recent Backtests</div>");
+                sb.append("<div style='color:#6b7280;font-size:12px;'>No backtests run yet. Run a backtest to see results here.</div>");
+                sb.append("</div>");
+
+                respondHtml(ex, htmlPage(sb.toString()), 200);
+            }
+        });
+
+        // Backtest run endpoint
+        server.createContext("/backtest-run", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    respondHtml(ex, htmlPage(""), 200); return;
+                }
+
+                String body = readBody(ex);
+                Map<String, String> form = parseForm(body);
+
+                String agent = form.getOrDefault("agent", "FUND_MOMENTUM_V1");
+                String tickersStr = form.getOrDefault("tickers", "");
+                String startDate = form.getOrDefault("startDate", "2022-01-01");
+                String endDate = form.getOrDefault("endDate", "2026-06-13");
+                double stopLoss = Double.parseDouble(form.getOrDefault("stopLoss", "5"));
+                double takeProfit = Double.parseDouble(form.getOrDefault("takeProfit", "10"));
+                int maxDays = Integer.parseInt(form.getOrDefault("maxDays", "7"));
+                String sector = form.getOrDefault("sector", "");
+
+                List<String> tickers = new ArrayList<>();
+                if (!sector.isEmpty() && !sector.equals("all")) {
+                    tickers = LongTermCandidateFinder.getSectorTickers(sector);
+                } else if (sector.equals("all")) {
+                    tickers = LongTermCandidateFinder.getAllSectorTickers();
+                } else if (!tickersStr.isEmpty()) {
+                    String[] parts = tickersStr.split(",");
+                    for (String part : parts) {
+                        tickers.add(part.trim().toUpperCase());
+                    }
+                }
+
+                if (tickers.isEmpty()) {
+                    Map<String, Object> error = new LinkedHashMap<>();
+                    error.put("error", "No tickers specified");
+                    respondJson(ex, error, 400);
+                    return;
+                }
+
+                // Run backtest in background
+                final List<String> finalTickers = tickers;
+                new Thread(() -> {
+                    try {
+                        BacktestEngine.BacktestResults results = BacktestEngine.runBacktest(
+                            agent, finalTickers, startDate, endDate, stopLoss, takeProfit, maxDays
+                        );
+                        System.out.println("[Backtest] Completed: " + results.totalTrades + " trades, WR: " + 
+                            String.format("%.1f%%", results.winRate) + ", PF: " + 
+                            String.format("%.2f", results.profitFactor));
+                    } catch (Exception e) {
+                        System.err.println("[Backtest] Error: " + e.getMessage());
+                    }
+                }).start();
+
+                Map<String, Object> response = new LinkedHashMap<>();
+                response.put("status", "started");
+                response.put("agent", agent);
+                response.put("tickerCount", tickers.size());
+                response.put("message", "Backtest started in background. Check console for results.");
+                respondJson(ex, response, 200);
+            }
+        });
+
+        // Strategy Laboratory endpoint
+        server.createContext("/backtest-lab", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    respondHtml(ex, htmlPage(""), 200); return;
+                }
+
+                String body = readBody(ex);
+                Map<String, String> form = parseForm(body);
+
+                Map<String, Object> response = new LinkedHashMap<>();
+                response.put("status", "not_implemented");
+                response.put("message", "Strategy Laboratory coming soon. Use the manual backtest for now.");
+                respondJson(ex, response, 200);
+            }
+        });
+
+        // ---------------- Agent Backtest Page ----------------
+        server.createContext("/agent-backtest", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) {
+                    respondHtml(ex, htmlPage(""), 200); return;
+                }
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("<div class='card'>");
+                sb.append("<div class='title'>🕰️ Agent Backtest - Historical Performance</div>");
+                sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>Run your agents on historical data to see how they would have performed. Uses the same indicators and logic as live agents.</div>");
+
+                // Agent selection form
+                sb.append("<div style='background:#0d1b30;border:1px solid #1e3a5f;border-radius:10px;padding:16px;margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;color:#93c5fd;margin-bottom:12px;'>Select Agent & Date Range</div>");
+                
+                sb.append("<div id='agentSelector' style='margin-bottom:12px;'>");
+                sb.append("<label style='color:#9ca3af;display:block;margin-bottom:6px;'>Agent:</label>");
+                sb.append("<select id='agentSelect' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("<option value=''>Loading agents...</option>");
+                sb.append("</select>");
+                sb.append("</div>");
+
+                sb.append("<div style='display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;'>");
+                sb.append("<div>");
+                sb.append("<label style='color:#9ca3af;display:block;margin-bottom:6px;'>Start Date:</label>");
+                sb.append("<input type='date' id='startDate' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("</div>");
+                sb.append("<div>");
+                sb.append("<label style='color:#9ca3af;display:block;margin-bottom:6px;'>End Date:</label>");
+                sb.append("<input type='date' id='endDate' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("</div>");
+                sb.append("</div>");
+
+                sb.append("<div style='margin-bottom:12px;'>");
+                sb.append("<label style='color:#9ca3af;display:block;margin-bottom:6px;'>Initial Capital ($):</label>");
+                sb.append("<input type='number' id='initialCapital' value='100000' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("</div>");
+
+                sb.append("<div style='margin-bottom:12px;'>");
+                sb.append("<label style='color:#9ca3af;display:block;margin-bottom:6px;'>Ticker Universe (optional, comma-separated):</label>");
+                sb.append("<input type='text' id='agentBacktestTickers' placeholder='AAPL,MSFT,GOOGL,AMZN,NVDA,META,TSLA,JPM,JNJ,UNH,XOM,CAT,HD,PG,NEE,LIN,AMT,DIS,NFLX' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("<button type='button' onclick='loadUniverseTickers(\"agentBacktestTickers\")' style='margin-top:4px;padding:6px 12px;background:#4c1d95;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;'>📋 Load All Universe Tickers</button>");
+                sb.append("<div style='color:#6b7280;font-size:11px;margin-top:4px;'>Leave empty to use default universe (all sectors)</div>");
+                sb.append("</div>");
+
+                sb.append("<button id='runBacktestBtn' onclick='runAgentBacktest()' style='background:#7c3aed;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;'>🚀 Run Backtest</button>");
+                sb.append("</div>");
+
+                // Results section
+                sb.append("<div id='backtestResults' style='display:none;background:#0d1b30;border:1px solid #1e3a5f;border-radius:10px;padding:16px;margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;color:#93c5fd;margin-bottom:12px;'>📊 Backtest Results</div>");
+                
+                // Summary metrics
+                sb.append("<div id='summaryMetrics' style='display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;'></div>");
+
+                // Detailed metrics
+                sb.append("<div id='detailedMetrics' style='background:#1e1b4b;border-radius:8px;padding:12px;margin-bottom:16px;'></div>");
+
+                // Trades table
+                sb.append("<div style='font-weight:600;color:#93c5fd;margin-bottom:8px;'>📋 Trades</div>");
+                sb.append("<div id='tradesTable' style='max-height:400px;overflow-y:auto;'></div>");
+                sb.append("</div>");
+
+                sb.append("</div>");
+
+                sb.append("<script>"+
+                        "// Load available agents"+
+                        "async function loadAgents(){"+
+                        "  try{"+
+                        "    var r=await fetch('/api/agents');"+
+                        "    var d=await r.json();"+
+                        "    var sel=document.getElementById('agentSelect');"+
+                        "    sel.innerHTML='<option value=\"\">Select an agent...</option>';"+
+                        "    if(d.agents){"+
+                        "      d.agents.forEach(function(a){"+
+                        "        var opt=document.createElement('option');"+
+                        "        opt.value=a.id;"+
+                        "        opt.text=a.name+' ('+a.nameHe+')';"+
+                        "        sel.appendChild(opt);"+
+                        "      });"+
+                        "    }"+
+                        "  }catch(e){console.error(e);}"+
+                        "}"+
+
+                        "// Set default dates (1 year back to today)"+
+                        "function setDefaultDates(){"+
+                        "  var today=new Date();"+
+                        "  var oneYearAgo=new Date();"+
+                        "  oneYearAgo.setFullYear(today.getFullYear()-1);"+
+                        "  document.getElementById('endDate').value=today.toISOString().split('T')[0];"+
+                        "  document.getElementById('startDate').value=oneYearAgo.toISOString().split('T')[0];"+
+                        "}"+
+
+                        "// Run agent backtest"+
+                        "async function runAgentBacktest(){"+
+                        "  var agentId=document.getElementById('agentSelect').value;"+
+                        "  var startDate=document.getElementById('startDate').value;"+
+                        "  var endDate=document.getElementById('endDate').value;"+
+                        "  var initialCapital=document.getElementById('initialCapital').value;"+
+                        "  var tickers=document.getElementById('tickers').value;"+
+                        "  "+
+                        "  if(!agentId){alert('Please select an agent');return;}"+
+                        "  if(!startDate||!endDate){alert('Please select date range');return;}"+
+                        "  "+
+                        "  var btn=document.getElementById('runBacktestBtn');"+
+                        "  btn.disabled=true;btn.textContent='⏳ Running...';"+
+                        "  "+
+                        "  try{"+
+                        "    var url='/api/agent-backtest?agentId='+encodeURIComponent(agentId);"+
+                        "    url+='&startDate='+encodeURIComponent(startDate);"+
+                        "    url+='&endDate='+encodeURIComponent(endDate);"+
+                        "    url+='&initialCapital='+encodeURIComponent(initialCapital);"+
+                        "    if(tickers) url+='&tickers='+encodeURIComponent(tickers);"+
+                        "    "+
+                        "    var r=await fetch(url);"+
+                        "    var d=await r.json();"+
+                        "    "+
+                        "    btn.disabled=false;btn.textContent='🚀 Run Backtest';"+
+                        "    "+
+                        "    if(d.error){"+
+                        "      alert('Error: '+d.error);"+
+                        "      return;"+
+                        "    }"+
+                        "    "+
+                        "    displayResults(d);"+
+                        "  }catch(e){"+
+                        "    btn.disabled=false;btn.textContent='🚀 Run Backtest';"+
+                        "    alert('Error: '+e);"+
+                        "  }"+
+                        "}"+
+
+                        "// Display backtest results"+
+                        "function displayResults(d){"+
+                        "  document.getElementById('backtestResults').style.display='block';"+
+                        "  "+
+                        "  // Helper function for safe toFixed"+
+                        "  function safeFixed(val,decimals){return (val!=null&&!isNaN(val))?val.toFixed(decimals):'0.00';}"+
+                        "  function safeInt(val){return (val!=null&&!isNaN(val))?val:0;}"+
+                        "  "+
+                        "  // Summary metrics"+
+                        "  var summaryHtml="+
+                        "    '<div style=\"background:#1e1b4b;border-radius:8px;padding:12px;\">'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:12px;\">Net Profit</div>'"+
+                        "    '<div style=\"font-size:20px;font-weight:600;color:'+(d.netProfit>=0?'#22c55e':'#ef4444')+'\">$'+safeFixed(d.netProfit,2)+'</div>'"+
+                        "    '</div>'"+
+                        "    '<div style=\"background:#1e1b4b;border-radius:8px;padding:12px;\">'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:12px;\">Win Rate</div>'"+
+                        "    '<div style=\"font-size:20px;font-weight:600;color:#93c5fd;\">'+safeFixed(d.winRate,1)+'%</div>'"+
+                        "    '</div>'"+
+                        "    '<div style=\"background:#1e1b4b;border-radius:8px;padding:12px;\">'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:12px;\">Total Trades</div>'"+
+                        "    '<div style=\"font-size:20px;font-weight:600;color:#e5e7eb;\">'+safeInt(d.totalTrades)+'</div>'"+
+                        "    '</div>'"+
+                        "    '<div style=\"background:#1e1b4b;border-radius:8px;padding:12px;\">'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:12px;\">Profit Factor</div>'"+
+                        "    '<div style=\"font-size:20px;font-weight:600;color:'+(d.profitFactor>=1?'#22c55e':'#ef4444')+'\">'+safeFixed(d.profitFactor,2)+'</div>'"+
+                        "    '</div>';"+
+                        "  document.getElementById('summaryMetrics').innerHTML=summaryHtml;"+
+                        "  "+
+                        "  // Detailed metrics"+
+                        "  var detailHtml="+
+                        "    '<div style=\"display:grid;grid-template-columns:repeat(3,1fr);gap:8px;\">'+"+
+                        "    '<div><span style=\"color:#9ca3af;\">Winning Trades:</span> <span style=\"color:#22c55e;\">'+safeInt(d.winningTrades)+'</span></div>'"+
+                        "    '<div><span style=\"color:#9ca3af;\">Losing Trades:</span> <span style=\"color:#ef4444;\">'+safeInt(d.losingTrades)+'</span></div>'"+
+                        "    '<div><span style=\"color:#9ca3af;\">Avg Win:</span> <span style=\"color:#22c55e;\">$'+safeFixed(d.avgWin,2)+'</span></div>'"+
+                        "    '<div><span style=\"color:#9ca3af;\">Avg Loss:</span> <span style=\"color:#ef4444;\">$'+safeFixed(d.avgLoss,2)+'</span></div>'"+
+                        "    '<div><span style=\"color:#9ca3af;\">Max Drawdown:</span> <span style=\"color:#ef4444;\">$'+safeFixed(d.maxDrawdown,2)+'</span></div>'"+
+                        "    '<div><span style=\"color:#9ca3af;\">Expectancy:</span> <span style=\"color:'+(d.expectancy>=0?'#22c55e':'#ef4444')+';\">$'+safeFixed(d.expectancy,2)+'</span></div>'"+
+                        "    '<div><span style=\"color:#9ca3af;\">Sharpe Ratio:</span> <span style=\"color:#93c5fd;\">'+safeFixed(d.sharpeRatio,2)+'</span></div>'"+
+                        "    '<div><span style=\"color:#9ca3af;\">CAGR:</span> <span style=\"color:#93c5fd;\">'+safeFixed(d.cagr,2)+'%</span></div>'"+
+                        "    '</div>';"+
+                        "  document.getElementById('detailedMetrics').innerHTML=detailHtml;"+
+                        "  "+
+                        "  // Trades table"+
+                        "  if(d.trades&&d.trades.length>0){"+
+                        "    var tableHtml="+
+                        "      '<table style=\"width:100%;border-collapse:collapse;font-size:12px;\">'+"+
+                        "      '<thead><tr style=\"background:#1e3a5f;\">'+"+
+                        "      '<th style=\"padding:8px;text-align:left;color:#93c5fd;\">Date</th>'"+
+                        "      '<th style=\"padding:8px;text-align:left;color:#93c5fd;\">Ticker</th>'"+
+                        "      '<th style=\"padding:8px;text-align:right;color:#93c5fd;\">Entry</th>'"+
+                        "      '<th style=\"padding:8px;text-align:right;color:#93c5fd;\">Exit</th>'"+
+                        "      '<th style=\"padding:8px;text-align:right;color:#93c5fd;\">P&L %</th>'"+
+                        "      '<th style=\"padding:8px;text-align:right;color:#93c5fd;\">P&L $</th>'"+
+                        "      '<th style=\"padding:8px;text-align:center;color:#93c5fd;\">Days</th>'"+
+                        "      '<th style=\"padding:8px;text-align:center;color:#93c5fd;\">Exit Reason</th>'"+
+                        "      '</tr></thead><tbody>';"+
+                        "    d.trades.forEach(function(t){"+
+                        "      var plColor=t.profitPct>=0?'#22c55e':'#ef4444';"+
+                        "      tableHtml+="+
+                        "        '<tr style=\"border-bottom:1px solid #1e3a5f;\">'+"+
+                        "        '<td style=\"padding:8px;color:#e5e7eb;\">'+t.entryDate+'</td>'"+
+                        "        '<td style=\"padding:8px;color:#93c5fd;font-weight:600;\">'+t.ticker+'</td>'"+
+                        "        '<td style=\"padding:8px;text-align:right;color:#e5e7eb;\">$'+t.entryPrice.toFixed(2)+'</td>'"+
+                        "        '<td style=\"padding:8px;text-align:right;color:#e5e7eb;\">$'+t.exitPrice.toFixed(2)+'</td>'"+
+                        "        '<td style=\"padding:8px;text-align:right;color:'+plColor+';\">'+t.profitPct.toFixed(2)+'%</td>'"+
+                        "        '<td style=\"padding:8px;text-align:right;color:'+plColor+';\">$'+t.profitAmount.toFixed(2)+'</td>'"+
+                        "        '<td style=\"padding:8px;text-align:center;color:#e5e7eb;\">'+t.daysHeld+'</td>'"+
+                        "        '<td style=\"padding:8px;text-align:center;color:#9ca3af;font-size:11px;\">'+t.exitReason+'</td>"+
+                        "        '</tr>';"+
+                        "    });"+
+                        "    tableHtml+='</tbody></table>';"+
+                        "    document.getElementById('tradesTable').innerHTML=tableHtml;"+
+                        "  }else{"+
+                        "    document.getElementById('tradesTable').innerHTML='<div style=\"color:#9ca3af;padding:12px;\">No trades found</div>';"+
+                        "  }"+
+                        "}"+
+
+                        "// Load all universe tickers into input field"+
+                        "async function loadUniverseTickers(inputId){"+
+                        "  console.log('Loading universe tickers for:', inputId);"+
+                        "  try{"+
+                        "    var r=await fetch('/api/universe-tickers');"+
+                        "    console.log('Response status:', r.status);"+
+                        "    var d=await r.json();"+
+                        "    console.log('Response data:', d);"+
+                        "    if(d.tickers){"+
+                        "      document.getElementById(inputId).value=d.tickers;"+
+                        "      alert('Loaded '+d.count+' universe tickers');"+
+                        "    }else{"+
+                        "      alert('No tickers found in response');"+
+                        "    }"+
+                        "  }catch(e){console.error('Error loading universe tickers:', e);alert('Failed to load universe tickers: '+e.message);}"+
+                        "}"+
+
+                        "// Initialize"+
+                        "loadAgents();"+
+                        "setDefaultDates();"+
+                        "</script>");
+
+                respondHtml(ex, htmlPage(sb.toString()), 200);
+            }
+        });
+
         // ---------------- Favorites (persistent simple file) ----------------
         final Object favLock = new Object();
         final Path favPath = Paths.get("favorites.txt");
@@ -6480,7 +7026,7 @@ public class WebServer {
                 String savedParam = qp.getOrDefault("saved", "");
 
                 StringBuilder sb = new StringBuilder();
-                sb.append("<div class='card'><div class='title'>SwingLongAiAgent</div>");
+                sb.append("<div class='card'><div class='title'>Favorites</div>");
 
                 if (syncStatus.startsWith("added_")) {
                     String count = syncStatus.substring(6);
@@ -8694,8 +9240,6 @@ public class WebServer {
                 sb.append("<div style='background:#0d1b30;border:1px solid #1e3a5f;border-radius:10px;padding:14px;margin-bottom:16px;'>");
                 sb.append("<div style='font-weight:600;color:#93c5fd;margin-bottom:8px;'>💡 Settings are now also available directly on each agent page:</div>");
                 sb.append("<div style='display:flex;gap:10px;flex-wrap:wrap;'>");
-                sb.append("<a href='/favorites' style='display:inline-block;padding:8px 16px;background:#1f2a44;border-radius:6px;color:#22c55e;text-decoration:none;font-size:13px;'>🟢 SwingLongAiAgent → /favorites</a>");
-                sb.append("<a href='/alpha-agent' style='display:inline-block;padding:8px 16px;background:#1f2a44;border-radius:6px;color:#8b5cf6;text-decoration:none;font-size:13px;'>🚀 MomentumAiAgent → /alpha-agent</a>");
                 sb.append("</div>");
                 sb.append("<div style='font-size:11px;color:#6b7280;margin-top:8px;'>Each page lets you set the strategy mode and agent config inline, without leaving the page. Changes here apply globally (same underlying config).</div>");
                 sb.append("</div>");

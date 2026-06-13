@@ -148,6 +148,7 @@ public class AIToolAgent {
         public boolean disabled = false; // true = skip this strategy (e.g. intraday strategies disabled for swing mode)
         public int maxOpenTrades = 5;  // max concurrent open positions for this agent (portfolio manager)
         public int maxPerSector  = 2;  // max concurrent positions in the same sector
+        public int stocksPerVariant = 2;  // max stocks to select per variant
     }
 
     public static class Trade {

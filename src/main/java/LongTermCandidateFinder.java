@@ -117,6 +117,33 @@ public class LongTermCandidateFinder {
         }
     }
 
+    // Get tickers for a specific sector by string name (for WebServer compatibility)
+    public static List<String> getSectorTickers(String sectorName) {
+        if (sectorName == null || sectorName.isEmpty()) {
+            return new ArrayList<>();
+        }
+        try {
+            Sector sector = Sector.valueOf(sectorName.toUpperCase().replace(" ", "_"));
+            return getTickersForSector(sector);
+        } catch (IllegalArgumentException e) {
+            // If sector name doesn't match enum, try case-insensitive matching
+            String upperName = sectorName.toUpperCase();
+            if (upperName.contains("TECH")) return TECHNOLOGY_TICKERS;
+            if (upperName.contains("FINANCIAL")) return FINANCIALS_TICKERS;
+            if (upperName.contains("HEALTH")) return HEALTHCARE_TICKERS;
+            if (upperName.contains("ENERGY")) return ENERGY_TICKERS;
+            if (upperName.contains("INDUSTRIAL")) return INDUSTRIALS_TICKERS;
+            if (upperName.contains("DISCRETIONARY") || upperName.contains("CONSUMER DISCRETIONARY")) return CONSUMER_DISCRETIONARY_TICKERS;
+            if (upperName.contains("STAPLES") || upperName.contains("CONSUMER STAPLES")) return CONSUMER_STAPLES_TICKERS;
+            if (upperName.contains("UTILITY")) return UTILITIES_TICKERS;
+            if (upperName.contains("MATERIAL")) return MATERIALS_TICKERS;
+            if (upperName.contains("REAL ESTATE")) return REAL_ESTATE_TICKERS;
+            if (upperName.contains("COMMUNICATION")) return COMMUNICATION_SERVICES_TICKERS;
+            if (upperName.contains("NASDAQ")) return NASDAQ_100_TICKERS;
+            return new ArrayList<>();
+        }
+    }
+
     // Configure sector allocation (percentages should sum to 100)
     public static void setSectorAllocation(Map<Sector, Integer> allocation) {
         sectorAllocation = new LinkedHashMap<>(allocation);

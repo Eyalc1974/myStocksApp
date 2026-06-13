@@ -17,11 +17,12 @@
     "GLOBAL_QUOTE" : 16
   },
   "2026-06-13" : {
-    "TIME_SERIES_DAILY" : 230,
-    "OVERVIEW" : 37,
-    "CASH_FLOW" : 74,
-    "INCOME_STATEMENT" : 37,
-    "BALANCE_SHEET" : 37
+    "OVERVIEW" : 70,
+    "EARNINGS" : 373,
+    "CASH_FLOW" : 135,
+    "INCOME_STATEMENT" : 443,
+    "BALANCE_SHEET" : 68,
+    "TIME_SERIES_DAILY" : 1644
   },
   "2026-06-01" : {
     "TIME_SERIES_DAILY" : 302,
@@ -30,13 +31,13 @@
     "GLOBAL_QUOTE" : 123
   },
   "2026-06-12" : {
-    "TIME_SERIES_DAILY" : 418,
-    "NEWS_SENTIMENT" : 46,
     "OVERVIEW" : 71,
-    "GLOBAL_QUOTE" : 32,
     "CASH_FLOW" : 66,
     "INCOME_STATEMENT" : 40,
-    "BALANCE_SHEET" : 33
+    "BALANCE_SHEET" : 33,
+    "TIME_SERIES_DAILY" : 418,
+    "NEWS_SENTIMENT" : 46,
+    "GLOBAL_QUOTE" : 32
   },
   "2026-06-11" : {
     "TIME_SERIES_DAILY" : 106,

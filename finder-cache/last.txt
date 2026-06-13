@@ -1,18 +1,26 @@
 --- 🎯 מציאת 5 מועמדי Long Term Buy מובילים ---
 | TICKER | PRICE     | DCF FV     | FINAL VERDICT                 | TECHNICAL          | FUNDAMENTAL               | TREND | 
 |--------|-----------|------------|------------------------------|--------------------|--------------------------|-------|
---- ⏳ מריץ ניתוח על 5 מניות שנבחרו אקראית: [WMT, REGN, ASML, BKR, KHC] ---
-| WMT    | $114.36   | FV $18.90    | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 27.28 |
-| REGN   | $767.96   | FV $345.90   | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 29.61 |
-| ASML   | $1056.02  | FV $236.76   | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 21.19 |
-| BKR    | $44.71    | FV $20.80    | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 23.95 |
-| KHC    | $24.51    | FV $22.78    | NEUTRAL (No clear edge)      | NEUTRAL            | DISTRESS (Altman Z < 1.81) | ADX 15.79 |
+--- ⏳ מריץ ניתוח על 5 מניות שנבחרו אקראית: [VRTX, NTRA, AFMD, AWI, CP] ---
+[ScoringConfig] Loaded config: activeMode=LONG_TERM_INVESTOR
+[ScoringConfig] Mode thresholds: green=60, buy=60, strongBuy=80
+| VRTX   | $444.93   | FV $162.21   | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 12.22 |
+[AIToolAgent] Skipping disabled agent file: momentum-success-2026.json
+[AIToolAgent] Skipping disabled agent file: swing-variants.json
+[AIToolAgent] Initialized with 19 agents
+[AIToolAgent] End-of-day cleanup scheduled in 3537 minutes (2026-06-15 16:30 ET)
+[AIToolAgent] scan-detail.log rotated (was 1250h old)
+[AIToolAgent] Market is CLOSED - agents will run at next market open (9:30 AM ET)
+| NTRA   | $212.07   | FV $26.68    | NEUTRAL (No clear edge)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 13.07 |
+| AFMD   | $0.18     | FV $0.00     | NEUTRAL (No clear edge)      | NEUTRAL            | NEUTRAL                  | ADX 4.61 |
+| AWI    | $154.21   | FV $72.29    | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 31.15 |
+| CP     | $90.08    | FV $20.67    | AVOID/SELL (Overvalued)      | NEUTRAL            | OVERVALUED (Avoid)       | ADX 20.62 |
 
 לא נמצאו מועמדים העומדים בקריטריונים המחמירים. מציג את הטובים ביותר לפי דירוג פנימי:
 
 Selected tickers:
-- KHC
-- ASML
-- BKR
-- WMT
-- REGN
+- NTRA
+- AFMD
+- VRTX
+- CP
+- AWI

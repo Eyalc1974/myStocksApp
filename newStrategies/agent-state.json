@@ -46,7 +46,8 @@
       "entryType" : "AUTO",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "MASTER_6_VOLUME_BREAKOUT" : {
       "id" : "MASTER_6_VOLUME_BREAKOUT",
@@ -82,7 +83,8 @@
       "entryType" : "AUTO",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "M5_MA_CROSS_V2" : {
       "id" : "M5_MA_CROSS_V2",
@@ -124,7 +126,8 @@
       "entryType" : "TREND_CONTINUATION",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "M4_PULLBACK" : {
       "id" : "M4_PULLBACK",
@@ -166,7 +169,8 @@
       "entryType" : "RETEST_BREAKOUT",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "M5_MA_CROSS" : {
       "id" : "M5_MA_CROSS",
@@ -209,7 +213,8 @@
       "entryType" : "TREND_CONTINUATION",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "MASTER_5_PULLBACK_MA20" : {
       "id" : "MASTER_5_PULLBACK_MA20",
@@ -246,7 +251,8 @@
       "entryType" : "AUTO",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "I6_AGGRESSIVE_INTRADAY" : {
       "id" : "I6_AGGRESSIVE_INTRADAY",
@@ -292,7 +298,8 @@
       "entryType" : "AUTO",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "I3_TREND_RIDER" : {
       "id" : "I3_TREND_RIDER",
@@ -339,7 +346,8 @@
       "entryType" : "AUTO",
       "disabled" : true,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "MASTER_7_VIX_MARKET_FILTER" : {
       "id" : "MASTER_7_VIX_MARKET_FILTER",
@@ -361,7 +369,8 @@
       "entryType" : "AUTO",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "I1_VWAP_BREAKOUT" : {
       "id" : "I1_VWAP_BREAKOUT",
@@ -410,7 +419,8 @@
       "entryType" : "AUTO",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "I4_VOLUME_SURGE" : {
       "id" : "I4_VOLUME_SURGE",
@@ -456,7 +466,8 @@
       "entryType" : "AUTO",
       "disabled" : true,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "MASTER_8_STRONG_TREND" : {
       "id" : "MASTER_8_STRONG_TREND",
@@ -493,7 +504,8 @@
       "entryType" : "AUTO",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "M1_AGGRESSIVE" : {
       "id" : "M1_AGGRESSIVE",
@@ -535,7 +547,8 @@
       "entryType" : "AUTO",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "M2_CONSERVATIVE" : {
       "id" : "M2_CONSERVATIVE",
@@ -577,7 +590,8 @@
       "entryType" : "AUTO",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "M2_CONSERVATIVE_V2" : {
       "id" : "M2_CONSERVATIVE_V2",
@@ -619,7 +633,8 @@
       "entryType" : "AUTO",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "I2_VWAP_PULLBACK" : {
       "id" : "I2_VWAP_PULLBACK",
@@ -670,7 +685,8 @@
       "entryType" : "AUTO",
       "disabled" : true,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "INST_SWING_V1" : {
       "id" : "INST_SWING_V1",
@@ -714,7 +730,8 @@
       "entryType" : "INSTITUTIONAL_SWING",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "FUND_MOMENTUM_V1" : {
       "id" : "FUND_MOMENTUM_V1",
@@ -760,7 +777,8 @@
       "entryType" : "FUNDAMENTAL_MOMENTUM",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     },
     "QUALITY_GROWTH_V1" : {
       "id" : "QUALITY_GROWTH_V1",
@@ -806,7 +824,8 @@
       "entryType" : "QUALITY_GROWTH",
       "disabled" : false,
       "maxOpenTrades" : 5,
-      "maxPerSector" : 2
+      "maxPerSector" : 2,
+      "stocksPerVariant" : 2
     }
   },
   "tradeHistory" : {

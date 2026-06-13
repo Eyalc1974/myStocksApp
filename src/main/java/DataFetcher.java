@@ -8,6 +8,8 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Iterator;
+import java.util.Map;
 
 public class DataFetcher {
 
@@ -691,6 +693,68 @@ public class DataFetcher {
             return false;
         }
         return false;
+    }
+
+    // Fetch historical data for specific date range (for backtesting)
+    public static String fetchHistoricalDataForDateRange(String symbol, String startDate, String endDate) {
+        if (symbol == null || symbol.isBlank()) {
+            symbol = TICKER;
+        }
+        // Use full outputsize and filter by date range
+        String url = String.format(
+                "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=%s%s&outputsize=full&apikey=%s",
+                symbol, entitlementQueryParam(), API_KEY
+        );
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(REQUEST_TIMEOUT)
+                .build();
+        try {
+            ApiUsageTracker.track("TIME_SERIES_DAILY");
+            HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                String fullData = response.body();
+                return filterDataByDateRange(fullData, startDate, endDate);
+            } else {
+                return null;
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // Filter Alpha Vantage time series data by date range
+    private static String filterDataByDateRange(String jsonData, String startDate, String endDate) {
+        if (jsonData == null) return null;
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(jsonData);
+            JsonNode timeSeries = root.path("Time Series (Daily)");
+            
+            if (!timeSeries.isObject()) return jsonData;
+            
+            ObjectNode filtered = mapper.createObjectNode();
+            Iterator<Map.Entry<String, JsonNode>> it = timeSeries.fields();
+            
+            while (it.hasNext()) {
+                Map.Entry<String, JsonNode> entry = it.next();
+                String date = entry.getKey();
+                
+                // Check if date is within range
+                if ((startDate == null || date.compareTo(startDate) >= 0) &&
+                    (endDate == null || date.compareTo(endDate) <= 0)) {
+                    filtered.set(date, entry.getValue());
+                }
+            }
+            
+            ObjectNode result = mapper.createObjectNode();
+            result.set("Meta Data", root.path("Meta Data"));
+            result.set("Time Series (Daily)", filtered);
+            
+            return mapper.writeValueAsString(result);
+        } catch (Exception e) {
+            return jsonData; // Return original if filtering fails
+        }
     }
 
     // Check for earnings beat from earnings data
