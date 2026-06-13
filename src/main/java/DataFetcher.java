@@ -483,4 +483,219 @@ public class DataFetcher {
         }
         return ent.toLowerCase();
     }
+
+    // Fetch earnings revisions data from Alpha Vantage
+    public static String fetchEarningsRevisions(String symbol) {
+        if (symbol == null || symbol.isBlank()) {
+            symbol = TICKER;
+        }
+        String url = String.format(
+                "https://www.alphavantage.co/query?function=EARNINGS&symbol=%s%s&apikey=%s",
+                symbol, entitlementQueryParam(), API_KEY
+        );
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(REQUEST_TIMEOUT)
+                .build();
+        try {
+            ApiUsageTracker.track("EARNINGS");
+            HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                return response.body();
+            } else {
+                return null;
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // Calculate revenue growth from income statement data
+    public static double calculateRevenueGrowth(String incomeStatementJson) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(incomeStatementJson);
+            JsonNode quarterlyReports = root.path("quarterlyReports");
+            
+            if (quarterlyReports.isArray() && quarterlyReports.size() >= 2) {
+                double currentRevenue = quarterlyReports.get(0).path("totalRevenue").asDouble();
+                double previousRevenue = quarterlyReports.get(1).path("totalRevenue").asDouble();
+                
+                if (previousRevenue > 0) {
+                    return ((currentRevenue - previousRevenue) / previousRevenue) * 100.0;
+                }
+            }
+        } catch (Exception e) {
+            return 0.0;
+        }
+        return 0.0;
+    }
+
+    // Calculate EPS growth from earnings data
+    public static double calculateEPSGrowth(String earningsJson) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(earningsJson);
+            JsonNode quarterlyEarnings = root.path("quarterlyEarnings");
+            
+            if (quarterlyEarnings.isArray() && quarterlyEarnings.size() >= 2) {
+                double currentEPS = quarterlyEarnings.get(0).path("reportedEPS").asDouble();
+                double previousEPS = quarterlyEarnings.get(1).path("reportedEPS").asDouble();
+                
+                if (previousEPS > 0) {
+                    return ((currentEPS - previousEPS) / Math.abs(previousEPS)) * 100.0;
+                }
+            }
+        } catch (Exception e) {
+            return 0.0;
+        }
+        return 0.0;
+    }
+
+    // Check for positive EPS revisions
+    public static boolean hasPositiveEPSRevision(String earningsEstimatesJson) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(earningsEstimatesJson);
+            JsonNode estimates = root.path("estimates");
+            
+            if (estimates.isArray() && !estimates.isEmpty()) {
+                double estimatedEPS = estimates.get(0).path("estimatedEPS").asDouble();
+                double previousEstimate = estimates.size() > 1 ? estimates.get(1).path("estimatedEPS").asDouble() : estimatedEPS;
+                
+                return estimatedEPS > previousEstimate;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+        return false;
+    }
+
+    // Check for earnings surprise
+    public static double getEarningsSurprise(String earningsJson) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(earningsJson);
+            JsonNode quarterlyEarnings = root.path("quarterlyEarnings");
+            
+            if (quarterlyEarnings.isArray() && !quarterlyEarnings.isEmpty()) {
+                double reportedEPS = quarterlyEarnings.get(0).path("reportedEPS").asDouble();
+                double estimatedEPS = quarterlyEarnings.get(0).path("estimatedEPS").asDouble();
+                
+                if (estimatedEPS > 0) {
+                    return ((reportedEPS - estimatedEPS) / Math.abs(estimatedEPS)) * 100.0;
+                }
+            }
+        } catch (Exception e) {
+            return 0.0;
+        }
+        return 0.0;
+    }
+
+    // Calculate ROE from income statement and balance sheet
+    public static double calculateROE(String incomeStatementJson, String balanceSheetJson) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode incomeRoot = mapper.readTree(incomeStatementJson);
+            JsonNode balanceRoot = mapper.readTree(balanceSheetJson);
+            
+            JsonNode quarterlyReports = incomeRoot.path("quarterlyReports");
+            JsonNode quarterlyBalance = balanceRoot.path("quarterlyReports");
+            
+            if (quarterlyReports.isArray() && !quarterlyReports.isEmpty() && 
+                quarterlyBalance.isArray() && !quarterlyBalance.isEmpty()) {
+                
+                double netIncome = quarterlyReports.get(0).path("netIncome").asDouble();
+                double totalShareholderEquity = quarterlyBalance.get(0).path("totalShareholderEquity").asDouble();
+                
+                if (totalShareholderEquity > 0) {
+                    return (netIncome / totalShareholderEquity) * 100.0;
+                }
+            }
+        } catch (Exception e) {
+            return 0.0;
+        }
+        return 0.0;
+    }
+
+    // Calculate Debt/Equity ratio from balance sheet
+    public static double calculateDebtToEquity(String balanceSheetJson) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(balanceSheetJson);
+            JsonNode quarterlyReports = root.path("quarterlyReports");
+            
+            if (quarterlyReports.isArray() && !quarterlyReports.isEmpty()) {
+                double totalDebt = quarterlyReports.get(0).path("totalDebt").asDouble();
+                double totalShareholderEquity = quarterlyReports.get(0).path("totalShareholderEquity").asDouble();
+                
+                if (totalShareholderEquity > 0) {
+                    return totalDebt / totalShareholderEquity;
+                }
+            }
+        } catch (Exception e) {
+            return 999.0; // High debt ratio if calculation fails
+        }
+        return 999.0;
+    }
+
+    // Check for analyst upgrades from news sentiment
+    public static boolean hasAnalystUpgrade(String newsSentimentJson) {
+        if (newsSentimentJson == null) return false;
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(newsSentimentJson);
+            JsonNode feed = root.path("feed");
+
+            if (feed.isArray()) {
+                for (JsonNode article : feed) {
+                    String title = article.path("title").asText().toLowerCase();
+                    String summary = article.path("summary").asText().toLowerCase();
+                    String text = title + " " + summary;
+
+                    if (text.contains("upgrade") || text.contains("upgraded") || 
+                        text.contains("rating upgrade") || text.contains("buy rating")) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return false;
+        }
+        return false;
+    }
+
+    // Check for guidance raise from news sentiment
+    public static boolean hasGuidanceRaise(String newsSentimentJson) {
+        if (newsSentimentJson == null) return false;
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(newsSentimentJson);
+            JsonNode feed = root.path("feed");
+
+            if (feed.isArray()) {
+                for (JsonNode article : feed) {
+                    String title = article.path("title").asText().toLowerCase();
+                    String summary = article.path("summary").asText().toLowerCase();
+                    String text = title + " " + summary;
+
+                    if (text.contains("guidance raise") || text.contains("raised guidance") || 
+                        text.contains("outlook raise") || text.contains("raised outlook")) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return false;
+        }
+        return false;
+    }
+
+    // Check for earnings beat from earnings data
+    public static boolean hasEarningsBeat(String earningsJson) {
+        double surprise = getEarningsSurprise(earningsJson);
+        return surprise > 0.0;
+    }
 }

@@ -1511,6 +1511,12 @@ public class AIToolAgent {
             // Load from institutional-swing-agent.json
             loadAgentsFromFile("institutional-swing-agent.json", "INSTITUTIONAL", "variants");
             
+            // Load from fundamental-momentum-agent.json
+            loadAgentsFromFile("fundamental-momentum-agent.json", "FUNDAMENTAL", "variants");
+            
+            // Load from quality-growth-agent.json
+            loadAgentsFromFile("quality-growth-agent.json", "QUALITY", "variants");
+            
             // Load any evolved agents from newStrategies folder
             loadEvolvedAgents();
         }
@@ -1576,6 +1582,7 @@ public class AIToolAgent {
                 }
                 
                 agent.entryType = v.path("entryType").asText("AUTO");
+                agent.disabled = v.path("disabled").asBoolean(false);
 
                 if (!agent.id.isEmpty()) {
                     systemState.agents.put(agent.id, agent);

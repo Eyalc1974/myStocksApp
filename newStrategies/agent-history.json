@@ -1,5 +1,5 @@
 {
-  "lastUpdated" : "2026-06-05T07:35:18.6659789-04:00[America/New_York]",
+  "lastUpdated" : "2026-06-12T11:22:06.9399484-04:00[America/New_York]",
   "tradeHistory" : {
     "I5_VWAP_RETEST" : [ {
       "id" : "8d4a37e7",
@@ -566,6 +566,50 @@
       "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-20T11:41:06.3678608-04:00[America/New_York]",
       "exitTime" : "2026-05-21T10:22:37.40909-04:00[America/New_York]"
+    }, {
+      "id" : "4f2ac29a",
+      "ticker" : "LRCX",
+      "action" : "BUY",
+      "entryPrice" : 311.0648,
+      "exitPrice" : 329.415,
+      "profitLoss" : 1835.020000000003,
+      "profitLossPct" : 5.899156703040663,
+      "status" : "CLOSED_WIN",
+      "entryTime" : "2026-06-05T13:37:21.1068231-04:00[America/New_York]",
+      "exitTime" : "2026-06-08T12:10:08.5850852-04:00[America/New_York]"
+    }, {
+      "id" : "fecf8a32",
+      "ticker" : "MU",
+      "action" : "BUY",
+      "entryPrice" : 897.05,
+      "exitPrice" : 956.4988,
+      "profitLoss" : 5944.880000000001,
+      "profitLossPct" : 6.627144529290454,
+      "status" : "CLOSED_WIN",
+      "entryTime" : "2026-06-05T13:37:23.1423829-04:00[America/New_York]",
+      "exitTime" : "2026-06-08T12:10:24.7654595-04:00[America/New_York]"
+    }, {
+      "id" : "d3094058",
+      "ticker" : "MSCI",
+      "action" : "BUY",
+      "entryPrice" : 608.16,
+      "exitPrice" : 594.31,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-06-09T11:02:08.0420862-04:00[America/New_York]",
+      "exitTime" : "2026-06-12T05:42:44.0940846-04:00[America/New_York]"
+    }, {
+      "id" : "5545e5d3",
+      "ticker" : "WDC",
+      "action" : "BUY",
+      "entryPrice" : 519.9739,
+      "exitPrice" : 529.29,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-06-12T05:42:39.8334279-04:00[America/New_York]",
+      "exitTime" : "2026-06-12T05:42:57.5271327-04:00[America/New_York]"
     } ],
     "I6_AGGRESSIVE_INTRADAY" : [ {
       "id" : "d70efaf5",
@@ -729,6 +773,28 @@
       "status" : "CLOSED_LOSS",
       "entryTime" : "2026-05-13T10:30:42.977346-04:00[America/New_York]",
       "exitTime" : "2026-05-26T00:45:16.3427014-04:00[America/New_York]"
+    }, {
+      "id" : "50102712",
+      "ticker" : "MAS",
+      "action" : "BUY",
+      "entryPrice" : 71.865,
+      "exitPrice" : 73.75,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-06-09T11:02:10.3088235-04:00[America/New_York]",
+      "exitTime" : "2026-06-12T05:43:11.149776-04:00[America/New_York]"
+    }, {
+      "id" : "b90ca43b",
+      "ticker" : "CSCO",
+      "action" : "BUY",
+      "entryPrice" : 122.18,
+      "exitPrice" : 121.83,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-06-12T05:42:41.5670851-04:00[America/New_York]",
+      "exitTime" : "2026-06-12T05:43:25.1898036-04:00[America/New_York]"
     } ],
     "I2_VWAP_PULLBACK" : [ ],
     "MASTER_7_VIX_MARKET_FILTER" : [ {

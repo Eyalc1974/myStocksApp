@@ -60,6 +60,7 @@
       "nameHe": "כניסה בחזרה ל-VWAP",
       "description": "Wait for pullback to VWAP after breakout - Uses 15-min delay as advantage to confirm strength",
       "descriptionHe": "המתנה לחזרה ל-VWAP אחרי פריצה - הדיליי של 15 דקות נותן זמן לראות אם הפריצה אמיתית",
+      "disabled": true,
       "stocksPerVariant": 3,
       "entryFilters": {
         "vwapRequired": true,
@@ -106,6 +107,7 @@
       "nameHe": "רוכב המגמה (שמרני)",
       "description": "Conservative trend following - Requires strong RS, stable above VWAP, wider stops",
       "descriptionHe": "רכיבה שמרנית על המגמה - דורש RS חזק, יציבות מעל VWAP וסטופים רחבים יותר",
+      "disabled": true,
       "stocksPerVariant": 2,
       "entryFilters": {
         "vwapRequired": true,
@@ -148,6 +150,7 @@
       "nameHe": "זינוק נפח + VWAP",
       "description": "High volume breakout with VWAP confirmation - Institutional buying signal",
       "descriptionHe": "פריצה בנפח גבוה מאוד עם אישור VWAP - סימן לקנייה מוסדית",
+      "disabled": true,
       "stocksPerVariant": 2,
       "entryFilters": {
         "vwapRequired": true,

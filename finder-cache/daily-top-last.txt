@@ -1,8 +1,23 @@
 --- 🎯 Daily Nasdaq Top 5 (GREEN) candidates ---
-שגיאה בניתוח ADS: חסר נתונים לחישובים מורכבים עבור ADS
-Alpha Vantage: Invalid API call. Please retry or visit the documentation (https://www.alphavantage.co/documentation/) for TIME_SERIES_DAILY_ADJUSTED.
-שגיאה בניתוח ACOR: חסר נתונים לחישובים מורכבים עבור ACOR
-Alpha Vantage: Invalid API call. Please retry or visit the documentation (https://www.alphavantage.co/documentation/) for TIME_SERIES_DAILY_ADJUSTED.
+[AIToolAgent] LIVE price for AMD: $507.03 (daily close was $507.52)
+[AV] OVERVIEW -> https://www.alphavantage.co/query?symbol=CSX&function=OVERVIEW&entitlement=delayed&apikey=***
+[AV] NEWS_SENTIMENT -> https://www.alphavantage.co/query?limit=50&tickers=CSX&function=NEWS_SENTIMENT&sort=LATEST&entitlement=delayed&apikey=***
+[AIToolAgent] LIVE price for MAS: $73.74 (daily close was $73.74)
+[AIToolAgent][Discord] Sent notification, status: 204
+[AIToolAgent] Scan complete — signals: 0, tickers: 52, agents: 17
+[ScoringConfig] Updated tracker for MASTER_5_PULLBACK_MA20: 177/458
+[ScoringConfig] Updated tracker for MASTER_7_VIX_MARKET_FILTER: 597/948
+[AIToolAgent] Run #130 completed.
+[AIToolAgent] Monitoring 4 open positions...
+[AIToolAgent] LIVE price for PSA: $324.58 (daily close was $324.64)
+[AIToolAgent] LIVE price for CSX: $47.62 (daily close was $47.53)
+שגיאה בניתוח TRIP: חסר נתונים לחישובים מורכבים עבור TRIP
+שגיאה בניתוח VRSN: חסר נתונים לחישובים מורכבים עבור VRSN
+שגיאה בניתוח ADVM: חסר נתונים לחישובים מורכבים עבור ADVM
+[AIToolAgent] Already initialized, skipping...
+[AIToolAgent] LIVE price for VLO: $258.44 (daily close was $258.44)
+[AIToolAgent] LIVE price for WDC: $568.82 (daily close was $568.82)
+[AIToolAgent] LIVE price for STX: $932.62 (daily close was $932.47)
 
 | TICKER | PRICE    | טכני (כניסה)    | פונדמנטלי         | ADX (חוזק) |
 |--------|----------|-----------------|-------------------|-----------|
