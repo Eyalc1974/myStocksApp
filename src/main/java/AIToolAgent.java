@@ -24,6 +24,7 @@ public class AIToolAgent {
     private static final Path AGENT_STATE_FILE = Paths.get("newStrategies", "agent-state.json");
     private static final Path TRADE_LOG_FILE = Paths.get("newStrategies", "full-scan-trade-log.txt");
     private static final Path RECS_FILE       = Paths.get("newStrategies", "buy-recommendations.json");
+    private static final Path DAILY_RECS_FILE = Paths.get("newStrategies", "daily-recommendations.txt");
     private static final Path SCAN_LOG_FILE  = Paths.get("newStrategies", "scan-detail.log");
     private static final ZoneId NY = ZoneId.of("America/New_York");
     private static final ZoneId ISRAEL = ZoneId.of("Asia/Jerusalem");
@@ -252,8 +253,78 @@ public class AIToolAgent {
         try {
             Files.createDirectories(NEW_STRATEGIES_DIR);
             JSON.writeValue(RECS_FILE.toFile(), new ArrayList<>(recentRecs));
+            saveDailyRecommendationsToTxt();
         } catch (Exception e) {
             System.err.println("[AIToolAgent] Error saving recommendations: " + e.getMessage());
+        }
+    }
+
+    private static void saveDailyRecommendationsToTxt() {
+        try {
+            Files.createDirectories(NEW_STRATEGIES_DIR);
+            
+            String today = LocalDate.now(NY).toString();
+            List<ScanRecommendation> todayRecs = getRecentRecommendations();
+            
+            if (todayRecs.isEmpty()) {
+                return;
+            }
+            
+            StringBuilder sb = new StringBuilder();
+            sb.append("================================================================================\n");
+            sb.append("DAILY STOCK RECOMMENDATIONS - ").append(today).append("\n");
+            sb.append("Generated at: ").append(ZonedDateTime.now(NY).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z"))).append("\n");
+            sb.append("Position Size: $1,000 per trade\n");
+            sb.append("Total Recommendations: ").append(todayRecs.size()).append("\n");
+            sb.append("================================================================================\n\n");
+            
+            // Group by agent and sort by conviction (descending), then take top 3 per agent
+            Map<String, List<ScanRecommendation>> byAgent = todayRecs.stream()
+                .collect(Collectors.groupingBy(r -> r.agentId));
+            
+            for (Map.Entry<String, List<ScanRecommendation>> entry : byAgent.entrySet()) {
+                String agentId = entry.getKey();
+                List<ScanRecommendation> agentRecs = entry.getValue();
+                
+                // Sort by conviction (descending) and take top 3
+                agentRecs.sort((a, b) -> Double.compare(b.finalConviction, a.finalConviction));
+                List<ScanRecommendation> topRecs = agentRecs.stream().limit(3).collect(Collectors.toList());
+                
+                sb.append("AGENT: ").append(agentId).append("\n");
+                sb.append("--------------------------------------------------------------------------------\n");
+                
+                for (ScanRecommendation rec : topRecs) {
+                    // Calculate shares based on $1K position size
+                    int shares = (int) (RISK_PER_TRADE / rec.entryPrice);
+                    double positionValue = shares * rec.entryPrice;
+                    
+                    sb.append("  TICKER:         ").append(rec.ticker).append("\n");
+                    sb.append("  Entry Price:    $").append(String.format("%.2f", rec.entryPrice)).append("\n");
+                    sb.append("  Stop Loss:      $").append(String.format("%.2f", rec.stopLoss)).append("\n");
+                    sb.append("  Take Profit:    $").append(String.format("%.2f", rec.takeProfit)).append("\n");
+                    sb.append("  Quantity:       ").append(shares).append(" shares ($").append(String.format("%.0f", positionValue)).append(")\n");
+                    sb.append("  Score:          ").append(rec.score).append("/100\n");
+                    sb.append("  Conviction:     ").append(String.format("%.1f", rec.finalConviction)).append("/10\n");
+                    sb.append("  Fundamental:    ").append(rec.fundamentalScore).append("/10\n");
+                    sb.append("  Catalyst:       ").append(rec.catalystScore).append("/10\n");
+                    sb.append("  Inst. Flow:     ").append(rec.institutionalFlowScore).append("/10\n");
+                    sb.append("  Date:           ").append(rec.date).append("\n");
+                    sb.append("\n");
+                }
+                
+                sb.append("\n");
+            }
+            
+            sb.append("================================================================================\n");
+            sb.append("END OF DAILY RECOMMENDATIONS\n");
+            sb.append("================================================================================\n");
+            
+            // Append to file instead of overwriting - allows tracking multiple runs per day
+            Files.writeString(DAILY_RECS_FILE, sb.toString(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            System.out.println("[AIToolAgent] Daily recommendations appended to: " + DAILY_RECS_FILE);
+            
+        } catch (Exception e) {
+            System.err.println("[AIToolAgent] Error saving daily recommendations to txt: " + e.getMessage());
         }
     }
 

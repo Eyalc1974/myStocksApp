@@ -1,0 +1,78 @@
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-18
+Generated at: 2026-06-18 13:18:36 EDT
+Total Recommendations: 6
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         CVS
+  Entry Price:    $98.32
+  Stop Loss:      $92.37
+  Take Profit:    $110.12
+  Score:          10/100
+  Conviction:     37.1/10
+  Fundamental:    6/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-06-18
+
+  TICKER:         SPG
+  Entry Price:    $212.85
+  Stop Loss:      $202.11
+  Take Profit:    $238.39
+  Score:          10/100
+  Conviction:     43.3/10
+  Fundamental:    8/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-18
+
+  TICKER:         MET
+  Entry Price:    $85.59
+  Stop Loss:      $80.94
+  Take Profit:    $95.86
+  Score:          12/100
+  Conviction:     34.8/10
+  Fundamental:    6/10
+  Catalyst:       7/10
+  Inst. Flow:     0/10
+  Date:           2026-06-18
+
+  TICKER:         FTNT
+  Entry Price:    $145.25
+  Stop Loss:      $130.83
+  Take Profit:    $162.68
+  Score:          10/100
+  Conviction:     43.3/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     3/10
+  Date:           2026-06-18
+
+  TICKER:         ILMN
+  Entry Price:    $161.75
+  Stop Loss:      $145.92
+  Take Profit:    $181.16
+  Score:          11/100
+  Conviction:     42.9/10
+  Fundamental:    5/10
+  Catalyst:       10/10
+  Inst. Flow:     4/10
+  Date:           2026-06-18
+
+  TICKER:         HPE
+  Entry Price:    $47.34
+  Stop Loss:      $39.84
+  Take Profit:    $53.02
+  Score:          10/100
+  Conviction:     36.6/10
+  Fundamental:    6/10
+  Catalyst:       9/10
+  Inst. Flow:     2/10
+  Date:           2026-06-18
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================

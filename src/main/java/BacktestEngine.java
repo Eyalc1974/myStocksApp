@@ -12,6 +12,9 @@ import java.util.*;
 public class BacktestEngine {
     
     private static final ObjectMapper mapper = new ObjectMapper();
+    private static volatile BacktestResults lastResults = null;
+    private static volatile String lastBacktestAgent = null;
+    private static volatile boolean backtestRunning = false;
     
     /**
      * Backtest result for a single trade
@@ -74,6 +77,8 @@ public class BacktestEngine {
             double takeProfitPct,
             int maxDaysHeld
     ) {
+        backtestRunning = true;
+        lastBacktestAgent = agentId;
         BacktestResults results = new BacktestResults();
         
         for (String ticker : tickers) {
@@ -82,19 +87,176 @@ public class BacktestEngine {
                     ticker, agentId, startDate, endDate, stopLossPct, takeProfitPct, maxDaysHeld
                 );
                 results.trades.addAll(tickerTrades);
+                
+                // No rate limiting needed when using cached data
+                // Only applies when falling back to live API calls
+                
             } catch (Exception e) {
                 System.err.println("[Backtest] Error backtesting " + ticker + ": " + e.getMessage());
             }
         }
         
         calculateMetrics(results);
+        lastResults = results;
+        backtestRunning = false;
         return results;
+    }
+    
+    public static BacktestResults getLastResults() {
+        return lastResults;
+    }
+    
+    public static String getLastBacktestAgent() {
+        return lastBacktestAgent;
+    }
+    
+    public static boolean isBacktestRunning() {
+        return backtestRunning;
     }
     
     /**
      * Backtest a single ticker
      */
     private static List<BacktestTrade> backtestTicker(
+            String ticker,
+            String agentId,
+            String startDate,
+            String endDate,
+            double stopLossPct,
+            double takeProfitPct,
+            int maxDaysHeld
+    ) {
+        List<BacktestTrade> trades = new ArrayList<>();
+        
+        try {
+            // Try to use cached data first
+            MarketDataCache.TickerData cachedData = MarketDataCache.getTickerData(ticker);
+            
+            if (cachedData != null) {
+                // Use cached data - much faster!
+                return backtestWithCachedData(cachedData, agentId, startDate, endDate, stopLossPct, takeProfitPct, maxDaysHeld);
+            }
+            
+            // Fallback to live API calls if no cache
+            System.out.println("[Backtest] No cache for " + ticker + ", using live API");
+            return backtestWithLiveAPI(ticker, agentId, startDate, endDate, stopLossPct, takeProfitPct, maxDaysHeld);
+            
+        } catch (Exception e) {
+            System.err.println("[Backtest] Error processing " + ticker + ": " + e.getMessage());
+        }
+        
+        return trades;
+    }
+    
+    /**
+     * Run backtest using cached data (fast)
+     */
+    private static List<BacktestTrade> backtestWithCachedData(
+            MarketDataCache.TickerData cachedData,
+            String agentId,
+            String startDate,
+            String endDate,
+            double stopLossPct,
+            double takeProfitPct,
+            int maxDaysHeld
+    ) {
+        List<BacktestTrade> trades = new ArrayList<>();
+        
+        try {
+            // Filter dates within range
+            List<LocalDate> dates = new ArrayList<>();
+            Map<LocalDate, MarketDataCache.DailyData> dataByDate = new TreeMap<>();
+            
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+            
+            for (Map.Entry<String, MarketDataCache.DailyData> entry : cachedData.dailyData.entrySet()) {
+                LocalDate date = LocalDate.parse(entry.getKey());
+                if (!date.isBefore(start) && !date.isAfter(end)) {
+                    dates.add(date);
+                    dataByDate.put(date, entry.getValue());
+                }
+            }
+            Collections.sort(dates);
+            
+            double revenueGrowth = cachedData.revenueGrowth != null ? cachedData.revenueGrowth : 0.0;
+            double epsGrowth = cachedData.epsGrowth != null ? cachedData.epsGrowth : 0.0;
+            
+            System.out.println("[Backtest] " + cachedData.symbol + " (CACHED) - Revenue Growth: " + revenueGrowth + 
+                "%, EPS Growth: " + epsGrowth + "%, Data points: " + dates.size());
+            
+            // Walk through dates and check entry conditions
+            for (int i = 200; i < dates.size(); i++) {
+                LocalDate date = dates.get(i);
+                MarketDataCache.DailyData dayData = dataByDate.get(date);
+                
+                if (dayData.sma200 == null || dayData.rsi == null || dayData.rvol == null) {
+                    continue; // Skip if indicators not available
+                }
+                
+                // Check entry conditions based on agent
+                if (shouldEnter(agentId, date, dayData.close, dayData.volume, dayData.sma200, dayData.sma50, 
+                                  dayData.rsi, dayData.rvol, revenueGrowth, epsGrowth)) {
+                    
+                    BacktestTrade trade = new BacktestTrade(date.toString(), cachedData.symbol, agentId, dayData.close);
+                    
+                    // Simulate trade forward
+                    for (int j = i + 1; j < dates.size() && j < i + maxDaysHeld; j++) {
+                        LocalDate futureDate = dates.get(j);
+                        MarketDataCache.DailyData futureData = dataByDate.get(futureDate);
+                        
+                        double profitPct = ((futureData.close - dayData.close) / dayData.close) * 100.0;
+                        
+                        // Check exit conditions
+                        if (profitPct <= -stopLossPct) {
+                            trade.exitDate = futureDate.toString();
+                            trade.exitPrice = futureData.close;
+                            trade.profitPct = profitPct;
+                            trade.daysHeld = j - i;
+                            trade.exitReason = "STOP";
+                            trades.add(trade);
+                            i = j; // Skip ahead
+                            break;
+                        } else if (profitPct >= takeProfitPct) {
+                            trade.exitDate = futureDate.toString();
+                            trade.exitPrice = futureData.close;
+                            trade.profitPct = profitPct;
+                            trade.daysHeld = j - i;
+                            trade.exitReason = "TAKE_PROFIT";
+                            trades.add(trade);
+                            i = j; // Skip ahead
+                            break;
+                        }
+                    }
+                    
+                    // If still open after maxDaysHeld, close it
+                    if (trade.exitDate == null) {
+                        int endIndex = Math.min(i + maxDaysHeld, dates.size() - 1);
+                        LocalDate exitDate = dates.get(endIndex);
+                        MarketDataCache.DailyData exitData = dataByDate.get(exitDate);
+                        
+                        trade.exitDate = exitDate.toString();
+                        trade.exitPrice = exitData.close;
+                        trade.profitPct = ((exitData.close - dayData.close) / dayData.close) * 100.0;
+                        trade.daysHeld = endIndex - i;
+                        trade.exitReason = "TIME";
+                        trades.add(trade);
+                        i = endIndex;
+                    }
+                }
+            }
+            
+        } catch (Exception e) {
+            System.err.println("[Backtest] Error processing cached data for " + cachedData.symbol + ": " + e.getMessage());
+        }
+        
+        return trades;
+    }
+    
+    /**
+     * Run backtest using live API calls (slow, rate-limited)
+     */
+    private static List<BacktestTrade> backtestWithLiveAPI(
             String ticker,
             String agentId,
             String startDate,
@@ -142,6 +304,8 @@ public class BacktestEngine {
             
             double revenueGrowth = DataFetcher.calculateRevenueGrowth(incomeStatement);
             double epsGrowth = DataFetcher.calculateEPSGrowth(earnings);
+            
+            System.out.println("[Backtest] " + ticker + " (LIVE API) - Revenue Growth: " + revenueGrowth + "%, EPS Growth: " + epsGrowth + "%, Data points: " + dates.size());
             
             // Walk through dates and check entry conditions
             for (int i = 200; i < dates.size(); i++) {

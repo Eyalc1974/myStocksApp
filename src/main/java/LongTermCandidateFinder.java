@@ -20,7 +20,11 @@ public class LongTermCandidateFinder {
         "AMD","INTC","QCOM","CSCO","IBM","NOW","SNOW","PANW","AMAT","MU",
         "LRCX","KLAC","TXN","ADI","NXPI","ASML","MRVL","WDAY","FTNT","ANET",
         "TEAM","ZS","OKTA","DDOG","MDB","NET","HPE","DELL","HPQ","STX",
-        "WDC","ON","MPWR","MCHP","SWKS","QRVO","TER","CDNS","SNPS"
+        "WDC","ON","MPWR","MCHP","SWKS","QRVO","TER","CDNS","SNPS",
+        // Additional semiconductor stocks
+        "ARM","SMCI","TSM","COHR","TSEM","WOLF","STM","UMC","ASX","MX",
+        // Additional AI stocks
+        "PLTR","AI","PATH","SOUN","UPST"
     );
 
     public static final List<String> FINANCIALS_TICKERS = Arrays.asList(

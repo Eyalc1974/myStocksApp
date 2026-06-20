@@ -1,8 +1,12 @@
 --- 🎯 Daily Nasdaq Top 5 (GREEN) candidates ---
-שגיאה בניתוח AIM: חסר נתונים לחישובים מורכבים עבור AIM
+שגיאה בניתוח SEGA: חסר נתונים לחישובים מורכבים עבור SEGA
+Alpha Vantage: Invalid API call. Please retry or visit the documentation (https://www.alphavantage.co/documentation/) for TIME_SERIES_DAILY_ADJUSTED.
+[AIToolAgent] Run #134 | Scanning 51 tickers with 19 agents
+[AIToolAgent][Discord] Sent notification, status: 204
+[daily-green] started (thread will run in background)
 [ScoringConfig] Loaded config: activeMode=LONG_TERM_INVESTOR
 [ScoringConfig] Mode thresholds: green=60, buy=60, strongBuy=80
 
 | TICKER | PRICE    | טכני (כניסה)    | פונדמנטלי         | ADX (חוזק) |
 |--------|----------|-----------------|-------------------|-----------|
-| ALSN  | $117.35   | NEUTRAL         | STRONG BUY (Long Term) | ADX: 17.05 |
+No GREEN candidates found today (based on current filters). Try again later.

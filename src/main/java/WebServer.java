@@ -26,18 +26,7 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.LinkedHashMap;
-import java.util.UUID;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -94,6 +83,18 @@ public class WebServer {
     private static volatile int strategyCompareProgress = 0;
     private static volatile int strategyCompareTotal = 0;
     private static volatile List<Map<String, Object>> strategyCompareResults = new ArrayList<>();
+
+    // Cache building status tracking
+    private static final Object cacheBuildLock = new Object();
+    private static volatile boolean cacheBuildRunning = false;
+    private static volatile String cacheBuildStatus = "not_started";
+    private static volatile int cacheBuildProgress = 0;
+    private static volatile int cacheBuildTotal = 0;
+    private static volatile String cacheBuildStartDate = "";
+    private static volatile String cacheBuildEndDate = "";
+    private static volatile boolean autoBuildCacheOnStartup = false;
+    private static final String CACHE_SETTINGS_FILE = "cache_settings.json";
+    private static final String CACHE_STATE_FILE = "cache_state.json";
 
     // Popular tickers for random selection
     private static final String[] POPULAR_TICKERS = {
@@ -4595,8 +4596,8 @@ public class WebServer {
                         "    '<div style=\"font-size:20px;font-weight:700;color:#ef4444;\">'+(s.losers||0)+'</div>'+"+
                         "    '<div style=\"color:#9ca3af;font-size:11px;\">Losers</div></div>'+"+
                         "  '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">'+"+
-                        "    '<div style=\"font-size:20px;font-weight:700;color:'+(s.winRate>=50?'#22c55e':'#ef4444')+';\">'+(s.winRate||0).toFixed(0)+'%</div>'+"+
-                        "    '<div style=\"color:#9ca3af;font-size:11px;\">Win Rate</div></div>'+"+
+                        "    '<div style=\"font-size:20px;font-weight:700;color:'+(s.totalPnL>=0?'#22c55e':'#ef4444')+';\">$'+(s.totalPnL||0).toFixed(0)+'</div>'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:11px;\">Net Profit</div></div>'+"+
                         "  '<div style=\"text-align:center;padding:12px;background:#1f2a44;border-radius:8px;\">'+"+
                         "    '<div style=\"font-size:20px;font-weight:700;color:'+(s.totalPnL>=0?'#22c55e':'#ef4444')+';\">$'+(s.totalPnL||0).toFixed(0)+'</div>'+"+
                         "    '<div style=\"color:#9ca3af;font-size:11px;\">Total P/L</div></div>'+"+
@@ -4744,8 +4745,7 @@ public class WebServer {
                         "    '<thead><tr style=\"background:#1f2a44;\">'+"+
                         "    '<th style=\"padding:8px;text-align:left;\">🏆 Variant</th>'+"+
                         "    '<th style=\"padding:8px;text-align:center;\">Trades</th>'+"+
-                        "    '<th style=\"padding:8px;text-align:center;\">Win Rate</th>'+"+
-                        "    '<th style=\"padding:8px;text-align:right;\">P/L $</th>'+"+
+                        "    '<th style=\"padding:8px;text-align:center;\">Net Profit</th>'+"+
                         "    '<th style=\"padding:8px;text-align:right;\">P/L %</th>'+"+
                         "    '<th style=\"padding:8px;text-align:center;\">Profit Factor</th>'+"+
                         "    '</tr></thead><tbody>';"+
@@ -4757,8 +4757,7 @@ public class WebServer {
                         "    vpHtml+='<tr style=\"border-bottom:1px solid #1f2a44;\">'+"+
                         "      '<td style=\"padding:8px;\">'+medal+'<b>'+vd.variantName+'</b><div style=\"font-size:10px;color:#9ca3af;\">'+vd.variantId+'</div></td>'+"+
                         "      '<td style=\"padding:8px;text-align:center;\">'+vd.totalTrades+' <span style=\"color:#22c55e;\">('+vd.winningTrades+'W)</span> <span style=\"color:#ef4444;\">('+vd.losingTrades+'L)</span></td>'+"+
-                        "      '<td style=\"padding:8px;text-align:center;color:'+wrColor+';font-weight:600;\">'+vd.winRate.toFixed(0)+'%</td>'+"+
-                        "      '<td style=\"padding:8px;text-align:right;color:'+pnlColor+';font-weight:600;\">$'+vd.totalProfitLossDollars.toFixed(0)+'</td>'+"+
+                        "      '<td style=\"padding:8px;text-align:center;color:'+pnlColor+';font-weight:600;\">$'+vd.totalProfitLossDollars.toFixed(0)+'</td>'+"+
                         "      '<td style=\"padding:8px;text-align:right;color:'+pnlColor+';\">'+(vd.totalProfitLossPct>=0?'+':'')+vd.totalProfitLossPct.toFixed(1)+'%</td>'+"+
                         "      '<td style=\"padding:8px;text-align:center;color:'+pfColor+';font-weight:600;\">'+vd.profitFactor.toFixed(2)+'</td>'+"+
                         "    '</tr>';}"+
@@ -5356,6 +5355,73 @@ public class WebServer {
             }
         });
 
+        // ---------------- Fetch Market Data API Endpoint ----------------
+        server.createContext("/api/fetch-market-data", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                
+                Map<String, String> qp = parseQueryParams(ex.getRequestURI() == null ? null : ex.getRequestURI().getRawQuery());
+                String sector = qp.getOrDefault("sector", "").trim();
+                String monthsBackStr = qp.getOrDefault("monthsBack", "6").trim();
+                
+                Integer monthsBack;
+                try { monthsBack = Integer.parseInt(monthsBackStr); } catch (Exception ignore) { monthsBack = 6; }
+                
+                // Get tickers from LongTermCandidateFinder based on sector
+                List<String> tickers = new ArrayList<>();
+                if (sector.isEmpty() || "ALL".equalsIgnoreCase(sector)) {
+                    // Get all tickers from all sectors
+                    tickers.addAll(LongTermCandidateFinder.TECHNOLOGY_TICKERS);
+                    tickers.addAll(LongTermCandidateFinder.FINANCIALS_TICKERS);
+                    tickers.addAll(LongTermCandidateFinder.HEALTHCARE_TICKERS);
+                    tickers.addAll(LongTermCandidateFinder.ENERGY_TICKERS);
+                    tickers.addAll(LongTermCandidateFinder.INDUSTRIALS_TICKERS);
+                    tickers.addAll(LongTermCandidateFinder.CONSUMER_DISCRETIONARY_TICKERS);
+                    tickers.addAll(LongTermCandidateFinder.CONSUMER_STAPLES_TICKERS);
+                    tickers.addAll(LongTermCandidateFinder.UTILITIES_TICKERS);
+                    tickers.addAll(LongTermCandidateFinder.MATERIALS_TICKERS);
+                    tickers.addAll(LongTermCandidateFinder.REAL_ESTATE_TICKERS);
+                    tickers.addAll(LongTermCandidateFinder.COMMUNICATION_SERVICES_TICKERS);
+                } else {
+                    // Get tickers from specific sector
+                    LongTermCandidateFinder.Sector sectorEnum = null;
+                    try {
+                        sectorEnum = LongTermCandidateFinder.Sector.valueOf(sector.toUpperCase());
+                        tickers = LongTermCandidateFinder.getTickersForSector(sectorEnum);
+                    } catch (Exception e) {
+                        respondJson(ex, Map.of("error", "Invalid sector: " + sector), 400);
+                        return;
+                    }
+                }
+                
+                // Remove duplicates
+                tickers = new ArrayList<>(new LinkedHashSet<>(tickers));
+                final List<String> finalTickers = tickers;
+                final int finalMonthsBack = monthsBack;
+
+                try {
+                    // Start async data fetch
+                    new Thread(() -> {
+                        try {
+                            MarketDataCache.fetchAndCacheData(finalTickers, finalMonthsBack);
+                        } catch (Exception e) {
+                            System.err.println("[FetchMarketData] Error: " + e.getMessage());
+                        }
+                    }).start();
+                    
+                    Map<String, Object> out = new LinkedHashMap<>();
+                    out.put("status", "started");
+                    out.put("tickers", tickers.size());
+                    out.put("monthsBack", monthsBack);
+                    out.put("message", "Fetching data for " + tickers.size() + " tickers (last " + monthsBack + " months). This will take several minutes due to API rate limits.");
+                    
+                    respondJson(ex, out, 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", "Failed to start data fetch: " + e.getMessage()), 500);
+                }
+            }
+        });
+
         // ---------------- Get Available Agents API Endpoint ----------------
         server.createContext("/api/agents", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
@@ -5381,6 +5447,114 @@ public class WebServer {
                     respondJson(ex, Map.of("tickers", tickerString, "count", tickers.size()), 200);
                 } catch (Exception e) {
                     respondJson(ex, Map.of("error", "Failed to get universe tickers: " + e.getMessage()), 500);
+                }
+            }
+        });
+
+        // ---------------- Cache Status API Endpoint ----------------
+        server.createContext("/api/cache-status", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                
+                try {
+                    synchronized (cacheBuildLock) {
+                        Map<String, Object> status = new LinkedHashMap<>();
+                        status.put("running", cacheBuildRunning);
+                        status.put("status", cacheBuildStatus);
+                        status.put("progress", cacheBuildProgress);
+                        status.put("total", cacheBuildTotal);
+                        status.put("startDate", cacheBuildStartDate);
+                        status.put("endDate", cacheBuildEndDate);
+                        
+                        // Check if cache file exists
+                        MarketDataCache.MarketCache existingCache = MarketDataCache.loadCache();
+                        if (existingCache != null) {
+                            status.put("cacheExists", true);
+                            status.put("cacheLastUpdated", existingCache.lastUpdated);
+                            status.put("cacheTickers", existingCache.totalTickers);
+                        } else {
+                            status.put("cacheExists", false);
+                        }
+                        
+                        respondJson(ex, status, 200);
+                    }
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", "Failed to get cache status: " + e.getMessage()), 500);
+                }
+            }
+        });
+
+        // ---------------- Cache Build Trigger API Endpoint ----------------
+        server.createContext("/api/cache-build/start", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                
+                try {
+                    synchronized (cacheBuildLock) {
+                        if (cacheBuildRunning) {
+                            respondJson(ex, Map.of("error", "Cache build already running"), 400);
+                            return;
+                        }
+                        cacheBuildRunning = true;
+                        cacheBuildStatus = "starting";
+                        cacheBuildProgress = 0;
+                        cacheBuildTotal = 0;
+                        cacheBuildStartDate = "2025-01-01";
+                        cacheBuildEndDate = java.time.LocalDate.now().toString();
+                    }
+                    
+                    // Start cache building in background
+                    Thread cacheThread = new Thread(() -> {
+                        try {
+                            System.out.println("[CacheBuild] Manual cache build triggered");
+                            
+                            synchronized (cacheBuildLock) {
+                                cacheBuildStatus = "in_progress";
+                            }
+
+                            // Get universe tickers
+                            List<String> tickers = LongTermCandidateFinder.getUniverseTickers();
+                            synchronized (cacheBuildLock) {
+                                cacheBuildTotal = tickers.size();
+                                cacheBuildProgress = 0;
+                            }
+                            System.out.println("[CacheBuild] Building cache for " + tickers.size() + " tickers");
+                            System.out.println("[CacheBuild] First 10 tickers: " + tickers.subList(0, Math.min(10, tickers.size())));
+
+                            // Actually build the cache with real data
+                            MarketDataCache.fetchAndCacheData(tickers);
+                            
+                            // Verify file was created
+                            java.io.File cacheFile = new java.io.File("market_data_cache.json");
+                            if (cacheFile.exists()) {
+                                System.out.println("[CacheBuild] Cache file created successfully: " + cacheFile.getAbsolutePath() + " (" + cacheFile.length() + " bytes)");
+                            } else {
+                                System.err.println("[CacheBuild] WARNING: Cache file was not created!");
+                            }
+                            
+                            synchronized (cacheBuildLock) {
+                                cacheBuildProgress = tickers.size();
+                                cacheBuildStatus = "completed";
+                                cacheBuildRunning = false;
+                            }
+                            System.out.println("[CacheBuild] Cache building completed");
+                            
+                        } catch (Exception e) {
+                            System.err.println("[CacheBuild] Error: " + e.getMessage());
+                            e.printStackTrace();
+                            synchronized (cacheBuildLock) {
+                                cacheBuildStatus = "error";
+                                cacheBuildRunning = false;
+                            }
+                        }
+                    });
+                    cacheThread.setDaemon(true);
+                    cacheThread.setName("cache-build-manual");
+                    cacheThread.start();
+                    
+                    respondJson(ex, Map.of("message", "Cache build started", "tickers", LongTermCandidateFinder.getUniverseTickers().size()), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", "Failed to start cache build: " + e.getMessage()), 500);
                 }
             }
         });
@@ -6556,6 +6730,20 @@ public class WebServer {
                 sb.append("<div style='color:#9ca3af;margin-bottom:16px;'>Test trading strategies on historical data (2022-2026). Calculate Win Rate, Profit Factor, Expectancy, Max Drawdown, CAGR, Sharpe.</div>");
                 sb.append("<div style='color:#9ca3af;margin-bottom:16px;' dir='rtl'>בדוק אסטרטגיות על נתונים היסטוריים. חשב Win Rate, Profit Factor, Expectancy, Max Drawdown, CAGR, Sharpe.</div>");
 
+                // Cache status indicator
+                sb.append("<div id='cacheStatus' style='background:#0d1b30;border:1px solid #1e3a5f;border-radius:8px;padding:12px;margin-bottom:16px;'>");
+                sb.append("<div style='display:flex;align-items:center;justify-content:space-between;'>");
+                sb.append("<div style='display:flex;align-items:center;gap:8px;'>");
+                sb.append("<span id='cacheStatusIcon' style='font-size:20px;'>⏳</span>");
+                sb.append("<div>");
+                sb.append("<div id='cacheStatusText' style='font-weight:600;color:#93c5fd;'>Loading cache status...</div>");
+                sb.append("<div id='cacheStatusDetails' style='font-size:12px;color:#9ca3af;'></div>");
+                sb.append("</div>");
+                sb.append("</div>");
+                sb.append("<button id='startCacheBuild' onclick='startCacheBuild()' style='background:#22c55e;padding:8px 16px;border:none;border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:12px;'>🚀 Build Cache</button>");
+                sb.append("</div>");
+                sb.append("</div>");
+
                 // Backtest form
                 sb.append("<form method='post' action='/backtest-run' style='margin-bottom:20px;'>");
                 sb.append("<div style='display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;'>");
@@ -6631,6 +6819,58 @@ public class WebServer {
                         "    }"+
                         "  }catch(e){console.error('Error loading universe tickers:', e);alert('Failed to load universe tickers: '+e.message);}"+
                         "}"+
+                        "async function startCacheBuild(){"+
+                        "  var btn=document.getElementById('startCacheBuild');"+
+                        "  if(btn) btn.disabled=true;"+
+                        "  try{"+
+                        "    var r=await fetch('/api/cache-build/start',{method:'POST'});"+
+                        "    var d=await r.json();"+
+                        "    if(d.error){alert('Error: '+d.error);if(btn) btn.disabled=false;return;}"+
+                        "    alert('Cache build started for '+d.tickers+' tickers. This will take several hours due to API rate limits.');"+
+                        "    updateCacheStatus();"+
+                        "  }catch(e){console.error('Error starting cache build:', e);alert('Failed to start cache build: '+e.message);if(btn) btn.disabled=false;}"+
+                        "}"+
+                        "async function updateCacheStatus(){"+
+                        "  try{"+
+                        "    var r=await fetch('/api/cache-status');"+
+                        "    var d=await r.json();"+
+                        "    var icon=document.getElementById('cacheStatusIcon');"+
+                        "    var text=document.getElementById('cacheStatusText');"+
+                        "    var details=document.getElementById('cacheStatusDetails');"+
+                        "    var btn=document.getElementById('startCacheBuild');"+
+                        "    if(d.running){"+
+                        "      icon.textContent='⏳';"+
+                        "      text.textContent='Cache Building In Progress';"+
+                        "      text.style.color='#f59e0b';"+
+                        "      details.textContent='Progress: '+d.progress+'/'+d.total+' tickers ('+d.startDate+' to '+d.endDate+')';"+
+                        "      if(btn) btn.disabled=true;"+
+                        "    }else if(d.status==='completed'){"+
+                        "      icon.textContent='✅';"+
+                        "      text.textContent='Cache Build Completed';"+
+                        "      text.style.color='#22c55e';"+
+                        "      if(d.cacheExists){"+
+                        "        details.textContent='Cache updated: '+d.cacheLastUpdated+' ('+d.cacheTickers+' tickers)';"+
+                        "      }else{"+
+                        "        details.textContent='Build completed but cache file not found';"+
+                        "      }"+
+                        "      if(btn) btn.disabled=false;"+
+                        "    }else if(d.status==='error'){"+
+                        "      icon.textContent='❌';"+
+                        "      text.textContent='Cache Build Error';"+
+                        "      text.style.color='#ef4444';"+
+                        "      details.textContent='An error occurred during cache building';"+
+                        "      if(btn) btn.disabled=false;"+
+                        "    }else{"+
+                        "      icon.textContent='⏸️';"+
+                        "      text.textContent='Cache Not Started';"+
+                        "      text.style.color='#9ca3af';"+
+                        "      details.textContent='Click Build Cache to start (will take several hours)';"+
+                        "      if(btn) btn.disabled=false;"+
+                        "    }"+
+                        "  }catch(e){console.error('Error fetching cache status:', e);}"+
+                        "}"+
+                        "updateCacheStatus();"+
+                        "setInterval(updateCacheStatus,5000);"+
                         "</script>");
                 
                 // Strategy Laboratory section
@@ -6717,7 +6957,102 @@ public class WebServer {
                 response.put("status", "started");
                 response.put("agent", agent);
                 response.put("tickerCount", tickers.size());
-                response.put("message", "Backtest started in background. Check console for results.");
+                response.put("message", "Backtest started in background. Results will appear below when complete.");
+                respondJson(ex, response, 200);
+            }
+        });
+
+        // Cache management endpoint
+        server.createContext("/cache-status", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                Map<String, Object> response = new LinkedHashMap<>();
+                MarketDataCache.MarketCache cache = MarketDataCache.loadCache();
+                
+                if (cache != null) {
+                    response.put("exists", true);
+                    response.put("lastUpdated", cache.lastUpdated);
+                    response.put("totalTickers", cache.totalTickers);
+                    response.put("tickers", new ArrayList<>(cache.tickers.keySet()));
+                } else {
+                    response.put("exists", false);
+                }
+                
+                respondJson(ex, response, 200);
+            }
+        });
+
+        server.createContext("/cache-build", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    respondHtml(ex, htmlPage(""), 200); return;
+                }
+
+                String body = readBody(ex);
+                Map<String, String> form = parseForm(body);
+
+                String tickersStr = form.getOrDefault("tickers", "");
+                String sector = form.getOrDefault("sector", "");
+
+                List<String> tickers = new ArrayList<>();
+                if (!sector.isEmpty() && !sector.equals("all")) {
+                    tickers = LongTermCandidateFinder.getSectorTickers(sector);
+                } else if (sector.equals("all")) {
+                    tickers = LongTermCandidateFinder.getAllSectorTickers();
+                } else if (!tickersStr.isEmpty()) {
+                    String[] parts = tickersStr.split(",");
+                    for (String part : parts) {
+                        tickers.add(part.trim().toUpperCase());
+                    }
+                }
+
+                if (tickers.isEmpty()) {
+                    Map<String, Object> error = new LinkedHashMap<>();
+                    error.put("error", "No tickers specified");
+                    respondJson(ex, error, 400);
+                    return;
+                }
+
+                // Run cache build in background
+                final List<String> finalTickers = tickers;
+                new Thread(() -> {
+                    try {
+                        MarketDataCache.fetchAndCacheData(finalTickers);
+                    } catch (Exception e) {
+                        System.err.println("[Cache] Error: " + e.getMessage());
+                    }
+                }).start();
+
+                Map<String, Object> response = new LinkedHashMap<>();
+                response.put("status", "started");
+                response.put("tickerCount", tickers.size());
+                response.put("message", "Cache build started in background. This will take several hours for all tickers.");
+                respondJson(ex, response, 200);
+            }
+        });
+
+        // Backtest status endpoint
+        server.createContext("/backtest-status", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                Map<String, Object> response = new LinkedHashMap<>();
+                response.put("running", BacktestEngine.isBacktestRunning());
+                response.put("agent", BacktestEngine.getLastBacktestAgent());
+                
+                BacktestEngine.BacktestResults results = BacktestEngine.getLastResults();
+                if (results != null) {
+                    response.put("completed", true);
+                    response.put("totalTrades", results.totalTrades);
+                    response.put("winRate", results.winRate);
+                    response.put("profitFactor", results.profitFactor);
+                    response.put("expectancy", results.expectancy);
+                    response.put("maxDrawdown", results.maxDrawdown);
+                    response.put("totalProfit", results.totalProfit);
+                    response.put("totalLoss", results.totalLoss);
+                    response.put("avgWin", results.avgWin);
+                    response.put("avgLoss", results.avgLoss);
+                } else {
+                    response.put("completed", false);
+                }
+                
                 respondJson(ex, response, 200);
             }
         });
@@ -6788,6 +7123,51 @@ public class WebServer {
                 sb.append("<button id='runBacktestBtn' onclick='runAgentBacktest()' style='background:#7c3aed;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;'>🚀 Run Backtest</button>");
                 sb.append("</div>");
 
+                // Cache Management section
+                sb.append("<div style='background:#0d1b30;border:1px solid #1e3a5f;border-radius:10px;padding:16px;margin-bottom:16px;'>");
+                sb.append("<div style='font-weight:600;color:#93c5fd;margin-bottom:12px;'>💾 Market Data Cache</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:12px;'>Cache market data to enable fast backtesting without API rate limits. Build once, run many backtests instantly.</div>");
+                
+                sb.append("<div id='cacheStatus' style='margin-bottom:12px;'></div>");
+                
+                sb.append("<div style='display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;'>");
+                sb.append("<div>");
+                sb.append("<label style='color:#9ca3af;display:block;margin-bottom:6px;'>Sector:</label>");
+                sb.append("<select id='cacheSector' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("<option value='ALL'>All sectors (500+ tickers)</option>");
+                sb.append("<option value='TECHNOLOGY'>Technology</option>");
+                sb.append("<option value='FINANCIALS'>Financials</option>");
+                sb.append("<option value='HEALTHCARE'>Healthcare</option>");
+                sb.append("<option value='ENERGY'>Energy</option>");
+                sb.append("<option value='INDUSTRIALS'>Industrials</option>");
+                sb.append("<option value='CONSUMER_DISCRETIONARY'>Consumer Discretionary</option>");
+                sb.append("<option value='CONSUMER_STAPLES'>Consumer Staples</option>");
+                sb.append("<option value='UTILITIES'>Utilities</option>");
+                sb.append("<option value='MATERIALS'>Materials</option>");
+                sb.append("<option value='REAL_ESTATE'>Real Estate</option>");
+                sb.append("<option value='COMMUNICATION_SERVICES'>Communication Services</option>");
+                sb.append("</select>");
+                sb.append("</div>");
+                sb.append("<div>");
+                sb.append("<label style='color:#9ca3af;display:block;margin-bottom:6px;'>Months Back:</label>");
+                sb.append("<select id='monthsBack' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("<option value='6'>6 months (recommended for backtest)</option>");
+                sb.append("<option value='12'>12 months</option>");
+                sb.append("<option value='24'>24 months</option>");
+                sb.append("<option value=''>All available data</option>");
+                sb.append("</select>");
+                sb.append("</div>");
+                sb.append("</div>");
+                
+                sb.append("<div style='margin-bottom:12px;'>");
+                sb.append("<label style='color:#9ca3af;display:block;margin-bottom:6px;'>Or custom tickers:</label>");
+                sb.append("<input type='text' id='cacheTickers' placeholder='AAPL,MSFT,GOOGL' style='width:100%;padding:8px;background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#e5e7eb;'>");
+                sb.append("</div>");
+                
+                sb.append("<button id='fetchDataBtn' onclick='fetchMarketData()' style='background:#7c3aed;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;'>📥 Fetch Market Data (6 months)</button>");
+                sb.append("<button onclick='checkCacheStatus()' style='background:#4b5563;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;'>📋 Check Status</button>");
+                sb.append("</div>");
+
                 // Results section
                 sb.append("<div id='backtestResults' style='display:none;background:#0d1b30;border:1px solid #1e3a5f;border-radius:10px;padding:16px;margin-bottom:16px;'>");
                 sb.append("<div style='font-weight:600;color:#93c5fd;margin-bottom:12px;'>📊 Backtest Results</div>");
@@ -6832,14 +7212,85 @@ public class WebServer {
                         "  document.getElementById('endDate').value=today.toISOString().split('T')[0];"+
                         "  document.getElementById('startDate').value=oneYearAgo.toISOString().split('T')[0];"+
                         "}"+
+                        
+                        "// Check cache status on page load"+
+                        "async function checkCacheStatus(){"+
+                        "  try{"+
+                        "    var r=await fetch('/cache-status');"+
+                        "    var d=await r.json();"+
+                        "    var statusDiv=document.getElementById('cacheStatus');"+
+                        "    if(d.exists){"+
+                        "      statusDiv.innerHTML='<div style=\"color:#22c55e;font-size:12px;\">✅ Cache exists: '+d.totalTickers+' tickers (updated: '+d.lastUpdated+')</div>';"+
+                        "    }else{"+
+                        "      statusDiv.innerHTML='<div style=\"color:#ef4444;font-size:12px;\">❌ No cache found. Build cache to enable fast backtesting.</div>';"+
+                        "    }"+
+                        "  }catch(e){console.error(e);}"+
+                        "}"+
+                        
+                        "// Build market data cache"+
+                        "async function buildCache(){"+
+                        "  var sector=document.getElementById('cacheSector').value;"+
+                        "  var tickers=document.getElementById('cacheTickers').value;"+
+                        "  "+
+                        "  if(!sector&&!tickers){alert('Please select a sector or enter custom tickers');return;}"+
+                        "  "+
+                        "  if(!confirm('Building cache will take several hours for all tickers. Continue?'))return;"+
+                        "  "+
+                        "  var formData=new FormData();"+
+                        "  formData.append('sector',sector);"+
+                        "  if(tickers) formData.append('tickers',tickers);"+
+                        "  "+
+                        "  var btn=document.getElementById('startCacheBuild');"+
+                        "  btn.disabled=true;btn.textContent='⏳ Building...';"+
+                        "  "+
+                        "  try{"+
+                        "    var r=await fetch('/cache-build',{method:'POST',body:formData});"+
+                        "    var d=await r.json();"+
+                        "    alert(d.message);"+
+                        "  }catch(e){"+
+                        "    alert('Error: '+e);"+
+                        "  }"+
+                        "  "+
+                        "  btn.disabled=false;btn.textContent='🔨 Build Cache';"+
+                        "}"+
+
+                        "// Fetch market data for backtesting"+
+                        "async function fetchMarketData(){"+
+                        "  var sector=document.getElementById('cacheSector').value;"+
+                        "  var monthsBack=document.getElementById('monthsBack').value;"+
+                        "  var tickers=document.getElementById('cacheTickers').value;"+
+                        "  "+
+                        "  if(!sector&&!tickers){alert('Please select a sector or enter custom tickers');return;}"+
+                        "  "+
+                        "  var tickerCount=sector==='ALL'?500:50;"+
+                        "  var timeEstimate=Math.ceil(tickerCount*36/60);"+
+                        "  if(!confirm('Fetching data for '+tickerCount+' tickers (last '+monthsBack+' months).\\n\\nThis will take approximately '+timeEstimate+' minutes due to API rate limits (36 seconds per ticker).\\n\\nContinue?'))return;"+
+                        "  "+
+                        "  var btn=document.getElementById('fetchDataBtn');"+
+                        "  btn.disabled=true;btn.textContent='⏳ Fetching...';"+
+                        "  "+
+                        "  try{"+
+                        "    var params='?sector='+encodeURIComponent(sector);"+
+                        "    if(monthsBack) params+='&monthsBack='+encodeURIComponent(monthsBack);"+
+                        "    if(tickers) params+='&tickers='+encodeURIComponent(tickers);"+
+                        "    "+
+                        "    var r=await fetch('/api/fetch-market-data'+params,{method:'POST'});"+
+                        "    var d=await r.json();"+
+                        "    alert(d.message);"+
+                        "    checkCacheStatus();"+
+                        "  }catch(e){"+
+                        "    alert('Error: '+e);"+
+                        "  }"+
+                        "  "+
+                        "  btn.disabled=false;btn.textContent='📥 Fetch Market Data (6 months)';"+
+                        "}"+
 
                         "// Run agent backtest"+
                         "async function runAgentBacktest(){"+
                         "  var agentId=document.getElementById('agentSelect').value;"+
                         "  var startDate=document.getElementById('startDate').value;"+
                         "  var endDate=document.getElementById('endDate').value;"+
-                        "  var initialCapital=document.getElementById('initialCapital').value;"+
-                        "  var tickers=document.getElementById('tickers').value;"+
+                        "  var tickers=document.getElementById('agentBacktestTickers').value;"+
                         "  "+
                         "  if(!agentId){alert('Please select an agent');return;}"+
                         "  if(!startDate||!endDate){alert('Please select date range');return;}"+
@@ -6848,31 +7299,53 @@ public class WebServer {
                         "  btn.disabled=true;btn.textContent='⏳ Running...';"+
                         "  "+
                         "  try{"+
-                        "    var url='/api/agent-backtest?agentId='+encodeURIComponent(agentId);"+
-                        "    url+='&startDate='+encodeURIComponent(startDate);"+
-                        "    url+='&endDate='+encodeURIComponent(endDate);"+
-                        "    url+='&initialCapital='+encodeURIComponent(initialCapital);"+
-                        "    if(tickers) url+='&tickers='+encodeURIComponent(tickers);"+
+                        "    var formData=new FormData();"+
+                        "    formData.append('agent',agentId);"+
+                        "    formData.append('startDate',startDate);"+
+                        "    formData.append('endDate',endDate);"+
+                        "    formData.append('stopLoss','5');"+
+                        "    formData.append('takeProfit','10');"+
+                        "    formData.append('maxDays','7');"+
+                        "    if(tickers) formData.append('tickers',tickers);"+
                         "    "+
-                        "    var r=await fetch(url);"+
+                        "    var r=await fetch('/backtest-run',{method:'POST',body:formData});"+
                         "    var d=await r.json();"+
                         "    "+
-                        "    btn.disabled=false;btn.textContent='🚀 Run Backtest';"+
-                        "    "+
                         "    if(d.error){"+
+                        "      btn.disabled=false;btn.textContent='🚀 Run Backtest';"+
                         "      alert('Error: '+d.error);"+
                         "      return;"+
                         "    }"+
                         "    "+
-                        "    displayResults(d);"+
+                        "    // Start polling for results"+
+                        "    pollBacktestResults();"+
                         "  }catch(e){"+
                         "    btn.disabled=false;btn.textContent='🚀 Run Backtest';"+
                         "    alert('Error: '+e);"+
                         "  }"+
                         "}"+
-
-                        "// Display backtest results"+
-                        "function displayResults(d){"+
+                        "// Poll for backtest results"+
+                        "async function pollBacktestResults(){"+
+                        "  var pollInterval=setInterval(async function(){"+
+                        "    try{"+
+                        "      var r=await fetch('/backtest-status');"+
+                        "      var d=await r.json();"+
+                        "      "+
+                        "      if(d.running){"+
+                        "        document.getElementById('runBacktestBtn').textContent='⏳ Running... ('+d.agent+')';"+
+                        "      }else if(d.completed){"+
+                        "        clearInterval(pollInterval);"+
+                        "        document.getElementById('runBacktestBtn').disabled=false;"+
+                        "        document.getElementById('runBacktestBtn').textContent='🚀 Run Backtest';"+
+                        "        displayBacktestResults(d);"+
+                        "      }"+
+                        "    }catch(e){"+
+                        "      console.error('Poll error:',e);"+
+                        "    }"+
+                        "  },2000);"+
+                        "}"+
+                        "// Display backtest results from status endpoint"+
+                        "function displayBacktestResults(d){"+
                         "  document.getElementById('backtestResults').style.display='block';"+
                         "  "+
                         "  // Helper function for safe toFixed"+
@@ -6882,20 +7355,20 @@ public class WebServer {
                         "  // Summary metrics"+
                         "  var summaryHtml="+
                         "    '<div style=\"background:#1e1b4b;border-radius:8px;padding:12px;\">'+"+
-                        "    '<div style=\"color:#9ca3af;font-size:12px;\">Net Profit</div>'"+
-                        "    '<div style=\"font-size:20px;font-weight:600;color:'+(d.netProfit>=0?'#22c55e':'#ef4444')+'\">$'+safeFixed(d.netProfit,2)+'</div>'"+
-                        "    '</div>'"+
-                        "    '<div style=\"background:#1e1b4b;border-radius:8px;padding:12px;\">'+"+
-                        "    '<div style=\"color:#9ca3af;font-size:12px;\">Win Rate</div>'"+
-                        "    '<div style=\"font-size:20px;font-weight:600;color:#93c5fd;\">'+safeFixed(d.winRate,1)+'%</div>'"+
-                        "    '</div>'"+
-                        "    '<div style=\"background:#1e1b4b;border-radius:8px;padding:12px;\">'+"+
                         "    '<div style=\"color:#9ca3af;font-size:12px;\">Total Trades</div>'"+
                         "    '<div style=\"font-size:20px;font-weight:600;color:#e5e7eb;\">'+safeInt(d.totalTrades)+'</div>'"+
                         "    '</div>'"+
                         "    '<div style=\"background:#1e1b4b;border-radius:8px;padding:12px;\">'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:12px;\">Net Profit</div>'"+
+                        "    '<div style=\"font-size:20px;font-weight:600;color:'+(d.totalPnL>=0?'#22c55e':'#ef4444')+';\">$'+safeFixed(d.totalPnL,0)+'</div>'"+
+                        "    '</div>'"+
+                        "    '<div style=\"background:#1e1b4b;border-radius:8px;padding:12px;\">'+"+
                         "    '<div style=\"color:#9ca3af;font-size:12px;\">Profit Factor</div>'"+
                         "    '<div style=\"font-size:20px;font-weight:600;color:'+(d.profitFactor>=1?'#22c55e':'#ef4444')+'\">'+safeFixed(d.profitFactor,2)+'</div>'"+
+                        "    '</div>'"+
+                        "    '<div style=\"background:#1e1b4b;border-radius:8px;padding:12px;\">'+"+
+                        "    '<div style=\"color:#9ca3af;font-size:12px;\">Expectancy</div>'"+
+                        "    '<div style=\"font-size:20px;font-weight:600;color:'+(d.expectancy>=0?'#22c55e':'#ef4444')+'\">'+safeFixed(d.expectancy,2)+'%</div>'"+
                         "    '</div>';"+
                         "  document.getElementById('summaryMetrics').innerHTML=summaryHtml;"+
                         "  "+
@@ -6968,6 +7441,7 @@ public class WebServer {
                         "// Initialize"+
                         "loadAgents();"+
                         "setDefaultDates();"+
+                        "checkCacheStatus();"+
                         "</script>");
 
                 respondHtml(ex, htmlPage(sb.toString()), 200);
@@ -7701,8 +8175,20 @@ public class WebServer {
                     sb.append(escapeHtml(p.agentId)).append("</span>");
                     sb.append("<span style='color:#a78bfa;font-size:10px;'>").append(p.type != null ? p.type : "").append("</span>");
                     if (p.totalTrades > 0) {
-                        String wrColor = p.winRate >= 70 ? "#22c55e" : "#eab308";
-                        sb.append("<span style='color:").append(wrColor).append(";font-weight:600;font-size:11px;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
+                        // Calculate Net Profit based on $1K position size
+                        double totalPL = 0;
+                        List<AIToolAgent.Trade> agentTrades = AIToolAgent.getAgentTradeHistory(p.agentId);
+                        if (agentTrades != null) {
+                            for (AIToolAgent.Trade t : agentTrades) {
+                                if (t.exitPrice > 0 && t.entryPrice > 0) {
+                                    int shares = (int) (1000.0 / t.entryPrice);
+                                    double plPerShare = (t.exitPrice - t.entryPrice);
+                                    totalPL += plPerShare * shares;
+                                }
+                            }
+                        }
+                        String netPLColor = totalPL >= 0 ? "#22c55e" : "#ef4444";
+                        sb.append("<span style='color:").append(netPLColor).append(";font-weight:600;font-size:11px;'>$").append(String.format("%.0f", totalPL)).append("</span>");
                         sb.append("<span style='color:#9ca3af;font-size:10px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades</span>");
                     } else {
                         long openCnt = p.recentTrades != null ? p.recentTrades.stream().filter(t -> "OPEN".equals(t.status)).count() : 0;
@@ -7736,8 +8222,20 @@ public class WebServer {
                     sb.append("<span style='color:#e5e7eb;font-weight:500;font-size:12px;'>").append(escapeHtml(masterName)).append("</span>");
                     sb.append("<span style='color:#818cf8;font-size:10px;'>").append(escapeHtml(masterType)).append("</span>");
                     if (masterPerf != null && masterPerf.totalTrades > 0) {
-                        String wrColor2 = masterPerf.winRate >= 70 ? "#22c55e" : "#eab308";
-                        sb.append("<span style='color:").append(wrColor2).append(";font-weight:600;font-size:11px;'>").append(String.format("%.1f%%", masterPerf.winRate)).append("</span>");
+                        // Calculate Net Profit based on $1K position size
+                        double totalPL = 0;
+                        List<AIToolAgent.Trade> agentTrades = AIToolAgent.getAgentTradeHistory(masterId);
+                        if (agentTrades != null) {
+                            for (AIToolAgent.Trade t : agentTrades) {
+                                if (t.exitPrice > 0 && t.entryPrice > 0) {
+                                    int shares = (int) (1000.0 / t.entryPrice);
+                                    double plPerShare = (t.exitPrice - t.entryPrice);
+                                    totalPL += plPerShare * shares;
+                                }
+                            }
+                        }
+                        String netPLColor2 = totalPL >= 0 ? "#22c55e" : "#ef4444";
+                        sb.append("<span style='color:").append(netPLColor2).append(";font-weight:600;font-size:11px;'>$").append(String.format("%.0f", totalPL)).append("</span>");
                         sb.append("<span style='color:#9ca3af;font-size:10px;'>").append(masterPerf.wins).append("/").append(masterPerf.totalTrades).append(" trades</span>");
                     } else if (!isFilter && masterPerf != null) {
                         long openCntM = masterPerf.recentTrades != null ? masterPerf.recentTrades.stream().filter(t -> "OPEN".equals(t.status)).count() : 0;
@@ -7754,7 +8252,7 @@ public class WebServer {
                     if (!isFilter) agentIdx++;
                 }
 
-                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:8px;margin-bottom:8px;'>💡 Select agents to run. Agents with >50% win rate or INST_SWING_V1 are pre-checked. Pinned masters must be manually checked. Leave all unchecked to auto-run filtered agents.</div>");
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:8px;margin-bottom:8px;'>💡 Select agents to run. Filtered agents are pre-checked. Pinned masters must be manually checked. Leave all unchecked to auto-run filtered agents.</div>");
                 sb.append("<button type='submit' style='background:#7c3aed;margin-top:4px;'>🚀 Start Full Scan with Selected Agents</button>");
                 sb.append("</form>");
                 
@@ -7966,6 +8464,19 @@ public class WebServer {
                         boolean isActive = tracker.agentId.equals(currentSavedAgent);
                         String rowBg = isActive ? "background:rgba(34,197,94,0.15);" : "";
                         
+                        // Calculate Net Profit based on $1K position size
+                        double totalPL = 0;
+                        List<AIToolAgent.Trade> agentTrades = AIToolAgent.getAgentTradeHistory(tracker.agentId);
+                        if (agentTrades != null) {
+                            for (AIToolAgent.Trade t : agentTrades) {
+                                if (t.exitPrice > 0 && t.entryPrice > 0) {
+                                    int shares = (int) (1000.0 / t.entryPrice);
+                                    double plPerShare = (t.exitPrice - t.entryPrice);
+                                    totalPL += plPerShare * shares;
+                                }
+                            }
+                        }
+                        
                         sb.append("<tr style='border-bottom:1px solid #1f2a44;").append(rowBg).append("'>");
                         sb.append("<td style='padding:10px;'>");
                         if (isActive) sb.append("✅ ");
@@ -7974,7 +8485,7 @@ public class WebServer {
                         sb.append("</td>");
                         sb.append("<td style='padding:10px;text-align:center;font-weight:600;'>").append(tracker.cumulativeWins).append("/").append(tracker.cumulativeTrades).append("</td>");
                         sb.append("<td style='padding:10px;text-align:center;color:").append(winColor).append(";font-weight:700;'>").append(String.format("%.1f%%", cumWinRate)).append("</td>");
-                        sb.append("<td style='padding:10px;text-align:right;color:").append(tracker.cumulativeProfitLoss >= 0 ? "#22c55e" : "#ef4444").append(";'>$").append(String.format("%.2f", tracker.cumulativeProfitLoss)).append("</td>");
+                        sb.append("<td style='padding:10px;text-align:right;color:").append(totalPL >= 0 ? "#22c55e" : "#ef4444").append(";'>$").append(String.format("%.2f", totalPL)).append("</td>");
                         sb.append("<td style='padding:10px;text-align:center;color:#6b7280;font-size:11px;'>").append(tracker.firstSavedDate != null ? tracker.firstSavedDate : "-").append("</td>");
                         sb.append("<td style='padding:10px;text-align:center;'>");
                         sb.append("<div style='display:flex;gap:6px;justify-content:center;'>");
@@ -8026,12 +8537,24 @@ public class WebServer {
                     boolean notifyEnabled = ScoringConfig.isTradeNotificationEnabled(p.agentId);
                     boolean isLocked = AIToolAgent.isAgentLocked(p.agentId);
                     boolean codeVersionChanged = AIToolAgent.hasCodeVersionChanged(p.agentId);
-                    String winColor = p.winRate >= 70 ? "#22c55e" : p.winRate >= 50 ? "#eab308" : "#ef4444";
+                    // Calculate Net Profit based on $1K position size
+                    double totalPL = 0;
+                    List<AIToolAgent.Trade> agentTrades = AIToolAgent.getAgentTradeHistory(p.agentId);
+                    if (agentTrades != null) {
+                        for (AIToolAgent.Trade t : agentTrades) {
+                            if (t.exitPrice > 0 && t.entryPrice > 0) {
+                                int shares = (int) (1000.0 / t.entryPrice);
+                                double plPerShare = (t.exitPrice - t.entryPrice);
+                                totalPL += plPerShare * shares;
+                            }
+                        }
+                    }
+                    String netPLColor = totalPL >= 0 ? "#22c55e" : "#ef4444";
                     String borderColor = isLocked ? "#f59e0b" : (isTracked ? "#22c55e" : (isWinner ? "#22c55e" : "#1f2a44"));
                     sb.append("<div style='position:relative;'>");
                     sb.append("<form method='post' action='/aitool-track-agent' style='margin:0;'>");
                     sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(p.agentId)).append("' />");
-                    sb.append("<button type='submit' style='width:100%;text-align:left;background:#0b1220;border:2px solid ").append(borderColor).append(";border-radius:8px;padding:12px;padding-right:").append(isTracked ? "80px" : "44px").append(";cursor:pointer;outline:none;'>");
+                    sb.append("<button type='submit' style='width:100%;text-align:left;background:#0b1220;border:2px solid ").append(borderColor).append(";border-radius:8px;padding:12px;cursor:pointer;outline:none;'>");
                     sb.append("<div style='display:flex;justify-content:space-between;align-items:center;'>");
                     sb.append("<div style='font-weight:600;color:#e5e7eb;'>");
                     if (isLocked) sb.append("🔒 ");
@@ -8039,11 +8562,11 @@ public class WebServer {
                     if (isTracked) sb.append("✓ ");
                     sb.append(escapeHtml(p.agentId)).append("</div>");
                     sb.append("<div style='display:flex;align-items:center;gap:8px;'>");
-                    sb.append("<span style='color:").append(winColor).append(";font-weight:700;'>").append(String.format("%.1f%%", p.winRate)).append("</span>");
+                    sb.append("<span style='color:").append(netPLColor).append(";font-weight:700;'>$").append(String.format("%.0f", totalPL)).append("</span>");
                     sb.append("</div>");
                     sb.append("</div>");
                     sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-top:4px;'>");
-                    sb.append("<span style='color:#9ca3af;font-size:12px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades | P/L: $").append(String.format("%.2f", p.totalProfitLoss)).append("</span>");
+                    sb.append("<span style='color:#9ca3af;font-size:12px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades</span>");
                     sb.append("<a href='/agent-detail?id=").append(urlEncode(p.agentId)).append("' style='color:#60a5fa;font-size:11px;padding:2px 6px;background:#1e3a5f;border-radius:4px;text-decoration:none;' onclick='event.stopPropagation();'>📋 Detail</a>");
                     sb.append("</div>");
                     // Show code version warning if locked and code changed
@@ -8053,24 +8576,6 @@ public class WebServer {
                     }
                     sb.append("</button>");
                     sb.append("</form>");
-                    // Lock/Unlock toggle button (key icon) - show for agents with >70% win rate
-                    if (p.winRate >= 70) {
-                        sb.append("<form method='post' action='/aitool-toggle-lock' style='position:absolute;top:8px;right:").append(isTracked ? "44px" : "8px").append(";margin:0;z-index:10;' onclick='event.stopPropagation();'>");
-                        sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(p.agentId)).append("' />");
-                        sb.append("<button type='submit' title='").append(isLocked ? "Unlock agent (allow evolution)" : "Lock agent (prevent evolution)").append("' style='background:").append(isLocked ? "#f59e0b" : "#374151").append(";border:2px solid ").append(isLocked ? "#d97706" : "#4b5563").append(";border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 4px rgba(0,0,0,0.3);'>");
-                        sb.append(isLocked ? "🔐" : "🔑");
-                        sb.append("</button>");
-                        sb.append("</form>");
-                    }
-                    // Notification toggle button (ring icon) - only show if tracked
-                    if (isTracked) {
-                        sb.append("<form method='post' action='/aitool-toggle-notify' style='position:absolute;top:8px;right:8px;margin:0;z-index:10;' onclick='event.stopPropagation();'>");
-                        sb.append("<input type='hidden' name='agentId' value='").append(escapeHtml(p.agentId)).append("' />");
-                        sb.append("<button type='submit' title='").append(notifyEnabled ? "Disable" : "Enable").append(" Discord notifications for trades' style='background:").append(notifyEnabled ? "#22c55e" : "#374151").append(";border:2px solid ").append(notifyEnabled ? "#16a34a" : "#4b5563").append(";border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 4px rgba(0,0,0,0.3);'>");
-                        sb.append(notifyEnabled ? "🔔" : "🔕");
-                        sb.append("</button>");
-                        sb.append("</form>");
-                    }
                     sb.append("</div>");
                     savedCount++;
                 }
@@ -8290,10 +8795,21 @@ public class WebServer {
                     sb.append("<td style='padding:8px;text-align:center;border-bottom:1px solid #1f2a44;color:").append(winRateColor).append(";font-weight:600;'>")
                       .append(String.format("%.1f%%", perf.winRate)).append("</td>");
                     
-                    // Total P/L
-                    String plColor = perf.totalProfitLoss >= 0 ? "#22c55e" : "#ef4444";
+                    // Total P/L (calculated based on $1K position size)
+                    double totalPL = 0;
+                    List<AIToolAgent.Trade> agentTrades = AIToolAgent.getAgentTradeHistory(perf.agentId);
+                    if (agentTrades != null) {
+                        for (AIToolAgent.Trade t : agentTrades) {
+                            if (t.exitPrice > 0 && t.entryPrice > 0) {
+                                int shares = (int) (1000.0 / t.entryPrice);
+                                double plPerShare = (t.exitPrice - t.entryPrice);
+                                totalPL += plPerShare * shares;
+                            }
+                        }
+                    }
+                    String plColor = totalPL >= 0 ? "#22c55e" : "#ef4444";
                     sb.append("<td style='padding:8px;text-align:right;border-bottom:1px solid #1f2a44;color:").append(plColor).append(";font-weight:600;'>")
-                      .append(String.format("$%.2f", perf.totalProfitLoss)).append("</td>");
+                      .append(String.format("$%.2f", totalPL)).append("</td>");
                     
                     // Daily Avg
                     String dailyColor = perf.avgDailyReturn >= 0 ? "#22c55e" : "#ef4444";
@@ -8690,13 +9206,21 @@ public class WebServer {
                 if (isTop) sb.append("<span style='background:#15803d;color:#86efac;font-size:12px;padding:2px 8px;border-radius:12px;font-weight:600;'>🏆 TOP AGENT</span>");
                 sb.append("</div>");
 
-                // Pre-compute avg win / avg loss P/L from trade history
-                double avgWinPL = 0, avgLossPL = 0;
+                // Pre-compute avg win / avg loss P/L and Net Profit from trade history (based on $1K position size)
+                double avgWinPL = 0, avgLossPL = 0, totalPL = 0;
                 {
                     double sumWin = 0, sumLoss = 0; int cntWin = 0, cntLoss = 0;
                     for (AIToolAgent.Trade t : allTrades) {
-                        if ("CLOSED_WIN".equals(t.status))  { sumWin  += t.profitLoss; cntWin++;  }
-                        else if ("CLOSED_LOSS".equals(t.status)) { sumLoss += t.profitLoss; cntLoss++; }
+                        if (t.exitPrice > 0 && t.entryPrice > 0) {
+                            // Calculate P/L based on $1K position size
+                            int shares = (int) (1000.0 / t.entryPrice);
+                            double plPerShare = (t.exitPrice - t.entryPrice);
+                            double plDollars = plPerShare * shares;
+                            totalPL += plDollars;
+                            
+                            if ("CLOSED_WIN".equals(t.status))  { sumWin  += plDollars; cntWin++;  }
+                            else if ("CLOSED_LOSS".equals(t.status)) { sumLoss += plDollars; cntLoss++; }
+                        }
                     }
                     avgWinPL  = cntWin  > 0 ? sumWin  / cntWin  : 0;
                     avgLossPL = cntLoss > 0 ? sumLoss / cntLoss : 0;
@@ -8707,7 +9231,6 @@ public class WebServer {
                 int totalTrades = perf != null ? perf.totalTrades : 0;
                 int wins = perf != null ? perf.wins : 0;
                 int losses = perf != null ? perf.losses : 0;
-                double totalPL = perf != null ? perf.totalProfitLoss : 0;
                 double currentCapital = perf != null ? perf.currentCapital : 10000.0;
                 double maxDrawdown = perf != null ? perf.maxDrawdown : 0.0;
                 double sharpeRatio = perf != null ? perf.sharpeRatio : 0.0;
@@ -8746,10 +9269,10 @@ public class WebServer {
                 sb.append("<div style='background:#0f172a;border:1px solid #3b82f6;border-radius:8px;padding:12px;text-align:center;'>");
                 sb.append("<div style='font-size:22px;font-weight:700;color:").append(pfColor).append(";'>").append(pfDisplay).append("</div>");
                 sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:2px;'>⚖️ Profit Factor</div></div>");
-                // Win rate (legacy - still shown)
+                // Net Profit (replaced Win Rate)
                 sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:12px;text-align:center;'>");
-                sb.append("<div style='font-size:22px;font-weight:700;color:").append(wrColor).append(";'>").append(String.format("%.1f%%", winRate)).append("</div>");
-                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:2px;'>Win Rate</div></div>");
+                sb.append("<div style='font-size:22px;font-weight:700;color:").append(netPLColor).append(";'>$").append(String.format("%+.0f", totalPL)).append("</div>");
+                sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:2px;'>Net Profit</div></div>");
                 // Total trades
                 sb.append("<div style='background:#1e1b4b;border:1px solid #7c3aed;border-radius:8px;padding:12px;text-align:center;'>");
                 sb.append("<div style='font-size:22px;font-weight:700;color:#a78bfa;'>").append(totalTrades).append("</div>");
@@ -8870,6 +9393,7 @@ public class WebServer {
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Entry Zone</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>🛑 Stop Loss</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>🎯 Take Profit</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Quantity</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>R:R</th>");
                     sb.append("<th style='padding:8px;text-align:center;border-bottom:1px solid #7c3aed;'>⏳ Hold</th>");
                     sb.append("<th style='padding:8px;text-align:center;border-bottom:1px solid #7c3aed;'>⏱ Valid</th>");
@@ -8921,6 +9445,11 @@ public class WebServer {
                           .append("<span style='color:#22c55e;font-weight:600;'>$").append(String.format("%.2f", t.takeProfit)).append("</span>")
                           .append("<br><span style='color:#22c55e;font-size:10px;'>need +").append(String.format("%.1f%%", toTPPct)).append("</span>")
                           .append("</td>");
+                        // Calculate quantity based on $1K position size for alignment across agents
+                        int shares = (int) (1000.0 / t.entryPrice);
+                        double positionValue = shares * t.entryPrice;
+                        sb.append("<td style='padding:8px;text-align:right;color:#fbbf24;font-weight:700;'>")
+                          .append(shares).append("<br><span style='color:#9ca3af;font-size:10px;'>$").append(String.format("%.0f", positionValue)).append("</span></td>");
                         sb.append("<td style='padding:8px;text-align:right;color:#a78bfa;font-weight:700;'>1:")
                           .append(String.format("%.1f", rr)).append("</td>");
                         sb.append("<td style='padding:8px;text-align:center;'>")
@@ -8952,6 +9481,7 @@ public class WebServer {
                     sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Result</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Entry $</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Exit $</th>");
+                    sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>Quantity</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>P/L $</th>");
                     sb.append("<th style='padding:8px;text-align:right;border-bottom:1px solid #7c3aed;'>P/L %</th>");
                     sb.append("<th style='padding:8px;text-align:left;border-bottom:1px solid #7c3aed;'>Close Reason</th>");
@@ -8985,7 +9515,15 @@ public class WebServer {
                         sb.append("<td style='padding:8px;color:").append(statusColor).append(";font-weight:600;'>").append(statusIcon).append(" ").append(isWin ? "WIN" : "LOSS").append("</td>");
                         sb.append("<td style='padding:8px;text-align:right;color:#93c5fd;'>$").append(String.format("%.2f", t.entryPrice)).append("</td>");
                         sb.append("<td style='padding:8px;text-align:right;color:#d1d5db;'>$").append(String.format("%.2f", t.exitPrice)).append("</td>");
-                        sb.append("<td style='padding:8px;text-align:right;color:").append(plColor2).append(";font-weight:600;'>$").append(String.format("%+.2f", t.profitLoss)).append("</td>");
+                        // Calculate quantity based on $1K position size for alignment across agents
+                        int sharesClosed = (int) (1000.0 / t.entryPrice);
+                        double positionValueClosed = sharesClosed * t.entryPrice;
+                        sb.append("<td style='padding:8px;text-align:right;color:#fbbf24;font-weight:700;'>")
+                          .append(sharesClosed).append("<br><span style='color:#9ca3af;font-size:10px;'>$").append(String.format("%.0f", positionValueClosed)).append("</span></td>");
+                        // Calculate P/L $ based on $1K position size
+                        double plPerShare = (t.exitPrice - t.entryPrice);
+                        double plDollars = plPerShare * sharesClosed;
+                        sb.append("<td style='padding:8px;text-align:right;color:").append(plColor2).append(";font-weight:600;'>$").append(String.format("%+.2f", plDollars)).append("</td>");
                         sb.append("<td style='padding:8px;text-align:right;color:").append(plColor2).append(";'>").append(String.format("%+.2f%%", t.profitLossPct)).append("</td>");
                         String reason = t.closeReason != null ? t.closeReason : t.status;
                         sb.append("<td style='padding:8px;color:#9ca3af;font-size:11px;'>").append(escapeHtml(reason)).append("</td>");
@@ -10966,6 +11504,9 @@ public class WebServer {
         server.start();
         System.out.println("Server running at http://localhost:" + port + "/ (threads=" + threads + ")");
 
+        // Start automatic cache building in background
+        startAutomaticCacheBuilding();
+
         startDailyNasdaqScheduler();
         startAlphaAgentScheduler();
         startDailyGreenRecommendationsScheduler();
@@ -11365,6 +11906,170 @@ public class WebServer {
                 }
             } catch (Exception ignore) {}
         }, initialCloseDelayMs, periodMs, TimeUnit.MILLISECONDS);
+    }
+
+    private static void loadCacheSettings() {
+        try {
+            java.io.File settingsFile = new java.io.File(CACHE_SETTINGS_FILE);
+            if (settingsFile.exists()) {
+                String content = new String(java.nio.file.Files.readAllBytes(settingsFile.toPath()));
+                if (content.contains("\"autoBuildCacheOnStartup\":true")) {
+                    autoBuildCacheOnStartup = true;
+                }
+                System.out.println("[CacheSettings] Loaded: autoBuildCacheOnStartup=" + autoBuildCacheOnStartup);
+            }
+        } catch (Exception e) {
+            System.err.println("[CacheSettings] Error loading settings: " + e.getMessage());
+        }
+    }
+
+    private static void saveCacheSettings() {
+        try {
+            String json = "{\"autoBuildCacheOnStartup\":" + autoBuildCacheOnStartup + "}";
+            java.nio.file.Files.write(new java.io.File(CACHE_SETTINGS_FILE).toPath(), json.getBytes());
+            System.out.println("[CacheSettings] Saved: autoBuildCacheOnStartup=" + autoBuildCacheOnStartup);
+        } catch (Exception e) {
+            System.err.println("[CacheSettings] Error saving settings: " + e.getMessage());
+        }
+    }
+
+    private static void loadCacheState() {
+        try {
+            java.io.File stateFile = new java.io.File(CACHE_STATE_FILE);
+            if (stateFile.exists()) {
+                String content = new String(java.nio.file.Files.readAllBytes(stateFile.toPath()));
+                if (content.contains("\"running\":true")) {
+                    synchronized (cacheBuildLock) {
+                        cacheBuildRunning = true;
+                        cacheBuildStatus = "interrupted";
+                        // Try to parse progress
+                        if (content.contains("\"progress\":")) {
+                            int idx = content.indexOf("\"progress\":");
+                            int endIdx = content.indexOf(",", idx);
+                            if (endIdx == -1) endIdx = content.indexOf("}", idx);
+                            String progressStr = content.substring(idx + 11, endIdx).trim();
+                            try {
+                                cacheBuildProgress = Integer.parseInt(progressStr);
+                            } catch (Exception ignore) {}
+                        }
+                        if (content.contains("\"total\":")) {
+                            int idx = content.indexOf("\"total\":");
+                            int endIdx = content.indexOf(",", idx);
+                            if (endIdx == -1) endIdx = content.indexOf("}", idx);
+                            String totalStr = content.substring(idx + 8, endIdx).trim();
+                            try {
+                                cacheBuildTotal = Integer.parseInt(totalStr);
+                            } catch (Exception ignore) {}
+                        }
+                    }
+                    System.out.println("[CacheState] Loaded interrupted build: progress=" + cacheBuildProgress + "/" + cacheBuildTotal);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[CacheState] Error loading state: " + e.getMessage());
+        }
+    }
+
+    private static void saveCacheState() {
+        try {
+            StringBuilder json = new StringBuilder();
+            json.append("{");
+            json.append("\"running\":").append(cacheBuildRunning).append(",");
+            json.append("\"status\":\"").append(cacheBuildStatus).append("\",");
+            json.append("\"progress\":").append(cacheBuildProgress).append(",");
+            json.append("\"total\":").append(cacheBuildTotal).append(",");
+            json.append("\"startDate\":\"").append(cacheBuildStartDate).append("\",");
+            json.append("\"endDate\":\"").append(cacheBuildEndDate).append("\"");
+            json.append("}");
+            java.nio.file.Files.write(new java.io.File(CACHE_STATE_FILE).toPath(), json.toString().getBytes());
+            System.out.println("[CacheState] Saved state: " + cacheBuildStatus + " (" + cacheBuildProgress + "/" + cacheBuildTotal + ")");
+        } catch (Exception e) {
+            System.err.println("[CacheState] Error saving state: " + e.getMessage());
+        }
+    }
+
+    private static void startAutomaticCacheBuilding() {
+        // Check if auto-build is enabled
+        if (!autoBuildCacheOnStartup) {
+            System.out.println("[CacheBuild] Auto-build disabled in settings, skipping");
+            return;
+        }
+
+        synchronized (cacheBuildLock) {
+            if (cacheBuildRunning) {
+                System.out.println("[CacheBuild] Already running, skipping");
+                return;
+            }
+            cacheBuildRunning = true;
+            cacheBuildStatus = "starting";
+            cacheBuildProgress = 0;
+            cacheBuildTotal = 0;
+            cacheBuildStartDate = "2025-01-01";
+            cacheBuildEndDate = java.time.LocalDate.now().toString();
+        }
+
+        Thread cacheThread = new Thread(() -> {
+            try {
+                System.out.println("[CacheBuild] Starting automatic cache building from " + cacheBuildStartDate + " to " + cacheBuildEndDate);
+                
+                synchronized (cacheBuildLock) {
+                    cacheBuildStatus = "in_progress";
+                }
+
+                // Check if cache already exists
+                MarketDataCache.MarketCache existingCache = MarketDataCache.loadCache();
+                if (existingCache != null && existingCache.lastUpdated != null) {
+                    System.out.println("[CacheBuild] Existing cache found, updated: " + existingCache.lastUpdated + " with " + existingCache.totalTickers + " tickers");
+                    synchronized (cacheBuildLock) {
+                        cacheBuildStatus = "completed";
+                        cacheBuildProgress = existingCache.totalTickers;
+                        cacheBuildTotal = existingCache.totalTickers;
+                        cacheBuildRunning = false;
+                    }
+                    return;
+                }
+
+                // Get universe tickers
+                List<String> tickers = LongTermCandidateFinder.getUniverseTickers();
+                synchronized (cacheBuildLock) {
+                    cacheBuildTotal = tickers.size();
+                    cacheBuildProgress = 0;
+                }
+                System.out.println("[CacheBuild] Building cache for " + tickers.size() + " tickers");
+                System.out.println("[CacheBuild] First 10 tickers: " + tickers.subList(0, Math.min(10, tickers.size())));
+
+                // Actually build the cache with real data
+                MarketDataCache.fetchAndCacheData(tickers);
+                
+                // Verify file was created
+                java.io.File cacheFile = new java.io.File("market_data_cache.json");
+                if (cacheFile.exists()) {
+                    System.out.println("[CacheBuild] Cache file created successfully: " + cacheFile.getAbsolutePath() + " (" + cacheFile.length() + " bytes)");
+                } else {
+                    System.err.println("[CacheBuild] WARNING: Cache file was not created!");
+                }
+                
+                synchronized (cacheBuildLock) {
+                    cacheBuildProgress = tickers.size();
+                    cacheBuildStatus = "completed";
+                    cacheBuildRunning = false;
+                    saveCacheState(); // Save final state
+                }
+                System.out.println("[CacheBuild] Cache building completed");
+                
+            } catch (Exception e) {
+                System.err.println("[CacheBuild] Error: " + e.getMessage());
+                e.printStackTrace();
+                synchronized (cacheBuildLock) {
+                    cacheBuildStatus = "error";
+                    cacheBuildRunning = false;
+                    saveCacheState(); // Save error state
+                }
+            }
+        });
+        cacheThread.setDaemon(true);
+        cacheThread.setName("cache-build");
+        cacheThread.start();
     }
 
     private static long computeDelayToNextHour(int hour) {

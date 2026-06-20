@@ -1,5 +1,5 @@
 {
-  "lastUpdated" : "2026-06-12T11:22:06.9399484-04:00[America/New_York]",
+  "lastUpdated" : "2026-06-18T13:19:16.8661986-04:00[America/New_York]",
   "tradeHistory" : {
     "I5_VWAP_RETEST" : [ {
       "id" : "8d4a37e7",
@@ -593,23 +593,56 @@
       "ticker" : "MSCI",
       "action" : "BUY",
       "entryPrice" : 608.16,
-      "exitPrice" : 594.31,
+      "exitPrice" : 599.12,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
       "entryTime" : "2026-06-09T11:02:08.0420862-04:00[America/New_York]",
-      "exitTime" : "2026-06-12T05:42:44.0940846-04:00[America/New_York]"
+      "exitTime" : "2026-06-13T04:06:47.2691481-04:00[America/New_York]"
     }, {
       "id" : "5545e5d3",
       "ticker" : "WDC",
       "action" : "BUY",
       "entryPrice" : 519.9739,
-      "exitPrice" : 529.29,
+      "exitPrice" : 582.370768,
+      "profitLoss" : 6239.686800000004,
+      "profitLossPct" : 12.000000000000009,
+      "status" : "CLOSED_WIN",
+      "entryTime" : "2026-06-12T05:42:39.8334279-04:00[America/New_York]",
+      "exitTime" : "2026-06-15T11:02:50.658923-04:00[America/New_York]"
+    }, {
+      "id" : "ae74a78f",
+      "ticker" : "MSCI",
+      "action" : "BUY",
+      "entryPrice" : 606.6462,
+      "exitPrice" : 0.0,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
-      "entryTime" : "2026-06-12T05:42:39.8334279-04:00[America/New_York]",
-      "exitTime" : "2026-06-12T05:42:57.5271327-04:00[America/New_York]"
+      "entryTime" : "2026-06-15T11:02:35.2846755-04:00[America/New_York]",
+      "exitTime" : null
+    }, {
+      "id" : "a94bf2b8",
+      "ticker" : "HPQ",
+      "action" : "BUY",
+      "entryPrice" : 24.9463,
+      "exitPrice" : 0.0,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-06-15T12:02:49.4323649-04:00[America/New_York]",
+      "exitTime" : null
+    }, {
+      "id" : "ee65cf14",
+      "ticker" : "KO",
+      "action" : "BUY",
+      "entryPrice" : 80.548,
+      "exitPrice" : 0.0,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-06-16T13:06:01.3241453-04:00[America/New_York]",
+      "exitTime" : null
     } ],
     "I6_AGGRESSIVE_INTRADAY" : [ {
       "id" : "d70efaf5",
@@ -778,23 +811,23 @@
       "ticker" : "MAS",
       "action" : "BUY",
       "entryPrice" : 71.865,
-      "exitPrice" : 73.75,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 74.03,
+      "profitLoss" : 216.50000000000063,
+      "profitLossPct" : 3.012593056425251,
+      "status" : "CLOSED_WIN",
       "entryTime" : "2026-06-09T11:02:10.3088235-04:00[America/New_York]",
-      "exitTime" : "2026-06-12T05:43:11.149776-04:00[America/New_York]"
+      "exitTime" : "2026-06-13T04:07:22.5687805-04:00[America/New_York]"
     }, {
       "id" : "b90ca43b",
       "ticker" : "CSCO",
       "action" : "BUY",
       "entryPrice" : 122.18,
-      "exitPrice" : 121.83,
+      "exitPrice" : 121.1,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
       "entryTime" : "2026-06-12T05:42:41.5670851-04:00[America/New_York]",
-      "exitTime" : "2026-06-12T05:43:25.1898036-04:00[America/New_York]"
+      "exitTime" : "2026-06-13T04:07:46.5411954-04:00[America/New_York]"
     } ],
     "I2_VWAP_PULLBACK" : [ ],
     "MASTER_7_VIX_MARKET_FILTER" : [ {
@@ -2228,6 +2261,8 @@
       "entryTime" : "2026-05-29T09:51:40.0650887-04:00[America/New_York]",
       "exitTime" : "2026-06-01T12:13:01.570879-04:00[America/New_York]"
     } ],
-    "INST_SWING_V1" : [ ]
+    "INST_SWING_V1" : [ ],
+    "FUND_MOMENTUM_V1" : [ ],
+    "QUALITY_GROWTH_V1" : [ ]
   }
 }
