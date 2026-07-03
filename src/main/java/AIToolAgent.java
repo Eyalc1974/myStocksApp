@@ -26,6 +26,7 @@ public class AIToolAgent {
     private static final Path RECS_FILE       = Paths.get("newStrategies", "buy-recommendations.json");
     private static final Path DAILY_RECS_FILE = Paths.get("newStrategies", "daily-recommendations.txt");
     private static final Path SCAN_LOG_FILE  = Paths.get("newStrategies", "scan-detail.log");
+    private static final Path EXAMINATION_LOG_FILE = Paths.get("newStrategies", "stock-examination-log.txt");
     private static final ZoneId NY = ZoneId.of("America/New_York");
     private static final ZoneId ISRAEL = ZoneId.of("Asia/Jerusalem");
     private static final DateTimeFormatter LOG_TIMESTAMP_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
@@ -44,8 +45,17 @@ public class AIToolAgent {
     private static final int CONFLUENCE_SCORE_THRESHOLD = 7;
     private static final int CONFLUENCE_BONUS = 2;
     private static final int MAX_TRADES_PER_SCAN       = 2;   // TOP 2 only - quality over quantity
-    private static final int MAX_OPEN_POSITIONS_TOTAL  = 5;   // global cap: max open trades (reduced from 8 for focus)
-    private static final int MAX_OPEN_PER_SECTOR        = 1;   // max simultaneous positions in the same sector (reduced from 2)
+    
+    // Split System Architecture - Separate position limits for Swing vs Intraday
+    private static final int SWING_MAX_POSITIONS       = 8;   // Swing system: 8 position slots
+    private static final int SWING_MAX_PER_SECTOR      = 2;   // Swing system: 2 positions per sector
+    private static final int INTRADAY_MAX_POSITIONS    = 5;   // Intraday system: 5 position slots
+    private static final int INTRADAY_MAX_PER_SECTOR   = 1;   // Intraday system: 1 position per sector
+    
+    // Legacy constants (deprecated - use system-specific limits above)
+    private static final int MAX_OPEN_POSITIONS_TOTAL  = 8;   // global cap: max open trades (increased from 5 to allow MASTER_7 more room)
+    private static final int MAX_OPEN_PER_SECTOR        = 1;   // max simultaneous positions in the same sector (increased to 2 when regime is HEALTHY)
+    
     private static final double MIN_STOP_LOSS_PCT       = 3.0; // minimum stop-loss distance (%)
     private static final double RISK_PER_TRADE = 1000.0; // $ position size per trade (changed from $500 to $1K)
     private static final double MIN_PROFIT_FOR_WIN = 20.0; // minimum profit ($) to be considered a WIN
@@ -64,6 +74,83 @@ public class AIToolAgent {
     
     // Track which agents we've already notified about (to avoid spam)
     private static final Set<String> notifiedWinningAgents = ConcurrentHashMap.newKeySet();
+    
+    // Track rejected signals with timestamps for cooldown (48-72 hours)
+    private static final Map<String, Long> rejectedSignalTimestamps = new ConcurrentHashMap<>();
+    private static final long SIGNAL_COOLDOWN_MS = 60 * 60 * 1000; // 48 hours in milliseconds
+    
+    // Track full details of rejected signals for analysis
+    private static final List<RejectedSignal> rejectedSignalsLog = new CopyOnWriteArrayList<>();
+    private static final Path REJECTED_SIGNALS_FILE = Paths.get("newStrategies", "rejected-signals.json");
+    
+    // Split System Architecture - Separate position stores for Swing vs Intraday
+    private static ActivePositionsStore swingPositionsStore;
+    private static ActivePositionsStore intradayPositionsStore;
+    
+    static class RejectedSignal {
+        public String ticker;
+        public String agentId;
+        public String agentName;
+        public double entryPrice;
+        public double stopLoss;
+        public double takeProfit;
+        public int score;
+        public double finalConviction;
+        public String rejectReason; // e.g., "Portfolio full", "Agent at max", "Sector at cap"
+        public String timestamp;
+        public String sector;
+    }
+    
+    private static void logRejectedSignal(RankedSignal sig, String rejectReason) {
+        RejectedSignal rs = new RejectedSignal();
+        rs.ticker = sig.ticker;
+        rs.agentId = sig.strategy.id;
+        rs.agentName = sig.strategy.name;
+        rs.entryPrice = sig.decision.entryPrice;
+        rs.stopLoss = sig.decision.suggestedStopLoss;
+        rs.takeProfit = sig.decision.suggestedTakeProfit;
+        rs.score = sig.decision.totalScore;
+        rs.finalConviction = sig.decision.finalConviction;
+        rs.rejectReason = rejectReason;
+        rs.timestamp = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
+        rs.sector = LongTermCandidateFinder.getSectorForTicker(sig.ticker);
+        
+        rejectedSignalsLog.add(rs);
+        
+        // Log to scan log
+        writeScanLog("[REJECTED-SIGNAL] " + sig.ticker + " | " + sig.strategy.id + " | " + rejectReason
+            + " | Entry=$" + String.format("%.2f", rs.entryPrice)
+            + " | SL=$" + String.format("%.2f", rs.stopLoss)
+            + " | TP=$" + String.format("%.2f", rs.takeProfit)
+            + " | Score=" + rs.score
+            + " | Conviction=" + String.format("%.2f", rs.finalConviction));
+        
+        // Save to file periodically
+        saveRejectedSignals();
+    }
+    
+    private static void saveRejectedSignals() {
+        try {
+            if (!Files.exists(NEW_STRATEGIES_DIR)) {
+                Files.createDirectories(NEW_STRATEGIES_DIR);
+            }
+            JSON.writerWithDefaultPrettyPrinter().writeValue(REJECTED_SIGNALS_FILE.toFile(), rejectedSignalsLog);
+        } catch (Exception e) {
+            System.err.println("[ERROR] Failed to save rejected signals: " + e.getMessage());
+        }
+    }
+    
+    private static void loadRejectedSignals() {
+        try {
+            if (Files.exists(REJECTED_SIGNALS_FILE)) {
+                RejectedSignal[] loaded = JSON.readValue(REJECTED_SIGNALS_FILE.toFile(), RejectedSignal[].class);
+                rejectedSignalsLog.clear();
+                rejectedSignalsLog.addAll(Arrays.asList(loaded));
+            }
+        } catch (Exception e) {
+            System.err.println("[ERROR] Failed to load rejected signals: " + e.getMessage());
+        }
+    }
     
     private static final Object LOCK = new Object();
     private static volatile AgentSystemState systemState = null;
@@ -132,6 +219,7 @@ public class AIToolAgent {
         public String name;
         public String sourceFile;
         public String type; // MOMENTUM, SWING, INTRADAY, SUCCESS
+        public String systemType; // SWING_SYSTEM, INTRADAY_SYSTEM - for split architecture
         public Map<String, Object> entryFilters = new HashMap<>();
         public Map<String, Object> riskManagement = new HashMap<>();
         public Map<String, Object> scoring = new HashMap<>();
@@ -471,12 +559,21 @@ public class AIToolAgent {
         
         try {
             Files.createDirectories(NEW_STRATEGIES_DIR);
+            
+            // Initialize separate position stores for Swing vs Intraday systems
+            Path swingCache = Paths.get("finder-cache", "swing-positions.json");
+            Path intradayCache = Paths.get("finder-cache", "intraday-positions.json");
+            swingPositionsStore = ActivePositionsStore.createWithLimits(swingCache, SWING_MAX_POSITIONS, SWING_MAX_PER_SECTOR);
+            intradayPositionsStore = ActivePositionsStore.createWithLimits(intradayCache, INTRADAY_MAX_POSITIONS, INTRADAY_MAX_PER_SECTOR);
+            System.out.println("[AIToolAgent] Initialized split position stores: Swing (8 slots, 2 per sector) and Intraday (5 slots, 1 per sector)");
+            
             loadState();
             if (systemState == null) {
                 systemState = new AgentSystemState();
             }
             loadAllAgents();
             loadRecommendations();
+            loadRejectedSignals(); // Load rejected signals log for analysis
             LongTermCandidateFinder.loadRSCache(); // warm up RS cache from last scan (eliminates cold-start penalty)
             saveState();
             
@@ -576,9 +673,137 @@ public class AIToolAgent {
      * - Run 3: 21:30-22:00 (before close - best swing trades)
      */
     private static void scheduleStrategicScanRuns() {
-        scheduleScanRun(17, 15, "Post-Open (Primary)", "🟢 **Primary Scan - Post Market Open**\nMarket has calmed down. Direction starting to clear. Fewer fake moves.\nSelecting TOP 1-2 trades only.");
-        scheduleScanRun(19, 30, "Mid-Day", "🟡 **Mid-Day Scan**\nContinuation & retest setups. Less noise than open.\nAdding if strong signals found.");
-        scheduleScanRun(21, 30, "Pre-Close", "🔵 **Pre-Close Swing Scan**\nBest swing trades for next day entry.\nMore reliable with daily data. Swing only (not intraday).");
+        // Swing system scans (open and close only)
+        scheduleSwingScanRun(17, 15, "Post-Open (Swing)", "🟢 **Swing System - Post Market Open**\nMarket has calms down. Direction starting to clear.\nSwing agents: INST_SWING_V1, QUALITY_GROWTH_V1, FUND_MOMENTUM_V1");
+        scheduleSwingScanRun(21, 30, "Pre-Close (Swing)", "🔵 **Swing System - Pre-Close**\nBest swing trades for next day entry.\nSwing agents only (2-5 day holds).");
+        
+        // Intraday system scans (every 30 min during market hours)
+        scheduleIntradayScanRuns();
+    }
+
+    /**
+     * Schedule swing system scans (open and close only)
+     */
+    private static void scheduleSwingScanRun(int hour, int minute, String runName, String discordMessage) {
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                ZonedDateTime nowIsrael = ZonedDateTime.now(ISRAEL);
+                ZonedDateTime scheduledTime = nowIsrael.withHour(hour).withMinute(minute).withSecond(0).withNano(0);
+
+                // Only run if we're within the target window (within 15 minutes of scheduled time)
+                long minutesFromScheduled = Duration.between(scheduledTime, nowIsrael).toMinutes();
+                if (minutesFromScheduled < 0 || minutesFromScheduled > 15) {
+                    return;
+                }
+
+                // Skip weekends
+                DayOfWeek dow = nowIsrael.getDayOfWeek();
+                if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+                    return;
+                }
+
+                System.out.println("[AIToolAgent] " + runName + " Swing Scan starting at " + nowIsrael.format(DateTimeFormatter.ofPattern("HH:mm")) + " Israel time");
+                sendDiscord(discordMessage + "\n🚀 Running Swing System Scan...");
+
+                // Get swing system agents only
+                List<String> swingAgentIds = getSwingSystemAgents();
+                if (swingAgentIds.isEmpty()) {
+                    sendDiscord("⚠️ No swing agents found. Skipping scan.");
+                    return;
+                }
+
+                System.out.println("[AIToolAgent] Running " + swingAgentIds.size() + " swing agents: " + swingAgentIds);
+                sendDiscord("🤖 Swing agents: " + String.join(", ", swingAgentIds));
+
+                // Run full scan with swing agents
+                runFullScanWithAgentsAsync(swingAgentIds);
+                monitorOpenPositions();
+
+            } catch (Exception e) {
+                System.err.println("[AIToolAgent] " + runName + " swing scan error: " + e.getMessage());
+            }
+        }, computeInitialDelay(hour, minute), 24 * 60, TimeUnit.MINUTES);
+    }
+
+    /**
+     * Schedule intraday system scans (every 30 min during market hours)
+     */
+    private static void scheduleIntradayScanRuns() {
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                ZonedDateTime nowIsrael = ZonedDateTime.now(ISRAEL);
+                ZonedDateTime nowET = nowIsrael.withZoneSameInstant(ZoneId.of("America/New_York"));
+                
+                // Only run during market hours (9:30 AM - 4:00 PM ET)
+                int hourET = nowET.getHour();
+                int minuteET = nowET.getMinute();
+                int timeInMinutesET = hourET * 60 + minuteET;
+                int marketOpen = 9 * 60 + 30;  // 9:30 AM
+                int marketClose = 16 * 60;      // 4:00 PM
+                
+                if (timeInMinutesET < marketOpen || timeInMinutesET >= marketClose) {
+                    return;
+                }
+
+                // Skip weekends
+                DayOfWeek dow = nowIsrael.getDayOfWeek();
+                if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+                    return;
+                }
+
+                System.out.println("[AIToolAgent] Intraday Scan starting at " + nowIsrael.format(DateTimeFormatter.ofPattern("HH:mm")) + " Israel time");
+                
+                // Get intraday system agents only
+                List<String> intradayAgentIds = getIntradaySystemAgents();
+                if (intradayAgentIds.isEmpty()) {
+                    System.out.println("[AIToolAgent] No intraday agents found. Skipping scan.");
+                    return;
+                }
+
+                System.out.println("[AIToolAgent] Running " + intradayAgentIds.size() + " intraday agents: " + intradayAgentIds);
+
+                // Run full scan with intraday agents
+                runFullScanWithAgentsAsync(intradayAgentIds);
+                monitorOpenPositions();
+
+            } catch (Exception e) {
+                System.err.println("[AIToolAgent] Intraday scan error: " + e.getMessage());
+            }
+        }, 30, 30, TimeUnit.MINUTES); // Every 30 minutes
+    }
+
+    /**
+     * Get swing system agents (2-5 day holds)
+     */
+    public static List<String> getSwingSystemAgents() {
+        List<String> swingAgents = new ArrayList<>();
+        synchronized (LOCK) {
+            if (systemState != null && systemState.agents != null) {
+                for (AgentConfig agent : systemState.agents.values()) {
+                    if ("SWING_SYSTEM".equals(agent.systemType) && !agent.disabled) {
+                        swingAgents.add(agent.id);
+                    }
+                }
+            }
+        }
+        return swingAgents;
+    }
+
+    /**
+     * Get intraday system agents (same-day holds)
+     */
+    public static List<String> getIntradaySystemAgents() {
+        List<String> intradayAgents = new ArrayList<>();
+        synchronized (LOCK) {
+            if (systemState != null && systemState.agents != null) {
+                for (AgentConfig agent : systemState.agents.values()) {
+                    if ("INTRADAY_SYSTEM".equals(agent.systemType) && !agent.disabled) {
+                        intradayAgents.add(agent.id);
+                    }
+                }
+            }
+        }
+        return intradayAgents;
     }
 
     private static void scheduleScanRun(int hour, int minute, String runName, String discordMessage) {
@@ -1216,6 +1441,17 @@ public class AIToolAgent {
         } catch (Exception ignored) {}
     }
 
+    static void writeExaminationLog(String line) {
+        try {
+            String entry = ZonedDateTime.now(NY).format(LOG_TIMESTAMP_FMT) + "  " + line + "\n";
+            java.nio.file.Files.createDirectories(NEW_STRATEGIES_DIR);
+            java.nio.file.Files.write(EXAMINATION_LOG_FILE,
+                entry.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                java.nio.file.StandardOpenOption.CREATE,
+                java.nio.file.StandardOpenOption.APPEND);
+        } catch (Exception ignored) {}
+    }
+
     /**
      * Delete and recreate scan-detail.log if it is older than 48 hours.
      */
@@ -1381,7 +1617,7 @@ public class AIToolAgent {
         return count;
     }
     
-    /** Count total OPEN positions across ALL agents. */
+    /** Count total OPEN positions across ALL agents (legacy - uses tradeHistory). */
     private static int countAllOpenPositions() {
         synchronized (LOCK) {
             if (systemState == null || systemState.tradeHistory == null) return 0;
@@ -1393,7 +1629,7 @@ public class AIToolAgent {
         }
     }
 
-    /** Count OPEN positions per sector across ALL agents. */
+    /** Count OPEN positions per sector across ALL agents (legacy - uses tradeHistory). */
     private static Map<String, Integer> countOpenPositionsBySector() {
         Map<String, Integer> sectorCount = new HashMap<>();
         synchronized (LOCK) {
@@ -1402,6 +1638,30 @@ public class AIToolAgent {
                 for (Trade t : trades)
                     if ("OPEN".equals(t.status) && t.sector != null)
                         sectorCount.merge(t.sector, 1, Integer::sum);
+        }
+        return sectorCount;
+    }
+
+    /** Count total OPEN positions for a specific system (SWING_SYSTEM or INTRADAY_SYSTEM). */
+    private static int countOpenPositionsForSystem(String systemType) {
+        if (systemType == null) return 0;
+        ActivePositionsStore store = "SWING_SYSTEM".equals(systemType) ? swingPositionsStore : intradayPositionsStore;
+        if (store == null) return 0;
+        return store.load().positions.size();
+    }
+
+    /** Count OPEN positions per sector for a specific system. */
+    private static Map<String, Integer> countOpenPositionsBySectorForSystem(String systemType) {
+        Map<String, Integer> sectorCount = new HashMap<>();
+        if (systemType == null) return sectorCount;
+        ActivePositionsStore store = "SWING_SYSTEM".equals(systemType) ? swingPositionsStore : intradayPositionsStore;
+        if (store == null) return sectorCount;
+        
+        ActivePositionsStore.PositionsData data = store.load();
+        for (ActivePositionsStore.Position p : data.positions) {
+            if (p.sector != null) {
+                sectorCount.merge(p.sector, 1, Integer::sum);
+            }
         }
         return sectorCount;
     }
@@ -1490,6 +1750,7 @@ public class AIToolAgent {
         StringBuilder deletedReport = new StringBuilder();
         
         synchronized (LOCK) {
+            if (systemState == null || systemState.performance == null) return;
             for (AgentPerformance perf : systemState.performance.values()) {
                 // Use expectancy instead of winRate for deletion threshold
                 if (perf.totalTrades >= MIN_TRADES_FOR_DELETION && perf.expectancy < 0.0) {
@@ -1561,6 +1822,33 @@ public class AIToolAgent {
         return timeInMinutes >= marketOpen && timeInMinutes < marketClose;
     }
 
+    /**
+     * Assign system type (SWING_SYSTEM or INTRADAY_SYSTEM) based on agent ID
+     * This enables the split architecture where Swing and Intraday agents have separate position tracking
+     */
+    private static String assignSystemType(String agentId) {
+        if (agentId == null) return "SWING_SYSTEM"; // Default to swing
+        
+        // Swing system agents (2-5 day holds, scan at open/close only)
+        if (agentId.equals("INST_SWING_V1") || 
+            agentId.equals("QUALITY_GROWTH_V1") ||
+            agentId.equals("FUND_MOMENTUM_V1") ||
+            agentId.contains("SWING") ||
+            agentId.contains("MASTER")) {
+            return "SWING_SYSTEM";
+        }
+        
+        // Intraday system agents (same-day holds, scan every 30 min)
+        if (agentId.startsWith("I") || 
+            agentId.contains("INTRADAY") ||
+            agentId.contains("AGGRESSIVE")) {
+            return "INTRADAY_SYSTEM";
+        }
+        
+        // Default to swing system for unknown agents
+        return "SWING_SYSTEM";
+    }
+
     public static void loadAllAgents() {
         synchronized (LOCK) {
             if (systemState == null) systemState = new AgentSystemState();
@@ -1618,6 +1906,9 @@ public class AIToolAgent {
                 agent.sourceFile = filename;
                 agent.type = type;
                 agent.generation = 0;
+                
+                // Assign systemType based on agent ID for split architecture
+                agent.systemType = assignSystemType(agent.id);
                 
                 JsonNode ef = v.get("entryFilters");
                 if (ef != null) {
@@ -1789,244 +2080,346 @@ public class AIToolAgent {
             runTotal = total;
             runStockProgress = 0;
             runCurrentTicker = null;
-
-            int totalSignals = 0;
-
-            // Comparator: top-performing agents first (expectancy desc, min 3 trades), rest at end
-            Comparator<AgentConfig> byExpectancyDesc = (a, b) -> {
-                AgentPerformance pa = systemState.performance.get(a.id);
-                AgentPerformance pb = systemState.performance.get(b.id);
-                double ea = (pa != null && pa.totalTrades >= 3) ? pa.expectancy : -1;
-                double eb = (pb != null && pb.totalTrades >= 3) ? pb.expectancy : -1;
-                return Double.compare(eb, ea); // descending
-            };
-
-            // Separate master strategies (scoring-based) from legacy agents (binary pass/fail)
-            List<AgentConfig> masterStrategies = allAgents.stream()
-                .filter(a -> a.masterStrategy && a.strategyType != null && !a.disabled)
-                .sorted(byExpectancyDesc)
-                .collect(Collectors.toList());
-            List<AgentConfig> legacyAgents = allAgents.stream()
-                .filter(a -> !a.masterStrategy)
-                .sorted(byExpectancyDesc)
-                .collect(Collectors.toList());
-            boolean useMasters = !masterStrategies.isEmpty();
-            List<RankedSignal> allSignals = new ArrayList<>();
-
-            writeScanLog("[SCAN MODE] " + (useMasters
-                ? "MASTER STRATEGY scoring — " + masterStrategies.size() + " strategies (threshold=" + SCORE_THRESHOLD + "/12)"
-                : "LEGACY AGENTS binary — " + legacyAgents.size() + " agents"));
-
-            // ── PARALLEL PRE-FETCH: all tickers fetched concurrently via Alpha Vantage ──
-            // Rate is controlled by AV_CALLS_PER_MIN env var (default 5 for free tier, 150 for premium).
-            // Each thread acquires a time-slot ticket so total rate never exceeds the configured limit.
-            final int AV_CPM = avCallsPerMin();
-            final long MS_PER_CALL = 60_000L / AV_CPM;
-            final int FETCH_THREADS = Math.min(AV_CPM, 16); // no point in more threads than calls/min
-            final java.util.concurrent.atomic.AtomicLong nextSlot = new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis());
-            final java.util.concurrent.atomic.AtomicInteger fetchedCount = new java.util.concurrent.atomic.AtomicInteger(0);
-            ExecutorService fetchPool = Executors.newFixedThreadPool(FETCH_THREADS);
-            ConcurrentHashMap<String, String> prefetchedJson = new ConcurrentHashMap<>();
-            long prefetchStart = System.currentTimeMillis();
-            writeScanLog("[PRE-FETCH] Starting parallel AV fetch: " + total + " tickers | " + AV_CPM + " calls/min | ETA ~" + (int)Math.ceil(total / (double)AV_CPM) + " min");
-            List<CompletableFuture<Void>> fetchFutures = allTickers.stream()
-                .map(t -> CompletableFuture.runAsync(() -> {
-                    try {
-                        // Acquire a rate-limited time slot (ticket system)
-                        long slot = nextSlot.getAndAdd(MS_PER_CALL);
-                        long waitMs = slot - System.currentTimeMillis();
-                        if (waitMs > 0) Thread.sleep(waitMs);
-                        runCurrentTicker = t;
-                        String data = DataFetcher.fetchStockDataForTicker(t);
-                        if (data != null && !data.isBlank()) {
-                            prefetchedJson.put(t, data);
-                            int progress = fetchedCount.incrementAndGet();
-                            // Log progress every 10 tickers or at completion
-                            if (progress % 10 == 0 || progress == total) {
-                                writeScanLog("[PRE-FETCH] Progress: " + progress + "/" + total + " (" + 
-                                    String.format("%.1f", (progress * 100.0 / total)) + "%) - Latest: " + t);
-                            }
-                        } else {
-                            int progress = fetchedCount.incrementAndGet();
-                            // Log failed fetches
-                            if (progress % 20 == 0) {
-                                writeScanLog("[PRE-FETCH] Progress: " + progress + "/" + total + " - Failed: " + t);
-                            }
-                        }
-                    } catch (Exception e) {
-                        int progress = fetchedCount.incrementAndGet();
-                        writeScanLog("[PRE-FETCH] Error fetching " + t + ": " + e.getMessage());
-                    }
-                }, fetchPool))
-                .collect(Collectors.toList());
-            // Start progress monitor thread
-            Thread progressMonitor = new Thread(() -> {
-                try {
-                    while (!fetchPool.isTerminated()) {
-                        Thread.sleep(30000); // Report every 30 seconds
-                        int current = fetchedCount.get();
-                        double elapsedSec = (System.currentTimeMillis() - prefetchStart) / 1000.0;
-                        double rate = current / elapsedSec * 60; // calls per minute
-                        writeScanLog("[PRE-FETCH] Status: " + current + "/" + total + " (" + 
-                            String.format("%.1f", current * 100.0 / total) + "%) - Rate: " + 
-                            String.format("%.1f", rate) + " calls/min - Elapsed: " + 
-                            String.format("%.1f", elapsedSec / 60) + " min");
-                    }
-                } catch (InterruptedException e) {
-                    // Normal termination
-                }
-            });
-            progressMonitor.setDaemon(true);
-            progressMonitor.start();
             
-            try {
-                CompletableFuture.allOf(fetchFutures.toArray(new CompletableFuture[0]))
-                    .get(120, TimeUnit.MINUTES);
-                progressMonitor.interrupt(); // Stop the monitor when done
-            } catch (Exception e) {
-                writeScanLog("[PRE-FETCH] Warning: timeout or partial failure — " + e.getMessage());
-                progressMonitor.interrupt();
+            runAllAgentsInternal(allTickers, allAgents);
+            
+        } catch (Exception e) {
+            System.err.println("[AIToolAgent] Run error: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            synchronized (LOCK) {
+                systemState.running = false;
+                systemState.lastRunTime = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                saveState();
             }
-            fetchPool.shutdownNow();
-            long prefetchMs = System.currentTimeMillis() - prefetchStart;
-            writeScanLog("[PRE-FETCH] Done in " + (prefetchMs / 1000) + "s — "
-                + prefetchedJson.size() + "/" + total + " tickers loaded");
+        }
+    }
 
-            // ── CLOSE EXPIRED POSITIONS: settle any trade past maxHoldDays using pre-fetched prices ──
-            closeExpiredPositions(prefetchedJson);
+    public static void runAllAgents(List<String> agentIds) {
+        boolean alreadyRunning = false;
+        synchronized (LOCK) {
+            if (systemState == null) {
+                initialize();
+            }
+            if (systemState.running) {
+                alreadyRunning = true;
+            } else {
+                systemState.running = true;
+                systemState.runCount++;
+                signalsSentThisRun = 0;
+                currentRunNumber = systemState.runCount;
+            }
+        }
+        if (alreadyRunning) {
+            System.out.println("[AIToolAgent] Already running, skipping...");
+            return;
+        }
 
-            for (int i = 0; i < allTickers.size(); i++) {
-                String ticker = allTickers.get(i);
-                runCurrentTicker = ticker;
-                runProgress = i;
+        try {
+            List<String> allTickers = LongTermCandidateFinder.getAllSectorTickers();
+            List<AgentConfig> selectedAgents = new ArrayList<>();
+            synchronized (LOCK) {
+                for (String agentId : agentIds) {
+                    AgentConfig cfg = systemState.agents.get(agentId);
+                    if (cfg != null && !cfg.disabled) {
+                        selectedAgents.add(cfg);
+                    }
+                }
+            }
 
+            int total = allTickers.size();
+            System.out.println("[AIToolAgent] Run #" + systemState.runCount +
+                " | Scanning " + total + " tickers with " + selectedAgents.size() + " selected agents");
+            writeScanLog("════════════════════════════════════════");
+            writeScanLog("[SCAN START] Run #" + systemState.runCount +
+                " | Tickers: " + total + " | Selected Agents: " + selectedAgents.size());
+            int avCpm = avCallsPerMin();
+            int etaMin = (int) Math.ceil(total * (60.0 / avCpm) / 60);
+            sendDiscord("🚀 **Scan Started** — Run #" + systemState.runCount
+                + "\nScanning **" + total + "** tickers | Selected agents: **" + selectedAgents.size() + "** | AV rate: **" + avCpm + " calls/min** | ETA ~" + etaMin + " min"
+                + "\n⏰ " + ZonedDateTime.now(NY).format(DateTimeFormatter.ofPattern("HH:mm:ss z")));
+            runProgress = 0;
+            runTotal = total;
+            runStockProgress = 0;
+            runCurrentTicker = null;
+            
+            runAllAgentsInternal(allTickers, selectedAgents);
+            
+        } catch (Exception e) {
+            System.err.println("[AIToolAgent] Run error: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            synchronized (LOCK) {
+                systemState.running = false;
+                systemState.lastRunTime = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                saveState();
+            }
+        }
+    }
+
+    private static void runAllAgentsInternal(List<String> allTickers, List<AgentConfig> agents) {
+        int total = allTickers.size();
+        int totalSignals = 0;
+
+        // Comparator: top-performing agents first (expectancy desc, min 3 trades), rest at end
+        Comparator<AgentConfig> byExpectancyDesc = (a, b) -> {
+            AgentPerformance pa = systemState != null && systemState.performance != null ? systemState.performance.get(a.id) : null;
+            AgentPerformance pb = systemState != null && systemState.performance != null ? systemState.performance.get(b.id) : null;
+            double ea = (pa != null && pa.totalTrades >= 3) ? pa.expectancy : -1;
+            double eb = (pb != null && pb.totalTrades >= 3) ? pb.expectancy : -1;
+            return Double.compare(eb, ea); // descending
+        };
+
+        // Separate master strategies (scoring-based) from legacy agents (binary pass/fail)
+        List<AgentConfig> masterStrategies = agents.stream()
+            .filter(a -> a.masterStrategy && a.strategyType != null && !a.disabled)
+            .sorted(byExpectancyDesc)
+            .collect(Collectors.toList());
+        List<AgentConfig> legacyAgents = agents.stream()
+            .filter(a -> !a.masterStrategy)
+            .sorted(byExpectancyDesc)
+            .collect(Collectors.toList());
+        boolean useMasters = !masterStrategies.isEmpty();
+        List<RankedSignal> allSignals = new ArrayList<>();
+
+        writeScanLog("[SCAN MODE] " + (useMasters
+            ? "MASTER STRATEGY scoring — " + masterStrategies.size() + " strategies (threshold=" + SCORE_THRESHOLD + "/12)"
+            : "LEGACY AGENTS binary — " + legacyAgents.size() + " agents"));
+
+        // ── PARALLEL PRE-FETCH: all tickers fetched concurrently via Alpha Vantage ──
+        // Rate is controlled by AV_CALLS_PER_MIN env var (default 5 for free tier, 150 for premium).
+        // Each thread acquires a time-slot ticket so total rate never exceeds the configured limit.
+        final int AV_CPM = avCallsPerMin();
+        final long MS_PER_CALL = 60_000L / AV_CPM;
+        final int FETCH_THREADS = Math.min(AV_CPM, 16); // no point in more threads than calls/min
+        final java.util.concurrent.atomic.AtomicLong nextSlot = new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis());
+        final java.util.concurrent.atomic.AtomicInteger fetchedCount = new java.util.concurrent.atomic.AtomicInteger(0);
+        ExecutorService fetchPool = Executors.newFixedThreadPool(FETCH_THREADS);
+        ConcurrentHashMap<String, String> prefetchedJson = new ConcurrentHashMap<>();
+        long prefetchStart = System.currentTimeMillis();
+        writeScanLog("[PRE-FETCH] Starting parallel AV fetch: " + total + " tickers | " + AV_CPM + " calls/min | ETA ~" + (int)Math.ceil(total / (double)AV_CPM) + " min");
+        List<CompletableFuture<Void>> fetchFutures = allTickers.stream()
+            .map(t -> CompletableFuture.runAsync(() -> {
                 try {
-                    // Use pre-fetched data from parallel download phase
-                    String json = prefetchedJson.get(ticker);
-                    if (json == null || json.isBlank()) {
-                        writeScanLog("[FETCH FAIL] " + ticker + " — not in pre-fetch cache");
+                    // Acquire a rate-limited time slot (ticket system)
+                    long slot = nextSlot.getAndAdd(MS_PER_CALL);
+                    long waitMs = slot - System.currentTimeMillis();
+                    if (waitMs > 0) Thread.sleep(waitMs);
+                    runCurrentTicker = t;
+                    String data = DataFetcher.fetchStockDataForTicker(t);
+                    if (data != null && !data.isBlank()) {
+                        prefetchedJson.put(t, data);
+                        int progress = fetchedCount.incrementAndGet();
+                        // Log progress every 10 tickers or at completion
+                        if (progress % 10 == 0 || progress == total) {
+                            writeScanLog("[PRE-FETCH] Progress: " + progress + "/" + total + " (" + 
+                                String.format("%.1f", (progress * 100.0 / total)) + "%) - Latest: " + t);
+                        }
+                    } else {
+                        int progress = fetchedCount.incrementAndGet();
+                        // Log failed fetches
+                        if (progress % 20 == 0) {
+                            writeScanLog("[PRE-FETCH] Progress: " + progress + "/" + total + " - Failed: " + t);
+                        }
+                    }
+                } catch (Exception e) {
+                    int progress = fetchedCount.incrementAndGet();
+                    writeScanLog("[PRE-FETCH] Error fetching " + t + ": " + e.getMessage());
+                }
+            }, fetchPool))
+            .collect(Collectors.toList());
+        
+        // Start progress monitor thread
+        Thread progressMonitor = new Thread(() -> {
+            try {
+                while (!fetchPool.isTerminated()) {
+                    Thread.sleep(30000); // Report every 30 seconds
+                    int current = fetchedCount.get();
+                    double elapsedSec = (System.currentTimeMillis() - prefetchStart) / 1000.0;
+                    double rate = current / elapsedSec * 60; // calls per minute
+                    writeScanLog("[PRE-FETCH] Status: " + current + "/" + total + " (" + 
+                        String.format("%.1f", current * 100.0 / total) + "%) - Rate: " + 
+                        String.format("%.1f", rate) + " calls/min - Elapsed: " + 
+                        String.format("%.1f", elapsedSec / 60) + " min");
+                }
+            } catch (InterruptedException e) {
+                // Normal termination
+            }
+        });
+        progressMonitor.setDaemon(true);
+        progressMonitor.start();
+        
+        try {
+            CompletableFuture.allOf(fetchFutures.toArray(new CompletableFuture[0]))
+                .get(120, TimeUnit.MINUTES);
+            progressMonitor.interrupt(); // Stop the monitor when done
+        } catch (Exception e) {
+            writeScanLog("[PRE-FETCH] Warning: timeout or partial failure — " + e.getMessage());
+            progressMonitor.interrupt();
+        }
+        fetchPool.shutdownNow();
+        long prefetchMs = System.currentTimeMillis() - prefetchStart;
+        writeScanLog("[PRE-FETCH] Done in " + (prefetchMs / 1000) + "s — "
+            + prefetchedJson.size() + "/" + total + " tickers loaded");
+
+        // ── CLOSE EXPIRED POSITIONS: settle any trade past maxHoldDays using pre-fetched prices ──
+        closeExpiredPositions(prefetchedJson);
+
+        for (int i = 0; i < allTickers.size(); i++) {
+            String ticker = allTickers.get(i);
+            runCurrentTicker = ticker;
+            runProgress = i;
+
+            try {
+                // Use pre-fetched data from parallel download phase
+                String json = prefetchedJson.get(ticker);
+                if (json == null || json.isBlank()) {
+                    writeScanLog("[FETCH FAIL] " + ticker + " — not in pre-fetch cache");
+                    continue;
+                }
+
+                if (useMasters) {
+                    // ── MASTER STRATEGY PATH: score-based with confluence detection ──
+                    IndicatorData data = computeIndicators(ticker, json);
+                    // Institutional Flow Layer: warm cached fundamental/catalyst data (fast, no API calls)
+                    InstitutionalFlowLayer.enrichCached(data);
+                    // Update RS ranking cache (used to pre-filter universe on next scan)
+                    double rsScore = data.momentum20d
+                        + (data.priceAboveSMA50  ? 4.0 : -4.0)
+                        + (data.priceAboveSMA200 ? 5.0 : -5.0)
+                        + (data.rvol > 2.0       ? 2.0 :  0.0);
+                    LongTermCandidateFinder.updateRSScore(ticker, data.valid ? rsScore : -99.0);
+                    if (!data.valid) {
+                        writeScanLog("[NULL] " + ticker + " — insufficient data for scoring");
                         continue;
                     }
 
-                    if (useMasters) {
-                        // ── MASTER STRATEGY PATH: score-based with confluence detection ──
-                        IndicatorData data = computeIndicators(ticker, json);
-                        // Institutional Flow Layer: warm cached fundamental/catalyst data (fast, no API calls)
-                        InstitutionalFlowLayer.enrichCached(data);
-                        // Update RS ranking cache (used to pre-filter universe on next scan)
-                        double rsScore = data.momentum20d
-                            + (data.priceAboveSMA50  ? 4.0 : -4.0)
-                            + (data.priceAboveSMA200 ? 5.0 : -5.0)
-                            + (data.rvol > 2.0       ? 2.0 :  0.0);
-                        LongTermCandidateFinder.updateRSScore(ticker, data.valid ? rsScore : -99.0);
-                        if (!data.valid) {
-                            writeScanLog("[NULL] " + ticker + " — insufficient data for scoring");
+                    // Score each master strategy against this ticker
+                    Map<String, TradeDecision> scoreMap = new LinkedHashMap<>();
+                    for (AgentConfig strategy : masterStrategies) {
+                        synchronized (LOCK) { systemState.currentAgent = strategy.id; }
+                        if (hasOpenPositionToday(strategy.id, ticker)) {
+                            writeScanLog("[SKIP] " + ticker + " | " + strategy.id + " — already has open position today");
                             continue;
                         }
+                        TradeDecision d = scoreStrategyForTicker(ticker, strategy, data);
+                        scoreMap.put(strategy.id, d);
+                        
+                        // Log every stock examined with its final grade/score
+                        String examLog = "[🔍 EXAMINED] " + ticker + " | " + strategy.id +
+                            " | Score=" + d.totalScore + "/12" +
+                            " | V=" + d.volumeScore +
+                            " T=" + d.trendScore +
+                            " M=" + d.momentumScore +
+                            " S=" + d.setupScore +
+                            " | Conviction=" + String.format("%.1f", d.finalConviction) + "/50";
+                        writeScanLog(examLog);
+                        writeExaminationLog(examLog);
+                    }
 
-                        // Score each master strategy against this ticker
-                        Map<String, TradeDecision> scoreMap = new LinkedHashMap<>();
-                        for (AgentConfig strategy : masterStrategies) {
-                            synchronized (LOCK) { systemState.currentAgent = strategy.id; }
-                            if (hasOpenPositionToday(strategy.id, ticker)) {
-                                writeScanLog("[SKIP] " + ticker + " | " + strategy.id + " — already has open position today");
+                    // Confluence: count strategies that score >= CONFLUENCE_SCORE_THRESHOLD
+                    long confluenceCount = scoreMap.values().stream()
+                        .filter(d -> d.totalScore >= CONFLUENCE_SCORE_THRESHOLD)
+                        .count();
+
+                    // Apply confluence bonus, then decide to trade
+                    for (AgentConfig strategy : masterStrategies) {
+                        TradeDecision d = scoreMap.get(strategy.id);
+                        if (d == null) continue;
+
+                        if (confluenceCount >= 2) {
+                            d.confluenceBonus = CONFLUENCE_BONUS;
+                            d.totalScore += CONFLUENCE_BONUS;
+                        }
+                        d.confluenceCount = (int) confluenceCount;
+
+                        // Institutional Flow Layer: fetch + score (API calls only if technical score >= 7 to save quota)
+                        InstitutionalFlowLayer.enrichAndScore(data, d, d.totalScore >= 7);
+
+                        d.shouldTrade = d.totalScore >= SCORE_THRESHOLD && !d.triggerNotMet;
+
+                        if (d.shouldTrade) {
+                            String confluenceTag = confluenceCount >= 2
+                                ? " 🔥CONFLUENCE(+" + CONFLUENCE_BONUS + ")" : "";
+                            String iflTag = (d.finalConviction > 0)
+                                ? " | Conviction=" + String.format("%.1f", d.finalConviction) + "/50"
+                                : "";
+                            writeScanLog("[✅ SIGNAL] " + ticker + " | " + strategy.id +
+                                " | Score=" + d.totalScore + "/12" + confluenceTag +
+                                " (V=" + d.volumeScore + " T=" + d.trendScore +
+                                " M=" + d.momentumScore + " S=" + d.setupScore + ")" +
+                                iflTag +
+                                " | Entry=$" + String.format("%.2f", d.entryPrice) +
+                                " SL=$" + String.format("%.2f", d.suggestedStopLoss) +
+                                " TP=$" + String.format("%.2f", d.suggestedTakeProfit));
+                            if (hasMinWinRate(strategy.id, 65.0)) {
+                                String agentLabel = (strategy.name != null && !strategy.name.isEmpty())
+                                    ? strategy.name : strategy.id;
+                                double entryZoneHigh = d.entryPrice * 1.01;
+                                double cappedSL = d.entryPrice * 0.98; // max $20 risk on $1K position
+                                double cappedSLActual = Math.max(d.suggestedStopLoss, cappedSL); // use tighter of the two
+                                sendDiscord("\uD83C\uDFC6 **" + ticker + "** | " + agentLabel + " (`" + strategy.id + "`)"
+                                    + " | Score=" + d.totalScore + "/12" + confluenceTag
+                                    + " (V=" + d.volumeScore + " T=" + d.trendScore
+                                    + " M=" + d.momentumScore + " S=" + d.setupScore + ")"
+                                    + (d.finalConviction > 0
+                                        ? "\n🏦 Conviction=" + String.format("%.1f", d.finalConviction) + "/50"
+                                          + " (F=" + d.fundamentalScore + " C=" + d.catalystScore
+                                          + " I=" + d.institutionalFlowScore + ")"
+                                        : "")
+                                    + "\n📥 **ENTRY ZONE:** $" + String.format("%.2f", d.entryPrice) + " – $" + String.format("%.2f", entryZoneHigh)
+                                    + "  |  🛑 **SL:** $" + String.format("%.2f", cappedSLActual) + " *(max $20 risk)*"
+                                    + "  |  🎯 **TP:** $" + String.format("%.2f", d.suggestedTakeProfit)
+                                    + "\n⏱ **VALID FOR: 10 min**");
+                            }
+                            addRecommendation(ticker, strategy.id, d.entryPrice,
+                                d.suggestedStopLoss, d.suggestedTakeProfit, d.totalScore,
+                                d.finalConviction, d.fundamentalScore, d.catalystScore, d.institutionalFlowScore);
+                            // If this ticker was previously on the watchlist, promote it
+                            confirmPendingSignal(ticker, strategy.id);
+                            allSignals.add(new RankedSignal(strategy, ticker, d, confluenceCount >= 2));
+                        } else if (d.triggerNotMet) {
+                            // Score passed but trigger not yet met → save to watchlist
+                            // (already logged as [⏳ TRIGGER-WAIT] inside scoreStrategyForTicker)
+                            if (d.totalScore >= SCORE_THRESHOLD) {
+                                upsertPendingSignal(ticker, strategy, d);
+                            }
+                        } else {
+                            writeScanLog("[❌ SCORE] " + ticker + " | " + strategy.id +
+                                " — Score=" + d.totalScore + "/12 < " + SCORE_THRESHOLD +
+                                " (V=" + d.volumeScore + " T=" + d.trendScore +
+                                " M=" + d.momentumScore + " S=" + d.setupScore + ")");
+                            // Score dropped → expire any watchlist entry for this ticker/strategy
+                            expirePendingSignal(ticker, strategy.id);
+                        }
+                    }
+
+                } else {
+                    // ── LEGACY AGENT PATH: binary pass/fail (unchanged) ──
+                    for (AgentConfig agent : legacyAgents) {
+                        try {
+                            synchronized (LOCK) { systemState.currentAgent = agent.id; }
+                            if (hasOpenPositionToday(agent.id, ticker)) {
+                                writeScanLog("[SKIP] " + ticker + " | " + agent.id + " — already has open position today");
                                 continue;
                             }
-                            TradeDecision d = scoreStrategyForTicker(ticker, strategy, data);
-                            scoreMap.put(strategy.id, d);
-                        }
 
-                        // Confluence: count strategies that score >= CONFLUENCE_SCORE_THRESHOLD
-                        long confluenceCount = scoreMap.values().stream()
-                            .filter(d -> d.totalScore >= CONFLUENCE_SCORE_THRESHOLD)
-                            .count();
-
-                        // Apply confluence bonus, then decide to trade
-                        for (AgentConfig strategy : masterStrategies) {
-                            TradeDecision d = scoreMap.get(strategy.id);
-                            if (d == null) continue;
-
-                            if (confluenceCount >= 2) {
-                                d.confluenceBonus = CONFLUENCE_BONUS;
-                                d.totalScore += CONFLUENCE_BONUS;
-                            }
-                            d.confluenceCount = (int) confluenceCount;
-
-                            // Institutional Flow Layer: fetch + score (API calls only if technical score >= 7 to save quota)
-                            InstitutionalFlowLayer.enrichAndScore(data, d, d.totalScore >= 7);
-
-                            d.shouldTrade = d.totalScore >= SCORE_THRESHOLD && !d.triggerNotMet;
-
-                            if (d.shouldTrade) {
-                                String confluenceTag = confluenceCount >= 2
-                                    ? " 🔥CONFLUENCE(+" + CONFLUENCE_BONUS + ")" : "";
-                                String iflTag = (d.finalConviction > 0)
-                                    ? " | Conviction=" + String.format("%.1f", d.finalConviction) + "/50"
-                                    : "";
-                                writeScanLog("[✅ SIGNAL] " + ticker + " | " + strategy.id +
-                                    " | Score=" + d.totalScore + "/12" + confluenceTag +
-                                    " (V=" + d.volumeScore + " T=" + d.trendScore +
-                                    " M=" + d.momentumScore + " S=" + d.setupScore + ")" +
-                                    iflTag +
-                                    " | Entry=$" + String.format("%.2f", d.entryPrice) +
-                                    " SL=$" + String.format("%.2f", d.suggestedStopLoss) +
-                                    " TP=$" + String.format("%.2f", d.suggestedTakeProfit));
-                                if (hasMinWinRate(strategy.id, 65.0)) {
-                                    String agentLabel = (strategy.name != null && !strategy.name.isEmpty())
-                                        ? strategy.name : strategy.id;
-                                    double entryZoneHigh = d.entryPrice * 1.01;
-                                    double cappedSL = d.entryPrice * 0.98; // max $20 risk on $1K position
-                                    double cappedSLActual = Math.max(d.suggestedStopLoss, cappedSL); // use tighter of the two
-                                    sendDiscord("\uD83C\uDFC6 **" + ticker + "** | " + agentLabel + " (`" + strategy.id + "`)"
-                                        + " | Score=" + d.totalScore + "/12" + confluenceTag
-                                        + " (V=" + d.volumeScore + " T=" + d.trendScore
-                                        + " M=" + d.momentumScore + " S=" + d.setupScore + ")"
-                                        + (d.finalConviction > 0
-                                            ? "\n🏦 Conviction=" + String.format("%.1f", d.finalConviction) + "/50"
-                                              + " (F=" + d.fundamentalScore + " C=" + d.catalystScore
-                                              + " I=" + d.institutionalFlowScore + ")"
-                                            : "")
-                                        + "\n📥 **ENTRY ZONE:** $" + String.format("%.2f", d.entryPrice) + " – $" + String.format("%.2f", entryZoneHigh)
-                                        + "  |  🛑 **SL:** $" + String.format("%.2f", cappedSLActual) + " *(max $20 risk)*"
-                                        + "  |  🎯 **TP:** $" + String.format("%.2f", d.suggestedTakeProfit)
-                                        + "\n⏱ **VALID FOR: 10 min**");
-                                }
-                                addRecommendation(ticker, strategy.id, d.entryPrice,
-                                    d.suggestedStopLoss, d.suggestedTakeProfit, d.totalScore,
-                                    d.finalConviction, d.fundamentalScore, d.catalystScore, d.institutionalFlowScore);
-                                // If this ticker was previously on the watchlist, promote it
-                                confirmPendingSignal(ticker, strategy.id);
-                                allSignals.add(new RankedSignal(strategy, ticker, d, confluenceCount >= 2));
-                            } else if (d.triggerNotMet) {
-                                // Score passed but trigger not yet met → save to watchlist
-                                // (already logged as [⏳ TRIGGER-WAIT] inside scoreStrategyForTicker)
-                                if (d.totalScore >= SCORE_THRESHOLD) {
-                                    upsertPendingSignal(ticker, strategy, d);
-                                }
+                            TradeDecision decision = analyzeStock(ticker, agent, json);
+                            if (decision == null) {
+                                writeScanLog("[NULL] " + ticker + " | " + agent.id + " — insufficient data");
                             } else {
-                                writeScanLog("[❌ SCORE] " + ticker + " | " + strategy.id +
-                                    " — Score=" + d.totalScore + "/12 < " + SCORE_THRESHOLD +
-                                    " (V=" + d.volumeScore + " T=" + d.trendScore +
-                                    " M=" + d.momentumScore + " S=" + d.setupScore + ")");
-                                // Score dropped → expire any watchlist entry for this ticker/strategy
-                                expirePendingSignal(ticker, strategy.id);
-                            }
-                        }
-
-                    } else {
-                        // ── LEGACY AGENT PATH: binary pass/fail (unchanged) ──
-                        for (AgentConfig agent : legacyAgents) {
-                            try {
-                                synchronized (LOCK) { systemState.currentAgent = agent.id; }
-                                if (hasOpenPositionToday(agent.id, ticker)) {
-                                    writeScanLog("[SKIP] " + ticker + " | " + agent.id + " — already has open position today");
-                                    continue;
-                                }
-
-                                TradeDecision decision = analyzeStock(ticker, agent, json);
-                                if (decision == null) {
-                                    writeScanLog("[NULL] " + ticker + " | " + agent.id + " — insufficient data");
-                                } else if (decision.shouldTrade) {
+                                // Log every stock examined with its final grade/score
+                                String examLog = "[🔍 EXAMINED] " + ticker + " | " + agent.id +
+                                    " | Score=" + decision.totalScore + "/12" +
+                                    " | V=" + decision.volumeScore +
+                                    " T=" + decision.trendScore +
+                                    " M=" + decision.momentumScore +
+                                    " S=" + decision.setupScore +
+                                    " | Conviction=" + String.format("%.1f", decision.finalConviction) + "/50";
+                                writeScanLog(examLog);
+                                writeExaminationLog(examLog);
+                                
+                                if (decision.shouldTrade) {
                                     // Promote from watchlist if it was waiting
                                     confirmPendingSignal(ticker, agent.id);
                                     writeScanLog("[✅ BUY SIGNAL] " + ticker + " | " + agent.id +
@@ -2062,149 +2455,175 @@ public class AIToolAgent {
                                     writeScanLog("[❌ REJECT] " + ticker + " | " + agent.id +
                                         " — " + (decision.rejectReason != null ? decision.rejectReason : "unknown"));
                                 }
-                            } catch (Exception e) {
-                                System.err.println("[AIToolAgent] Agent " + agent.id +
-                                    " error on " + ticker + ": " + e.getMessage());
-                                writeScanLog("[ERROR] " + ticker + " | " + agent.id + " — " + e.getMessage());
                             }
+                        } catch (Exception e) {
+                            System.err.println("[AIToolAgent] Agent " + agent.id +
+                                " error on " + ticker + ": " + e.getMessage());
+                            writeScanLog("[ERROR] " + ticker + " | " + agent.id + " — " + e.getMessage());
                         }
                     }
+                }
 
-                } catch (Exception e) {
-                    System.err.println("[AIToolAgent] Error fetching " + ticker + ": " + e.getMessage());
+            } catch (Exception e) {
+                System.err.println("[AIToolAgent] Error fetching " + ticker + ": " + e.getMessage());
+            }
+        }
+
+        // ── RANK & EXECUTE: portfolio-manager mode ──
+        if (useMasters && !allSignals.isEmpty()) {
+            // Rank by finalConviction (META SCORE) instead of totalScore
+            allSignals.sort((a, b) -> Double.compare(b.decision.finalConviction, a.decision.finalConviction));
+
+            writeScanLog("────────────────────────────────────────");
+            writeScanLog("[PORTFOLIO] ── Step 1: Dedup ─────────────────────────");
+            writeScanLog("[PORTFOLIO] Raw signals before dedup: " + allSignals.size());
+
+            // ── Step 1: Dedup same ticker across strategies — keep highest finalConviction signal ──
+            Map<String, RankedSignal> dedupMap = new LinkedHashMap<>();
+            for (RankedSignal sig : allSignals) {
+                RankedSignal existing = dedupMap.get(sig.ticker);
+                if (existing != null && existing.decision.finalConviction >= sig.decision.finalConviction) {
+                    writeScanLog("[DEDUP] " + sig.ticker + " — dropped " + sig.strategy.id
+                        + " (finalConviction=" + String.format("%.2f", sig.decision.finalConviction) + ") — kept " + existing.strategy.id
+                        + " (finalConviction=" + String.format("%.2f", existing.decision.finalConviction) + ")");
+                } else {
+                    if (existing != null) {
+                        writeScanLog("[DEDUP] " + sig.ticker + " — replaced " + existing.strategy.id
+                            + " (finalConviction=" + String.format("%.2f", existing.decision.finalConviction) + ") with " + sig.strategy.id
+                            + " (finalConviction=" + String.format("%.2f", sig.decision.finalConviction) + ")");
+                    }
+                    dedupMap.put(sig.ticker, sig);
                 }
             }
+            List<RankedSignal> dedupedSignals = new ArrayList<>(dedupMap.values());
+            dedupedSignals.sort((a, b) -> Double.compare(b.decision.finalConviction, a.decision.finalConviction));
+            int removedDups = allSignals.size() - dedupedSignals.size();
+            writeScanLog("[DEDUP] Result: " + allSignals.size() + " → " + dedupedSignals.size()
+                + " unique signals (" + removedDups + " duplicate(s) removed)");
 
-            // ── RANK & EXECUTE: portfolio-manager mode ──
-            if (useMasters && !allSignals.isEmpty()) {
-                // Rank by finalConviction (META SCORE) instead of totalScore
-                allSignals.sort((a, b) -> Double.compare(b.decision.finalConviction, a.decision.finalConviction));
+            // ── Step 1.5: Take TOP 2 candidates only ──
+            final int TOP_CANDIDATES = 2;
+            List<RankedSignal> topCandidates = dedupedSignals.stream()
+                .limit(TOP_CANDIDATES)
+                .collect(Collectors.toList());
+            writeScanLog("[RANK] Taking TOP " + TOP_CANDIDATES + " candidates from " + dedupedSignals.size() + " unique signals");
 
-                writeScanLog("────────────────────────────────────────");
-                writeScanLog("[PORTFOLIO] ── Step 1: Dedup ─────────────────────────");
-                writeScanLog("[PORTFOLIO] Raw signals before dedup: " + allSignals.size());
+            // Log ranked list
+            writeScanLog("[PORTFOLIO] ── Ranked TOP candidates ──────────");
+            for (int i = 0; i < topCandidates.size(); i++) {
+                RankedSignal sig = topCandidates.get(i);
+                String sector = LongTermCandidateFinder.getSectorForTicker(sig.ticker);
+                writeScanLog(String.format("[RANK #%d] %s | %s | FinalConviction=%.2f | Tech=%.1f Mom=%.1f Fund=%.1f Cat=%.1f | Sector=%s",
+                    i + 1, sig.ticker, sig.strategy.id, sig.decision.finalConviction,
+                    sig.decision.totalScore * 0.35, sig.decision.momentumScore * 0.20,
+                    sig.decision.fundamentalScore * 0.25, sig.decision.catalystScore * 0.20, sector));
+            }
 
-                // ── Step 1: Dedup same ticker across strategies — keep highest finalConviction signal ──
-                Map<String, RankedSignal> dedupMap = new LinkedHashMap<>();
-                for (RankedSignal sig : allSignals) {
-                    RankedSignal existing = dedupMap.get(sig.ticker);
-                    if (existing != null && existing.decision.finalConviction >= sig.decision.finalConviction) {
-                        writeScanLog("[DEDUP] " + sig.ticker + " — dropped " + sig.strategy.id
-                            + " (finalConviction=" + String.format("%.2f", sig.decision.finalConviction) + ") — kept " + existing.strategy.id
-                            + " (finalConviction=" + String.format("%.2f", existing.decision.finalConviction) + ")");
+            // ── Step 2: Portfolio constraints — sector cap + agent open cap + total open cap ──
+            writeScanLog("[PORTFOLIO] ── Step 2: Portfolio filter (Split System) ─────────────");
+            
+            // Use system-specific position tracking based on the agent's systemType
+            String systemType = topCandidates.isEmpty() ? "SWING_SYSTEM" : topCandidates.get(0).strategy.systemType;
+            int maxPositions = "SWING_SYSTEM".equals(systemType) ? SWING_MAX_POSITIONS : INTRADAY_MAX_POSITIONS;
+            int maxPerSector = "SWING_SYSTEM".equals(systemType) ? SWING_MAX_PER_SECTOR : INTRADAY_MAX_PER_SECTOR;
+            
+            int currentOpenTotal = countOpenPositionsForSystem(systemType);
+            Map<String, Integer> sectorOpenCount = countOpenPositionsBySectorForSystem(systemType);
+            writeScanLog("[PORTFOLIO] System: " + systemType + " | Current open positions: " + currentOpenTotal + "/" + maxPositions);
+            if (!sectorOpenCount.isEmpty()) {
+                StringBuilder sb2 = new StringBuilder("[PORTFOLIO] Open by sector:");
+                sectorOpenCount.forEach((sec, cnt) -> sb2.append(" ").append(sec).append("=").append(cnt));
+                writeScanLog(sb2.toString());
+            }
+
+            List<RankedSignal> topSignals = new ArrayList<>();
+            for (RankedSignal sig : topCandidates) {
+                // Check: signal cooldown (skip if rejected recently)
+                Long lastRejected = rejectedSignalTimestamps.get(sig.ticker);
+                if (lastRejected != null) {
+                    long hoursSinceRejection = (System.currentTimeMillis() - lastRejected) / (60 * 60 * 1000);
+                    if (hoursSinceRejection < 48) {
+                        writeScanLog("[COOLDOWN] ⏸️ " + sig.ticker + " | Rejected " + hoursSinceRejection + "h ago — skipping (cooldown 48h)");
+                        continue;
                     } else {
-                        if (existing != null) {
-                            writeScanLog("[DEDUP] " + sig.ticker + " — replaced " + existing.strategy.id
-                                + " (finalConviction=" + String.format("%.2f", existing.decision.finalConviction) + ") with " + sig.strategy.id
-                                + " (finalConviction=" + String.format("%.2f", sig.decision.finalConviction) + ")");
-                        }
-                        dedupMap.put(sig.ticker, sig);
+                        // Cooldown expired, remove from tracking
+                        rejectedSignalTimestamps.remove(sig.ticker);
                     }
                 }
-                List<RankedSignal> dedupedSignals = new ArrayList<>(dedupMap.values());
-                dedupedSignals.sort((a, b) -> Double.compare(b.decision.finalConviction, a.decision.finalConviction));
-                int removedDups = allSignals.size() - dedupedSignals.size();
-                writeScanLog("[DEDUP] Result: " + allSignals.size() + " → " + dedupedSignals.size()
-                    + " unique signals (" + removedDups + " duplicate(s) removed)");
-
-                // ── Step 1.5: Take TOP 2 candidates only ──
-                final int TOP_CANDIDATES = 2;
-                List<RankedSignal> topCandidates = dedupedSignals.stream()
-                    .limit(TOP_CANDIDATES)
-                    .collect(Collectors.toList());
-                writeScanLog("[RANK] Taking TOP " + TOP_CANDIDATES + " candidates from " + dedupedSignals.size() + " unique signals");
-
-                // Log ranked list
-                writeScanLog("[PORTFOLIO] ── Ranked TOP candidates ──────────");
-                for (int i = 0; i < topCandidates.size(); i++) {
-                    RankedSignal sig = topCandidates.get(i);
-                    String sector = LongTermCandidateFinder.getSectorForTicker(sig.ticker);
-                    writeScanLog(String.format("[RANK #%d] %s | %s | FinalConviction=%.2f | Tech=%.1f Mom=%.1f Fund=%.1f Cat=%.1f | Sector=%s",
-                        i + 1, sig.ticker, sig.strategy.id, sig.decision.finalConviction,
-                        sig.decision.totalScore * 0.35, sig.decision.momentumScore * 0.20,
-                        sig.decision.fundamentalScore * 0.25, sig.decision.catalystScore * 0.20, sector));
+                
+                String sector = LongTermCandidateFinder.getSectorForTicker(sig.ticker);
+                // Check: total open cap (system-specific)
+                if (topSignals.size() + currentOpenTotal >= maxPositions) {
+                    writeScanLog("[PORTFOLIO] ❌ " + sig.ticker + " | Portfolio full ("
+                        + (topSignals.size() + currentOpenTotal) + "/" + maxPositions + ") — skipped");
+                    rejectedSignalTimestamps.put(sig.ticker, System.currentTimeMillis()); // Record rejection for cooldown
+                    logRejectedSignal(sig, "Portfolio full (" + (topSignals.size() + currentOpenTotal) + "/" + maxPositions + ")");
+                    continue;
                 }
-
-                // ── Step 2: Portfolio constraints — sector cap + agent open cap + total open cap ──
-                writeScanLog("[PORTFOLIO] ── Step 2: Portfolio filter ─────────────");
-                int currentOpenTotal = countAllOpenPositions();
-                Map<String, Integer> sectorOpenCount = countOpenPositionsBySector();
-                writeScanLog("[PORTFOLIO] Current open positions: " + currentOpenTotal + "/" + MAX_OPEN_POSITIONS_TOTAL);
-                if (!sectorOpenCount.isEmpty()) {
-                    StringBuilder sb2 = new StringBuilder("[PORTFOLIO] Open by sector:");
-                    sectorOpenCount.forEach((sec, cnt) -> sb2.append(" ").append(sec).append("=").append(cnt));
-                    writeScanLog(sb2.toString());
+                // Check: per-agent cap
+                int agentOpen = countOpenPositionsForAgent(sig.strategy.id);
+                int agentMax  = sig.strategy.maxOpenTrades > 0 ? sig.strategy.maxOpenTrades : maxPositions;
+                if (agentOpen >= agentMax) {
+                    writeScanLog("[PORTFOLIO] ❌ " + sig.ticker + " | Agent " + sig.strategy.id
+                        + " at max open positions (" + agentOpen + "/" + agentMax + ") — skipped");
+                    rejectedSignalTimestamps.put(sig.ticker, System.currentTimeMillis()); // Record rejection for cooldown
+                    logRejectedSignal(sig, "Agent at max open positions (" + agentOpen + "/" + agentMax + ")");
+                    continue;
                 }
+                // Check: per-sector cap (system-specific, allow 2 when regime is HEALTHY, otherwise 1)
+                int baseSectorMax = sig.strategy.maxPerSector > 0 ? sig.strategy.maxPerSector : maxPerSector;
+                int sectorMax     = (lastKnownRegime == RegimeLevel.HEALTHY) ? Math.max(2, baseSectorMax) : baseSectorMax;
+                int sectorCurrent = sectorOpenCount.getOrDefault(sector, 0);
+                if (!"OTHER".equals(sector) && sectorCurrent >= sectorMax) {
+                    writeScanLog("[PORTFOLIO] ❌ " + sig.ticker + " | Sector " + sector
+                        + " at cap (" + sectorCurrent + "/" + sectorMax + ") — skipped");
+                    rejectedSignalTimestamps.put(sig.ticker, System.currentTimeMillis()); // Record rejection for cooldown
+                    logRejectedSignal(sig, "Sector at cap (" + sector + " " + sectorCurrent + "/" + sectorMax + ")");
+                    continue;
+                }
+                writeScanLog("[PORTFOLIO] ✅ " + sig.ticker + " | FinalConviction=" + String.format("%.2f", sig.decision.finalConviction)
+                    + " | " + sig.strategy.id + " | Sector=" + sector
+                    + " (" + sectorCurrent + "/" + sectorMax + ")");
+                topSignals.add(sig);
+                sectorOpenCount.merge(sector, 1, Integer::sum); // reserve slot for this scan
+            }
+            writeScanLog("[PORTFOLIO] Filter result: " + topCandidates.size()
+                + " → " + topSignals.size() + " signal(s) approved for execution");
 
-                List<RankedSignal> topSignals = new ArrayList<>();
-                for (RankedSignal sig : topCandidates) {
-                    String sector = LongTermCandidateFinder.getSectorForTicker(sig.ticker);
-                    // Check: total open cap
-                    if (topSignals.size() + currentOpenTotal >= MAX_OPEN_POSITIONS_TOTAL) {
-                        writeScanLog("[PORTFOLIO] ❌ " + sig.ticker + " | Portfolio full ("
-                            + (topSignals.size() + currentOpenTotal) + "/" + MAX_OPEN_POSITIONS_TOTAL + ") — skipped");
+            RegimeLevel regime = checkMarketRegime();
+            double posMultiplier = (regime == RegimeLevel.HEALTHY) ? 1.0
+                                 : (regime == RegimeLevel.WEAK)    ? 0.5 : 0.0;
+            sendRankedScanSummary(topCandidates, topSignals, regime, posMultiplier);
+            writeScanLog("[PORTFOLIO] ── Step 3: Execution ──────────────────");
+            if (regime == RegimeLevel.VERY_WEAK) {
+                lastScanSignalCount = topCandidates.size();
+                writeScanLog("[REGIME] ⛔ Trade execution blocked — market in crash mode (" + topCandidates.size() + " signal(s) suppressed)");
+            } else {
+                String regimeNote = (regime == RegimeLevel.WEAK) ? " [WEAK regime — 50% size]" : "";
+                writeScanLog("[EXECUTE] " + topSignals.size() + " signal(s) queued for execution" + regimeNote);
+                for (RankedSignal sig : topSignals) {
+                    if (hasOpenPositionToday(sig.strategy.id, sig.ticker)) {
+                        writeScanLog("[EXECUTE] ⚠️ " + sig.ticker + " | " + sig.strategy.id + " — already has open position today, skipped");
                         continue;
                     }
-                    // Check: per-agent cap
-                    int agentOpen = countOpenPositionsForAgent(sig.strategy.id);
-                    int agentMax  = sig.strategy.maxOpenTrades > 0 ? sig.strategy.maxOpenTrades : MAX_OPEN_POSITIONS_TOTAL;
-                    if (agentOpen >= agentMax) {
-                        writeScanLog("[PORTFOLIO] ❌ " + sig.ticker + " | Agent " + sig.strategy.id
-                            + " at max open positions (" + agentOpen + "/" + agentMax + ") — skipped");
-                        continue;
-                    }
-                    // Check: per-sector cap
-                    int sectorMax     = sig.strategy.maxPerSector > 0 ? sig.strategy.maxPerSector : MAX_OPEN_PER_SECTOR;
-                    int sectorCurrent = sectorOpenCount.getOrDefault(sector, 0);
-                    if (!"OTHER".equals(sector) && sectorCurrent >= sectorMax) {
-                        writeScanLog("[PORTFOLIO] ❌ " + sig.ticker + " | Sector " + sector
-                            + " at cap (" + sectorCurrent + "/" + sectorMax + ") — skipped");
-                        continue;
-                    }
-                    writeScanLog("[PORTFOLIO] ✅ " + sig.ticker + " | FinalConviction=" + String.format("%.2f", sig.decision.finalConviction)
-                        + " | " + sig.strategy.id + " | Sector=" + sector
-                        + " (" + sectorCurrent + "/" + sectorMax + ")");
-                    topSignals.add(sig);
-                    sectorOpenCount.merge(sector, 1, Integer::sum); // reserve slot for this scan
-                }
-                writeScanLog("[PORTFOLIO] Filter result: " + topCandidates.size()
-                    + " → " + topSignals.size() + " signal(s) approved for execution");
-
-                RegimeLevel regime = checkMarketRegime();
-                double posMultiplier = (regime == RegimeLevel.HEALTHY) ? 1.0
-                                     : (regime == RegimeLevel.WEAK)    ? 0.5 : 0.0;
-                sendRankedScanSummary(topCandidates, topSignals, regime, posMultiplier);
-                writeScanLog("[PORTFOLIO] ── Step 3: Execution ──────────────────");
-                if (regime == RegimeLevel.VERY_WEAK) {
-                    lastScanSignalCount = topCandidates.size();
-                    writeScanLog("[REGIME] ⛔ Trade execution blocked — market in crash mode (" + topCandidates.size() + " signal(s) suppressed)");
-                } else {
-                    String regimeNote = (regime == RegimeLevel.WEAK) ? " [WEAK regime — 50% size]" : "";
-                    writeScanLog("[EXECUTE] " + topSignals.size() + " signal(s) queued for execution" + regimeNote);
-                    for (RankedSignal sig : topSignals) {
-                        if (hasOpenPositionToday(sig.strategy.id, sig.ticker)) {
-                            writeScanLog("[EXECUTE] ⚠️ " + sig.ticker + " | " + sig.strategy.id + " — already has open position today, skipped");
-                            continue;
+                    Trade trade = executeTrade(sig.strategy, sig.ticker, sig.decision);
+                    if (trade != null) {
+                        logBuySignal(sig.strategy.id, sig.ticker, trade.entryPrice, trade.stopLoss, trade.takeProfit);
+                        logTradeExecuted(sig.strategy.id, sig.ticker, trade.entryPrice, trade.quantity);
+                        writeScanLog(String.format("[EXECUTE] ✅ TRADE OPENED: %s | %s | Entry=$%.2f | SL=$%.2f (%.1f%%) | TP=$%.2f (%.1f%%)",
+                            sig.ticker, sig.strategy.id,
+                            trade.entryPrice,
+                            trade.stopLoss,  ((trade.entryPrice - trade.stopLoss)  / trade.entryPrice) * 100,
+                            trade.takeProfit, ((trade.takeProfit - trade.entryPrice) / trade.entryPrice) * 100));
+                        synchronized (LOCK) {
+                            systemState.tradeHistory
+                                .computeIfAbsent(sig.strategy.id, k -> new ArrayList<>())
+                                .add(trade);
                         }
-                        Trade trade = executeTrade(sig.strategy, sig.ticker, sig.decision);
-                        if (trade != null) {
-                            logBuySignal(sig.strategy.id, sig.ticker, trade.entryPrice, trade.stopLoss, trade.takeProfit);
-                            logTradeExecuted(sig.strategy.id, sig.ticker, trade.entryPrice, trade.quantity);
-                            writeScanLog(String.format("[EXECUTE] ✅ TRADE OPENED: %s | %s | Entry=$%.2f | SL=$%.2f (%.1f%%) | TP=$%.2f (%.1f%%)",
-                                sig.ticker, sig.strategy.id,
-                                trade.entryPrice,
-                                trade.stopLoss,  ((trade.entryPrice - trade.stopLoss)  / trade.entryPrice) * 100,
-                                trade.takeProfit, ((trade.takeProfit - trade.entryPrice) / trade.entryPrice) * 100));
-                            synchronized (LOCK) {
-                                systemState.tradeHistory
-                                    .computeIfAbsent(sig.strategy.id, k -> new ArrayList<>())
-                                    .add(trade);
-                            }
-                            updatePerformance(sig.strategy.id, trade);
-                            totalSignals++;
-                        } else {
-                            writeScanLog("[EXECUTE] ⚠️ " + sig.ticker + " | executeTrade returned null — skipped");
-                        }
+                        updatePerformance(sig.strategy.id, trade);
+                        totalSignals++;
+                    } else {
+                        writeScanLog("[EXECUTE] ⚠️ " + sig.ticker + " | executeTrade returned null — skipped");
                     }
                 }
                 writeScanLog("────────────────────────────────────────");
@@ -2212,7 +2631,7 @@ public class AIToolAgent {
 
             runProgress = total;
             System.out.println("[AIToolAgent] Scan complete — signals: " + totalSignals +
-                ", tickers: " + total + ", agents: " + allAgents.size());
+                ", tickers: " + total + ", agents: " + agents.size());
             writeScanLog("[SCAN END] Run #" + systemState.runCount +
                 " | Signals: " + totalSignals + " | Tickers scanned: " + total);
             writeScanLog("════════════════════════════════════════");
@@ -2233,15 +2652,10 @@ public class AIToolAgent {
             saveHistory();
 
             System.out.println("[AIToolAgent] Run #" + systemState.runCount + " completed.");
-        } catch (Exception e) {
-            System.err.println("[AIToolAgent] Run error: " + e.getMessage());
-            synchronized (LOCK) {
-                systemState.running = false;
-            }
         }
     }
 
-    private static void runSingleAgent(AgentConfig agent) {
+    private static void runSingleAgent(AIToolAgent.AgentConfig agent) {
         // Select random stocks from the ticker list
         List<String> selectedStocks = selectRandomStocks(STOCKS_PER_AGENT_RUN);
         System.out.println("[AIToolAgent] Agent " + agent.id + " analyzing " + selectedStocks.size() + " stocks: " + selectedStocks);
@@ -2735,7 +3149,7 @@ public class AIToolAgent {
         dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice,
             d.currentPrice + (d.currentPrice - dec.suggestedStopLoss) * atrM > d.currentPrice
                 ? d.currentPrice + (d.currentPrice - dec.suggestedStopLoss) * atrM
-                : d.currentPrice * (1 + tpPct / 100));
+                : d.currentPrice * (1 + tpPct / 100), dec.suggestedStopLoss);
 
         double upside_breakout = (d.resistance30d > 0 && d.currentPrice > 0)
             ? ((d.resistance30d - d.currentPrice) / d.currentPrice) * 100 : 0;
@@ -2791,7 +3205,7 @@ public class AIToolAgent {
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 10.5);
         double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
         dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
-        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100), dec.suggestedStopLoss);
 
         // Entry trigger: buy only when price reclaims VWAP/typical-price support
         double vwapLevel = d.typicalPrice > 0 ? d.typicalPrice : d.currentPrice;
@@ -2855,7 +3269,7 @@ public class AIToolAgent {
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 13.0);
         double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
         dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
-        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100), dec.suggestedStopLoss);
 
         // Entry trigger: buy only if price pushes 0.5% above last close — confirms momentum is real
         dec.entryTriggerPrice = d.currentPrice * 1.005;
@@ -2913,7 +3327,7 @@ public class AIToolAgent {
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 18.0);
         double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
         dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
-        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100), dec.suggestedStopLoss);
 
         // Entry trigger: buy only on confirmed break above the 52W high
         dec.entryTriggerPrice = d.week52High > 0 ? d.week52High * 1.002 : d.currentPrice * 1.005;
@@ -2969,7 +3383,7 @@ public class AIToolAgent {
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 12.0);
         double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
         dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
-        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100), dec.suggestedStopLoss);
 
         // Entry trigger: buy only when price closes back above MA20 with a small buffer
         dec.entryTriggerPrice = d.sma20 > 0 ? d.sma20 * 1.003 : d.currentPrice * 1.003;
@@ -3026,7 +3440,7 @@ public class AIToolAgent {
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 15.0);
         double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
         dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
-        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100), dec.suggestedStopLoss);
 
         // Entry trigger: buy only on confirmed break above the 30-day resistance
         dec.entryTriggerPrice = d.resistance30d > 0 ? d.resistance30d * 1.005 : d.currentPrice * 1.005;
@@ -3082,7 +3496,7 @@ public class AIToolAgent {
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 15.0);
         double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
         dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
-        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100), dec.suggestedStopLoss);
 
         // Entry trigger: buy ONLY if price breaks above yesterday's high (momentum confirmation)
         dec.entryTriggerPrice = d.prevHigh > 0 ? d.prevHigh * 1.001 : d.currentPrice * 1.005;
@@ -3200,7 +3614,7 @@ public class AIToolAgent {
         double tpPct = getDoubleRisk(strategy, "takeProfitPct", 12.0);
         double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.5);
         dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
-        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100));
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100), dec.suggestedStopLoss);
 
         // Entry trigger: immediate entry (all filters already validated)
         dec.entryTriggerPrice = d.currentPrice;
@@ -3871,7 +4285,7 @@ public class AIToolAgent {
             double riskPerShare           = currentPrice - decision.suggestedStopLoss;
             decision.suggestedTakeProfit = applyMinTakeProfit(currentPrice,
                 currentPrice + (riskPerShare * rrRatio > 0 ? riskPerShare * rrRatio
-                    : currentPrice * takeProfitPct / 100));
+                    : currentPrice * takeProfitPct / 100), decision.suggestedStopLoss);
 
             // --- Entry Trigger 1: MA Crossover (MA9 > MA21) ---
             if (getBooleanFilter(agent, "maCrossoverRequired", false)) {
@@ -4047,7 +4461,7 @@ public class AIToolAgent {
                     double liveRisk               = livePrice - decision.suggestedStopLoss;
                     decision.suggestedTakeProfit = applyMinTakeProfit(livePrice,
                         livePrice + (liveRisk * rrRatio > 0 ? liveRisk * rrRatio
-                            : livePrice * takeProfitPct / 100));
+                            : livePrice * takeProfitPct / 100), decision.suggestedStopLoss);
                 }
             }
 
@@ -4075,12 +4489,17 @@ public class AIToolAgent {
     }
 
     /**
-     * Enforce a minimum 6% take-profit floor on any take-profit price.
+     * Enforce a minimum 6% take-profit floor and cap at 2.5x the SL distance.
      * If the strategy TP% yields less than 6%, raise it to entry × 1.06.
+     * If the TP exceeds 2.5x the risk distance (entry - SL), cap it at 2.5x.
      */
-    private static double applyMinTakeProfit(double entryPrice, double rawTP) {
+    private static double applyMinTakeProfit(double entryPrice, double rawTP, double stopLoss) {
         double minTP = entryPrice * 1.06;
-        return Math.max(rawTP, minTP);
+        double riskDistance = entryPrice - stopLoss;
+        double maxTP = entryPrice + (riskDistance * 2.5); // Cap at 2.5x risk
+        
+        double tpWithFloor = Math.max(rawTP, minTP);
+        return Math.min(tpWithFloor, maxTP);
     }
 
     /**
@@ -4302,6 +4721,7 @@ public class AIToolAgent {
 
     private static void updatePerformance(String agentId, Trade trade) {
         synchronized (LOCK) {
+            if (systemState == null || systemState.performance == null) return;
             AgentPerformance perf = systemState.performance.computeIfAbsent(agentId, k -> {
                 AgentPerformance p = new AgentPerformance();
                 p.agentId = agentId;
@@ -4609,7 +5029,7 @@ public class AIToolAgent {
         double riskReward = rewardPct / riskPct;
 
         // Get agent performance for context
-        AgentPerformance perf = systemState.performance.get(agent.id);
+        AgentPerformance perf = systemState != null && systemState.performance != null ? systemState.performance.get(agent.id) : null;
         String winRateStr = perf != null ? String.format("%.1f%%", perf.winRate) : "N/A";
         int totalTrades = perf != null ? perf.totalTrades : 0;
 
@@ -5135,6 +5555,16 @@ public class AIToolAgent {
         scheduler.submit(() -> {
             try {
                 runAllAgents();
+            } catch (Exception e) {
+                System.err.println("[AIToolAgent] Async run error: " + e.getMessage());
+            }
+        });
+    }
+
+    public static void runAgentsAsync(List<String> agentIds) {
+        scheduler.submit(() -> {
+            try {
+                runAllAgents(agentIds);
             } catch (Exception e) {
                 System.err.println("[AIToolAgent] Async run error: " + e.getMessage());
             }

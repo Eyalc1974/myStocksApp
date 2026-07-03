@@ -196,8 +196,9 @@ Final Conviction = (Technical × 1.0) + (Momentum × 0.75) + (Fundamentals × 1.
 
 **Risk Management**:
 - Stop loss: Typically 3-5% below entry (based on ATR)
-- Take profit: Typically 8-12% above entry (2-3R reward)
+- Take profit: Capped at 2.5x risk distance (entry - stop loss), with minimum 6% floor
 - Max risk: $20 per $1,000 position (2% risk)
+- Rejection cooldown: 48-hour cooldown for rejected signals to prevent repeated rejections
 
 ---
 
@@ -271,7 +272,63 @@ MAX_OPEN_POSITIONS_TOTAL = 5      // Global position cap
 MAX_OPEN_PER_SECTOR = 1           // Sector cap
 MIN_STOP_LOSS_PCT = 3.0           // Minimum stop loss distance
 STOCKS_PER_AGENT_RUN = 12         // Stocks per agent per run
+SIGNAL_COOLDOWN_MS = 48h          // Rejection signal cooldown (48 hours)
+INSTITUTIONAL_SWING_DAILY_LIMIT = 3  // Max institutional swing trades per day
 ```
+
+---
+
+## Agent Types
+
+### Split System Architecture
+
+The trading system is now split into two independent systems to prevent competition for position slots:
+
+**System A — Swing (2-5 day holds)**
+- Position limits: 8 slots, 2 per sector
+- Scheduling: Scans at market open (17:15) and close (21:30) Israel time
+- Agents: INST_SWING_V1, QUALITY_GROWTH_V1, FUND_MOMENTUM_V1, MASTER strategies, SWING variants
+- Position tracking: Separate `swing-positions.json` file
+
+**System B — Intraday (same-day holds)**
+- Position limits: 5 slots, 1 per sector
+- Scheduling: Every 30 minutes during market hours (9:30 AM - 4:00 PM ET)
+- Agents: I1-I6 intraday variants, AGGRESSIVE_INTRADAY
+- Position tracking: Separate `intraday-positions.json` file
+
+### Technical Agents
+- **Momentum Agents**: M1-M5 variants focusing on price momentum and trend following
+- **Intraday Agents**: I1-I6 variants for short-term VWAP and volume-based strategies
+- **Swing Agents**: S1-S10 variants for multi-day swing trades
+- **Master Strategies**: Pullback to MA20, Volume Breakout, Strong Trend
+
+### Fundamental Agents
+- **FUND_MOMENTUM_V1**: Combines earnings revisions, relative strength, and catalysts
+  - Filters: Revenue Growth > 15%, EPS Growth > 20%, RS Score > 90, RVOL > 1.5
+  - Max 3 recommendations per day
+  - Risk: 5% SL, 15% TP, 3.0 R/R ratio
+  - System: Swing System
+
+- **QUALITY_GROWTH_V1**: Focuses on business quality + momentum + catalysts
+  - Filters: Revenue > 15%, EPS > 20%, ROE > 15%, Debt/Equity < 0.5, RS > 80
+  - Requires: Earnings beat, analyst upgrade, guidance raise
+  - Max 2 recommendations per day
+  - Risk: 5% SL, 20% TP, 4.0 R/R ratio
+  - System: Swing System
+
+### Institutional Agents
+- **INST_SWING_V1**: High-conviction swing trades with institutional-grade filters
+  - Filters: Above SMA50, RS vs SPY > 1.02, Fundamental Score > 5, Catalyst > 4
+  - Market regime: NORMAL only
+  - Max 3 recommendations per day
+  - Risk: 4% SL, 12% TP, 3.0 R/R ratio
+  - System: Swing System
+
+### Market Filter
+- **MASTER_7_VIX_MARKET_FILTER**: Market regime filter (not a trading agent)
+  - Uses VIX and SPY technicals to determine market health
+  - Suppresses trading during adverse conditions
+  - System: Swing System
 
 ---
 
@@ -306,14 +363,21 @@ STOCKS_PER_AGENT_RUN = 12         // Stocks per agent per run
 
 ---
 
-## Recent Improvements (2026-05)
+## Recent Improvements (2026-06)
 
-1. **Expectancy-Based Ranking**: Replaced win rate with expectancy for agent ranking
-2. **Position Limits**: Max 5 positions, sector cap=1, semiconductor cap=1
-3. **TOP 2 Selection**: Only trade the 2 highest-conviction candidates
-4. **META SCORE**: Final conviction combining technical, momentum, fundamentals, catalyst
-5. **Parallel Pre-Fetch**: Optimized data fetching with rate limiting
-6. **Confluence Detection**: Bonus when multiple strategies agree
+1. **Risk Management Enhancement**: Take profit capped at 2.5x risk distance with 6% minimum floor
+2. **Rejection Signal Tracking**: 48-hour cooldown for rejected signals to prevent repeated rejections
+3. **New Fundamental Agents**: Added FUND_MOMENTUM_V1 and QUALITY_GROWTH_V1 for fundamental-based trading
+4. **New Institutional Agent**: Added INST_SWING_V1 for institutional-grade swing trades
+5. **Agent Categorization**: Analyzed and categorized all agents for consolidation (see agent-categorization-report.md)
+6. **Fundamental Momentum Analyzer**: New utility class for institutional flow detection and relative strength scoring
+7. **Previous Improvements (2026-05)**:
+   - Expectancy-Based Ranking: Replaced win rate with expectancy for agent ranking
+   - Position Limits: Max 5 positions, sector cap=1, semiconductor cap=1
+   - TOP 2 Selection: Only trade the 2 highest-conviction candidates
+   - META SCORE: Final conviction combining technical, momentum, fundamentals, catalyst
+   - Parallel Pre-Fetch: Optimized data fetching with rate limiting
+   - Confluence Detection: Bonus when multiple strategies agree
 
 ---
 
@@ -346,4 +410,4 @@ For issues or questions, check:
 
 ---
 
-*Last Updated: May 23, 2026*
+*Last Updated: June 20, 2026*

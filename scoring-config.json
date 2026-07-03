@@ -552,11 +552,11 @@
       "agentId" : "MASTER_5_PULLBACK_MA20",
       "agentName" : "Pullback to MA20 (Master)",
       "type" : "MASTER",
-      "cumulativeWins" : 228,
-      "cumulativeTrades" : 590,
-      "cumulativeProfitLoss" : 292431.44374967733,
+      "cumulativeWins" : 345,
+      "cumulativeTrades" : 885,
+      "cumulativeProfitLoss" : 447957.3998824751,
       "firstSavedDate" : "2026-05-01",
-      "lastUpdatedDate" : "2026-06-18",
+      "lastUpdatedDate" : "2026-07-02",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-05-01",
@@ -678,17 +678,53 @@
         "trades" : 44,
         "winRate" : 38.63636363636363,
         "profitLoss" : 29744.612867844764
+      }, {
+        "date" : "2026-06-22",
+        "wins" : 17,
+        "trades" : 45,
+        "winRate" : 37.77777777777778,
+        "profitLoss" : 27047.61286784477
+      }, {
+        "date" : "2026-06-26",
+        "wins" : 20,
+        "trades" : 50,
+        "winRate" : 40.0,
+        "profitLoss" : 25695.66865299062
+      }, {
+        "date" : "2026-06-29",
+        "wins" : 20,
+        "trades" : 50,
+        "winRate" : 40.0,
+        "profitLoss" : 25695.66865299062
+      }, {
+        "date" : "2026-06-30",
+        "wins" : 20,
+        "trades" : 50,
+        "winRate" : 40.0,
+        "profitLoss" : 25695.66865299062
+      }, {
+        "date" : "2026-07-01",
+        "wins" : 20,
+        "trades" : 50,
+        "winRate" : 40.0,
+        "profitLoss" : 25695.66865299062
+      }, {
+        "date" : "2026-07-02",
+        "wins" : 20,
+        "trades" : 50,
+        "winRate" : 40.0,
+        "profitLoss" : 25695.66865299062
       } ]
     },
     "MASTER_7_VIX_MARKET_FILTER" : {
       "agentId" : "MASTER_7_VIX_MARKET_FILTER",
       "agentName" : "VIX + SPY Market Filter (Master)",
       "type" : "MARKET_FILTER",
-      "cumulativeWins" : 843,
-      "cumulativeTrades" : 1338,
-      "cumulativeProfitLoss" : 175716.83913738304,
+      "cumulativeWins" : 1335,
+      "cumulativeTrades" : 2118,
+      "cumulativeProfitLoss" : 272382.1365390133,
       "firstSavedDate" : "2026-05-26",
-      "lastUpdatedDate" : "2026-06-18",
+      "lastUpdatedDate" : "2026-07-02",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-05-26",
@@ -764,6 +800,42 @@
         "profitLoss" : 16110.882900271716
       }, {
         "date" : "2026-06-18",
+        "wins" : 82,
+        "trades" : 130,
+        "winRate" : 63.07692307692308,
+        "profitLoss" : 16110.882900271716
+      }, {
+        "date" : "2026-06-22",
+        "wins" : 82,
+        "trades" : 130,
+        "winRate" : 63.07692307692308,
+        "profitLoss" : 16110.882900271716
+      }, {
+        "date" : "2026-06-26",
+        "wins" : 82,
+        "trades" : 130,
+        "winRate" : 63.07692307692308,
+        "profitLoss" : 16110.882900271716
+      }, {
+        "date" : "2026-06-29",
+        "wins" : 82,
+        "trades" : 130,
+        "winRate" : 63.07692307692308,
+        "profitLoss" : 16110.882900271716
+      }, {
+        "date" : "2026-06-30",
+        "wins" : 82,
+        "trades" : 130,
+        "winRate" : 63.07692307692308,
+        "profitLoss" : 16110.882900271716
+      }, {
+        "date" : "2026-07-01",
+        "wins" : 82,
+        "trades" : 130,
+        "winRate" : 63.07692307692308,
+        "profitLoss" : 16110.882900271716
+      }, {
+        "date" : "2026-07-02",
         "wins" : 82,
         "trades" : 130,
         "winRate" : 63.07692307692308,

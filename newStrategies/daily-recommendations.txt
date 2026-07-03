@@ -76,3 +76,1436 @@ AGENT: MASTER_5_PULLBACK_MA20
 ================================================================================
 END OF DAILY RECOMMENDATIONS
 ================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-22
+Generated at: 2026-06-22 16:23:33 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 1
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         HUM
+  Entry Price:    $360.07
+  Stop Loss:      $330.02
+  Take Profit:    $403.28
+  Quantity:       2 shares ($720)
+  Score:          10/100
+  Conviction:     37.1/10
+  Fundamental:    5/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-22
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-22
+Generated at: 2026-06-22 16:23:35 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 2
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         ILMN
+  Entry Price:    $162.26
+  Stop Loss:      $146.62
+  Take Profit:    $181.73
+  Quantity:       6 shares ($974)
+  Score:          12/100
+  Conviction:     41.3/10
+  Fundamental:    5/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-22
+
+  TICKER:         HUM
+  Entry Price:    $360.07
+  Stop Loss:      $330.02
+  Take Profit:    $403.28
+  Quantity:       2 shares ($720)
+  Score:          10/100
+  Conviction:     37.1/10
+  Fundamental:    5/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-22
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-22
+Generated at: 2026-06-22 16:23:37 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 3
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         ILMN
+  Entry Price:    $162.26
+  Stop Loss:      $146.62
+  Take Profit:    $181.73
+  Quantity:       6 shares ($974)
+  Score:          12/100
+  Conviction:     41.3/10
+  Fundamental:    5/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-22
+
+  TICKER:         FTNT
+  Entry Price:    $144.19
+  Stop Loss:      $129.63
+  Take Profit:    $161.49
+  Quantity:       6 shares ($865)
+  Score:          11/100
+  Conviction:     39.4/10
+  Fundamental:    9/10
+  Catalyst:       8/10
+  Inst. Flow:     2/10
+  Date:           2026-06-22
+
+  TICKER:         HUM
+  Entry Price:    $360.07
+  Stop Loss:      $330.02
+  Take Profit:    $403.28
+  Quantity:       2 shares ($720)
+  Score:          10/100
+  Conviction:     37.1/10
+  Fundamental:    5/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-22
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-26
+Generated at: 2026-06-26 10:11:12 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 1
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         WDC
+  Entry Price:    $619.07
+  Stop Loss:      $486.61
+  Take Profit:    $693.35
+  Quantity:       1 shares ($619)
+  Score:          11/100
+  Conviction:     39.2/10
+  Fundamental:    9/10
+  Catalyst:       5/10
+  Inst. Flow:     2/10
+  Date:           2026-06-26
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-26
+Generated at: 2026-06-26 10:11:17 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 2
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         STX
+  Entry Price:    $956.02
+  Stop Loss:      $780.11
+  Take Profit:    $1070.74
+  Quantity:       1 shares ($956)
+  Score:          13/100
+  Conviction:     46.3/10
+  Fundamental:    8/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-06-26
+
+  TICKER:         WDC
+  Entry Price:    $619.07
+  Stop Loss:      $486.61
+  Take Profit:    $693.35
+  Quantity:       1 shares ($619)
+  Score:          11/100
+  Conviction:     39.2/10
+  Fundamental:    9/10
+  Catalyst:       5/10
+  Inst. Flow:     2/10
+  Date:           2026-06-26
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-26
+Generated at: 2026-06-26 10:11:56 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 3
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         STX
+  Entry Price:    $956.02
+  Stop Loss:      $780.11
+  Take Profit:    $1070.74
+  Quantity:       1 shares ($956)
+  Score:          13/100
+  Conviction:     46.3/10
+  Fundamental:    8/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-06-26
+
+  TICKER:         WDC
+  Entry Price:    $619.07
+  Stop Loss:      $486.61
+  Take Profit:    $693.35
+  Quantity:       1 shares ($619)
+  Score:          11/100
+  Conviction:     39.2/10
+  Fundamental:    9/10
+  Catalyst:       5/10
+  Inst. Flow:     2/10
+  Date:           2026-06-26
+
+
+AGENT: MASTER_8_STRONG_TREND
+--------------------------------------------------------------------------------
+  TICKER:         DDOG
+  Entry Price:    $228.24
+  Stop Loss:      $199.52
+  Take Profit:    $262.47
+  Quantity:       4 shares ($913)
+  Score:          10/100
+  Conviction:     33.6/10
+  Fundamental:    7/10
+  Catalyst:       8/10
+  Inst. Flow:     0/10
+  Date:           2026-06-26
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-26
+Generated at: 2026-06-26 10:11:57 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 4
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         STX
+  Entry Price:    $956.02
+  Stop Loss:      $780.11
+  Take Profit:    $1070.74
+  Quantity:       1 shares ($956)
+  Score:          13/100
+  Conviction:     46.3/10
+  Fundamental:    8/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-06-26
+
+  TICKER:         MET
+  Entry Price:    $85.58
+  Stop Loss:      $80.63
+  Take Profit:    $95.84
+  Quantity:       11 shares ($941)
+  Score:          13/100
+  Conviction:     39.8/10
+  Fundamental:    6/10
+  Catalyst:       7/10
+  Inst. Flow:     2/10
+  Date:           2026-06-26
+
+  TICKER:         WDC
+  Entry Price:    $619.07
+  Stop Loss:      $486.61
+  Take Profit:    $693.35
+  Quantity:       1 shares ($619)
+  Score:          11/100
+  Conviction:     39.2/10
+  Fundamental:    9/10
+  Catalyst:       5/10
+  Inst. Flow:     2/10
+  Date:           2026-06-26
+
+
+AGENT: MASTER_8_STRONG_TREND
+--------------------------------------------------------------------------------
+  TICKER:         DDOG
+  Entry Price:    $228.24
+  Stop Loss:      $199.52
+  Take Profit:    $262.47
+  Quantity:       4 shares ($913)
+  Score:          10/100
+  Conviction:     33.6/10
+  Fundamental:    7/10
+  Catalyst:       8/10
+  Inst. Flow:     0/10
+  Date:           2026-06-26
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-26
+Generated at: 2026-06-26 10:12:04 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 5
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         STX
+  Entry Price:    $956.02
+  Stop Loss:      $780.11
+  Take Profit:    $1070.74
+  Quantity:       1 shares ($956)
+  Score:          13/100
+  Conviction:     46.3/10
+  Fundamental:    8/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-06-26
+
+  TICKER:         UNP
+  Entry Price:    $268.57
+  Stop Loss:      $252.86
+  Take Profit:    $300.80
+  Quantity:       3 shares ($806)
+  Score:          12/100
+  Conviction:     42.5/10
+  Fundamental:    6/10
+  Catalyst:       10/10
+  Inst. Flow:     0/10
+  Date:           2026-06-26
+
+  TICKER:         MET
+  Entry Price:    $85.58
+  Stop Loss:      $80.63
+  Take Profit:    $95.84
+  Quantity:       11 shares ($941)
+  Score:          13/100
+  Conviction:     39.8/10
+  Fundamental:    6/10
+  Catalyst:       7/10
+  Inst. Flow:     2/10
+  Date:           2026-06-26
+
+
+AGENT: MASTER_8_STRONG_TREND
+--------------------------------------------------------------------------------
+  TICKER:         DDOG
+  Entry Price:    $228.24
+  Stop Loss:      $199.52
+  Take Profit:    $262.47
+  Quantity:       4 shares ($913)
+  Score:          10/100
+  Conviction:     33.6/10
+  Fundamental:    7/10
+  Catalyst:       8/10
+  Inst. Flow:     0/10
+  Date:           2026-06-26
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-26
+Generated at: 2026-06-26 10:12:04 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 6
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         STX
+  Entry Price:    $956.02
+  Stop Loss:      $780.11
+  Take Profit:    $1070.74
+  Quantity:       1 shares ($956)
+  Score:          13/100
+  Conviction:     46.3/10
+  Fundamental:    8/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-06-26
+
+  TICKER:         UNP
+  Entry Price:    $268.57
+  Stop Loss:      $252.86
+  Take Profit:    $300.80
+  Quantity:       3 shares ($806)
+  Score:          12/100
+  Conviction:     42.5/10
+  Fundamental:    6/10
+  Catalyst:       10/10
+  Inst. Flow:     0/10
+  Date:           2026-06-26
+
+  TICKER:         MET
+  Entry Price:    $85.58
+  Stop Loss:      $80.63
+  Take Profit:    $95.84
+  Quantity:       11 shares ($941)
+  Score:          13/100
+  Conviction:     39.8/10
+  Fundamental:    6/10
+  Catalyst:       7/10
+  Inst. Flow:     2/10
+  Date:           2026-06-26
+
+
+AGENT: MASTER_8_STRONG_TREND
+--------------------------------------------------------------------------------
+  TICKER:         UNP
+  Entry Price:    $268.57
+  Stop Loss:      $252.86
+  Take Profit:    $307.83
+  Quantity:       3 shares ($806)
+  Score:          10/100
+  Conviction:     40.8/10
+  Fundamental:    6/10
+  Catalyst:       10/10
+  Inst. Flow:     0/10
+  Date:           2026-06-26
+
+  TICKER:         DDOG
+  Entry Price:    $228.24
+  Stop Loss:      $199.52
+  Take Profit:    $262.47
+  Quantity:       4 shares ($913)
+  Score:          10/100
+  Conviction:     33.6/10
+  Fundamental:    7/10
+  Catalyst:       8/10
+  Inst. Flow:     0/10
+  Date:           2026-06-26
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-29
+Generated at: 2026-06-29 11:30:43 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 1
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1075.97
+  Stop Loss:      $835.61
+  Take Profit:    $1205.09
+  Quantity:       0 shares ($0)
+  Score:          10/100
+  Conviction:     44.6/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-29
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-29
+Generated at: 2026-06-29 11:30:47 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 2
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1075.97
+  Stop Loss:      $835.61
+  Take Profit:    $1205.09
+  Quantity:       0 shares ($0)
+  Score:          10/100
+  Conviction:     44.6/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-29
+
+  TICKER:         WDC
+  Entry Price:    $623.89
+  Stop Loss:      $487.66
+  Take Profit:    $698.76
+  Quantity:       1 shares ($624)
+  Score:          11/100
+  Conviction:     41.7/10
+  Fundamental:    9/10
+  Catalyst:       5/10
+  Inst. Flow:     4/10
+  Date:           2026-06-29
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-29
+Generated at: 2026-06-29 11:31:02 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 3
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1075.97
+  Stop Loss:      $835.61
+  Take Profit:    $1205.09
+  Quantity:       0 shares ($0)
+  Score:          10/100
+  Conviction:     44.6/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-29
+
+  TICKER:         WDC
+  Entry Price:    $623.89
+  Stop Loss:      $487.66
+  Take Profit:    $698.76
+  Quantity:       1 shares ($624)
+  Score:          11/100
+  Conviction:     41.7/10
+  Fundamental:    9/10
+  Catalyst:       5/10
+  Inst. Flow:     4/10
+  Date:           2026-06-29
+
+  TICKER:         MET
+  Entry Price:    $85.86
+  Stop Loss:      $80.88
+  Take Profit:    $96.17
+  Quantity:       11 shares ($944)
+  Score:          12/100
+  Conviction:     34.8/10
+  Fundamental:    6/10
+  Catalyst:       7/10
+  Inst. Flow:     0/10
+  Date:           2026-06-29
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-29
+Generated at: 2026-06-29 11:31:04 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 4
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1075.97
+  Stop Loss:      $835.61
+  Take Profit:    $1205.09
+  Quantity:       0 shares ($0)
+  Score:          10/100
+  Conviction:     44.6/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-29
+
+  TICKER:         WDC
+  Entry Price:    $623.89
+  Stop Loss:      $487.66
+  Take Profit:    $698.76
+  Quantity:       1 shares ($624)
+  Score:          11/100
+  Conviction:     41.7/10
+  Fundamental:    9/10
+  Catalyst:       5/10
+  Inst. Flow:     4/10
+  Date:           2026-06-29
+
+  TICKER:         UNP
+  Entry Price:    $270.75
+  Stop Loss:      $255.15
+  Take Profit:    $303.23
+  Quantity:       3 shares ($812)
+  Score:          10/100
+  Conviction:     39.6/10
+  Fundamental:    6/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-06-29
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-29
+Generated at: 2026-06-29 11:31:05 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 5
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1075.97
+  Stop Loss:      $835.61
+  Take Profit:    $1205.09
+  Quantity:       0 shares ($0)
+  Score:          10/100
+  Conviction:     44.6/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-29
+
+  TICKER:         WDC
+  Entry Price:    $623.89
+  Stop Loss:      $487.66
+  Take Profit:    $698.76
+  Quantity:       1 shares ($624)
+  Score:          11/100
+  Conviction:     41.7/10
+  Fundamental:    9/10
+  Catalyst:       5/10
+  Inst. Flow:     4/10
+  Date:           2026-06-29
+
+  TICKER:         AMD
+  Entry Price:    $519.51
+  Stop Loss:      $435.49
+  Take Profit:    $581.85
+  Quantity:       1 shares ($520)
+  Score:          12/100
+  Conviction:     41.3/10
+  Fundamental:    7/10
+  Catalyst:       10/10
+  Inst. Flow:     0/10
+  Date:           2026-06-29
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-30
+Generated at: 2026-06-30 12:06:07 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 1
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         PSA
+  Entry Price:    $318.59
+  Stop Loss:      $300.78
+  Take Profit:    $356.82
+  Quantity:       3 shares ($956)
+  Score:          10/100
+  Conviction:     43.3/10
+  Fundamental:    7/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-06-30
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-30
+Generated at: 2026-06-30 12:06:14 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 2
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         PSA
+  Entry Price:    $318.59
+  Stop Loss:      $300.78
+  Take Profit:    $356.82
+  Quantity:       3 shares ($956)
+  Score:          10/100
+  Conviction:     43.3/10
+  Fundamental:    7/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-06-30
+
+
+AGENT: MASTER_8_STRONG_TREND
+--------------------------------------------------------------------------------
+  TICKER:         DDOG
+  Entry Price:    $255.23
+  Stop Loss:      $224.45
+  Take Profit:    $293.51
+  Quantity:       3 shares ($766)
+  Score:          10/100
+  Conviction:     38.3/10
+  Fundamental:    6/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-30
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-30
+Generated at: 2026-06-30 12:06:16 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 3
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         PSA
+  Entry Price:    $318.59
+  Stop Loss:      $300.78
+  Take Profit:    $356.82
+  Quantity:       3 shares ($956)
+  Score:          10/100
+  Conviction:     43.3/10
+  Fundamental:    7/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-06-30
+
+  TICKER:         DELL
+  Entry Price:    $423.22
+  Stop Loss:      $349.40
+  Take Profit:    $474.01
+  Quantity:       2 shares ($846)
+  Score:          10/100
+  Conviction:     40.8/10
+  Fundamental:    8/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-30
+
+
+AGENT: MASTER_8_STRONG_TREND
+--------------------------------------------------------------------------------
+  TICKER:         DDOG
+  Entry Price:    $255.23
+  Stop Loss:      $224.45
+  Take Profit:    $293.51
+  Quantity:       3 shares ($766)
+  Score:          10/100
+  Conviction:     38.3/10
+  Fundamental:    6/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-30
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-06-30
+Generated at: 2026-06-30 12:06:16 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 4
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         PSA
+  Entry Price:    $318.59
+  Stop Loss:      $300.78
+  Take Profit:    $356.82
+  Quantity:       3 shares ($956)
+  Score:          10/100
+  Conviction:     43.3/10
+  Fundamental:    7/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-06-30
+
+  TICKER:         DELL
+  Entry Price:    $423.22
+  Stop Loss:      $349.40
+  Take Profit:    $474.01
+  Quantity:       2 shares ($846)
+  Score:          10/100
+  Conviction:     40.8/10
+  Fundamental:    8/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-30
+
+
+AGENT: MASTER_8_STRONG_TREND
+--------------------------------------------------------------------------------
+  TICKER:         DELL
+  Entry Price:    $423.22
+  Stop Loss:      $349.40
+  Take Profit:    $486.71
+  Quantity:       2 shares ($846)
+  Score:          11/100
+  Conviction:     41.7/10
+  Fundamental:    8/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-30
+
+  TICKER:         DDOG
+  Entry Price:    $255.23
+  Stop Loss:      $224.45
+  Take Profit:    $293.51
+  Quantity:       3 shares ($766)
+  Score:          10/100
+  Conviction:     38.3/10
+  Fundamental:    6/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-06-30
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-01
+Generated at: 2026-07-01 10:40:06 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 1
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MRVL
+  Entry Price:    $287.22
+  Stop Loss:      $221.87
+  Take Profit:    $321.68
+  Quantity:       3 shares ($862)
+  Score:          11/100
+  Conviction:     39.2/10
+  Fundamental:    6/10
+  Catalyst:       10/10
+  Inst. Flow:     0/10
+  Date:           2026-07-01
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-01
+Generated at: 2026-07-01 10:40:21 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 2
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1080.60
+  Stop Loss:      $847.44
+  Take Profit:    $1210.27
+  Quantity:       0 shares ($0)
+  Score:          11/100
+  Conviction:     46.7/10
+  Fundamental:    10/10
+  Catalyst:       10/10
+  Inst. Flow:     0/10
+  Date:           2026-07-01
+
+  TICKER:         MRVL
+  Entry Price:    $287.22
+  Stop Loss:      $221.87
+  Take Profit:    $321.68
+  Quantity:       3 shares ($862)
+  Score:          11/100
+  Conviction:     39.2/10
+  Fundamental:    6/10
+  Catalyst:       10/10
+  Inst. Flow:     0/10
+  Date:           2026-07-01
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-01
+Generated at: 2026-07-01 10:40:26 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 3
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1080.60
+  Stop Loss:      $847.44
+  Take Profit:    $1210.27
+  Quantity:       0 shares ($0)
+  Score:          11/100
+  Conviction:     46.7/10
+  Fundamental:    10/10
+  Catalyst:       10/10
+  Inst. Flow:     0/10
+  Date:           2026-07-01
+
+  TICKER:         PSA
+  Entry Price:    $322.28
+  Stop Loss:      $304.92
+  Take Profit:    $360.95
+  Quantity:       3 shares ($967)
+  Score:          10/100
+  Conviction:     43.3/10
+  Fundamental:    7/10
+  Catalyst:       10/10
+  Inst. Flow:     3/10
+  Date:           2026-07-01
+
+  TICKER:         MRVL
+  Entry Price:    $287.22
+  Stop Loss:      $221.87
+  Take Profit:    $321.68
+  Quantity:       3 shares ($862)
+  Score:          11/100
+  Conviction:     39.2/10
+  Fundamental:    6/10
+  Catalyst:       10/10
+  Inst. Flow:     0/10
+  Date:           2026-07-01
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-01
+Generated at: 2026-07-01 10:48:16 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 4
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1080.60
+  Stop Loss:      $847.44
+  Take Profit:    $1210.27
+  Quantity:       0 shares ($0)
+  Score:          11/100
+  Conviction:     46.7/10
+  Fundamental:    10/10
+  Catalyst:       10/10
+  Inst. Flow:     0/10
+  Date:           2026-07-01
+
+  TICKER:         PSA
+  Entry Price:    $322.08
+  Stop Loss:      $304.72
+  Take Profit:    $360.73
+  Quantity:       3 shares ($966)
+  Score:          10/100
+  Conviction:     43.3/10
+  Fundamental:    7/10
+  Catalyst:       10/10
+  Inst. Flow:     3/10
+  Date:           2026-07-01
+
+  TICKER:         PSA
+  Entry Price:    $322.28
+  Stop Loss:      $304.92
+  Take Profit:    $360.95
+  Quantity:       3 shares ($967)
+  Score:          10/100
+  Conviction:     43.3/10
+  Fundamental:    7/10
+  Catalyst:       10/10
+  Inst. Flow:     3/10
+  Date:           2026-07-01
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-01
+Generated at: 2026-07-01 10:48:36 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 5
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1070.07
+  Stop Loss:      $836.91
+  Take Profit:    $1198.48
+  Quantity:       0 shares ($0)
+  Score:          11/100
+  Conviction:     46.7/10
+  Fundamental:    10/10
+  Catalyst:       10/10
+  Inst. Flow:     0/10
+  Date:           2026-07-01
+
+  TICKER:         MU
+  Entry Price:    $1080.60
+  Stop Loss:      $847.44
+  Take Profit:    $1210.27
+  Quantity:       0 shares ($0)
+  Score:          11/100
+  Conviction:     46.7/10
+  Fundamental:    10/10
+  Catalyst:       10/10
+  Inst. Flow:     0/10
+  Date:           2026-07-01
+
+  TICKER:         PSA
+  Entry Price:    $322.08
+  Stop Loss:      $304.72
+  Take Profit:    $360.73
+  Quantity:       3 shares ($966)
+  Score:          10/100
+  Conviction:     43.3/10
+  Fundamental:    7/10
+  Catalyst:       10/10
+  Inst. Flow:     3/10
+  Date:           2026-07-01
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-02
+Generated at: 2026-07-02 10:22:28 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 1
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         LRCX
+  Entry Price:    $381.54
+  Stop Loss:      $316.26
+  Take Profit:    $427.32
+  Quantity:       2 shares ($763)
+  Score:          11/100
+  Conviction:     47.9/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-02
+Generated at: 2026-07-02 10:22:30 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 2
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         LRCX
+  Entry Price:    $381.54
+  Stop Loss:      $316.26
+  Take Profit:    $427.32
+  Quantity:       2 shares ($763)
+  Score:          11/100
+  Conviction:     47.9/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+  TICKER:         CAT
+  Entry Price:    $988.09
+  Stop Loss:      $884.13
+  Take Profit:    $1106.66
+  Quantity:       1 shares ($988)
+  Score:          11/100
+  Conviction:     46.7/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-07-02
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-02
+Generated at: 2026-07-02 10:22:31 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 3
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         LRCX
+  Entry Price:    $381.54
+  Stop Loss:      $316.26
+  Take Profit:    $427.32
+  Quantity:       2 shares ($763)
+  Score:          11/100
+  Conviction:     47.9/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+  TICKER:         CAT
+  Entry Price:    $988.09
+  Stop Loss:      $884.13
+  Take Profit:    $1106.66
+  Quantity:       1 shares ($988)
+  Score:          11/100
+  Conviction:     46.7/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-07-02
+
+  TICKER:         CARR
+  Entry Price:    $71.64
+  Stop Loss:      $65.83
+  Take Profit:    $80.23
+  Quantity:       13 shares ($931)
+  Score:          11/100
+  Conviction:     40.4/10
+  Fundamental:    4/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-07-02
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-02
+Generated at: 2026-07-02 10:22:32 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 4
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         LRCX
+  Entry Price:    $381.54
+  Stop Loss:      $316.26
+  Take Profit:    $427.32
+  Quantity:       2 shares ($763)
+  Score:          11/100
+  Conviction:     47.9/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+  TICKER:         CAT
+  Entry Price:    $988.09
+  Stop Loss:      $884.13
+  Take Profit:    $1106.66
+  Quantity:       1 shares ($988)
+  Score:          11/100
+  Conviction:     46.7/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-07-02
+
+  TICKER:         PSA
+  Entry Price:    $324.24
+  Stop Loss:      $307.07
+  Take Profit:    $363.14
+  Quantity:       3 shares ($973)
+  Score:          10/100
+  Conviction:     40.8/10
+  Fundamental:    7/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-07-02
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-02
+Generated at: 2026-07-02 10:22:35 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 5
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1051.39
+  Stop Loss:      $822.85
+  Take Profit:    $1177.56
+  Quantity:       0 shares ($0)
+  Score:          13/100
+  Conviction:     50.0/10
+  Fundamental:    10/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+  TICKER:         LRCX
+  Entry Price:    $381.54
+  Stop Loss:      $316.26
+  Take Profit:    $427.32
+  Quantity:       2 shares ($763)
+  Score:          11/100
+  Conviction:     47.9/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+  TICKER:         CAT
+  Entry Price:    $988.09
+  Stop Loss:      $884.13
+  Take Profit:    $1106.66
+  Quantity:       1 shares ($988)
+  Score:          11/100
+  Conviction:     46.7/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-07-02
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-02
+Generated at: 2026-07-02 10:22:38 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 6
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1051.39
+  Stop Loss:      $822.85
+  Take Profit:    $1177.56
+  Quantity:       0 shares ($0)
+  Score:          13/100
+  Conviction:     50.0/10
+  Fundamental:    10/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+  TICKER:         LRCX
+  Entry Price:    $381.54
+  Stop Loss:      $316.26
+  Take Profit:    $427.32
+  Quantity:       2 shares ($763)
+  Score:          11/100
+  Conviction:     47.9/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+  TICKER:         CAT
+  Entry Price:    $988.09
+  Stop Loss:      $884.13
+  Take Profit:    $1106.66
+  Quantity:       1 shares ($988)
+  Score:          11/100
+  Conviction:     46.7/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-07-02
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-02
+Generated at: 2026-07-02 10:41:14 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 7
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1051.39
+  Stop Loss:      $822.85
+  Take Profit:    $1177.56
+  Quantity:       0 shares ($0)
+  Score:          13/100
+  Conviction:     50.0/10
+  Fundamental:    10/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+  TICKER:         LRCX
+  Entry Price:    $381.54
+  Stop Loss:      $316.26
+  Take Profit:    $427.32
+  Quantity:       2 shares ($763)
+  Score:          11/100
+  Conviction:     47.9/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+  TICKER:         LRCX
+  Entry Price:    $372.22
+  Stop Loss:      $305.44
+  Take Profit:    $416.88
+  Quantity:       2 shares ($744)
+  Score:          13/100
+  Conviction:     47.5/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-07-02
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-02
+Generated at: 2026-07-02 10:41:15 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 8
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1051.39
+  Stop Loss:      $822.85
+  Take Profit:    $1177.56
+  Quantity:       0 shares ($0)
+  Score:          13/100
+  Conviction:     50.0/10
+  Fundamental:    10/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+  TICKER:         LRCX
+  Entry Price:    $381.54
+  Stop Loss:      $316.26
+  Take Profit:    $427.32
+  Quantity:       2 shares ($763)
+  Score:          11/100
+  Conviction:     47.9/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+  TICKER:         LRCX
+  Entry Price:    $372.22
+  Stop Loss:      $305.44
+  Take Profit:    $416.88
+  Quantity:       2 shares ($744)
+  Score:          13/100
+  Conviction:     47.5/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-07-02
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================
+================================================================================
+DAILY STOCK RECOMMENDATIONS - 2026-07-02
+Generated at: 2026-07-02 10:41:17 EDT
+Position Size: $1,000 per trade
+Total Recommendations: 9
+================================================================================
+
+AGENT: MASTER_5_PULLBACK_MA20
+--------------------------------------------------------------------------------
+  TICKER:         MU
+  Entry Price:    $1051.39
+  Stop Loss:      $822.85
+  Take Profit:    $1177.56
+  Quantity:       0 shares ($0)
+  Score:          13/100
+  Conviction:     50.0/10
+  Fundamental:    10/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+  TICKER:         LRCX
+  Entry Price:    $381.54
+  Stop Loss:      $316.26
+  Take Profit:    $427.32
+  Quantity:       2 shares ($763)
+  Score:          11/100
+  Conviction:     47.9/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     2/10
+  Date:           2026-07-02
+
+  TICKER:         LRCX
+  Entry Price:    $372.22
+  Stop Loss:      $305.44
+  Take Profit:    $416.88
+  Quantity:       2 shares ($744)
+  Score:          13/100
+  Conviction:     47.5/10
+  Fundamental:    9/10
+  Catalyst:       10/10
+  Inst. Flow:     1/10
+  Date:           2026-07-02
+
+
+================================================================================
+END OF DAILY RECOMMENDATIONS
+================================================================================

@@ -96,6 +96,14 @@ public class WebServer {
     private static final String CACHE_SETTINGS_FILE = "cache_settings.json";
     private static final String CACHE_STATE_FILE = "cache_state.json";
 
+    // Market data fetch progress tracking
+    private static final Object marketDataFetchLock = new Object();
+    private static volatile boolean marketDataFetchRunning = false;
+    private static volatile int marketDataFetchProgress = 0;
+    private static volatile int marketDataFetchTotal = 0;
+    private static volatile String marketDataFetchCurrentTicker = "";
+    private static volatile String marketDataFetchStatus = "not_started";
+
     // Popular tickers for random selection
     private static final String[] POPULAR_TICKERS = {
         "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "BRK.B", "JPM", "V",
@@ -5400,12 +5408,42 @@ public class WebServer {
                 final int finalMonthsBack = monthsBack;
 
                 try {
+                    // Set progress tracking
+                    synchronized (marketDataFetchLock) {
+                        marketDataFetchRunning = true;
+                        marketDataFetchProgress = 0;
+                        marketDataFetchTotal = tickers.size();
+                        marketDataFetchCurrentTicker = "";
+                        marketDataFetchStatus = "starting";
+                    }
+                    
+                    // Set progress callback
+                    MarketDataCache.setProgressCallback((current, total, currentTicker) -> {
+                        synchronized (marketDataFetchLock) {
+                            marketDataFetchProgress = current;
+                            marketDataFetchCurrentTicker = currentTicker;
+                            marketDataFetchStatus = "fetching";
+                        }
+                    });
+                    
                     // Start async data fetch
                     new Thread(() -> {
                         try {
+                            synchronized (marketDataFetchLock) {
+                                marketDataFetchStatus = "in_progress";
+                            }
                             MarketDataCache.fetchAndCacheData(finalTickers, finalMonthsBack);
+                            synchronized (marketDataFetchLock) {
+                                marketDataFetchRunning = false;
+                                marketDataFetchStatus = "completed";
+                                marketDataFetchProgress = finalTickers.size();
+                            }
                         } catch (Exception e) {
                             System.err.println("[FetchMarketData] Error: " + e.getMessage());
+                            synchronized (marketDataFetchLock) {
+                                marketDataFetchRunning = false;
+                                marketDataFetchStatus = "error";
+                            }
                         }
                     }).start();
                     
@@ -5419,6 +5457,24 @@ public class WebServer {
                 } catch (Exception e) {
                     respondJson(ex, Map.of("error", "Failed to start data fetch: " + e.getMessage()), 500);
                 }
+            }
+        });
+
+        // ---------------- Market Data Fetch Status Endpoint ----------------
+        server.createContext("/api/fetch-market-data-status", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                
+                Map<String, Object> status = new LinkedHashMap<>();
+                synchronized (marketDataFetchLock) {
+                    status.put("running", marketDataFetchRunning);
+                    status.put("progress", marketDataFetchProgress);
+                    status.put("total", marketDataFetchTotal);
+                    status.put("currentTicker", marketDataFetchCurrentTicker);
+                    status.put("status", marketDataFetchStatus);
+                }
+                
+                respondJson(ex, status, 200);
             }
         });
 
@@ -7165,7 +7221,19 @@ public class WebServer {
                 sb.append("</div>");
                 
                 sb.append("<button id='fetchDataBtn' onclick='fetchMarketData()' style='background:#7c3aed;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;'>📥 Fetch Market Data (6 months)</button>");
-                sb.append("<button onclick='checkCacheStatus()' style='background:#4b5563;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;'>📋 Check Status</button>");
+                sb.append("<button onclick='runAgentBacktest()' style='background:#4b5563;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;'>📋 Check Status</button>");
+                sb.append("</div>");
+                
+                // Progress bar for market data fetch
+                sb.append("<div id='fetchProgressContainer' style='display:none;margin-top:12px;'>");
+                sb.append("<div style='display:flex;justify-content:space-between;margin-bottom:4px;'>");
+                sb.append("<span id='fetchProgressText' style='color:#9ca3af;font-size:12px;'>Fetching data...</span>");
+                sb.append("<span id='fetchProgressPct' style='color:#93c5fd;font-size:12px;'>0%</span>");
+                sb.append("</div>");
+                sb.append("<div style='background:#1e1b4b;border-radius:6px;height:8px;overflow:hidden;'>");
+                sb.append("<div id='fetchProgressBar' style='background:#7c3aed;height:100%;width:0%;transition:width 0.3s;'></div>");
+                sb.append("</div>");
+                sb.append("<div id='fetchProgressTicker' style='color:#6b7280;font-size:11px;margin-top:4px;'></div>");
                 sb.append("</div>");
 
                 // Results section
@@ -7226,33 +7294,6 @@ public class WebServer {
                         "    }"+
                         "  }catch(e){console.error(e);}"+
                         "}"+
-                        
-                        "// Build market data cache"+
-                        "async function buildCache(){"+
-                        "  var sector=document.getElementById('cacheSector').value;"+
-                        "  var tickers=document.getElementById('cacheTickers').value;"+
-                        "  "+
-                        "  if(!sector&&!tickers){alert('Please select a sector or enter custom tickers');return;}"+
-                        "  "+
-                        "  if(!confirm('Building cache will take several hours for all tickers. Continue?'))return;"+
-                        "  "+
-                        "  var formData=new FormData();"+
-                        "  formData.append('sector',sector);"+
-                        "  if(tickers) formData.append('tickers',tickers);"+
-                        "  "+
-                        "  var btn=document.getElementById('startCacheBuild');"+
-                        "  btn.disabled=true;btn.textContent='⏳ Building...';"+
-                        "  "+
-                        "  try{"+
-                        "    var r=await fetch('/cache-build',{method:'POST',body:formData});"+
-                        "    var d=await r.json();"+
-                        "    alert(d.message);"+
-                        "  }catch(e){"+
-                        "    alert('Error: '+e);"+
-                        "  }"+
-                        "  "+
-                        "  btn.disabled=false;btn.textContent='🔨 Build Cache';"+
-                        "}"+
 
                         "// Fetch market data for backtesting"+
                         "async function fetchMarketData(){"+
@@ -7269,6 +7310,18 @@ public class WebServer {
                         "  var btn=document.getElementById('fetchDataBtn');"+
                         "  btn.disabled=true;btn.textContent='⏳ Fetching...';"+
                         "  "+
+                        "  // Show progress bar"+
+                        "  var progressContainer=document.getElementById('fetchProgressContainer');"+
+                        "  var progressBar=document.getElementById('fetchProgressBar');"+
+                        "  var progressText=document.getElementById('fetchProgressText');"+
+                        "  var progressPct=document.getElementById('fetchProgressPct');"+
+                        "  var progressTicker=document.getElementById('fetchProgressTicker');"+
+                        "  progressContainer.style.display='block';"+
+                        "  progressBar.style.width='0%';"+
+                        "  progressText.textContent='Fetching data...';"+
+                        "  progressPct.textContent='0%';"+
+                        "  progressTicker.textContent='';"+
+                        "  "+
                         "  try{"+
                         "    var params='?sector='+encodeURIComponent(sector);"+
                         "    if(monthsBack) params+='&monthsBack='+encodeURIComponent(monthsBack);"+
@@ -7276,13 +7329,59 @@ public class WebServer {
                         "    "+
                         "    var r=await fetch('/api/fetch-market-data'+params,{method:'POST'});"+
                         "    var d=await r.json();"+
-                        "    alert(d.message);"+
-                        "    checkCacheStatus();"+
+                        "    "+
+                        "    // Start polling for progress"+
+                        "    pollFetchProgress();"+
                         "  }catch(e){"+
                         "    alert('Error: '+e);"+
+                        "    btn.disabled=false;btn.textContent='📥 Fetch Market Data (6 months)';"+
+                        "    progressContainer.style.display='none';"+
                         "  }"+
                         "  "+
                         "  btn.disabled=false;btn.textContent='📥 Fetch Market Data (6 months)';"+
+                        "}"+
+                        "  "+
+                        "// Poll for market data fetch progress"+
+                        "async function pollFetchProgress(){"+
+                        "  var pollInterval=setInterval(async function(){"+
+                        "    try{"+
+                        "      var r=await fetch('/api/fetch-market-data-status');"+
+                        "      var d=await r.json();"+
+                        "      "+
+                        "      var progressBar=document.getElementById('fetchProgressBar');"+
+                        "      var progressText=document.getElementById('fetchProgressText');"+
+                        "      var progressPct=document.getElementById('fetchProgressPct');"+
+                        "      var progressTicker=document.getElementById('fetchProgressTicker');"+
+                        "      var btn=document.getElementById('fetchDataBtn');"+
+                        "      "+
+                        "      if(d.running){"+
+                        "        var pct=Math.round((d.progress/d.total)*100);"+
+                        "        progressBar.style.width=pct+'%';"+
+                        "        progressText.textContent='Fetching data...';"+
+                        "        progressPct.textContent=pct+'%';"+
+                        "        progressTicker.textContent='Current: '+d.currentTicker+' ('+d.progress+'/'+d.total+')';"+
+                        "      }else if(d.status==='completed'){"+
+                        "        clearInterval(pollInterval);"+
+                        "        progressBar.style.width='100%';"+
+                        "        progressText.textContent='✅ Completed';"+
+                        "        progressPct.textContent='100%';"+
+                        "        progressTicker.textContent='';"+
+                        "        btn.disabled=false;btn.textContent='📥 Fetch Market Data (6 months)';"+
+                        "        alert('Data fetch completed successfully!');"+
+                        "        checkCacheStatus();"+
+                        "        setTimeout(function(){progressContainer.style.display='none';},3000);"+
+                        "      }else if(d.status==='error'){"+
+                        "        clearInterval(pollInterval);"+
+                        "        progressText.textContent='❌ Error';"+
+                        "        progressTicker.textContent='';"+
+                        "        btn.disabled=false;btn.textContent='📥 Fetch Market Data (6 months)';"+
+                        "        alert('Error fetching data. Please try again.');"+
+                        "        setTimeout(function(){progressContainer.style.display='none';},3000);"+
+                        "      }"+
+                        "    }catch(e){"+
+                        "      console.error('Poll error:',e);"+
+                        "    }"+
+                        "  },2000);"+
                         "}"+
 
                         "// Run agent backtest"+
@@ -8064,7 +8163,9 @@ public class WebServer {
                 sb.append("</div>");
 
                 sb.append("<div style='margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;'>");
-                sb.append("<form method='post' action='/aitool-run' style='margin:0;'><button type='submit' id='runBtn'>▶️ Run All Agents Now</button></form>");
+                sb.append("<form method='post' action='/aitool-run-swing' style='margin:0;'><button type='submit' id='runSwingBtn' style='background:#0d9488;border-color:#14b8a6;'>🏏 Run Swing System</button></form>");
+                sb.append("<form method='post' action='/aitool-run-intraday' style='margin:0;'><button type='submit' id='runIntradayBtn' style='background:#7c3aed;border-color:#8b5cf6;'>⚡ Run Intraday System</button></form>");
+                sb.append("<form method='post' action='/aitool-run' style='margin:0;'><button type='submit' id='runBtn'>▶️ Run All Agents</button></form>");
                 sb.append("<form method='post' action='/aitool-monitor' style='margin:0;'><button type='submit' id='monitorBtn' style='background:#0e7490;border-color:#0891b2;'>📡 Monitor Open Positions Now</button></form>");
                 sb.append("<a href='/aitool' style='padding:10px 14px;background:#1f2a44;border-radius:8px;'>🔄 Refresh</a>");
                 sb.append("</div>");
@@ -8140,6 +8241,15 @@ public class WebServer {
                 sb.append("<div style='font-weight:600;color:#a78bfa;margin-bottom:8px;'>🚀 Start Full Scan with Selected Agents (").append(sectorTickerCount).append(" tickers across 11 sectors)</div>");
                 sb.append("<div style='font-size:11px;color:#6b7280;margin-bottom:8px;'>Technology · Financials · Healthcare · Energy · Industrials · Consumer Disc. · Consumer Staples · Utilities · Materials · Real Estate · Communication Services</div>");
                 
+                // Split System Architecture - Position Counts
+                sb.append("<div style='margin-top:12px;padding:10px;background:#0b1220;border:1px solid #1f2a44;border-radius:8px;'>");
+                sb.append("<div style='font-size:12px;color:#9ca3af;margin-bottom:6px;'>📊 Split System Position Tracking:</div>");
+                sb.append("<div style='display:flex;gap:20px;flex-wrap:wrap;'>");
+                sb.append("<div><span style='color:#14b8a6;font-weight:600;'>🏏 Swing System:</span> <span style='color:#e5e7eb;'>8 slots, 2 per sector</span></div>");
+                sb.append("<div><span style='color:#8b5cf6;font-weight:600;'>⚡ Intraday System:</span> <span style='color:#e5e7eb;'>5 slots, 1 per sector</span></div>");
+                sb.append("</div>");
+                sb.append("</div>");
+                
                 // Pinned master strategies always shown at the bottom (only active trading masters)
                 java.util.Set<String> PINNED_MASTERS = new java.util.LinkedHashSet<>(java.util.Arrays.asList("MASTER_5_PULLBACK_MA20","MASTER_6_VOLUME_BREAKOUT","MASTER_8_STRONG_TREND"));
                 // Filtered agents (MASTER_7_VIX_MARKET_FILTER only) — these get pre-checked (same as scheduled runs)
@@ -8158,13 +8268,16 @@ public class WebServer {
                     if (aFiltered != bFiltered) return aFiltered ? -1 : 1;
                     return a.agentId.compareTo(b.agentId);
                 });
-                sb.append("<div style='color:#9ca3af;font-size:11px;margin-bottom:4px;'>📊 Variant Agents:</div>");
+                
+                // Group agents by system type
+                sb.append("<div style='color:#14b8a6;font-size:11px;margin-bottom:4px;'>🏏 Swing System Agents (2-5 day holds):</div>");
                 for (AIToolAgent.AgentPerformance p : allAgentPerfs) {
-                    if (PINNED_MASTERS.contains(p.agentId)) continue; // shown separately below
+                    if (PINNED_MASTERS.contains(p.agentId)) continue;
                     AIToolAgent.AgentConfig pCfg = AIToolAgent.getAgentConfig(p.agentId);
-                    if (pCfg == null || pCfg.disabled || "MOMENTUM".equals(pCfg.type) || pCfg.masterStrategy) continue; // skip disabled / momentum / master agents
+                    if (pCfg == null || pCfg.disabled || "MOMENTUM".equals(pCfg.type) || pCfg.masterStrategy) continue;
+                    if (!"SWING_SYSTEM".equals(pCfg.systemType)) continue; // Only swing agents
                     boolean isFilteredAgent = filteredAgentIds.contains(p.agentId);
-                    String bgColor = isFilteredAgent ? "#1a2e1a" : (agentIdx % 2 == 0 ? "#2d2a5e" : "#1e1b4b");
+                    String bgColor = isFilteredAgent ? "#1a2e1a" : (agentIdx % 2 == 0 ? "#0d3d2d" : "#0a2d20");
                     String border = isFilteredAgent ? "border:1px solid #22c55e;" : "border:1px solid transparent;";
                     sb.append("<div style='display:flex;align-items:center;gap:4px;padding:4px 6px;background:").append(bgColor).append(";").append(border).append("border-radius:4px;margin-bottom:2px;'>");
                     sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(p.agentId)).append("' style='width:14px;height:14px;'");
@@ -8173,9 +8286,8 @@ public class WebServer {
                     sb.append("<span style='color:#e5e7eb;font-weight:500;font-size:12px;'>");
                     if (isFilteredAgent) sb.append("✅ ");
                     sb.append(escapeHtml(p.agentId)).append("</span>");
-                    sb.append("<span style='color:#a78bfa;font-size:10px;'>").append(p.type != null ? p.type : "").append("</span>");
+                    sb.append("<span style='color:#14b8a6;font-size:10px;'>SWING</span>");
                     if (p.totalTrades > 0) {
-                        // Calculate Net Profit based on $1K position size
                         double totalPL = 0;
                         List<AIToolAgent.Trade> agentTrades = AIToolAgent.getAgentTradeHistory(p.agentId);
                         if (agentTrades != null) {
@@ -8202,11 +8314,57 @@ public class WebServer {
                     sb.append("</div>");
                     agentIdx++;
                 }
+                
+                sb.append("<div style='color:#8b5cf6;font-size:11px;margin-top:8px;margin-bottom:4px;'>⚡ Intraday System Agents (same-day holds):</div>");
+                for (AIToolAgent.AgentPerformance p : allAgentPerfs) {
+                    if (PINNED_MASTERS.contains(p.agentId)) continue;
+                    AIToolAgent.AgentConfig pCfg = AIToolAgent.getAgentConfig(p.agentId);
+                    if (pCfg == null || pCfg.disabled || "MOMENTUM".equals(pCfg.type) || pCfg.masterStrategy) continue;
+                    if (!"INTRADAY_SYSTEM".equals(pCfg.systemType)) continue; // Only intraday agents
+                    boolean isFilteredAgent = filteredAgentIds.contains(p.agentId);
+                    String bgColor = isFilteredAgent ? "#1a2e1a" : (agentIdx % 2 == 0 ? "#2d1a4e" : "#1e0b3b");
+                    String border = isFilteredAgent ? "border:1px solid #22c55e;" : "border:1px solid transparent;";
+                    sb.append("<div style='display:flex;align-items:center;gap:4px;padding:4px 6px;background:").append(bgColor).append(";").append(border).append("border-radius:4px;margin-bottom:2px;'>");
+                    sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(p.agentId)).append("' style='width:14px;height:14px;'");
+                    if (isFilteredAgent) sb.append(" checked");
+                    sb.append(" />");
+                    sb.append("<span style='color:#e5e7eb;font-weight:500;font-size:12px;'>");
+                    if (isFilteredAgent) sb.append("✅ ");
+                    sb.append(escapeHtml(p.agentId)).append("</span>");
+                    sb.append("<span style='color:#8b5cf6;font-size:10px;'>INTRADAY</span>");
+                    if (p.totalTrades > 0) {
+                        double totalPL = 0;
+                        List<AIToolAgent.Trade> agentTrades = AIToolAgent.getAgentTradeHistory(p.agentId);
+                        if (agentTrades != null) {
+                            for (AIToolAgent.Trade t : agentTrades) {
+                                if (t.exitPrice > 0 && t.entryPrice > 0) {
+                                    int shares = (int) (1000.0 / t.entryPrice);
+                                    double plPerShare = (t.exitPrice - t.entryPrice);
+                                    totalPL += plPerShare * shares;
+                                }
+                            }
+                        }
+                        String netPLColor = totalPL >= 0 ? "#22c55e" : "#ef4444";
+                        sb.append("<span style='color:").append(netPLColor).append(";font-weight:600;font-size:11px;'>$").append(String.format("%.0f", totalPL)).append("</span>");
+                        sb.append("<span style='color:#9ca3af;font-size:10px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades</span>");
+                    } else {
+                        long openCnt = p.recentTrades != null ? p.recentTrades.stream().filter(t -> "OPEN".equals(t.status)).count() : 0;
+                        if (openCnt > 0) {
+                            sb.append("<span style='color:#facc15;font-size:10px;'>🕐 ").append(openCnt).append(" open</span>");
+                        } else {
+                            sb.append("<span style='color:#6b7280;font-size:10px;'>No trades yet</span>");
+                        }
+                    }
+                    sb.append("<a href='/agent-detail?id=").append(urlEncode(p.agentId)).append("' style='color:#60a5fa;font-size:10px;text-decoration:none;' title='Agent detail page'>📋</a>");
+                    sb.append("</div>");
+                    agentIdx++;
+                }
+                
                 // 2. Show pinned master strategies (always visible regardless of performance)
                 sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:8px;margin-bottom:4px;'>📌 Pinned Master Strategies:</div>");
                 for (String masterId : PINNED_MASTERS) {
                     AIToolAgent.AgentConfig masterCfg = AIToolAgent.getAgentConfig(masterId);
-                    if (masterCfg == null || masterCfg.disabled) continue; // skip missing / disabled pinned masters
+                    if (masterCfg == null || masterCfg.disabled) continue;
                     AIToolAgent.AgentPerformance masterPerf = AIToolAgent.getAgentPerformance(masterId);
                     String masterName = masterCfg != null ? masterCfg.name : masterId;
                     String masterType = masterCfg != null ? (masterCfg.strategyType != null ? masterCfg.strategyType : masterCfg.type) : "MASTER";
@@ -8222,7 +8380,6 @@ public class WebServer {
                     sb.append("<span style='color:#e5e7eb;font-weight:500;font-size:12px;'>").append(escapeHtml(masterName)).append("</span>");
                     sb.append("<span style='color:#818cf8;font-size:10px;'>").append(escapeHtml(masterType)).append("</span>");
                     if (masterPerf != null && masterPerf.totalTrades > 0) {
-                        // Calculate Net Profit based on $1K position size
                         double totalPL = 0;
                         List<AIToolAgent.Trade> agentTrades = AIToolAgent.getAgentTradeHistory(masterId);
                         if (agentTrades != null) {
@@ -8615,6 +8772,44 @@ public class WebServer {
                         sb.append("</div>");
                     } catch (Exception e) {
                         sb.append("<div style='color:#ef4444;'>Error reading log: ").append(escapeHtml(e.getMessage())).append("</div>");
+                    }
+                }
+                sb.append("</div>");
+
+                // Stock Examination Log Viewer
+                sb.append("<div class='card'><div class='title'>📊 Stock Examination Log — Final Grades</div>");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:8px;'>Live log from <code>newStrategies/stock-examination-log.txt</code> — shows every stock examined with final score breakdown.</div>");
+                java.nio.file.Path examLogPath = java.nio.file.Paths.get("newStrategies", "stock-examination-log.txt");
+                if (!java.nio.file.Files.exists(examLogPath)) {
+                    sb.append("<div style='color:#6b7280;padding:16px;text-align:center;'>No examination log yet — will appear after the first agent run.</div>");
+                } else {
+                    try {
+                        java.util.List<String> examLogLines = java.nio.file.Files.readAllLines(examLogPath, java.nio.charset.StandardCharsets.UTF_8);
+                        // Show last 500 lines (newest at top)
+                        int start = Math.max(0, examLogLines.size() - 500);
+                        java.util.List<String> recent = examLogLines.subList(start, examLogLines.size());
+                        sb.append("<div style='margin-bottom:8px;color:#9ca3af;font-size:12px;'>Showing last ")
+                          .append(recent.size()).append(" of ").append(examLogLines.size()).append(" lines</div>");
+                        sb.append("<div style='background:#0d1117;border-radius:6px;padding:12px;max-height:500px;overflow-y:auto;font-family:monospace;font-size:11px;line-height:1.6;'>");
+                        for (int li = recent.size() - 1; li >= 0; li--) {
+                            String line = escapeHtml(recent.get(li));
+                            String color = "#e5e7eb";
+                            if (line.contains("🔍 EXAMINED")) color = "#60a5fa";
+                            else if (line.contains("Score=")) {
+                                // Highlight high scores in green, low in red
+                                java.util.regex.Matcher scoreMatch = java.util.regex.Pattern.compile("Score=(\\d+)/12").matcher(line);
+                                if (scoreMatch.find()) {
+                                    int score = Integer.parseInt(scoreMatch.group(1));
+                                    if (score >= 10) color = "#22c55e";
+                                    else if (score >= 7) color = "#f59e0b";
+                                    else color = "#ef4444";
+                                }
+                            }
+                            sb.append("<div style='color:").append(color).append(";'>").append(line).append("</div>");
+                        }
+                        sb.append("</div>");
+                    } catch (Exception e) {
+                        sb.append("<div style='color:#ef4444;'>Error reading examination log: ").append(escapeHtml(e.getMessage())).append("</div>");
                     }
                 }
                 sb.append("</div>");
@@ -9057,6 +9252,52 @@ public class WebServer {
                 AIToolAgent.runAgentsAsync();
                 
                 ex.getResponseHeaders().add("Location", "/aitool?started=true");
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // Run Swing System agents only
+        server.createContext("/aitool-run-swing", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/aitool");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                
+                // Start async run with swing agents only
+                java.util.List<String> swingAgents = AIToolAgent.getSwingSystemAgents();
+                if (swingAgents.isEmpty()) {
+                    ex.getResponseHeaders().add("Location", "/aitool?error=no_swing_agents");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                AIToolAgent.runAgentsAsync(swingAgents);
+                
+                ex.getResponseHeaders().add("Location", "/aitool?started=swing");
+                ex.sendResponseHeaders(303, -1); ex.close();
+            }
+        });
+
+        // Run Intraday System agents only
+        server.createContext("/aitool-run-intraday", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    ex.getResponseHeaders().add("Location", "/aitool");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                
+                // Start async run with intraday agents only
+                java.util.List<String> intradayAgents = AIToolAgent.getIntradaySystemAgents();
+                if (intradayAgents.isEmpty()) {
+                    ex.getResponseHeaders().add("Location", "/aitool?error=no_intraday_agents");
+                    ex.sendResponseHeaders(303, -1); ex.close();
+                    return;
+                }
+                AIToolAgent.runAgentsAsync(intradayAgents);
+                
+                ex.getResponseHeaders().add("Location", "/aitool?started=intraday");
                 ex.sendResponseHeaders(303, -1); ex.close();
             }
         });

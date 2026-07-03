@@ -26,6 +26,9 @@ public class MarketDataCache {
         public Double epsGrowth;
         public String lastUpdated;
         
+        public TickerData() {
+        }
+        
         public TickerData(String symbol) {
             this.symbol = symbol;
             this.lastUpdated = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
@@ -64,6 +67,22 @@ public class MarketDataCache {
     private static MarketCache cache = null;
     
     /**
+     * Progress callback interface for market data fetch
+     */
+    public interface ProgressCallback {
+        void onProgress(int current, int total, String currentTicker);
+    }
+    
+    private static ProgressCallback progressCallback = null;
+    
+    /**
+     * Set progress callback for market data fetch
+     */
+    public static void setProgressCallback(ProgressCallback callback) {
+        progressCallback = callback;
+    }
+    
+    /**
      * Fetch all market data for given tickers and cache to JSON
      */
     public static void fetchAndCacheData(List<String> tickers) {
@@ -82,7 +101,8 @@ public class MarketDataCache {
         MarketCache newCache = new MarketCache();
         int processed = 0;
         
-        for (String ticker : tickers) {
+        for (int i = 0; i < tickers.size(); i++) {
+            String ticker = tickers.get(i);
             try {
                 TickerData tickerData = fetchTickerData(ticker, monthsBack);
                 if (tickerData != null) {
@@ -92,6 +112,11 @@ public class MarketDataCache {
                     if (processed % 10 == 0) {
                         System.out.println("[MarketDataCache] Processed " + processed + "/" + tickers.size() + " tickers");
                     }
+                }
+                
+                // Report progress
+                if (progressCallback != null) {
+                    progressCallback.onProgress(i + 1, tickers.size(), ticker);
                 }
                 
                 // Rate limiting: 3 API calls per ticker (stock data + income + earnings)

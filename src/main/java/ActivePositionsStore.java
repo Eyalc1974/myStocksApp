@@ -55,12 +55,18 @@ public class ActivePositionsStore {
     private final Path dataFile;
     private final ObjectMapper om;
 
-    // Position limits
-    private static final int MAX_POSITIONS = 5;
-    private static final int MAX_PER_SECTOR = 1;
+    // Position limits (configurable per system)
+    private final int maxPositions;
+    private final int maxPerSector;
 
     public ActivePositionsStore(Path dataFile) {
+        this(dataFile, 5, 1); // Default limits for backward compatibility
+    }
+
+    public ActivePositionsStore(Path dataFile, int maxPositions, int maxPerSector) {
         this.dataFile = dataFile;
+        this.maxPositions = maxPositions;
+        this.maxPerSector = maxPerSector;
         this.om = new ObjectMapper();
         try {
             Files.createDirectories(dataFile.getParent());
@@ -71,6 +77,10 @@ public class ActivePositionsStore {
         Path base = Paths.get("finder-cache");
         try { Files.createDirectories(base); } catch (Exception ignore) {}
         return new ActivePositionsStore(base.resolve("active-positions.json"));
+    }
+
+    public static ActivePositionsStore createWithLimits(Path dataFile, int maxPositions, int maxPerSector) {
+        return new ActivePositionsStore(dataFile, maxPositions, maxPerSector);
     }
 
     public PositionsData load() {
@@ -112,7 +122,7 @@ public class ActivePositionsStore {
             }
 
             // Check position limit
-            if (data.positions.size() >= MAX_POSITIONS) {
+            if (data.positions.size() >= maxPositions) {
                 return false; // Max positions reached
             }
 
@@ -126,7 +136,7 @@ public class ActivePositionsStore {
                     sectorCount++;
                 }
             }
-            if (sectorCount >= MAX_PER_SECTOR) {
+            if (sectorCount >= maxPerSector) {
                 return false; // Sector cap reached
             }
 
