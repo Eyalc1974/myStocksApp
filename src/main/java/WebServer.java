@@ -8089,6 +8089,7 @@ public class WebServer {
         // ---------------- AITool Page - Multi-Agent Strategy Testing ----------------
         server.createContext("/aitool", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) {
                     respondHtml(ex, htmlPage(""), 200); return;
                 }
@@ -9289,6 +9290,7 @@ public class WebServer {
 
         server.createContext("/aitool-monitor", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
                     ex.getResponseHeaders().add("Location", "/aitool");
                     ex.sendResponseHeaders(303, -1); ex.close();
@@ -9305,6 +9307,7 @@ public class WebServer {
 
         server.createContext("/aitool-run", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
                     ex.getResponseHeaders().add("Location", "/aitool");
                     ex.sendResponseHeaders(303, -1); ex.close();
@@ -9322,6 +9325,7 @@ public class WebServer {
         // Run Swing System agents only
         server.createContext("/aitool-run-swing", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
                     ex.getResponseHeaders().add("Location", "/aitool");
                     ex.sendResponseHeaders(303, -1); ex.close();
@@ -9345,6 +9349,7 @@ public class WebServer {
         // Run Intraday System agents only
         server.createContext("/aitool-run-intraday", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
                     ex.getResponseHeaders().add("Location", "/aitool");
                     ex.sendResponseHeaders(303, -1); ex.close();
@@ -9427,6 +9432,7 @@ public class WebServer {
         // Watchlist: dismiss a pending signal by id
         server.createContext("/aitool-pending-dismiss", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 String id = "";
                 String query = ex.getRequestURI().getQuery();
                 if (query != null) {
@@ -9447,6 +9453,7 @@ public class WebServer {
         // Full scan with selected agents against all 500+ tickers
         server.createContext("/aitool-full-scan", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
                     ex.getResponseHeaders().add("Location", "/aitool");
                     ex.sendResponseHeaders(303, -1); ex.close();
@@ -9875,6 +9882,7 @@ public class WebServer {
         // Save AITool agent configuration
         server.createContext("/aitool-save-config", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
                     ex.getResponseHeaders().add("Location", "/aitool");
                     ex.sendResponseHeaders(303, -1); ex.close();
@@ -9898,6 +9906,7 @@ public class WebServer {
         // Delete tracker endpoint
         server.createContext("/aitool-delete-tracker", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
                     ex.getResponseHeaders().add("Location", "/aitool");
                     ex.sendResponseHeaders(303, -1); ex.close();
@@ -9924,6 +9933,7 @@ public class WebServer {
         // Clear all trackers endpoint
         server.createContext("/aitool-clear-trackers", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
                     ex.getResponseHeaders().add("Location", "/aitool");
                     ex.sendResponseHeaders(303, -1); ex.close();
@@ -9944,6 +9954,7 @@ public class WebServer {
         // Track agent endpoint - saves agent with cumulative tracking
         server.createContext("/aitool-track-agent", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
                     ex.getResponseHeaders().add("Location", "/aitool");
                     ex.sendResponseHeaders(303, -1); ex.close();
@@ -9987,6 +9998,7 @@ public class WebServer {
         // Toggle lock/unlock for an agent (protect from evolution)
         server.createContext("/aitool-toggle-lock", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
                     ex.getResponseHeaders().add("Location", "/aitool");
                     ex.sendResponseHeaders(303, -1); ex.close();
@@ -10012,6 +10024,7 @@ public class WebServer {
         // Toggle trade notification for an agent
         server.createContext("/aitool-toggle-notify", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
                     ex.getResponseHeaders().add("Location", "/aitool");
                     ex.sendResponseHeaders(303, -1); ex.close();
