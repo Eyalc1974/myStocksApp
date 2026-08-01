@@ -234,6 +234,7 @@ public class AIToolAgent {
         public boolean masterStrategy = false;
         public String strategyType; // MOMENTUM_BREAKOUT, PULLBACK, TREND_CONTINUATION
         public String entryType = "AUTO"; // AUTO, EARLY_BREAKOUT, RETEST_BREAKOUT, TREND_CONTINUATION
+        public String dataSource; // TOP_GAINERS_LOSERS, RANDOM, etc.
         public boolean disabled = false; // true = skip this strategy (e.g. intraday strategies disabled for swing mode)
         public int maxOpenTrades = 5;  // max concurrent open positions for this agent (portfolio manager)
         public int maxPerSector  = 2;  // max concurrent positions in the same sector
@@ -674,7 +675,7 @@ public class AIToolAgent {
      */
     private static void scheduleStrategicScanRuns() {
         // Swing system scans (open and close only)
-        scheduleSwingScanRun(17, 15, "Post-Open (Swing)", "🟢 **Swing System - Post Market Open**\nMarket has calms down. Direction starting to clear.\nSwing agents: INST_SWING_V1, QUALITY_GROWTH_V1, FUND_MOMENTUM_V1");
+        scheduleSwingScanRun(17, 15, "Post-Open (Swing)", "🟢 **Swing System - Post Market Open**\nMarket has calms down. Direction starting to clear.\nSwing agents: INST_SWING_V1, QUALITY_GROWTH_V1, FUND_MOMENTUM_V1, MOMENTUM_FUNDAMENTAL_V1");
         scheduleSwingScanRun(21, 30, "Pre-Close (Swing)", "🔵 **Swing System - Pre-Close**\nBest swing trades for next day entry.\nSwing agents only (2-5 day holds).");
         
         // Intraday system scans (every 30 min during market hours)
@@ -1833,6 +1834,7 @@ public class AIToolAgent {
         if (agentId.equals("INST_SWING_V1") || 
             agentId.equals("QUALITY_GROWTH_V1") ||
             agentId.equals("FUND_MOMENTUM_V1") ||
+            agentId.equals("MOMENTUM_FUNDAMENTAL_V1") ||
             agentId.contains("SWING") ||
             agentId.contains("MASTER")) {
             return "SWING_SYSTEM";
@@ -1852,6 +1854,9 @@ public class AIToolAgent {
     public static void loadAllAgents() {
         synchronized (LOCK) {
             if (systemState == null) systemState = new AgentSystemState();
+            
+            // Clear existing agents before reloading to remove disabled ones
+            systemState.agents.clear();
             
             // Load from momentum-variants.json
             loadAgentsFromFile("momentum-variants.json", "MOMENTUM", "variants");
@@ -1876,6 +1881,9 @@ public class AIToolAgent {
             
             // Load from quality-growth-agent.json
             loadAgentsFromFile("quality-growth-agent.json", "QUALITY", "variants");
+            
+            // Load from momentum-fundamental-agent.json
+            loadAgentsFromFile("momentum-fundamental-agent.json", "MOMENTUM_FUNDAMENTAL", "variants");
             
             // Load any evolved agents from newStrategies folder
             loadEvolvedAgents();
@@ -1983,6 +1991,9 @@ public class AIToolAgent {
                         agent.generation = root.path("generation").asInt(1);
                         agent.parentId = root.path("parentId").asText(null);
                         agent.lastModified = root.path("lastModified").asText(null);
+                        
+                        // Assign systemType based on agent ID for split architecture
+                        agent.systemType = assignSystemType(agent.id);
                         
                         // Load lock protection fields
                         agent.locked = root.path("locked").asBoolean(false);
@@ -2656,8 +2667,15 @@ public class AIToolAgent {
     }
 
     private static void runSingleAgent(AIToolAgent.AgentConfig agent) {
-        // Select random stocks from the ticker list
-        List<String> selectedStocks = selectRandomStocks(STOCKS_PER_AGENT_RUN);
+        // Select stocks based on dataSource configuration
+        List<String> selectedStocks;
+        
+        if ("TOP_GAINERS_LOSERS".equals(agent.dataSource)) {
+            selectedStocks = selectTopGainers(agent);
+        } else {
+            selectedStocks = selectRandomStocks(STOCKS_PER_AGENT_RUN);
+        }
+        
         System.out.println("[AIToolAgent] Agent " + agent.id + " analyzing " + selectedStocks.size() + " stocks: " + selectedStocks);
         
         for (String ticker : selectedStocks) {
@@ -2694,6 +2712,63 @@ public class AIToolAgent {
         List<String> shuffled = new ArrayList<>(LongTermCandidateFinder.getAllSectorTickers());
         Collections.shuffle(shuffled);
         return shuffled.subList(0, Math.min(count, shuffled.size()));
+    }
+
+    private static List<String> selectTopGainers(AgentConfig agent) {
+        List<String> tickers = new ArrayList<>();
+        
+        try {
+            // Fetch Top Gainers/Losers from Alpha Vantage
+            String topGainersJson = DataFetcher.fetchTopGainersLosers();
+            if (topGainersJson == null || topGainersJson.isEmpty()) {
+                System.err.println("[AIToolAgent] Failed to fetch Top Gainers/Losers data");
+                return tickers;
+            }
+
+            // Parse the JSON response
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(topGainersJson);
+            JsonNode topGainers = root.path("top_gainers");
+
+            if (!topGainers.isArray() || topGainers.size() == 0) {
+                System.err.println("[AIToolAgent] No top gainers data found");
+                return tickers;
+            }
+
+            // Get filter parameters from agent configuration
+            double gainersMinPct = getDoubleFilter(agent, "gainersMinPct", 2.0);
+            double gainersMaxPct = getDoubleFilter(agent, "gainersMaxPct", 8.0);
+            int maxCandidates = (int) getDoubleFilter(agent, "maxCandidates", 20);
+
+            // Filter and collect tickers
+            for (JsonNode stock : topGainers) {
+                if (tickers.size() >= maxCandidates) break;
+
+                String ticker = stock.path("ticker").asText();
+                String changePctStr = stock.path("change_percentage").asText().replace("%", "");
+                
+                try {
+                    double changePct = Double.parseDouble(changePctStr);
+                    
+                    // Filter by gain percentage range
+                    if (changePct >= gainersMinPct && changePct <= gainersMaxPct) {
+                        tickers.add(ticker);
+                        writeScanLog("[TOP-GAINERS] " + ticker + " | Change: " + changePctStr + "%");
+                    }
+                } catch (NumberFormatException e) {
+                    // Skip if percentage parsing fails
+                }
+            }
+
+            System.out.println("[AIToolAgent] Selected " + tickers.size() + " top gainers from Alpha Vantage");
+            
+        } catch (Exception e) {
+            System.err.println("[AIToolAgent] Error selecting top gainers: " + e.getMessage());
+            // Fallback to random stocks if API fails
+            return selectRandomStocks(STOCKS_PER_AGENT_RUN);
+        }
+
+        return tickers;
     }
 
     // Returns true if this agent already has an OPEN position on the given ticker opened today.
@@ -2992,6 +3067,8 @@ public class AIToolAgent {
             dec = scoreStrongTrend(ticker, strategy, data);
         } else if ("INSTITUTIONAL_SWING".equals(strategy.strategyType)) {
             dec = scoreInstitutionalSwing(ticker, strategy, data);
+        } else if ("MOMENTUM_FUNDAMENTAL".equals(strategy.strategyType)) {
+            dec = scoreMomentumFundamental(ticker, strategy, data);
         } else {
             dec = new TradeDecision();
             dec.rejectReason = "Unknown strategyType: " + strategy.strategyType;
@@ -3642,6 +3719,208 @@ public class AIToolAgent {
             institutionalSwingDailyCount++;
             writeScanLog("[INST-SWING] Daily count: " + institutionalSwingDailyCount + "/" + INSTITUTIONAL_SWING_DAILY_LIMIT);
         }
+
+        return dec;
+    }
+
+    private static TradeDecision scoreMomentumFundamental(String ticker, AgentConfig strategy, IndicatorData d) {
+        TradeDecision dec = new TradeDecision();
+        dec.action = "BUY";
+
+        // ── Technical Entry Filters ─────────────────────────────────────────────────────
+        // Filter 1: Must be above SMA50 and SMA200
+        boolean sma50Required = getBooleanFilter(strategy, "sma50Required", true);
+        boolean sma200Required = getBooleanFilter(strategy, "sma200Required", true);
+        
+        if (sma50Required && (!d.hasSMA50 || !d.priceAboveSMA50)) {
+            dec.rejectReason = "SMA50 filter: price not above SMA50";
+            writeScanLog("[MOM-FUND|REJECT] " + ticker + " | " + strategy.id + " | " + dec.rejectReason);
+            return dec;
+        }
+        
+        if (sma200Required && (!d.hasSMA200 || !d.priceAboveSMA200)) {
+            dec.rejectReason = "SMA200 filter: price not above SMA200";
+            writeScanLog("[MOM-FUND|REJECT] " + ticker + " | " + strategy.id + " | " + dec.rejectReason);
+            return dec;
+        }
+
+        // Filter 2: RVOL minimum
+        double rvolMin = getDoubleFilter(strategy, "rvolMin", 1.2);
+        if (d.rvol < rvolMin) {
+            dec.rejectReason = String.format("Volume filter: RVOL %.2fx < %.2fx", d.rvol, rvolMin);
+            writeScanLog("[MOM-FUND|REJECT] " + ticker + " | " + strategy.id + " | " + dec.rejectReason);
+            return dec;
+        }
+
+        // Filter 3: RSI range
+        double rsiMin = getDoubleFilter(strategy, "rsiMin", 45.0);
+        double rsiMax = getDoubleFilter(strategy, "rsiMax", 75.0);
+        if (d.rsi < rsiMin || d.rsi > rsiMax) {
+            dec.rejectReason = String.format("RSI filter: %.1f outside range [%.1f, %.1f]", d.rsi, rsiMin, rsiMax);
+            writeScanLog("[MOM-FUND|REJECT] " + ticker + " | " + strategy.id + " | " + dec.rejectReason);
+            return dec;
+        }
+
+        // Filter 4: ATR minimum (volatility check)
+        double atrMinPct = getDoubleFilter(strategy, "atrMinPct", 1.5);
+        double atrPct = (d.atr / d.currentPrice) * 100;
+        if (atrPct < atrMinPct) {
+            dec.rejectReason = String.format("ATR filter: %.2f%% < %.2f%%", atrPct, atrMinPct);
+            writeScanLog("[MOM-FUND|REJECT] " + ticker + " | " + strategy.id + " | " + dec.rejectReason);
+            return dec;
+        }
+
+        // ── Fundamental Data Fetching & Validation ───────────────────────────────────────
+        try {
+            // Fetch fundamental data from Alpha Vantage
+            String incomeJson = DataFetcher.fetchIncomeStatement(ticker);
+            String cashFlowJson = DataFetcher.fetchCashFlow(ticker);
+            String overviewJson = DataFetcher.fetchCompanyOverview(ticker);
+            String dividendsJson = DataFetcher.fetchDividends(ticker);
+
+            if (incomeJson == null || cashFlowJson == null || overviewJson == null) {
+                dec.rejectReason = "Fundamental data unavailable from Alpha Vantage";
+                writeScanLog("[MOM-FUND|REJECT] " + ticker + " | " + strategy.id + " | " + dec.rejectReason);
+                return dec;
+            }
+
+            // Parse fundamental data
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode incomeRoot = mapper.readTree(incomeJson);
+            JsonNode cashFlowRoot = mapper.readTree(cashFlowJson);
+            JsonNode overviewRoot = mapper.readTree(overviewJson);
+            JsonNode quarterlyReports = incomeRoot.path("quarterlyReports");
+
+            // Filter 5: Revenue Growth
+            double minRevenueGrowth = getDoubleFilter(strategy, "revenueGrowthMin", 10.0);
+            double revenueGrowth = DataFetcher.calculateRevenueGrowth(incomeJson);
+            if (revenueGrowth < minRevenueGrowth) {
+                dec.rejectReason = String.format("Revenue growth filter: %.1f%% < %.1f%%", revenueGrowth, minRevenueGrowth);
+                writeScanLog("[MOM-FUND|REJECT] " + ticker + " | " + strategy.id + " | " + dec.rejectReason);
+                return dec;
+            }
+
+            // Filter 6: Profit Margin
+            double minProfitMargin = getDoubleFilter(strategy, "profitMarginMin", 8.0);
+            if (quarterlyReports.isArray() && quarterlyReports.size() > 0) {
+                double grossProfit = quarterlyReports.get(0).path("grossProfit").asDouble(0);
+                double totalRevenue = quarterlyReports.get(0).path("totalRevenue").asDouble(0);
+                double profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+                
+                if (profitMargin < minProfitMargin) {
+                    dec.rejectReason = String.format("Profit margin filter: %.1f%% < %.1f%%", profitMargin, minProfitMargin);
+                    writeScanLog("[MOM-FUND|REJECT] " + ticker + " | " + strategy.id + " | " + dec.rejectReason);
+                    return dec;
+                }
+            }
+
+            // Filter 7: Debt/Equity
+            double maxDebtToEquity = getDoubleFilter(strategy, "debtToEquityMax", 1.0);
+            double debtToEquity = overviewRoot.path("DebtToEquity").asDouble(999);
+            if (debtToEquity > maxDebtToEquity) {
+                dec.rejectReason = String.format("Debt/Equity filter: %.2f > %.2f", debtToEquity, maxDebtToEquity);
+                writeScanLog("[MOM-FUND|REJECT] " + ticker + " | " + strategy.id + " | " + dec.rejectReason);
+                return dec;
+            }
+
+            // Filter 8: Free Cash Flow Positive
+            boolean freeCashFlowRequired = getBooleanFilter(strategy, "freeCashFlowPositive", true);
+            if (freeCashFlowRequired) {
+                JsonNode cfReports = cashFlowRoot.path("quarterlyReports");
+                if (cfReports.isArray() && cfReports.size() > 0) {
+                    double freeCashFlow = cfReports.get(0).path("freeCashFlow").asDouble(0);
+                    if (freeCashFlow < 0) {
+                        dec.rejectReason = String.format("Free Cash Flow filter: %.0f < 0", freeCashFlow);
+                        writeScanLog("[MOM-FUND|REJECT] " + ticker + " | " + strategy.id + " | " + dec.rejectReason);
+                        return dec;
+                    }
+                }
+            }
+
+            // Filter 9: EPS Growth
+            double minEpsGrowth = getDoubleFilter(strategy, "epsGrowthMin", 5.0);
+            if (quarterlyReports.isArray() && quarterlyReports.size() >= 2) {
+                double currentEps = quarterlyReports.get(0).path("netIncome").asDouble(0);
+                double previousEps = quarterlyReports.get(1).path("netIncome").asDouble(0);
+                double sharesCurrent = quarterlyReports.get(0).path("commonStockSharesOutstanding").asDouble(1);
+                double sharesPrevious = quarterlyReports.get(1).path("commonStockSharesOutstanding").asDouble(1);
+                
+                double epsCurrent = sharesCurrent > 0 ? currentEps / sharesCurrent : 0;
+                double epsPrevious = sharesPrevious > 0 ? previousEps / sharesPrevious : 0;
+                
+                if (epsPrevious > 0) {
+                    double epsGrowth = ((epsCurrent - epsPrevious) / epsPrevious) * 100;
+                    if (epsGrowth < minEpsGrowth) {
+                        dec.rejectReason = String.format("EPS growth filter: %.1f%% < %.1f%%", epsGrowth, minEpsGrowth);
+                        writeScanLog("[MOM-FUND|REJECT] " + ticker + " | " + strategy.id + " | " + dec.rejectReason);
+                        return dec;
+                    }
+                }
+            }
+
+            // Bonus: Dividend payer
+            boolean dividendBonus = getBooleanFilter(strategy, "dividendBonus", true);
+            if (dividendBonus && dividendsJson != null) {
+                JsonNode divRoot = mapper.readTree(dividendsJson);
+                JsonNode divData = divRoot.path("data");
+                if (divData.isArray() && divData.size() > 0) {
+                    dec.totalScore += 1; // Bonus point for dividend payer
+                    writeScanLog("[MOM-FUND|BONUS] " + ticker + " | Dividend payer (+1)");
+                }
+            }
+
+        } catch (Exception e) {
+            dec.rejectReason = "Error parsing fundamental data: " + e.getMessage();
+            writeScanLog("[MOM-FUND|REJECT] " + ticker + " | " + strategy.id + " | " + dec.rejectReason);
+            return dec;
+        }
+
+        // ── Scoring Components ───────────────────────────────────────────────────────
+        // Momentum score (max 3): based on today's change and RVOL
+        if      (d.todayChangePct >= 3.0) dec.momentumScore = 3;
+        else if (d.todayChangePct >= 2.0) dec.momentumScore = 2;
+        else if (d.todayChangePct >= 1.0) dec.momentumScore = 1;
+
+        if      (d.rvol >= 2.5) dec.volumeScore = 3;
+        else if (d.rvol >= 1.8) dec.volumeScore = 2;
+        else if (d.rvol >= 1.2) dec.volumeScore = 1;
+
+        // Trend score (max 3): SMA alignment
+        if (d.hasSMA200 && d.priceAboveSMA200) dec.trendScore += 2;
+        if (d.maCrossoverUp) dec.trendScore += 1;
+
+        // Setup score (max 3): RSI in healthy zone
+        if      (d.rsi >= 50 && d.rsi <= 70) dec.setupScore = 3;
+        else if (d.rsi >= 45 && d.rsi <= 75) dec.setupScore = 2;
+        else if (d.rsi >= 40 && d.rsi <= 80) dec.setupScore = 1;
+
+        dec.totalScore = dec.volumeScore + dec.trendScore + dec.momentumScore + dec.setupScore;
+
+        // ── Risk Management ─────────────────────────────────────────────────────────
+        dec.entryPrice = d.currentPrice;
+        double slPct = getDoubleRisk(strategy, "stopLossPct", 4.5);
+        double tpPct = getDoubleRisk(strategy, "takeProfitPct", 14.0);
+        double atrM  = getDoubleRisk(strategy, "atrMultiplier", 2.0);
+        dec.suggestedStopLoss   = calculateFinalStopPrice(d.currentPrice, d.atr, atrM, slPct);
+        dec.suggestedTakeProfit = applyMinTakeProfit(d.currentPrice, d.currentPrice * (1 + tpPct / 100), dec.suggestedStopLoss);
+
+        // Entry trigger: immediate entry (all filters already validated)
+        dec.entryTriggerPrice = d.currentPrice;
+
+        double upsideToResistance = (d.resistance30d > 0 && d.currentPrice > 0)
+            ? ((d.resistance30d - d.currentPrice) / d.currentPrice) * 100 : 0;
+
+        writeScanLog("[SCORE|MOM-FUND] " + ticker + " | " + strategy.id +
+            " | Trend=" + dec.trendScore +
+                "(abvSMA50=" + (d.hasSMA50 && d.priceAboveSMA50 ? "Y" : "N") +
+                ",abvSMA200=" + (d.hasSMA200 && d.priceAboveSMA200 ? "Y" : "N") + ")" +
+            " Volume=" + dec.volumeScore + "(RVOL=" + String.format("%.1f", d.rvol) + "x)" +
+            " Momentum=" + dec.momentumScore +
+                "(chg=" + String.format("%+.1f%%", d.todayChangePct) + ")" +
+            " Setup=" + dec.setupScore +
+                "(RSI=" + String.format("%.0f", d.rsi) + ")" +
+            " upside=" + String.format("%.1f%%", upsideToResistance) +
+            " total=" + dec.totalScore + "/12");
 
         return dec;
     }
@@ -5693,6 +5972,9 @@ public class AIToolAgent {
             System.out.println("[AIToolAgent] Top agents full scan already running, skipping...");
             return;
         }
+        
+        // Set running flag immediately to prevent race condition with status polling
+        topAgentsFullScanRunning = true;
         
         // Mark as manual run (no TOP 2-3 filtering)
         isScheduledRun = false;

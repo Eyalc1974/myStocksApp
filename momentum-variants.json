@@ -1,6 +1,6 @@
 {
   "description": "Momentum Strategy Variants for A/B Testing - Comparing different parameter combinations",
-  "enabled": true,
+  "enabled": false,
   "variants": [
     {
       "id": "M1_AGGRESSIVE",

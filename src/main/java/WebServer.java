@@ -8047,31 +8047,6 @@ public class WebServer {
                 sb.append("  }");
                 sb.append("}");
                 sb.append("initSwingScanner();");
-                // Full scan polling
-                sb.append("var fullScanPollInterval = null;");
-                sb.append("async function pollFullScanStatus() {");
-                sb.append("  try {");
-                sb.append("    var r = await fetch('/api/full-scan/status');");
-                sb.append("    var s = await r.json();");
-                sb.append("    if (!s.running) {");
-                sb.append("      if (fullScanPollInterval) { clearInterval(fullScanPollInterval); fullScanPollInterval = null; }");
-                sb.append("      location.reload();");
-                sb.append("      return;");
-                sb.append("    }");
-                sb.append("    // Reload page to show updated progress");
-                sb.append("    location.reload();");
-                sb.append("  } catch(e) { console.log('Full scan poll error:', e); }");
-                sb.append("}");
-                sb.append("async function initFullScanner() {");
-                sb.append("  var urlParams = new URLSearchParams(window.location.search);");
-                sb.append("  if (urlParams.get('fullScanStarted') === 'true') {");
-                sb.append("    fullScanPollInterval = setInterval(pollFullScanStatus, 3000);");
-                sb.append("    // Remove the parameter from URL");
-                sb.append("    var newUrl = window.location.pathname;");
-                sb.append("    window.history.replaceState({}, document.title, newUrl);");
-                sb.append("  }");
-                sb.append("}");
-                sb.append("initFullScanner();");
                 sb.append("</script>");
                 sb.append("</div>");
 
@@ -8257,7 +8232,7 @@ public class WebServer {
                 for (String agentId : AIToolAgent.getFilteredAgentsForScheduledRun()) filteredAgentIds.add(agentId);
 
                 sb.append("<div style='color:#c4b5fd;font-size:12px;margin-bottom:8px;'>Select agents to run (✅ = MASTER_7_VIX_MARKET_FILTER pre-checked, others unchecked):</div>");
-                sb.append("<form method='post' action='/aitool-full-scan' style='margin:0;'>");
+                sb.append("<form id='fullScanForm' onsubmit='submitFullScan(event)' style='margin:0;'>");
 
                 int agentIdx = 0;
                 // 1. Show ALL loaded variant agents (sorted: filtered agents first, then alphabetical)
@@ -8410,8 +8385,20 @@ public class WebServer {
                 }
 
                 sb.append("<div style='color:#9ca3af;font-size:11px;margin-top:8px;margin-bottom:8px;'>💡 Select agents to run. Filtered agents are pre-checked. Pinned masters must be manually checked. Leave all unchecked to auto-run filtered agents.</div>");
-                sb.append("<button type='submit' style='background:#7c3aed;margin-top:4px;'>🚀 Start Full Scan with Selected Agents</button>");
+                sb.append("<button type='submit' id='fullScanSubmitBtn' style='background:#7c3aed;margin-top:4px;'>🚀 Start Full Scan with Selected Agents</button>");
                 sb.append("</form>");
+                
+                // Progress bar for full scan (hidden by default)
+                sb.append("<div id='fullScanProgressContainer' style='display:none;margin-top:12px;'>");
+                sb.append("<div style='display:flex;justify-content:space-between;margin-bottom:4px;'>");
+                sb.append("<span id='fullScanStatusText' style='color:#9ca3af;font-size:12px;'>Starting scan...</span>");
+                sb.append("<span id='fullScanProgressPct' style='color:#93c5fd;font-size:12px;'>0%</span>");
+                sb.append("</div>");
+                sb.append("<div style='background:#1e1b4b;border-radius:6px;height:8px;overflow:hidden;'>");
+                sb.append("<div id='fullScanProgressBar' style='background:#7c3aed;height:100%;width:0%;transition:width 0.3s;'></div>");
+                sb.append("</div>");
+                sb.append("<div id='fullScanProgressDetail' style='color:#6b7280;font-size:11px;margin-top:4px;'></div>");
+                sb.append("</div>");
                 
                 // Full scan status (if running or recently completed)
                 if (AIToolAgent.isTopAgentsFullScanRunning() || !AIToolAgent.getTopAgentsFullScanStatus().isEmpty()) {
@@ -8473,6 +8460,82 @@ public class WebServer {
                 }
                 sb.append("</div>");
                 sb.append("</div>");
+
+                // Full scan JavaScript functions
+                sb.append("<script>");
+                sb.append("var fullScanPollInterval = null;");
+                sb.append("async function pollFullScanStatus() {");
+                sb.append("  try {");
+                sb.append("    var r = await fetch('/api/full-scan/status');");
+                sb.append("    var s = await r.json();");
+                sb.append("    var container = document.getElementById('fullScanProgressContainer');");
+                sb.append("    var bar = document.getElementById('fullScanProgressBar');");
+                sb.append("    var statusText = document.getElementById('fullScanStatusText');");
+                sb.append("    var pctText = document.getElementById('fullScanProgressPct');");
+                sb.append("    var detailText = document.getElementById('fullScanProgressDetail');");
+                sb.append("    var submitBtn = document.getElementById('fullScanSubmitBtn');");
+                sb.append("    ");
+                sb.append("    if (s.running) {");
+                sb.append("      if (container) container.style.display = 'block';");
+                sb.append("      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Running...'; }");
+                sb.append("      var progress = s.progress || 0;");
+                sb.append("      var total = s.total || 1;");
+                sb.append("      var pct = total > 0 ? Math.round((progress / total) * 100) : 0;");
+                sb.append("      if (bar) bar.style.width = pct + '%';");
+                sb.append("      if (statusText) statusText.textContent = s.statusMessage || 'Running...';");
+                sb.append("      if (pctText) pctText.textContent = pct + '%';");
+                sb.append("      if (detailText) detailText.textContent = progress + ' / ' + total;");
+                sb.append("    } else {");
+                sb.append("      if (fullScanPollInterval) { clearInterval(fullScanPollInterval); fullScanPollInterval = null; }");
+                sb.append("      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🚀 Start Full Scan with Selected Agents'; }");
+                sb.append("      if (s.statusMessage && s.statusMessage !== '') {");
+                sb.append("        if (statusText) statusText.textContent = s.statusMessage;");
+                sb.append("        if (detailText) detailText.textContent = 'Scan complete';");
+                sb.append("      } else {");
+                sb.append("        if (container) container.style.display = 'none';");
+                sb.append("      }");
+                sb.append("      location.reload();");
+                sb.append("    }");
+                sb.append("  } catch(e) { console.log('Full scan poll error:', e); }");
+                sb.append("}");
+                sb.append("async function initFullScanner() {");
+                sb.append("  var urlParams = new URLSearchParams(window.location.search);");
+                sb.append("  if (urlParams.get('fullScanStarted') === 'true') {");
+                sb.append("    fullScanPollInterval = setInterval(pollFullScanStatus, 3000);");
+                sb.append("    var newUrl = window.location.pathname;");
+                sb.append("    window.history.replaceState({}, document.title, newUrl);");
+                sb.append("  }");
+                sb.append("}");
+                sb.append("async function submitFullScan(event) {");
+                sb.append("  event.preventDefault();");
+                sb.append("  var form = document.getElementById('fullScanForm');");
+                sb.append("  var formData = new FormData(form);");
+                sb.append("  var submitBtn = document.getElementById('fullScanSubmitBtn');");
+                sb.append("  ");
+                sb.append("  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Starting...'; }");
+                sb.append("  ");
+                sb.append("  try {");
+                sb.append("    var response = await fetch('/aitool-full-scan', {");
+                sb.append("      method: 'POST',");
+                sb.append("      body: formData");
+                sb.append("    });");
+                sb.append("    ");
+                sb.append("    if (response.ok) {");
+                sb.append("      if (fullScanPollInterval) clearInterval(fullScanPollInterval);");
+                sb.append("      fullScanPollInterval = setInterval(pollFullScanStatus, 3000);");
+                sb.append("      pollFullScanStatus();");
+                sb.append("    } else {");
+                sb.append("      alert('Failed to start scan');");
+                sb.append("      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🚀 Start Full Scan with Selected Agents'; }");
+                sb.append("    }");
+                sb.append("  } catch (error) {");
+                sb.append("    console.error('Error starting scan:', error);");
+                sb.append("    alert('Error starting scan: ' + error);");
+                sb.append("    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🚀 Start Full Scan with Selected Agents'; }");
+                sb.append("  }");
+                sb.append("}");
+                sb.append("initFullScanner();");
+                sb.append("</script>");
 
                 // ── 📡 Buy Recommendations ──
                 {
@@ -9409,8 +9472,13 @@ public class WebServer {
                     AIToolAgent.runFullScanWithAgentsAsync(selectedAgents);
                 }
                 
-                ex.getResponseHeaders().add("Location", "/aitool?fullScanStarted=true");
-                ex.sendResponseHeaders(303, -1); ex.close();
+                // Return JSON response for AJAX
+                ex.getResponseHeaders().add("Content-Type", "application/json");
+                String jsonResponse = "{\"success\":true,\"message\":\"Full scan started\"}";
+                byte[] bytes = jsonResponse.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                ex.sendResponseHeaders(200, bytes.length);
+                ex.getResponseBody().write(bytes);
+                ex.close();
             }
         });
 
@@ -9983,6 +10051,32 @@ public class WebServer {
                 byte[] resp = json.getBytes(java.nio.charset.StandardCharsets.UTF_8);
                 ex.sendResponseHeaders(200, resp.length);
                 ex.getResponseBody().write(resp);
+                ex.close();
+            }
+        });
+
+        // API endpoint to reload agent configurations from JSON files
+        // Usage: GET or POST to /api/aitool/reload-agents
+        server.createContext("/api/aitool/reload-agents", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Content-Type", "application/json");
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+                
+                try {
+                    // Reload all agent configurations from JSON files
+                    AIToolAgent.loadAllAgents();
+                    
+                    String json = "{\"status\":\"success\",\"message\":\"Agent configurations reloaded\",\"timestamp\":\"" + 
+                        java.time.Instant.now().toString() + "\"}";
+                    byte[] resp = json.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                    ex.sendResponseHeaders(200, resp.length);
+                    ex.getResponseBody().write(resp);
+                } catch (Exception e) {
+                    String json = "{\"status\":\"error\",\"message\":\"Failed to reload agents: " + e.getMessage() + "\"}";
+                    byte[] resp = json.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                    ex.sendResponseHeaders(500, resp.length);
+                    ex.getResponseBody().write(resp);
+                }
                 ex.close();
             }
         });

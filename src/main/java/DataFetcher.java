@@ -512,6 +512,32 @@ public class DataFetcher {
         }
     }
 
+    // Fetch dividends data from Alpha Vantage (Corporate Action - Dividends)
+    public static String fetchDividends(String symbol) {
+        if (symbol == null || symbol.isBlank()) {
+            symbol = TICKER;
+        }
+        String url = String.format(
+                "https://www.alphavantage.co/query?function=DIVIDENDS&symbol=%s%s&apikey=%s",
+                symbol, entitlementQueryParam(), API_KEY
+        );
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(REQUEST_TIMEOUT)
+                .build();
+        try {
+            ApiUsageTracker.track("DIVIDENDS");
+            HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                return response.body();
+            } else {
+                return null;
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     // Calculate revenue growth from income statement data
     public static double calculateRevenueGrowth(String incomeStatementJson) {
         try {

@@ -1,5 +1,10 @@
 --- 🎯 Daily Nasdaq Top 5 (GREEN) candidates ---
+[daily-green] started (thread will run in background)
+[ScoringConfig] Loaded config: activeMode=LONG_TERM_INVESTOR
+[ScoringConfig] Mode thresholds: green=60, buy=60, strongBuy=80
+[AIToolAgent] Agent MASTER_6_VOLUME_BREAKOUT found 0 signals, selecting top 0
+[AIToolAgent] Full scan with agent: MASTER_5_PULLBACK_MA20
 
 | TICKER | PRICE    | טכני (כניסה)    | פונדמנטלי         | ADX (חוזק) |
 |--------|----------|-----------------|-------------------|-----------|
-No GREEN candidates found today (based on current filters). Try again later.
+| AMN   | $32.35    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 34.05 |

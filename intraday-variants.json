@@ -1,6 +1,6 @@
 {
   "description": "Intraday VWAP Trend Following Strategy Variants - מבוסס על דיליי 15 דקות ואישור VWAP",
-  "enabled": true,
+  "enabled": false,
   "delayMinutes": 15,
   "vwapCore": {
     "description": "VWAP משמש כמסננת אמינות - אם המחיר מעל VWAP, הקונים שולטים ביום",
@@ -16,6 +16,7 @@
       "nameHe": "פריצת VWAP (מומלץ)",
       "description": "Classic VWAP breakout with CCI>100, high RVOL, RS leader - Best for confirmed momentum",
       "descriptionHe": "פריצה קלאסית מעל VWAP עם CCI>100, נפח חריג ומנהיגות יחסית - לזיהוי מומנטום אמיתי",
+      "disabled": true,
       "stocksPerVariant": 3,
       "entryFilters": {
         "vwapRequired": true,
@@ -192,6 +193,7 @@
       "nameHe": "בדיקה חוזרת של VWAP (סינון מלכודות)",
       "description": "Enter only after price retests VWAP and holds - Best for avoiding bull traps with 15-min delay",
       "descriptionHe": "כניסה רק אחרי שהמחיר חזר לבדוק VWAP והחזיק - הדיליי עוזר לסנן מלכודות שוורים",
+      "disabled": true,
       "stocksPerVariant": 2,
       "entryFilters": {
         "vwapRequired": true,
@@ -235,6 +237,7 @@
       "nameHe": "תוך-יומי אגרסיבי (סיכון גבוה)",
       "description": "Looser filters for more trades - Higher risk, for comparison testing only",
       "descriptionHe": "פילטרים רופפים יותר לעסקאות רבות יותר - סיכון גבוה, לבדיקה בלבד",
+      "disabled": true,
       "stocksPerVariant": 1,
       "entryFilters": {
         "vwapRequired": true,

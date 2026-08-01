@@ -60,5 +60,5 @@
     "Each VIX + SPY fetch costs 1 API call (12.5s sleep between them on free tier)"
   ],
   "locked" : true,
-  "disabled" : false
+  "disabled" : true
 }

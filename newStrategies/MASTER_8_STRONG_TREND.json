@@ -30,5 +30,5 @@
     "description" : "Trend/SMA50-alignment(3)+Volume-confirm(3)+Momentum/near-20dHigh+RSI(3)+Setup/resistance-room(3)=12 max. Entry only on break of yesterday high. Strictest filter: score>=11."
   },
   "locked" : true,
-  "disabled" : false
+  "disabled" : true
 }

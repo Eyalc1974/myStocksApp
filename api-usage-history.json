@@ -1,125 +1,42 @@
 {
-  "2026-06-14" : {
-    "TIME_SERIES_DAILY" : 46,
-    "EARNINGS" : 43,
-    "INCOME_STATEMENT" : 43
+  "2026-07-05" : {
+    "TIME_SERIES_DAILY" : 37
   },
-  "2026-06-13" : {
-    "OVERVIEW" : 70,
-    "EARNINGS" : 700,
-    "CASH_FLOW" : 135,
-    "INCOME_STATEMENT" : 770,
-    "BALANCE_SHEET" : 68,
-    "TIME_SERIES_DAILY" : 2352
+  "2026-07-16" : {
+    "OVERVIEW" : 516,
+    "CASH_FLOW" : 999,
+    "INCOME_STATEMENT" : 565,
+    "BALANCE_SHEET" : 500,
+    "TIME_SERIES_DAILY" : 2588,
+    "NEWS_SENTIMENT" : 24,
+    "GLOBAL_QUOTE" : 75
   },
-  "2026-06-12" : {
-    "OVERVIEW" : 71,
-    "CASH_FLOW" : 66,
-    "INCOME_STATEMENT" : 40,
-    "BALANCE_SHEET" : 33,
-    "TIME_SERIES_DAILY" : 418,
-    "NEWS_SENTIMENT" : 46,
-    "GLOBAL_QUOTE" : 32
+  "2026-07-27" : {
+    "TIME_SERIES_DAILY" : 123,
+    "NEWS_SENTIMENT" : 20,
+    "OVERVIEW" : 20,
+    "GLOBAL_QUOTE" : 16
   },
-  "2026-06-11" : {
-    "TIME_SERIES_DAILY" : 106,
-    "GLOBAL_QUOTE" : 37
+  "2026-07-17" : {
+    "TIME_SERIES_DAILY" : 27
   },
-  "2026-06-30" : {
-    "TIME_SERIES_DAILY" : 738,
-    "NEWS_SENTIMENT" : 22,
-    "OVERVIEW" : 14,
-    "GLOBAL_QUOTE" : 60
+  "2026-07-29" : {
+    "TIME_SERIES_DAILY" : 142,
+    "GLOBAL_QUOTE" : 11
   },
-  "2026-06-09" : {
-    "TIME_SERIES_DAILY" : 95,
-    "NEWS_SENTIMENT" : 45,
-    "OVERVIEW" : 2,
-    "GLOBAL_QUOTE" : 26
+  "2026-07-08" : {
+    "TIME_SERIES_DAILY" : 378,
+    "NEWS_SENTIMENT" : 23,
+    "OVERVIEW" : 15,
+    "GLOBAL_QUOTE" : 25
   },
-  "2026-06-08" : {
-    "TIME_SERIES_DAILY" : 6,
-    "GLOBAL_QUOTE" : 2
+  "2026-07-30" : {
+    "TIME_SERIES_DAILY" : 297,
+    "NEWS_SENTIMENT" : 12,
+    "GLOBAL_QUOTE" : 16
   },
-  "2026-06-29" : {
-    "TIME_SERIES_DAILY" : 846,
-    "NEWS_SENTIMENT" : 27,
-    "GLOBAL_QUOTE" : 40
-  },
-  "2026-06-05" : {
-    "TIME_SERIES_DAILY" : 146,
-    "NEWS_SENTIMENT" : 49,
-    "OVERVIEW" : 6,
-    "GLOBAL_QUOTE" : 36
-  },
-  "2026-06-04" : {
-    "TIME_SERIES_DAILY" : 94
-  },
-  "2026-06-26" : {
-    "OVERVIEW" : 25,
-    "CASH_FLOW" : 22,
-    "INCOME_STATEMENT" : 13,
-    "BALANCE_SHEET" : 11,
-    "TIME_SERIES_DAILY" : 337,
-    "NEWS_SENTIMENT" : 29,
-    "GLOBAL_QUOTE" : 20
-  },
-  "2026-06-03" : {
-    "TIME_SERIES_DAILY" : 346,
-    "NEWS_SENTIMENT" : 51,
-    "OVERVIEW" : 47,
-    "GLOBAL_QUOTE" : 70
-  },
-  "2026-06-25" : {
-    "TIME_SERIES_DAILY" : 983,
-    "GLOBAL_QUOTE" : 232
-  },
-  "2026-06-24" : {
-    "TIME_SERIES_DAILY" : 39,
-    "GLOBAL_QUOTE" : 43
-  },
-  "2026-06-23" : {
-    "TIME_SERIES_DAILY" : 54,
-    "GLOBAL_QUOTE" : 40
-  },
-  "2026-06-22" : {
-    "TIME_SERIES_DAILY" : 84,
-    "NEWS_SENTIMENT" : 19,
-    "OVERVIEW" : 17,
-    "EARNINGS" : 2,
-    "INCOME_STATEMENT" : 2
-  },
-  "2026-06-20" : {
-    "TIME_SERIES_DAILY" : 204,
-    "EARNINGS" : 174,
-    "INCOME_STATEMENT" : 174
-  },
-  "2026-06-19" : {
-    "TIME_SERIES_DAILY" : 44,
-    "EARNINGS" : 31,
-    "INCOME_STATEMENT" : 31
-  },
-  "2026-06-18" : {
-    "OVERVIEW" : 11,
-    "CASH_FLOW" : 14,
-    "INCOME_STATEMENT" : 8,
-    "BALANCE_SHEET" : 7,
-    "TIME_SERIES_DAILY" : 224,
-    "NEWS_SENTIMENT" : 40,
-    "GLOBAL_QUOTE" : 27
-  },
-  "2026-07-01" : {
-    "TIME_SERIES_DAILY" : 646,
-    "NEWS_SENTIMENT" : 5,
-    "OVERVIEW" : 2,
-    "GLOBAL_QUOTE" : 78
-  },
-  "2026-06-17" : {
-    "TIME_SERIES_DAILY" : 30,
-    "OVERVIEW" : 7,
-    "CASH_FLOW" : 14,
-    "INCOME_STATEMENT" : 8,
-    "BALANCE_SHEET" : 7
+  "2026-08-01" : {
+    "TIME_SERIES_DAILY" : 12
   },
   "2026-07-02" : {
     "TIME_SERIES_DAILY" : 154,
@@ -127,24 +44,19 @@
     "OVERVIEW" : 1,
     "GLOBAL_QUOTE" : 12
   },
-  "2026-06-16" : {
-    "OVERVIEW" : 164,
-    "CASH_FLOW" : 325,
-    "INCOME_STATEMENT" : 164,
-    "BALANCE_SHEET" : 163,
-    "TIME_SERIES_DAILY" : 938,
-    "NEWS_SENTIMENT" : 31,
-    "GLOBAL_QUOTE" : 53
+  "2026-07-14" : {
+    "TIME_SERIES_DAILY" : 197,
+    "NEWS_SENTIMENT" : 22,
+    "OVERVIEW" : 8,
+    "GLOBAL_QUOTE" : 42
   },
   "2026-07-03" : {
-    "TIME_SERIES_DAILY" : 90
-  },
-  "2026-06-15" : {
-    "OVERVIEW" : 6,
-    "EARNINGS" : 3,
+    "OVERVIEW" : 12,
+    "CASH_FLOW" : 6,
     "INCOME_STATEMENT" : 3,
-    "TIME_SERIES_DAILY" : 300,
-    "NEWS_SENTIMENT" : 34,
-    "GLOBAL_QUOTE" : 62
+    "BALANCE_SHEET" : 3,
+    "TIME_SERIES_DAILY" : 307,
+    "NEWS_SENTIMENT" : 20,
+    "GLOBAL_QUOTE" : 60
   }
 }
