@@ -7,8 +7,8 @@ COPY pom.xml .
 RUN mvn dependency:go-offline
 # Copy source code
 COPY src ./src
-# Build the application with verbose output
-RUN mvn clean package -DskipTests -X
+# Build the application
+RUN mvn clean package -DskipTests
 # List all JAR files created
 RUN ls -la target/*.jar
 # Runtime stage
@@ -17,6 +17,6 @@ WORKDIR /app
 # Copy the built JAR from builder stage using wildcard
 COPY --from=builder /app/target/trading-model*.jar app.jar
 # Expose port if needed (adjust based on your application)
-EXPOSE 8100
+EXPOSE 8099
 # Run the application
 CMD ["java", "-jar", "app.jar"]
