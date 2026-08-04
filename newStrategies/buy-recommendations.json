@@ -1,4 +1,19 @@
 [ {
+  "ticker" : "MAS",
+  "agentId" : "MASTER_8_STRONG_TREND",
+  "entryPrice" : 77.075,
+  "stopLoss" : 70.34250138826889,
+  "takeProfit" : 88.63624999999999,
+  "score" : 10,
+  "timestamp" : "08/04 16:51 EDT",
+  "runNumber" : 162,
+  "date" : "2026-08-04",
+  "signalTimeMs" : 1785876678877,
+  "finalConviction" : 39.583333333333336,
+  "fundamentalScore" : 7,
+  "catalystScore" : 10,
+  "institutionalFlowScore" : 2
+}, {
   "ticker" : "DELL",
   "agentId" : "MASTER_5B_PULLBACK_MA20_V2",
   "entryPrice" : 421.24,
@@ -1483,19 +1498,4 @@
   "fundamentalScore" : 9,
   "catalystScore" : 10,
   "institutionalFlowScore" : 3
-}, {
-  "ticker" : "VLO",
-  "agentId" : "MASTER_5_PULLBACK_MA20",
-  "entryPrice" : 255.6,
-  "stopLoss" : 232.54241058687708,
-  "takeProfit" : 286.27200000000005,
-  "score" : 11,
-  "timestamp" : "06/12 10:06 EDT",
-  "runNumber" : 130,
-  "date" : "2026-06-12",
-  "signalTimeMs" : 1781273172664,
-  "finalConviction" : 36.916666666666664,
-  "fundamentalScore" : 5,
-  "catalystScore" : 8,
-  "institutionalFlowScore" : 0
 } ]

@@ -1,5 +1,5 @@
 {
-  "lastUpdated" : "2026-07-27T12:19:26.5631237-04:00[America/New_York]",
+  "lastUpdated" : "2026-08-04T16:51:38.7754547-04:00[America/New_York]",
   "tradeHistory" : {
     "I5_VWAP_RETEST" : [ {
       "id" : "8d4a37e7",
@@ -321,6 +321,17 @@
       "status" : "CLOSED_LOSS",
       "entryTime" : "2026-07-08T12:54:13.3006215-04:00[America/New_York]",
       "exitTime" : "2026-07-27T12:18:26.5286489-04:00[America/New_York]"
+    }, {
+      "id" : "e9144543",
+      "ticker" : "MAS",
+      "action" : "BUY",
+      "entryPrice" : 77.075,
+      "exitPrice" : 0.0,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-08-04T16:51:36.968252-04:00[America/New_York]",
+      "exitTime" : null
     } ],
     "I2_VWAP_PULLBACK" : [ ],
     "MASTER_7_VIX_MARKET_FILTER" : [ {
@@ -1757,73 +1768,6 @@
     "INST_SWING_V1" : [ ],
     "FUND_MOMENTUM_V1" : [ ],
     "QUALITY_GROWTH_V1" : [ ],
-    "MASTER_5B_PULLBACK_MA20_V2" : [ {
-      "id" : "de0330fa",
-      "ticker" : "AMAT",
-      "action" : "BUY",
-      "entryPrice" : 603.04,
-      "exitPrice" : 500.97,
-      "profitLoss" : -10206.999999999993,
-      "profitLossPct" : -16.925908729105853,
-      "status" : "CLOSED_LOSS",
-      "entryTime" : "2026-07-03T10:36:58.6468033-04:00[America/New_York]",
-      "exitTime" : "2026-07-27T12:18:27.1996085-04:00[America/New_York]"
-    }, {
-      "id" : "92694b45",
-      "ticker" : "CAT",
-      "action" : "BUY",
-      "entryPrice" : 963.53,
-      "exitPrice" : 845.87,
-      "profitLoss" : -11765.999999999996,
-      "profitLossPct" : -12.211347856319987,
-      "status" : "CLOSED_LOSS",
-      "entryTime" : "2026-07-03T10:37:00.8746512-04:00[America/New_York]",
-      "exitTime" : "2026-07-27T12:18:27.417386-04:00[America/New_York]"
-    }, {
-      "id" : "5d11c878",
-      "ticker" : "CSCO",
-      "action" : "BUY",
-      "entryPrice" : 119.2017,
-      "exitPrice" : 109.81111871051276,
-      "profitLoss" : -939.0581289487244,
-      "profitLossPct" : -7.877892085001509,
-      "status" : "CLOSED_LOSS",
-      "entryTime" : "2026-07-14T11:37:58.7766959-04:00[America/New_York]",
-      "exitTime" : "2026-07-16T10:16:58.6679938-04:00[America/New_York]"
-    }, {
-      "id" : "8d443db4",
-      "ticker" : "NBIX",
-      "action" : "BUY",
-      "entryPrice" : 171.1333,
-      "exitPrice" : 170.88,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
-      "entryTime" : "2026-07-14T11:39:17.0581597-04:00[America/New_York]",
-      "exitTime" : "2026-07-17T16:59:25.7011813-04:00[America/New_York]"
-    }, {
-      "id" : "c5793763",
-      "ticker" : "DELL",
-      "action" : "BUY",
-      "entryPrice" : 421.24,
-      "exitPrice" : 0.0,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
-      "entryTime" : "2026-07-27T12:19:23.6397049-04:00[America/New_York]",
-      "exitTime" : null
-    }, {
-      "id" : "9ce80b36",
-      "ticker" : "KO",
-      "action" : "BUY",
-      "entryPrice" : 83.7558,
-      "exitPrice" : 0.0,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
-      "entryTime" : "2026-07-27T12:19:25.2053497-04:00[America/New_York]",
-      "exitTime" : null
-    } ],
     "MOMENTUM_FUNDAMENTAL_V1" : [ ]
   }
 }
