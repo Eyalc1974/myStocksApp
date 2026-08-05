@@ -19,14 +19,19 @@ import java.util.stream.Collectors;
 public class AIToolAgent {
 
     private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-    private static final Path NEW_STRATEGIES_DIR = Paths.get("newStrategies");
-    private static final Path HISTORY_FILE = Paths.get("newStrategies", "agent-history.json");
-    private static final Path AGENT_STATE_FILE = Paths.get("newStrategies", "agent-state.json");
-    private static final Path TRADE_LOG_FILE = Paths.get("newStrategies", "full-scan-trade-log.txt");
-    private static final Path RECS_FILE       = Paths.get("newStrategies", "buy-recommendations.json");
-    private static final Path DAILY_RECS_FILE = Paths.get("newStrategies", "daily-recommendations.txt");
-    private static final Path SCAN_LOG_FILE  = Paths.get("newStrategies", "scan-detail.log");
-    private static final Path EXAMINATION_LOG_FILE = Paths.get("newStrategies", "stock-examination-log.txt");
+    
+    // Base directory for strategy files - configurable via environment variable
+    // Default: "newStrategies" for local Windows development
+    // Docker/Railway: Set DATA_DIR environment variable to appropriate path (e.g., "/app/data")
+    private static final String DATA_DIR = System.getenv().getOrDefault("DATA_DIR", "newStrategies");
+    private static final Path NEW_STRATEGIES_DIR = Paths.get(DATA_DIR);
+    private static final Path HISTORY_FILE = Paths.get(DATA_DIR, "agent-history.json");
+    private static final Path AGENT_STATE_FILE = Paths.get(DATA_DIR, "agent-state.json");
+    private static final Path TRADE_LOG_FILE = Paths.get(DATA_DIR, "full-scan-trade-log.txt");
+    private static final Path RECS_FILE       = Paths.get(DATA_DIR, "buy-recommendations.json");
+    private static final Path DAILY_RECS_FILE = Paths.get(DATA_DIR, "daily-recommendations.txt");
+    private static final Path SCAN_LOG_FILE  = Paths.get(DATA_DIR, "scan-detail.log");
+    private static final Path EXAMINATION_LOG_FILE = Paths.get(DATA_DIR, "stock-examination-log.txt");
     private static final ZoneId NY = ZoneId.of("America/New_York");
     private static final ZoneId ISRAEL = ZoneId.of("Asia/Jerusalem");
     private static final DateTimeFormatter LOG_TIMESTAMP_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
@@ -6090,6 +6095,12 @@ public class AIToolAgent {
                             // Log BUY signal detected
                             logBuySignal(agent.id, ticker, decision.suggestedStopLoss / (1 - 0.03),
                                 decision.suggestedStopLoss, decision.suggestedTakeProfit);
+                            
+                            // Add to UI recommendations
+                            double entryPrice = decision.suggestedStopLoss / (1 - 0.03);
+                            addRecommendation(ticker, agent.id, entryPrice, decision.suggestedStopLoss, 
+                                decision.suggestedTakeProfit, decision.totalScore, decision.finalConviction,
+                                decision.fundamentalScore, decision.catalystScore, decision.institutionalFlowScore);
                         }
 
                         totalAnalyzed++;

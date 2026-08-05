@@ -1,7 +1,4 @@
 {
-  "2026-07-05" : {
-    "TIME_SERIES_DAILY" : 37
-  },
   "2026-07-16" : {
     "OVERVIEW" : 516,
     "CASH_FLOW" : 999,
@@ -55,5 +52,9 @@
     "NEWS_SENTIMENT" : 13,
     "OVERVIEW" : 5,
     "GLOBAL_QUOTE" : 9
+  },
+  "2026-08-05" : {
+    "TIME_SERIES_DAILY" : 230,
+    "GLOBAL_QUOTE" : 25
   }
 }

@@ -12,12 +12,16 @@ import java.util.concurrent.ConcurrentHashMap;
  * Fundamental data changes rarely (quarterly) → 7-day TTL.
  * Catalyst (news/sentiment) changes daily → 24-hour TTL.
  *
- * File layout: newStrategies/institutional-flow-cache/{ticker}_fundamental.json
- *              newStrategies/institutional-flow-cache/{ticker}_catalyst.json
+ * File layout: {DATA_DIR}/institutional-flow-cache/{ticker}_fundamental.json
+ *              {DATA_DIR}/institutional-flow-cache/{ticker}_catalyst.json
  */
 public class InstitutionalFlowCache {
 
-    private static final Path CACHE_DIR = Paths.get("newStrategies", "institutional-flow-cache");
+    // Base directory for cache files - configurable via environment variable
+    // Default: "newStrategies" for local Windows development
+    // Docker/Railway: Set DATA_DIR environment variable to appropriate path (e.g., "/app/data")
+    private static final String DATA_DIR = System.getenv().getOrDefault("DATA_DIR", "newStrategies");
+    private static final Path CACHE_DIR = Paths.get(DATA_DIR, "institutional-flow-cache");
     private static final long FUNDAMENTAL_TTL_MS = 7L * 24 * 60 * 60 * 1000; // 7 days
     private static final long CATALYST_TTL_MS    = 24L * 60 * 60 * 1000;     // 24 hours
 

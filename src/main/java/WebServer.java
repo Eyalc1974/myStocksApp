@@ -3341,7 +3341,8 @@ public class WebServer {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
                 try {
-                    java.nio.file.Path p = java.nio.file.Paths.get("newStrategies", "success-recipes.json");
+                    String dataDir = System.getenv().getOrDefault("DATA_DIR", "newStrategies");
+                    java.nio.file.Path p = java.nio.file.Paths.get(dataDir, "success-recipes.json");
                     if (!java.nio.file.Files.exists(p)) {
                         respondJson(ex, Map.of("message", "No recipes yet. Run /api/recipes/analyze first."), 200); return;
                     }
@@ -3357,7 +3358,8 @@ public class WebServer {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
                 try {
-                    java.nio.file.Path p = java.nio.file.Paths.get("newStrategies", "success-recipes.json");
+                    String dataDir = System.getenv().getOrDefault("DATA_DIR", "newStrategies");
+                    java.nio.file.Path p = java.nio.file.Paths.get(dataDir, "success-recipes.json");
                     if (!java.nio.file.Files.exists(p)) {
                         respondJson(ex, Map.of("message", "No recipes yet. Run /api/recipes/analyze first."), 200); return;
                     }
@@ -8804,8 +8806,9 @@ public class WebServer {
 
                 // Scan Detail Log Viewer
                 sb.append("<div class='card'><div class='title'>🔍 Scan Detail Log — Operations Trace</div>");
-                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:8px;'>Live log from <code>newStrategies/scan-detail.log</code> — auto-cleaned every 48h. Shows every agent decision: PASS, REJECT (with reason), MONITOR checks, EOD closes.</div>");
-                java.nio.file.Path scanLogPath = java.nio.file.Paths.get("newStrategies", "scan-detail.log");
+                String dataDir = System.getenv().getOrDefault("DATA_DIR", "newStrategies");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:8px;'>Live log from <code>" + dataDir + "/scan-detail.log</code> — auto-cleaned every 48h. Shows every agent decision: PASS, REJECT (with reason), MONITOR checks, EOD closes.</div>");
+                java.nio.file.Path scanLogPath = java.nio.file.Paths.get(dataDir, "scan-detail.log");
                 if (!java.nio.file.Files.exists(scanLogPath)) {
                     sb.append("<div style='color:#6b7280;padding:16px;text-align:center;'>No scan log yet — will appear after the first agent run.</div>");
                 } else {
@@ -8841,8 +8844,9 @@ public class WebServer {
 
                 // Stock Examination Log Viewer
                 sb.append("<div class='card'><div class='title'>📊 Stock Examination Log — Final Grades</div>");
-                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:8px;'>Live log from <code>newStrategies/stock-examination-log.txt</code> — shows every stock examined with final score breakdown.</div>");
-                java.nio.file.Path examLogPath = java.nio.file.Paths.get("newStrategies", "stock-examination-log.txt");
+                dataDir = System.getenv().getOrDefault("DATA_DIR", "newStrategies");
+                sb.append("<div style='color:#9ca3af;font-size:12px;margin-bottom:8px;'>Live log from <code>" + dataDir + "/stock-examination-log.txt</code> — shows every stock examined with final score breakdown.</div>");
+                java.nio.file.Path examLogPath = java.nio.file.Paths.get(dataDir, "stock-examination-log.txt");
                 if (!java.nio.file.Files.exists(examLogPath)) {
                     sb.append("<div style='color:#6b7280;padding:16px;text-align:center;'>No examination log yet — will appear after the first agent run.</div>");
                 } else {
@@ -9125,7 +9129,7 @@ public class WebServer {
                 sb.append("<div><span style='color:#a855f7;'>SWING</span> = swing-variants.json</div>");
                 sb.append("<div><span style='color:#eab308;'>INTRADAY</span> = intraday-variants.json</div>");
                 sb.append("<div><span style='color:#22c55e;'>SUCCESS</span> = momentum-success-2026.json</div>");
-                sb.append("<div><span style='color:#eab308;'>🔄</span> = Config evolved (saved to newStrategies/)</div>");
+                sb.append("<div><span style='color:#eab308;'>🔄</span> = Config evolved (saved to " + dataDir + "/)</div>");
                 sb.append("</div>");
                 sb.append("</div>");
 

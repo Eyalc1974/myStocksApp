@@ -280,7 +280,11 @@ public class LongTermCandidateFinder {
             .collect(Collectors.toList());
     }
 
-    private static final Path RS_CACHE_FILE = Paths.get("newStrategies", "rs-cache.json");
+    // Base directory for strategy files - configurable via environment variable
+    // Default: "newStrategies" for local Windows development
+    // Docker/Railway: Set DATA_DIR environment variable to appropriate path (e.g., "/app/data")
+    private static final String DATA_DIR = System.getenv().getOrDefault("DATA_DIR", "newStrategies");
+    private static final Path RS_CACHE_FILE = Paths.get(DATA_DIR, "rs-cache.json");
 
     /** Persist RS scores to disk so the next cold start also benefits from the filtered universe. */
     public static void persistRSCache() {

@@ -14,8 +14,12 @@ RUN ls -la target/*.jar
 # Runtime stage
 FROM eclipse-temurin:17-jre
 WORKDIR /app
+# Create data directory for strategy files
+RUN mkdir -p /app/data
 # Copy the built JAR from builder stage using wildcard
 COPY --from=builder /app/target/trading-model*.jar app.jar
+# Set environment variable for data directory
+ENV DATA_DIR=/app/data
 # Expose port if needed (adjust based on your application)
 EXPOSE 8099
 # Run the application

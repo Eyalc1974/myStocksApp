@@ -29,9 +29,14 @@ import java.util.stream.*;
 public class SuccessRecipeEngine {
 
     private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-    private static final Path HISTORY_PATH = Paths.get("newStrategies", "agent-history.json");
-    private static final Path STATE_PATH   = Paths.get("newStrategies", "agent-state.json");
-    private static final Path OUTPUT_PATH  = Paths.get("newStrategies", "success-recipes.json");
+    
+    // Base directory for strategy files - configurable via environment variable
+    // Default: "newStrategies" for local Windows development
+    // Docker/Railway: Set DATA_DIR environment variable to appropriate path (e.g., "/app/data")
+    private static final String DATA_DIR = System.getenv().getOrDefault("DATA_DIR", "newStrategies");
+    private static final Path HISTORY_PATH = Paths.get(DATA_DIR, "agent-history.json");
+    private static final Path STATE_PATH   = Paths.get(DATA_DIR, "agent-state.json");
+    private static final Path OUTPUT_PATH  = Paths.get(DATA_DIR, "success-recipes.json");
 
     // ── Public data model ───────────────────────────────────────────────────
 
