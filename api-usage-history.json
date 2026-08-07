@@ -14,8 +14,18 @@
     "OVERVIEW" : 20,
     "GLOBAL_QUOTE" : 16
   },
+  "2026-08-06" : {
+    "TIME_SERIES_DAILY" : 135,
+    "NEWS_SENTIMENT" : 9,
+    "OVERVIEW" : 1,
+    "GLOBAL_QUOTE" : 16
+  },
   "2026-07-17" : {
     "TIME_SERIES_DAILY" : 27
+  },
+  "2026-08-07" : {
+    "TIME_SERIES_DAILY" : 71,
+    "GLOBAL_QUOTE" : 10
   },
   "2026-07-29" : {
     "TIME_SERIES_DAILY" : 142,
@@ -54,7 +64,7 @@
     "GLOBAL_QUOTE" : 9
   },
   "2026-08-05" : {
-    "TIME_SERIES_DAILY" : 230,
+    "TIME_SERIES_DAILY" : 245,
     "GLOBAL_QUOTE" : 25
   }
 }

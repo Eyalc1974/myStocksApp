@@ -20,11 +20,11 @@ public class LongTermCandidateFinder {
         "AMD","INTC","QCOM","CSCO","IBM","NOW","SNOW","PANW","AMAT","MU",
         "LRCX","KLAC","TXN","ADI","NXPI","ASML","MRVL","WDAY","FTNT","ANET",
         "TEAM","ZS","OKTA","DDOG","MDB","NET","HPE","DELL","HPQ","STX",
-        "WDC","ON","MPWR","MCHP","SWKS","QRVO","TER","CDNS","SNPS",
+        "WDC","ON","MPWR","MCHP","SWKS","QRVO","TER","CDNS","SNPS","CRWD",
         // Additional semiconductor stocks
-        "ARM","SMCI","TSM","COHR","TSEM","WOLF","STM","UMC","ASX","MX",
-        // Additional AI stocks
-        "PLTR","AI","PATH","SOUN","UPST"
+        "ARM","TSM","COHR","TSEM","WOLF","STM","UMC","ASX","MX","ENT",
+        // Additional AI/Cloud stocks
+        "PLTR","AI","PATH","SOUN","UPST","ZM","DOCN","GH","NLOK"
     );
 
     public static final List<String> FINANCIALS_TICKERS = Arrays.asList(
@@ -40,7 +40,8 @@ public class LongTermCandidateFinder {
         "BMY","GILD","CVS","CI","HUM","ZTS","ISRG","SYK","VRTX","REGN",
         "BSX","EW","BDX","IDXX","DXCM","BIIB","MRNA","ILMN","ALGN","RMD",
         "COO","HCA","IQV","WAT","STE","HOLX","TECH","CRL","INCY","UTHR",
-        "NBIX","EXAS","VTRS","PODD","TFX","XRAY","DVA","DGX","LH","CTLT"
+        "NBIX","EXAS","VTRS","PODD","TFX","XRAY","DVA","DGX","LH","CTLT",
+        "DHR","BAX","RGEN","MD","GH","ALXO","SGEN","ARGX","SRPT","PTCT"
     );
 
     public static final List<String> ENERGY_TICKERS = Arrays.asList(
@@ -54,19 +55,22 @@ public class LongTermCandidateFinder {
         "CAT","DE","HON","GE","BA","LMT","RTX","NOC","GD","EMR",
         "UPS","FDX","ETN","PH","ITW","CSX","NSC","UNP","WM","RSG",
         "ROK","DOV","XYL","PCAR","FAST","URI","ODFL","EXPD","CHRW","PAYX",
-        "AME","GWW","CARR","IR","JCI","TT","MAS","AOS","PNR","ALLE"
+        "AME","GWW","CARR","IR","JCI","TT","MAS","AOS","PNR","ALLE",
+        "MMM","TXT","COL","PHM","DHI","LEN","NVR","TOL","KBH","MDC"
     );
 
     public static final List<String> CONSUMER_DISCRETIONARY_TICKERS = Arrays.asList(
         "AMZN","TSLA","HD","LOW","MCD","NKE","SBUX","BKNG","TGT","TJX",
         "ROST","MAR","HLT","YUM","CMG","EBAY","ETSY","EXPE","LULU","DG",
-        "DHI","LEN","PHM","NVR","POOL","TSCO","ULTA","BBY","DPZ","AZO"
+        "DHI","LEN","PHM","NVR","POOL","TSCO","ULTA","BBY","DPZ","AZO",
+        "F","GM","RCL","CCL","NCLH","WYNN","LVS","MGM","CZR","BYD"
     );
 
     public static final List<String> CONSUMER_STAPLES_TICKERS = Arrays.asList(
         "PG","KO","PEP","WMT","CL","KMB","MO","PM","EL","MDLZ",
         "COST","GIS","K","HSY","SJM","MKC","CHD","CLX","CPB","TSN",
-        "KR","WBA","TAP","BF.B","STZ","KDP","CAG","LW","HRL","BG"
+        "KR","WBA","TAP","BF.B","STZ","KDP","CAG","LW","HRL","BG",
+        "SYY","ADM","COTY","ELV","SPTN","FR","FLO","HAIN","POST","CL"
     );
 
     public static final List<String> UTILITIES_TICKERS = Arrays.asList(
@@ -76,17 +80,20 @@ public class LongTermCandidateFinder {
 
     public static final List<String> MATERIALS_TICKERS = Arrays.asList(
         "LIN","APD","SHW","FCX","NEM","DD","DOW","PPG","ECL","ALB",
-        "VMC","MLM","NUE","STLD","X","CF","MOS","FMC","IFF","CE"
+        "VMC","MLM","NUE","STLD","X","CF","MOS","FMC","IFF","CE",
+        "BHP","RIO","AA","GOLD","EMN","LYB","IP","PKG","AVY","SEE"
     );
 
     public static final List<String> REAL_ESTATE_TICKERS = Arrays.asList(
         "AMT","PLD","CCI","EQIX","SPG","O","PSA","WELL","DLR","VTR",
-        "AVB","EQR","ESS","MAA","UDR","CPT","BXP","ARE","HST","PEAK"
+        "AVB","EQR","ESS","MAA","UDR","CPT","BXP","ARE","HST","PEAK",
+        "VNO","SLG","KIM","FRT","REG","ADC","CBRE","PRO","EXR","VICI"
     );
 
     public static final List<String> COMMUNICATION_SERVICES_TICKERS = Arrays.asList(
         "DIS","NFLX","CMCSA","TMUS","VZ","T","CHTR","EA","TTWO","ROKU",
-        "GOOGL","META","SNAP","PINS","MTCH","SPOT","WBD","PARA","FOX","FOXA"
+        "GOOGL","META","SNAP","PINS","MTCH","SPOT","WBD","PARA","FOX","FOXA",
+        "LYV","OMC","IPG","DISH","S","LUMN","ATUS","CCOI","WIN","GLUU"
     );
 
     // Sector enum for configuration
