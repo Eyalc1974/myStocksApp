@@ -18,6 +18,8 @@ WORKDIR /app
 RUN mkdir -p /app/data
 # Copy the built JAR from builder stage using wildcard
 COPY --from=builder /app/target/trading-model*.jar app.jar
+# Copy local newStrategies data to seed the container with existing data
+COPY newStrategies/ /app/data/
 # Set environment variable for data directory
 ENV DATA_DIR=/app/data
 # Expose port if needed (adjust based on your application)
