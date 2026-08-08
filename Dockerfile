@@ -23,6 +23,6 @@ COPY newStrategies/ /app/data/
 # Set environment variable for data directory
 ENV DATA_DIR=/app/data
 # Expose port if needed (adjust based on your application)
-EXPOSE 8099
+EXPOSE 8100
 # Run the application
 CMD ["java", "-jar", "app.jar"]
