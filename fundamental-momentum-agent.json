@@ -1,0 +1,42 @@
+{
+  "description": "Fundamental Momentum Agent - High conviction trades based on earnings revisions, relative strength, and catalysts",
+  "enabled": false,
+  "variants": [
+    {
+      "id": "FUND_MOMENTUM_V1",
+      "name": "Fundamental Momentum Agent",
+      "nameHe": "סוכן מומנטום פונדמנטלי",
+      "description": "Strict entry filters: Revenue Growth > 15%, EPS Growth > 20%, Relative Strength 90+, Sector Strength above average, Positive Catalyst, RVOL > 1.5. Max 3 recommendations per day.",
+      "disabled": true,
+      "stocksPerVariant": 3,
+      "entryType": "FUNDAMENTAL_MOMENTUM",
+      "entryFilters": {
+        "rvolMin": 1.5,
+        "revenueGrowthMin": 15.0,
+        "epsGrowthMin": 20.0,
+        "relativeStrengthScoreMin": 90,
+        "sectorStrengthAboveAverage": true,
+        "catalystScoreMin": 4,
+        "earningsSurprisePositive": true,
+        "epsRevisionPositive": true,
+        "priceAboveSMA50": true,
+        "priceAboveSMA200": true
+      },
+      "riskManagement": {
+        "stopLossPct": 5.0,
+        "takeProfitPct": 15.0,
+        "trailingStopPct": 4.0,
+        "atrMultiplier": 2.0,
+        "riskRewardRatio": 3.0
+      },
+      "scoring": {
+        "earningsRevisionWeight": 25,
+        "relativeStrengthWeight": 25,
+        "catalystWeight": 20,
+        "sectorStrengthWeight": 15,
+        "volumeWeight": 10,
+        "technicalWeight": 5
+      }
+    }
+  ]
+}

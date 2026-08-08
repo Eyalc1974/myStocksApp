@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.UUID;
 
 public class WebServer {
 
@@ -41,6 +42,10 @@ public class WebServer {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private static final Object RUN_CAPTURE_LOCK = new Object();
+    
+    // Session management
+    private static final Map<String, String> activeSessions = new HashMap<>();
+    private static final Object sessionLock = new Object();
     
     // Swing scan state for background scanning
     private static volatile boolean swingScanRunning = false;
@@ -1347,6 +1352,10 @@ public class WebServer {
                 ".indicator-label{font-weight:600;color:#e5e7eb;}\n" +
                 ".indicator-value{color:#93c5fd;display:inline-block;margin-left:6px;}\n" +
                 ".indicator-text{color:#cbd5e1;margin-top:4px;}\n" +
+                ".user-info{position:fixed;top:16px;right:16px;background:rgba(15,23,42,0.95);border:1px solid rgba(148,163,184,0.25);border-radius:8px;padding:8px 16px;display:flex;align-items:center;gap:12px;z-index:1000;}\n" +
+                ".user-name{color:#e5e7eb;font-weight:500;font-size:14px;}\n" +
+                ".logout-btn{background:#dc2626;border:none;color:white;padding:6px 12px;border-radius:6px;font-size:13px;cursor:pointer;transition:background .2s;}\n" +
+                ".logout-btn:hover{background:#b91c1c;}\n" +
                 "</style>" +
                 "</head>" +
                 "<body>" +
@@ -1356,6 +1365,10 @@ public class WebServer {
                 "    <div>LOADING ...</div>" +
                 "    <div style=\"margin-top:4px;color:#9ca3af;\">Processing request...</div>" +
                 "</div>" +
+                "</div>" +
+                "<div id=\"user-info\" class=\"user-info\" style=\"display:none;\">" +
+                "  <span class=\"user-name\" id=\"user-name\"></span>" +
+                "  <button class=\"logout-btn\" onclick=\"logout()\">Sign Out</button>" +
                 "</div>" +
                 "<div class=\"container\">" +
                 "<h1>AlphaPoint AI</h1>" +
@@ -1373,7 +1386,7 @@ public class WebServer {
                 "</div>" +
                 (body == null ? "" : body) +
                 "</div>" +
-                "<script>(function(){function show(){var el=document.getElementById('loading');if(el){el.style.display='flex';}};var forms=document.querySelectorAll('form');forms.forEach(function(f){f.addEventListener('submit',function(){try{var t=(f.getAttribute('target')||'').toLowerCase();if(t==='_blank') return;}catch(e){} show();});});})();</script>" +
+                "<script>(function(){function show(){var el=document.getElementById('loading');if(el){el.style.display='flex';}};var forms=document.querySelectorAll('form');forms.forEach(function(f){f.addEventListener('submit',function(){try{var t=(f.getAttribute('target')||'').toLowerCase();if(t==='_blank') return;}catch(e){} show();});});})();async function checkAuth(){try{const res=await fetch('/auth/me');if(res.ok){const data=await res.json();if(data.authenticated){document.getElementById('user-info').style.display='flex';document.getElementById('user-name').textContent=data.username;}}}catch(e){}}async function logout(){try{await fetch('/auth/logout',{method:'POST'});window.location.href='/login';}catch(e){window.location.href='/login';}}checkAuth();</script>" +
                 "</body></html>";
         return base;
     }
@@ -2383,6 +2396,33 @@ public class WebServer {
         return map;
     }
 
+    private static String getSessionId(HttpExchange ex) {
+        String cookieHeader = ex.getRequestHeaders().getFirst("Cookie");
+        if (cookieHeader != null) {
+            for (String cookie : cookieHeader.split(";")) {
+                String[] parts = cookie.trim().split("=", 2);
+                if (parts.length == 2 && parts[0].equals("session")) {
+                    return parts[1];
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String getAuthenticatedUser(HttpExchange ex) {
+        String sessionId = getSessionId(ex);
+        if (sessionId != null) {
+            synchronized (sessionLock) {
+                return activeSessions.get(sessionId);
+            }
+        }
+        return null;
+    }
+
+    private static boolean isAuthenticated(HttpExchange ex) {
+        return getAuthenticatedUser(ex) != null;
+    }
+
     private static String readBody(HttpExchange ex) throws IOException {
         int contentLength = 0;
         String len = ex.getRequestHeaders().getFirst("Content-length");
@@ -2659,6 +2699,11 @@ public class WebServer {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) {
                     respondHtml(ex, htmlPage(""), 200);
+                    return;
+                }
+                if (!isAuthenticated(ex)) {
+                    String html = Files.readString(Paths.get("src/main/resources/login.html"));
+                    respondHtml(ex, html, 200);
                     return;
                 }
                 String content = "<div class='card'><div class='title'>Analyze single symbol</div>"+
@@ -8094,6 +8139,11 @@ public class WebServer {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) {
                     respondHtml(ex, htmlPage(""), 200); return;
                 }
+                if (!isAuthenticated(ex)) {
+                    String html = Files.readString(Paths.get("src/main/resources/login.html"));
+                    respondHtml(ex, html, 200);
+                    return;
+                }
 
                 // Initialize AITool if needed
                 try { AIToolAgent.initialize(); } catch (Exception ignore) {}
@@ -11836,6 +11886,238 @@ public class WebServer {
                         escapeHtml(result) + "</pre></div>" + gallery.toString() + analystsSection.toString() + monitoringSection.toString()
                         + "<script>(function(){try{var AC=window.AudioContext||window.webkitAudioContext;var ctx=new AC();function beep(f,d,t){var o=ctx.createOscillator();var g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(0.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.12,ctx.currentTime+0.02);o.start(t);g.gain.exponentialRampToValueAtTime(0.0001,t+d-0.05);o.stop(t+d);}var now=ctx.currentTime+0.05;beep(880,0.25,now);beep(1100,0.25,now+0.3);beep(1320,0.25,now+0.6);}catch(e){}})();</script>");
                 respondHtml(ex, html, 200);
+            }
+        });
+
+        // Authentication endpoints
+        server.createContext("/login", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, "", 405); return; }
+                String html = Files.readString(Paths.get("src/main/resources/login.html"));
+                respondHtml(ex, html, 200);
+            }
+        });
+
+        server.createContext("/register", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, "", 405); return; }
+                String html = Files.readString(Paths.get("src/main/resources/register.html"));
+                respondHtml(ex, html, 200);
+            }
+        });
+
+        server.createContext("/contact", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (ex.getRequestMethod().equalsIgnoreCase("GET")) {
+                    String html = Files.readString(Paths.get("src/main/resources/contact.html"));
+                    respondHtml(ex, html, 200);
+                } else if (ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    try {
+                        String body = readBody(ex);
+                        JsonNode json = JSON.readTree(body);
+                        String name = json.get("name").asText();
+                        String email = json.get("email").asText();
+                        String subject = json.get("subject").asText();
+                        String message = json.get("message").asText();
+                        
+                        // Save contact message to file
+                        Path contactPath = Paths.get(System.getenv().getOrDefault("DATA_DIR", "newStrategies"), "contact-messages.json");
+                        Files.createDirectories(contactPath.getParent());
+                        
+                        com.fasterxml.jackson.databind.node.ArrayNode messages;
+                        if (Files.exists(contactPath)) {
+                            messages = (com.fasterxml.jackson.databind.node.ArrayNode) JSON.readTree(Files.readString(contactPath));
+                        } else {
+                            messages = JSON.createArrayNode();
+                        }
+                        
+                        com.fasterxml.jackson.databind.node.ObjectNode newMessage = JSON.createObjectNode();
+                        newMessage.put("name", name);
+                        newMessage.put("email", email);
+                        newMessage.put("subject", subject);
+                        newMessage.put("message", message);
+                        newMessage.put("createdAt", java.time.Instant.now().toString());
+                        
+                        messages.add(newMessage);
+                        Files.writeString(contactPath, JSON.writerWithDefaultPrettyPrinter().writeValueAsString(messages));
+                        
+                        respondJson(ex, Map.of("success", true, "message", "Contact message saved"), 200);
+                    } catch (Exception e) {
+                        respondJson(ex, Map.of("error", "Failed to save contact message: " + e.getMessage()), 500);
+                    }
+                } else {
+                    respondHtml(ex, "", 405);
+                }
+            }
+        });
+
+        server.createContext("/forgot-password", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, "", 405); return; }
+                String html = Files.readString(Paths.get("src/main/resources/forgot-password.html"));
+                respondHtml(ex, html, 200);
+            }
+        });
+
+        server.createContext("/auth/login", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                
+                try {
+                    String body = readBody(ex);
+                    JsonNode json = JSON.readTree(body);
+                    String username = json.get("username").asText();
+                    String password = json.get("password").asText();
+                    
+                    // Load users from file
+                    Path usersPath = Paths.get(System.getenv().getOrDefault("DATA_DIR", "newStrategies"), "users.json");
+                    if (!Files.exists(usersPath)) {
+                        respondJson(ex, Map.of("error", "User database not found"), 500);
+                        return;
+                    }
+                    
+                    JsonNode usersJson = JSON.readTree(Files.readString(usersPath));
+                    boolean found = false;
+                    String role = "user";
+                    
+                    for (JsonNode user : usersJson.get("users")) {
+                        if (user.get("username").asText().equals(username)) {
+                            String storedHash = user.get("passwordHash").asText();
+                            if (PasswordUtil.verifyPassword(password, storedHash)) {
+                                found = true;
+                                role = user.get("role").asText();
+                            }
+                            break;
+                        }
+                    }
+                    
+                    if (found) {
+                        // Create session
+                        String sessionId = UUID.randomUUID().toString();
+                        synchronized (sessionLock) {
+                            activeSessions.put(sessionId, username);
+                        }
+                        
+                        // Set session cookie
+                        ex.getResponseHeaders().add("Set-Cookie", "session=" + sessionId + "; Path=/; HttpOnly");
+                        respondJson(ex, Map.of("success", true, "username", username, "role", role), 200);
+                    } else {
+                        respondJson(ex, Map.of("error", "Invalid username or password"), 401);
+                    }
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", "Login failed: " + e.getMessage()), 500);
+                }
+            }
+        });
+
+        server.createContext("/auth/register", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                
+                try {
+                    String body = readBody(ex);
+                    JsonNode json = JSON.readTree(body);
+                    String username = json.get("username").asText();
+                    String email = json.get("email").asText();
+                    String password = json.get("password").asText();
+                    
+                    // Load users from file
+                    Path usersPath = Paths.get(System.getenv().getOrDefault("DATA_DIR", "newStrategies"), "users.json");
+                    Files.createDirectories(usersPath.getParent());
+                    
+                    JsonNode usersJson;
+                    if (Files.exists(usersPath)) {
+                        usersJson = JSON.readTree(Files.readString(usersPath));
+                    } else {
+                        usersJson = JSON.createObjectNode();
+                        ((com.fasterxml.jackson.databind.node.ObjectNode) usersJson).putArray("users");
+                    }
+                    
+                    // Check if username already exists
+                    for (JsonNode user : usersJson.get("users")) {
+                        if (user.get("username").asText().equals(username)) {
+                            respondJson(ex, Map.of("error", "Username already exists"), 400);
+                            return;
+                        }
+                        if (user.get("email").asText().equals(email)) {
+                            respondJson(ex, Map.of("error", "Email already registered"), 400);
+                            return;
+                        }
+                    }
+                    
+                    // Add new user
+                    String passwordHash = PasswordUtil.hashPassword(password);
+                    com.fasterxml.jackson.databind.node.ObjectNode newUser = JSON.createObjectNode();
+                    newUser.put("username", username);
+                    newUser.put("email", email);
+                    newUser.put("passwordHash", passwordHash);
+                    newUser.put("role", "user");
+                    newUser.put("createdAt", java.time.Instant.now().toString());
+                    
+                    ((com.fasterxml.jackson.databind.node.ArrayNode) usersJson.get("users")).add(newUser);
+                    
+                    // Save to file
+                    Files.writeString(usersPath, JSON.writerWithDefaultPrettyPrinter().writeValueAsString(usersJson));
+                    
+                    respondJson(ex, Map.of("success", true, "message", "Account created successfully"), 201);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", "Registration failed: " + e.getMessage()), 500);
+                }
+            }
+        });
+
+        server.createContext("/auth/logout", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                
+                try {
+                    String sessionId = getSessionId(ex);
+                    if (sessionId != null) {
+                        synchronized (sessionLock) {
+                            activeSessions.remove(sessionId);
+                        }
+                    }
+                    
+                    ex.getResponseHeaders().add("Set-Cookie", "session=; Path=/; HttpOnly; Max-Age=0");
+                    respondJson(ex, Map.of("success", true), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", "Logout failed: " + e.getMessage()), 500);
+                }
+            }
+        });
+
+        server.createContext("/auth/forgot-password", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { respondJson(ex, Map.of("error", "POST only"), 405); return; }
+                
+                try {
+                    String body = readBody(ex);
+                    JsonNode json = JSON.readTree(body);
+                    String email = json.get("email").asText();
+                    
+                    // For security, we don't reveal if email exists or not
+                    // In production, this would send an email with reset link
+                    respondJson(ex, Map.of("success", true, "message", "If an account exists with this email, you will receive reset instructions"), 200);
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", "Failed to process request: " + e.getMessage()), 500);
+                }
+            }
+        });
+
+        server.createContext("/auth/me", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondJson(ex, Map.of("error", "GET only"), 405); return; }
+                
+                try {
+                    String username = getAuthenticatedUser(ex);
+                    if (username != null) {
+                        respondJson(ex, Map.of("username", username, "authenticated", true), 200);
+                    } else {
+                        respondJson(ex, Map.of("authenticated", false), 401);
+                    }
+                } catch (Exception e) {
+                    respondJson(ex, Map.of("error", "Failed to get user info: " + e.getMessage()), 500);
+                }
             }
         });
 

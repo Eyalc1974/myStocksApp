@@ -32,11 +32,8 @@
     "TIME_SERIES_DAILY" : 142,
     "GLOBAL_QUOTE" : 11
   },
-  "2026-07-08" : {
-    "TIME_SERIES_DAILY" : 378,
-    "NEWS_SENTIMENT" : 23,
-    "OVERVIEW" : 15,
-    "GLOBAL_QUOTE" : 25
+  "2026-08-08" : {
+    "TIME_SERIES_DAILY" : 2
   },
   "2026-07-30" : {
     "TIME_SERIES_DAILY" : 297,

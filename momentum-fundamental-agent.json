@@ -1,0 +1,56 @@
+{
+  "description": "Momentum Fundamental Agent - Combines real-time momentum from Top Gainers with fundamental quality filters",
+  "enabled": true,
+  "variants": [
+    {
+      "id": "MOMENTUM_FUNDAMENTAL_V1",
+      "name": "Momentum Fundamental Agent",
+      "nameHe": "סוכן מומנטום פונדמנטלי",
+      "description": "Two-stage filter: Start from Top 20 Gainers (real momentum), then apply fundamental quality filters. Revenue Growth > 10%, Free Cash Flow positive, Profit Margin > 8%, Debt/Equity < 1.0, Price above SMA50/200, RVOL > 1.2. Best run 17:30-19:30 Israel time. Max 3 recommendations per day.",
+      "disabled": false,
+      "stocksPerVariant": 3,
+      "strategyType": "MOMENTUM_FUNDAMENTAL",
+      "entryType": "MOMENTUM_FUNDAMENTAL",
+      "dataSource": "TOP_GAINERS_LOSERS",
+      "entryFilters": {
+        "gainersMinPct": 2.0,
+        "gainersMaxPct": 8.0,
+        "maxCandidates": 20,
+        "rvolMin": 1.2,
+        "rsiMin": 45.0,
+        "rsiMax": 75.0,
+        "sma50Required": true,
+        "sma200Required": true,
+        "atrMinPct": 1.5,
+        "revenueGrowthMin": 10.0,
+        "profitMarginMin": 8.0,
+        "debtToEquityMax": 1.0,
+        "freeCashFlowPositive": true,
+        "epsGrowthMin": 5.0,
+        "dividendBonus": true,
+        "cacheTTLDays": 7
+      },
+      "riskManagement": {
+        "stopLossPct": 4.5,
+        "takeProfitPct": 14.0,
+        "trailingStopPct": 5.5,
+        "atrMultiplier": 2.0,
+        "riskRewardRatio": 3.0,
+        "maxPositionPct": 0.07,
+        "maxHoldDays": 12
+      },
+      "scoring": {
+        "momentumWeight": 30,
+        "fundamentalQualityWeight": 30,
+        "volumeWeight": 20,
+        "technicalWeight": 15,
+        "dividendWeight": 5
+      },
+      "limits": {
+        "maxRecommendationsPerDay": 3,
+        "maxOpenTrades": 3,
+        "signalCooldownHours": 48
+      }
+    }
+  ]
+}

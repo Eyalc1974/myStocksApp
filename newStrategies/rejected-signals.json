@@ -1,0 +1,61 @@
+[ {
+  "ticker" : "MU",
+  "agentId" : "MASTER_5_PULLBACK_MA20",
+  "agentName" : "Pullback to MA20 (Master)",
+  "entryPrice" : 1080.595,
+  "stopLoss" : 847.4362155631974,
+  "takeProfit" : 1210.2664000000002,
+  "score" : 11,
+  "finalConviction" : 46.666666666666664,
+  "rejectReason" : "Agent at max open positions (5/5)",
+  "timestamp" : "2026-07-01T10:40:47.2377111-04:00[America/New_York]",
+  "sector" : "TECHNOLOGY"
+}, {
+  "ticker" : "PSA",
+  "agentId" : "MASTER_5_PULLBACK_MA20",
+  "agentName" : "Pullback to MA20 (Master)",
+  "entryPrice" : 322.2786,
+  "stopLoss" : 304.9167358630835,
+  "takeProfit" : 360.95203200000003,
+  "score" : 10,
+  "finalConviction" : 43.333333333333336,
+  "rejectReason" : "Agent at max open positions (5/5)",
+  "timestamp" : "2026-07-01T10:40:47.2718923-04:00[America/New_York]",
+  "sector" : "REAL_ESTATE"
+}, {
+  "ticker" : "MU",
+  "agentId" : "MASTER_5_PULLBACK_MA20",
+  "agentName" : "Pullback to MA20 (Master)",
+  "entryPrice" : 1051.39,
+  "stopLoss" : 822.8477703188875,
+  "takeProfit" : 1177.5568000000003,
+  "score" : 13,
+  "finalConviction" : 50.0,
+  "rejectReason" : "Agent at max open positions (5/5)",
+  "timestamp" : "2026-07-02T10:22:39.0561383-04:00[America/New_York]",
+  "sector" : "TECHNOLOGY"
+}, {
+  "ticker" : "LRCX",
+  "agentId" : "MASTER_5_PULLBACK_MA20",
+  "agentName" : "Pullback to MA20 (Master)",
+  "entryPrice" : 381.5377,
+  "stopLoss" : 316.2628602973562,
+  "takeProfit" : 427.322224,
+  "score" : 11,
+  "finalConviction" : 47.916666666666664,
+  "rejectReason" : "Agent at max open positions (5/5)",
+  "timestamp" : "2026-07-02T10:22:39.101099-04:00[America/New_York]",
+  "sector" : "TECHNOLOGY"
+}, {
+  "ticker" : "CAT",
+  "agentId" : "MASTER_5_PULLBACK_MA20",
+  "agentName" : "Pullback to MA20 (Master)",
+  "entryPrice" : 992.89,
+  "stopLoss" : 888.928229429863,
+  "takeProfit" : 1112.0368,
+  "score" : 11,
+  "finalConviction" : 46.666666666666664,
+  "rejectReason" : "Agent at max open positions (5/5)",
+  "timestamp" : "2026-07-02T10:41:18.0570123-04:00[America/New_York]",
+  "sector" : "INDUSTRIALS"
+} ]

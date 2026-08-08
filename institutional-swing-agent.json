@@ -1,0 +1,39 @@
+{
+  "description": "Institutional Swing Agent - High conviction swing trades with institutional-grade filters",
+  "enabled": true,
+  "variants": [
+    {
+      "id": "INST_SWING_V1",
+      "name": "Institutional Swing Agent",
+      "nameHe": "סוכן סווינג אינסטיטוציונלי",
+      "description": "Strict entry filters: Above SMA50, Relative Strength vs SPY, High Volume, Good Fundamentals, Positive Catalyst, Normal Market Regime. Max 3 recommendations per day.",
+      "stocksPerVariant": 3,
+      "entryType": "INSTITUTIONAL_SWING",
+      "entryFilters": {
+        "rvolMin": 1.5,
+        "rsiMin": 45,
+        "rsiMax": 75,
+        "sma50Required": true,
+        "sma200Required": false,
+        "relativeStrengthSpy20dMin": 1.02,
+        "fundamentalScoreMin": 5,
+        "catalystScoreMin": 4,
+        "marketRegimeRequired": "NORMAL"
+      },
+      "riskManagement": {
+        "stopLossPct": 4.0,
+        "takeProfitPct": 12.0,
+        "trailingStopPct": 3.0,
+        "atrMultiplier": 2.5,
+        "riskRewardRatio": 3.0
+      },
+      "scoring": {
+        "trendWeight": 25,
+        "volumeWeight": 20,
+        "relativeStrengthWeight": 20,
+        "fundamentalWeight": 20,
+        "catalystWeight": 15
+      }
+    }
+  ]
+}

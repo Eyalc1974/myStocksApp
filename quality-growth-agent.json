@@ -1,0 +1,42 @@
+{
+  "description": "Quality Growth Agent - Combines fundamental quality, momentum, and catalysts for high-conviction trades",
+  "enabled": false,
+  "variants": [
+    {
+      "id": "QUALITY_GROWTH_V1",
+      "name": "Quality Growth Agent",
+      "nameHe": "סוכן צמיחה איכותית",
+      "description": "Strict fundamental quality filters + Momentum + Catalysts. Only buys quality businesses with institutional support and clear catalysts. Max 2 recommendations per day.",
+      "disabled": true,
+      "stocksPerVariant": 2,
+      "entryType": "QUALITY_GROWTH",
+      "entryFilters": {
+        "rvolMin": 1.5,
+        "revenueGrowthMin": 15.0,
+        "epsGrowthMin": 20.0,
+        "roeMin": 15.0,
+        "debtToEquityMax": 0.5,
+        "relativeStrengthScoreMin": 80,
+        "priceAboveSMA50": true,
+        "priceAboveSMA200": true,
+        "earningsBeatRequired": true,
+        "analystUpgradeRequired": true,
+        "guidanceRaiseRequired": true
+      },
+      "riskManagement": {
+        "stopLossPct": 5.0,
+        "takeProfitPct": 20.0,
+        "trailingStopPct": 5.0,
+        "atrMultiplier": 2.0,
+        "riskRewardRatio": 4.0
+      },
+      "scoring": {
+        "fundamentalQualityWeight": 30,
+        "momentumWeight": 25,
+        "catalystWeight": 25,
+        "volumeWeight": 15,
+        "institutionalFlowWeight": 5
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "users" : [ {
+    "username" : "ceyal74",
+    "email" : "ceyal74@example.com",
+    "passwordHash" : "9a4b87a5e06e44ef9853231f143ccab901fda220f140cc2e46a33f8faba6d95d",
+    "role" : "admin",
+    "createdAt" : "2026-08-08T00:00:00Z"
+  }, {
+    "username" : "ceyal742",
+    "email" : "ceyal742@gmail.com",
+    "passwordHash" : "e2d61dfa08b4688508e365c69cb4f47ced8be3b42ff3e4a0d29a28198050c361",
+    "role" : "user",
+    "createdAt" : "2026-08-08T08:42:36.170008200Z"
+  } ]
+}
