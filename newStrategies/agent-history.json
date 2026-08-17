@@ -1,5 +1,5 @@
 {
-  "lastUpdated" : "2026-08-05T01:10:17.7710489-04:00[America/New_York]",
+  "lastUpdated" : "2026-08-17T11:43:52.4890985-04:00[America/New_York]",
   "tradeHistory" : {
     "I5_VWAP_RETEST" : [ {
       "id" : "8d4a37e7",
@@ -326,22 +326,33 @@
       "ticker" : "MAS",
       "action" : "BUY",
       "entryPrice" : 77.075,
-      "exitPrice" : 0.0,
-      "profitLoss" : 0.0,
-      "profitLossPct" : 0.0,
-      "status" : "OPEN",
+      "exitPrice" : 73.0901,
+      "profitLoss" : -398.4899999999996,
+      "profitLossPct" : -5.170158936101195,
+      "status" : "CLOSED_LOSS",
       "entryTime" : "2026-08-04T16:51:36.968252-04:00[America/New_York]",
-      "exitTime" : null
+      "exitTime" : "2026-08-17T11:42:41.569618-04:00[America/New_York]"
     }, {
       "id" : "0b5c5a3a",
       "ticker" : "MAS",
       "action" : "BUY",
       "entryPrice" : 77.08,
+      "exitPrice" : 73.0901,
+      "profitLoss" : -398.98999999999916,
+      "profitLossPct" : -5.176310326933046,
+      "status" : "CLOSED_LOSS",
+      "entryTime" : "2026-08-05T01:10:14.841396-04:00[America/New_York]",
+      "exitTime" : "2026-08-17T11:42:41.8843503-04:00[America/New_York]"
+    }, {
+      "id" : "c4bbc5c2",
+      "ticker" : "ILMN",
+      "action" : "BUY",
+      "entryPrice" : 193.03,
       "exitPrice" : 0.0,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
-      "entryTime" : "2026-08-05T01:10:14.841396-04:00[America/New_York]",
+      "entryTime" : "2026-08-17T11:43:48.7116558-04:00[America/New_York]",
       "exitTime" : null
     } ],
     "I2_VWAP_PULLBACK" : [ ],

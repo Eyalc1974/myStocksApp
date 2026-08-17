@@ -36,8 +36,8 @@ public class AIToolAgent {
     private static final ZoneId ISRAEL = ZoneId.of("Asia/Jerusalem");
     private static final DateTimeFormatter LOG_TIMESTAMP_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
     
-    // AlphaPoint AI recommendation: Filter to TOP 2-3 signals per run to reduce noise
-    private static final int MAX_SIGNALS_PER_RUN = 3;
+    // AlphaPoint AI recommendation: Filter to TOP 10 signals per run to increase variety
+    private static final int MAX_SIGNALS_PER_RUN = 10;
     
     // Discord webhook for notifications
     private static final String DISCORD_WEBHOOK_URL = System.getenv("DAILY_SIM_DISCORD_WEBHOOK_URL");
@@ -305,7 +305,7 @@ public class AIToolAgent {
     private static final List<ScanRecommendation> recentRecs = new java.util.concurrent.CopyOnWriteArrayList<>();
     private static final int MAX_RECS = 100;
     
-    // AlphaPoint AI recommendation: Track signals per run to filter to TOP 2-3
+    // AlphaPoint AI recommendation: Track signals per run to filter to TOP 10
     private static volatile int signalsSentThisRun = 0;
     private static volatile int currentRunNumber = 0;
     private static volatile boolean isScheduledRun = false; // true = scheduled scan, false = manual scan
@@ -372,17 +372,17 @@ public class AIToolAgent {
             sb.append("Total Recommendations: ").append(todayRecs.size()).append("\n");
             sb.append("================================================================================\n\n");
             
-            // Group by agent and sort by conviction (descending), then take top 3 per agent
+            // Group by agent and sort by conviction (descending), then take top 10 per agent
             Map<String, List<ScanRecommendation>> byAgent = todayRecs.stream()
                 .collect(Collectors.groupingBy(r -> r.agentId));
-            
+
             for (Map.Entry<String, List<ScanRecommendation>> entry : byAgent.entrySet()) {
                 String agentId = entry.getKey();
                 List<ScanRecommendation> agentRecs = entry.getValue();
-                
-                // Sort by conviction (descending) and take top 3
+
+                // Sort by conviction (descending) and take top 10
                 agentRecs.sort((a, b) -> Double.compare(b.finalConviction, a.finalConviction));
-                List<ScanRecommendation> topRecs = agentRecs.stream().limit(3).collect(Collectors.toList());
+                List<ScanRecommendation> topRecs = agentRecs.stream().limit(10).collect(Collectors.toList());
                 
                 sb.append("AGENT: ").append(agentId).append("\n");
                 sb.append("--------------------------------------------------------------------------------\n");
@@ -2281,6 +2281,9 @@ public class AIToolAgent {
         // ── CLOSE EXPIRED POSITIONS: settle any trade past maxHoldDays using pre-fetched prices ──
         closeExpiredPositions(prefetchedJson);
 
+        // Shuffle tickers to ensure random selection across runs (avoid always processing same stocks first)
+        Collections.shuffle(allTickers);
+
         for (int i = 0; i < allTickers.size(); i++) {
             String ticker = allTickers.get(i);
             runCurrentTicker = ticker;
@@ -2401,10 +2404,13 @@ public class AIToolAgent {
                                 upsertPendingSignal(ticker, strategy, d);
                             }
                         } else {
+                            String reasonTag = (d.rejectReason != null && !d.rejectReason.isEmpty())
+                                ? " | Reason: " + d.rejectReason
+                                : "";
                             writeScanLog("[❌ SCORE] " + ticker + " | " + strategy.id +
                                 " — Score=" + d.totalScore + "/12 < " + SCORE_THRESHOLD +
                                 " (V=" + d.volumeScore + " T=" + d.trendScore +
-                                " M=" + d.momentumScore + " S=" + d.setupScore + ")");
+                                " M=" + d.momentumScore + " S=" + d.setupScore + ")" + reasonTag);
                             // Score dropped → expire any watchlist entry for this ticker/strategy
                             expirePendingSignal(ticker, strategy.id);
                         }
@@ -2415,6 +2421,12 @@ public class AIToolAgent {
                     for (AgentConfig agent : legacyAgents) {
                         try {
                             synchronized (LOCK) { systemState.currentAgent = agent.id; }
+                            
+                            // Skip market filter agents - they don't generate individual stock signals
+                            if ("MARKET_FILTER".equals(agent.type)) {
+                                continue;
+                            }
+                            
                             if (hasOpenPositionToday(agent.id, ticker)) {
                                 writeScanLog("[SKIP] " + ticker + " | " + agent.id + " — already has open position today");
                                 continue;
@@ -6047,6 +6059,8 @@ public class AIToolAgent {
             
             // Get all tickers from sector banks (all sectors combined)
             List<String> allTickers = LongTermCandidateFinder.getAllSectorTickers();
+            // Shuffle tickers to ensure random selection across runs
+            Collections.shuffle(allTickers);
             topAgentsFullScanTotal = allTickers.size() * agentsToRun.size();
             
             // Send Discord scan-start notification
@@ -6069,6 +6083,12 @@ public class AIToolAgent {
             for (AgentPerformance perfInfo : agentsToRun) {
                 AgentConfig agent = systemState.agents.get(perfInfo.agentId);
                 if (agent == null || agent.disabled) continue;
+                
+                // Skip market filter agents - they don't generate individual stock signals
+                if ("MARKET_FILTER".equals(agent.type)) {
+                    System.out.println("[AIToolAgent] Skipping market filter agent: " + agent.id + " (does not generate stock signals)");
+                    continue;
+                }
 
                 System.out.println("[AIToolAgent] Full scan with agent: " + agent.id);
 
@@ -6116,21 +6136,21 @@ public class AIToolAgent {
                     }
                 }
 
-                // Sort signals by score (primary) and conviction (secondary), pick top 2
+                // Sort signals by score (primary) and conviction (secondary), pick top 10
                 agentSignals.sort((a, b) -> {
                     int scoreCompare = Double.compare(b.score, a.score);
                     if (scoreCompare != 0) return scoreCompare;
                     return Double.compare(b.finalConviction, a.finalConviction);
                 });
 
-                int topSignalsPerAgent = 2;
+                int topSignalsPerAgent = 10;
                 List<AgentSignal> topSignals = agentSignals.stream()
                     .limit(topSignalsPerAgent)
                     .collect(Collectors.toList());
 
                 System.out.println("[AIToolAgent] Agent " + agent.id + " found " + agentSignals.size() + " signals, selecting top " + topSignals.size());
 
-                // Send Discord notifications only for top 2 signals
+                // Send Discord notifications only for top 10 signals
                 for (AgentSignal signal : topSignals) {
                     double signalEntry = signal.decision.entryPrice > 0 ? signal.decision.entryPrice
                         : signal.decision.suggestedStopLoss / (1 - 0.03);
