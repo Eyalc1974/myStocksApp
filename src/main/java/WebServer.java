@@ -8587,6 +8587,15 @@ public class WebServer {
                 sb.append("  }");
                 sb.append("}");
                 sb.append("initFullScanner();");
+                
+                // Toggle function for recommendation details
+                sb.append("function toggleDetail(id) {");
+                sb.append("  var el = document.getElementById(id);");
+                sb.append("  if (el) {");
+                sb.append("    el.style.display = el.style.display === 'none' ? 'block' : 'none';");
+                sb.append("  }");
+                sb.append("}");
+                
                 sb.append("</script>");
 
                 // ── 📡 Buy Recommendations ──
@@ -8634,7 +8643,9 @@ public class WebServer {
                             boolean isExpired = elapsedMin >= 10;
                             String borderColor = isExpired ? "#4b5563" : "#22c55e";
                             sb.append("<div style='background:#0f1f35;border:1px solid #1f3a5f;border-left:4px solid ").append(borderColor).append(";")
-                              .append("border-radius:6px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;'>");
+                              .append("border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;'>");
+                            // Horizontal row for ticker, agent, and metrics
+                            sb.append("<div style='display:flex;flex-wrap:wrap;gap:10px;align-items:center;'>");
                             sb.append("<div style='min-width:180px;'>");
                             if (isExpired) {
                                 sb.append("<span style='font-size:18px;font-weight:800;color:#6b7280;'>⏸ ").append(escapeHtml(r.ticker)).append("</span>");
@@ -8666,7 +8677,42 @@ public class WebServer {
                             sb.append("<div><div style='color:#9ca3af;font-size:10px;'>R:R</div>")
                               .append("<div style='color:").append(rrColor).append(";font-weight:700;'>1:")
                               .append(String.format("%.1f", rr)).append("</div></div>");
-                            sb.append("</div></div>");
+                            sb.append("</div>");
+                            sb.append("</div>"); // Close horizontal row
+                            
+                            // Add "Why Recommended?" button with expandable details - outside the flex container
+                            String detailId = "detail_" + r.ticker + "_" + r.runNumber;
+                            sb.append("<div style='margin-top:8px;'>");
+                            sb.append("<button onclick='toggleDetail(\"").append(detailId).append("\")' style='background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer;width:100%;'>📊 Why Recommended? (Click to expand)</button>");
+                            sb.append("<div id='").append(detailId).append("' style='display:none;margin-top:8px;background:#0b1220;border:1px solid #1f2a44;border-radius:6px;padding:10px;'>");
+                            
+                            // Institutional Flow Layer scores
+                            sb.append("<div style='margin-bottom:8px;'>");
+                            sb.append("<div style='color:#a78bfa;font-size:11px;font-weight:700;margin-bottom:4px;'>📊 Institutional Flow Layer Scores</div>");
+                            sb.append("<div style='display:flex;gap:12px;flex-wrap:wrap;font-size:11px;'>");
+                            String fundColor = r.fundamentalScore >= 7 ? "#22c55e" : r.fundamentalScore >= 5 ? "#eab308" : "#ef4444";
+                            String catColor = r.catalystScore >= 7 ? "#22c55e" : r.catalystScore >= 5 ? "#eab308" : "#ef4444";
+                            String flowColor = r.institutionalFlowScore >= 7 ? "#22c55e" : r.institutionalFlowScore >= 5 ? "#eab308" : "#ef4444";
+                            sb.append("<div style='color:#9ca3af;'>Fundamental: <span style='color:").append(fundColor).append(";font-weight:700;'>").append(r.fundamentalScore).append("/10</span></div>");
+                            sb.append("<div style='color:#9ca3af;'>Catalyst: <span style='color:").append(catColor).append(";font-weight:700;'>").append(r.catalystScore).append("/10</span></div>");
+                            sb.append("<div style='color:#9ca3af;'>Inst. Flow: <span style='color:").append(flowColor).append(";font-weight:700;'>").append(r.institutionalFlowScore).append("/10</span></div>");
+                            sb.append("<div style='color:#9ca3af;'>Final Conviction: <span style='color:#93c5fd;font-weight:700;'>").append(String.format("%.1f", r.finalConviction)).append("/50</span></div>");
+                            sb.append("</div>");
+                            sb.append("</div>");
+                            
+                            // Strategy Score
+                            sb.append("<div>");
+                            sb.append("<div style='color:#a78bfa;font-size:11px;font-weight:700;margin-bottom:4px;'>🎯 Strategy Score</div>");
+                            sb.append("<div style='display:flex;gap:12px;flex-wrap:wrap;font-size:11px;'>");
+                            String scoreColor = r.score >= 11 ? "#22c55e" : r.score >= 10 ? "#eab308" : "#9ca3af";
+                            sb.append("<div style='color:#9ca3af;'>Total Score: <span style='color:").append(scoreColor).append(";font-weight:700;'>").append(r.score).append("/12</span></div>");
+                            sb.append("<div style='color:#9ca3af;'>Agent: <span style='color:#93c5fd;'>").append(escapeHtml(r.agentId)).append("</span></div>");
+                            sb.append("<div style='color:#9ca3af;'>Run: <span style='color:#93c5fd;'>#").append(r.runNumber).append("</span></div>");
+                            sb.append("</div>");
+                            sb.append("</div>");
+                            
+                            sb.append("</div>"); // Close detail div
+                            sb.append("</div>"); // Close button wrapper div
                         }
                         sb.append("</div>");
 
