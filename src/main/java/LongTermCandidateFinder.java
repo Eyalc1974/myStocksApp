@@ -235,6 +235,7 @@ public class LongTermCandidateFinder {
     private static final double RS_MIN_THRESHOLD = -2.0;
     private static final java.util.concurrent.ConcurrentHashMap<String, Double> rsScoreCache =
         new java.util.concurrent.ConcurrentHashMap<>();
+    private static volatile String lastCacheDate = null;
 
     /**
      * Called by AIToolAgent after computing IndicatorData for each ticker.
@@ -299,6 +300,7 @@ public class LongTermCandidateFinder {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode node = mapper.createObjectNode();
             rsScoreCache.forEach((ticker, score) -> node.put(ticker, score));
+            node.put("_lastCacheDate", lastCacheDate != null ? lastCacheDate : "");
             Files.createDirectories(RS_CACHE_FILE.getParent());
             Files.writeString(RS_CACHE_FILE, mapper.writeValueAsString(node));
         } catch (Exception ignored) {}
@@ -309,10 +311,26 @@ public class LongTermCandidateFinder {
         try {
             if (!Files.exists(RS_CACHE_FILE)) return;
             ObjectMapper mapper = new ObjectMapper();
-            mapper.readTree(Files.readString(RS_CACHE_FILE))
-                  .fields()
-                  .forEachRemaining(e -> rsScoreCache.put(e.getKey(), e.getValue().asDouble()));
+            var root = mapper.readTree(Files.readString(RS_CACHE_FILE));
+            root.fields()
+                  .forEachRemaining(e -> {
+                      if (!e.getKey().equals("_lastCacheDate")) {
+                          rsScoreCache.put(e.getKey(), e.getValue().asDouble());
+                      }
+                  });
+            lastCacheDate = root.has("_lastCacheDate") ? root.get("_lastCacheDate").asText() : null;
         } catch (Exception ignored) {}
+    }
+
+    /** Check if RS cache is from a different day and reset if needed. */
+    public static void checkAndResetRSCacheDaily() {
+        String today = java.time.LocalDate.now().toString();
+        if (lastCacheDate == null || !lastCacheDate.equals(today)) {
+            // New day - clear the cache to force fresh RS calculation
+            rsScoreCache.clear();
+            lastCacheDate = today;
+            System.out.println("[LongTermCandidateFinder] RS cache reset for new day: " + today);
+        }
     }
 
     // ======================= ORIGINAL NASDAQ_100 TICKERS =======================

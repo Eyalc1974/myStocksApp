@@ -2073,6 +2073,9 @@ public class AIToolAgent {
         }
 
         try {
+            // Reset RS cache daily to ensure fresh technical indicators
+            LongTermCandidateFinder.checkAndResetRSCacheDaily();
+            
             // Ticker-centric scan: fetch each ticker ONCE, then test ALL agents against it.
             // This uses 1 API call per ticker instead of (agentCount x tickerCount) calls.
             List<String> allTickers = LongTermCandidateFinder.getAllSectorTickers();
@@ -6056,6 +6059,9 @@ public class AIToolAgent {
                 topAgentsFullScanRunning = false;
                 return;
             }
+            
+            // Reset RS cache daily to ensure fresh technical indicators
+            LongTermCandidateFinder.checkAndResetRSCacheDaily();
             
             // Get all tickers from sector banks (all sectors combined)
             List<String> allTickers = LongTermCandidateFinder.getAllSectorTickers();

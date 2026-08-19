@@ -182,3 +182,14 @@
 2026-08-17 11:43:53 EDT  [MONITOR ⏳ HOLD] ILMN | MASTER_8_STRONG_TREND | live=$193.14 | SL=$174.97 | TP=$221.98
 2026-08-17 11:44:05 EDT  [MONITOR END] Done checking 1 position(s)
 2026-08-17 11:44:05 EDT  ────────────────────────────────────────
+2026-08-17 14:34:50 EDT  [DISCORD] ✅ Sent (HTTP 204): 🔵 **Swing System - Pre-Close** Best swing trades for next d...
+2026-08-17 14:34:51 EDT  [DISCORD] ✅ Sent (HTTP 204): 🤖 Swing agents: MASTER_6_VOLUME_BREAKOUT, MASTER_7_VIX_MARK...
+2026-08-17 14:34:52 EDT  ────────────────────────────────────────
+2026-08-17 14:34:52 EDT  [MONITOR START] Checking 1 open position(s) live
+2026-08-17 14:34:52 EDT  [MONITOR ⏳ HOLD] ILMN | MASTER_8_STRONG_TREND | live=$192.54 | SL=$174.97 | TP=$221.98
+2026-08-17 14:35:05 EDT  [MONITOR END] Done checking 1 position(s)
+2026-08-17 14:35:05 EDT  ────────────────────────────────────────
+2026-08-17 14:35:08 EDT  [REGIME] SPY $773.56 | SMA20=$757.77 | Change=-0.36% | BelowSMA20=0.0% | Above20=YES → ✅ HEALTHY (full size)
+2026-08-17 14:35:30 EDT  [DISCORD] ✅ Sent (HTTP 204): 🚀 **Full Scan Started** — 3 agents | 12 tickers Agents: MAS...
+2026-08-17 15:09:12 EDT  [REGIME] SPY $773.65 | SMA20=$757.77 | Change=-0.35% | BelowSMA20=0.0% | Above20=YES → ✅ HEALTHY (full size)
+2026-08-17 15:39:15 EDT  [REGIME] SPY $773.31 | SMA20=$757.76 | Change=-0.39% | BelowSMA20=0.0% | Above20=YES → ✅ HEALTHY (full size)
