@@ -12,10 +12,10 @@
     "GLOBAL_QUOTE" : 16
   },
   "2026-08-17" : {
-    "TIME_SERIES_DAILY" : 20,
+    "TIME_SERIES_DAILY" : 59,
     "NEWS_SENTIMENT" : 7,
     "OVERVIEW" : 1,
-    "GLOBAL_QUOTE" : 1
+    "GLOBAL_QUOTE" : 2
   },
   "2026-08-07" : {
     "TIME_SERIES_DAILY" : 177,
