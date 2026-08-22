@@ -2438,6 +2438,15 @@ public class WebServer {
         }
     }
 
+    private static String loadResourceFromClasspath(String resourcePath) throws IOException {
+        try (InputStream is = WebServer.class.getClassLoader().getResourceAsStream(resourcePath)) {
+            if (is == null) {
+                throw new IOException("Resource not found: " + resourcePath);
+            }
+            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
+
     private static String runAndCapture(Runnable r) {
         synchronized (RUN_CAPTURE_LOCK) {
             PrintStream originalOut = System.out;
@@ -2702,7 +2711,7 @@ public class WebServer {
                     return;
                 }
                 if (!isAuthenticated(ex)) {
-                    String html = Files.readString(Paths.get("src/main/resources/login.html"));
+                    String html = loadResourceFromClasspath("login.html");
                     respondHtml(ex, html, 200);
                     return;
                 }
@@ -8140,7 +8149,7 @@ public class WebServer {
                     respondHtml(ex, htmlPage(""), 200); return;
                 }
                 if (!isAuthenticated(ex)) {
-                    String html = Files.readString(Paths.get("src/main/resources/login.html"));
+                    String html = loadResourceFromClasspath("login.html");
                     respondHtml(ex, html, 200);
                     return;
                 }
