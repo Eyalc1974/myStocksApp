@@ -11948,7 +11948,7 @@ public class WebServer {
         server.createContext("/login", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, "", 405); return; }
-                String html = Files.readString(Paths.get("src/main/resources/login.html"));
+                String html = loadResourceFromClasspath("login.html");
                 respondHtml(ex, html, 200);
             }
         });
@@ -11956,7 +11956,7 @@ public class WebServer {
         server.createContext("/register", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, "", 405); return; }
-                String html = Files.readString(Paths.get("src/main/resources/register.html"));
+                String html = loadResourceFromClasspath("register.html");
                 respondHtml(ex, html, 200);
             }
         });
@@ -11964,7 +11964,7 @@ public class WebServer {
         server.createContext("/contact", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (ex.getRequestMethod().equalsIgnoreCase("GET")) {
-                    String html = Files.readString(Paths.get("src/main/resources/contact.html"));
+                    String html = loadResourceFromClasspath("contact.html");
                     respondHtml(ex, html, 200);
                 } else if (ex.getRequestMethod().equalsIgnoreCase("POST")) {
                     try {
@@ -12009,7 +12009,7 @@ public class WebServer {
         server.createContext("/forgot-password", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, "", 405); return; }
-                String html = Files.readString(Paths.get("src/main/resources/forgot-password.html"));
+                String html = loadResourceFromClasspath("forgot-password.html");
                 respondHtml(ex, html, 200);
             }
         });
@@ -12041,6 +12041,18 @@ public class WebServer {
                             if (PasswordUtil.verifyPassword(password, storedHash)) {
                                 found = true;
                                 role = user.get("role").asText();
+                                
+                                // Check account expiration for non-admin users
+                                if (!role.equals("admin")) {
+                                    JsonNode expiresAtNode = user.get("expiresAt");
+                                    if (expiresAtNode != null && !expiresAtNode.isNull()) {
+                                        java.time.Instant expiresAt = java.time.Instant.parse(expiresAtNode.asText());
+                                        if (java.time.Instant.now().isAfter(expiresAt)) {
+                                            respondJson(ex, Map.of("error", "Account has expired. Please register again."), 403);
+                                            return;
+                                        }
+                                    }
+                                }
                             }
                             break;
                         }
@@ -12108,6 +12120,9 @@ public class WebServer {
                     newUser.put("passwordHash", passwordHash);
                     newUser.put("role", "user");
                     newUser.put("createdAt", java.time.Instant.now().toString());
+                    // Set 30-day expiration for non-admin users
+                    java.time.Instant expiresAt = java.time.Instant.now().plus(30, java.time.temporal.ChronoUnit.DAYS);
+                    newUser.put("expiresAt", expiresAt.toString());
                     
                     ((com.fasterxml.jackson.databind.node.ArrayNode) usersJson.get("users")).add(newUser);
                     
