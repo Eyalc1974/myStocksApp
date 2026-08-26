@@ -250,7 +250,7 @@ public class AIToolAgentDebugTest {
      */
     @Test
     void testMultipleSymbolsFullReport() {
-        String agentId = "M5_MA_CROSS";
+        String agentId = "MASTER_7_VIX_MARKET_FILTER";
         
         // Symbols to analyze
         List<String> symbols = Arrays.asList("AAPL", "NVDA", "TSLA", "META", "MSFT");

@@ -19,7 +19,7 @@ public class InstitutionalFlowLayer {
     private static final MonitoringAlphaVantageClient AV = MonitoringAlphaVantageClient.fromEnv();
 
     /** Maximum API calls we allow the layer to make per ticker in one pass. */
-    private static final int MAX_CALLS_PER_TICKER = 2; // OVERVIEW + NEWS_SENTIMENT
+    private static final int MAX_CALLS_PER_TICKER = 6; // OVERVIEW + INCOME_STATEMENT + CASH_FLOW + BALANCE_SHEET + EARNINGS + DIVIDENDS
 
     /**
      * Enrich the given IndicatorData with cached fundamental / catalyst data.
@@ -71,7 +71,7 @@ public class InstitutionalFlowLayer {
         // ── Final Conviction (0-50) ──
         double technical   = normalize(decision.totalScore, 12);          // existing 0-12 score
         double momentum    = normalize(decision.momentumScore, 3);          // RSI/CCI component
-        double fundamental = normalize(decision.fundamentalScore, 10);      // Layer 2
+        double fundamental = normalize(decision.fundamentalScore, 15);      // Layer 2 (enhanced 0-15)
         double catalyst    = normalize(decision.catalystScore, 10);          // Layer 3
         double instFlow    = normalize(decision.institutionalFlowScore, 10); // Layer 4
 
@@ -117,12 +117,67 @@ public class InstitutionalFlowLayer {
 
     private static FundamentalData fetchFundamental(String ticker, double currentPrice) {
         try {
+            // Step 1: Get base data from OVERVIEW
             JsonNode overview = AV.overview(ticker);
             if (overview == null || overview.has("Information")) return null;
             FundamentalData d = FundamentalData.fromOverview(overview, currentPrice);
+
+            // Step 2: Enrich with INCOME_STATEMENT (90-day cache)
+            try {
+                JsonNode incomeStatement = AV.incomeStatement(ticker);
+                if (incomeStatement != null && !incomeStatement.has("Information")) {
+                    d.enrichFromIncomeStatement(incomeStatement);
+                }
+            } catch (Exception e) {
+                System.out.println("[IFL] Failed to fetch INCOME_STATEMENT for " + ticker + ": " + e.getMessage());
+            }
+
+            // Step 3: Enrich with CASH_FLOW (90-day cache)
+            try {
+                JsonNode cashFlow = AV.cashFlow(ticker);
+                if (cashFlow != null && !cashFlow.has("Information")) {
+                    d.enrichFromCashFlow(cashFlow, d.marketCap);
+                }
+            } catch (Exception e) {
+                System.out.println("[IFL] Failed to fetch CASH_FLOW for " + ticker + ": " + e.getMessage());
+            }
+
+            // Step 4: Enrich with BALANCE_SHEET (90-day cache)
+            try {
+                JsonNode balanceSheet = AV.balanceSheet(ticker);
+                if (balanceSheet != null && !balanceSheet.has("Information")) {
+                    // Estimate shares outstanding from market cap and current price
+                    double sharesOutstanding = (currentPrice > 0 && d.marketCap > 0) ? d.marketCap / currentPrice : 0;
+                    d.enrichFromBalanceSheet(balanceSheet, sharesOutstanding);
+                }
+            } catch (Exception e) {
+                System.out.println("[IFL] Failed to fetch BALANCE_SHEET for " + ticker + ": " + e.getMessage());
+            }
+
+            // Step 5: Enrich with EARNINGS (7-day cache)
+            try {
+                JsonNode earnings = AV.earnings(ticker);
+                if (earnings != null && !earnings.has("Information")) {
+                    d.enrichFromEarnings(earnings);
+                }
+            } catch (Exception e) {
+                System.out.println("[IFL] Failed to fetch EARNINGS for " + ticker + ": " + e.getMessage());
+            }
+
+            // Step 6: Enrich with DIVIDENDS (30-day cache)
+            try {
+                JsonNode dividends = AV.dividends(ticker);
+                if (dividends != null && !dividends.has("Information")) {
+                    d.enrichFromDividends(dividends, currentPrice);
+                }
+            } catch (Exception e) {
+                System.out.println("[IFL] Failed to fetch DIVIDENDS for " + ticker + ": " + e.getMessage());
+            }
+
             InstitutionalFlowCache.putFundamental(ticker, d);
             return d;
         } catch (Exception e) {
+            System.out.println("[IFL] Failed to fetch fundamental data for " + ticker + ": " + e.getMessage());
             return null;
         }
     }

@@ -41,22 +41,36 @@ The AI Trading System performs automated scans of the stock market to identify h
 
 ### Stage 3: Fundamental Analysis (Layer 2)
 
-**Purpose**: Evaluate company fundamentals using Alpha Vantage OVERVIEW API.
+**Purpose**: Evaluate company fundamentals using multiple Alpha Vantage APIs for comprehensive analysis.
 
-**What it checks**:
-- Revenue growth rate
-- EPS growth
-- Profit margin
-- Operating margin
-- P/E ratio
-- Debt-to-equity ratio
-- Analyst upside potential
-- Institutional score
-- Sector and industry classification
+**APIs Used** (with 90-day cache for quarterly reports):
+- **OVERVIEW**: Base company data (market cap, margins, ratios)
+- **INCOME_STATEMENT**: Revenue growth, gross margin, EBITDA margin, YoY comparisons
+- **CASH_FLOW**: Free cash flow, FCF margin, dividend payout ratio
+- **BALANCE_SHEET**: Current ratio, cash/debt ratio, book value per share
+- **EARNINGS**: Earnings surprise %, consecutive beats
+- **DIVIDENDS**: Dividend yield, dividend payment history
 
-**Scoring**: 0-10 points (computed by `FundamentalData.computeScore()`)
+**Enhanced Metrics** (14 new fields):
+- **Growth Metrics**: Revenue growth YoY, EPS growth YoY
+- **Profit Quality**: Gross margin, EBITDA margin, profit margin
+- **Cash Flow**: Free cash flow, FCF margin, dividend payout ratio
+- **Financial Stability**: Debt/equity, current ratio, cash/debt ratio
+- **Catalyst**: Earnings surprise %, consecutive beats
+- **Dividend**: Dividend yield, pays dividend flag
 
-**Caching**: Data cached for 7 days (TTL) to minimize API calls
+**Enhanced Scoring**: 0-15 points (computed by `FundamentalData.computeScore()`)
+- **Growth** (4 points): Revenue growth YoY >20% (2pts), >10% (1pt); EPS growth YoY >15% (2pts), >10% (1pt)
+- **Profit Quality** (3 points): Gross margin >40% (1pt), >30% (1pt); EBITDA margin >20% (1pt), >15% (1pt); Profit margin >15% (1pt)
+- **Cash Flow** (3 points): Positive FCF (1pt); FCF margin >15% (2pts), >10% (1pt)
+- **Financial Stability** (3 points): Debt/equity <0.5 (1pt), 0.5-1.0 (1pt); Current ratio >1.5 (1pt), >1.2 (1pt); Cash/debt >0.3 (1pt)
+- **Catalyst** (2 points): Earnings surprise >5% (2pts), >0% (1pt)
+- **Market Size** (1 point): Market cap >$10B (1pt), >$2B (1pt)
+- **Analyst Sentiment** (1 point): Target price >10% upside (1pt)
+- **Dividend Bonus** (1 point): Pays dividend with yield >1% and payout ratio <60% (1pt)
+- **Penalty**: P/E ratio >100 (-1 point)
+
+**Caching**: Data cached for 90 days (TTL) for quarterly reports to minimize API calls (~85% reduction)
 
 ---
 
@@ -102,17 +116,17 @@ The AI Trading System performs automated scans of the stock market to identify h
 Final Conviction = (Technical × 1.0) + (Momentum × 0.75) + (Fundamentals × 1.25) + (Catalyst × 1.75) + (Institutional Flow × 1.25)
 ```
 
-**Scale**: 0-60 points (each component normalized to 0-10 before weighting)
+**Scale**: 0-50 points (components normalized: Technical 0-12, Momentum 0-3, Fundamentals 0-15, Catalyst 0-10, Institutional Flow 0-10)
 
 **Example**:
 - Technical: 10/12 → normalized 8.33 → weighted 8.33 × 1.0 = 8.33
 - Momentum: 3/3 → normalized 10 → weighted 10 × 0.75 = 7.5
-- Fundamentals: 8/10 → normalized 8 → weighted 8 × 1.25 = 10.0
+- Fundamentals: 12/15 → normalized 8 → weighted 8 × 1.25 = 10.0
 - Catalyst: 9/10 → normalized 9 → weighted 9 × 1.75 = 15.75
 - Institutional Flow: 7/10 → normalized 7 → weighted 7 × 1.25 = 8.75
-- **Final Conviction = 50.33/60**
+- **Final Conviction = 50.33/50**
 
-**Rationale**: Higher weight on catalyst (35%) and institutional flow (25%) to capture stocks with real narratives and smart money footprints, not just technical setups.
+**Rationale**: Higher weight on catalyst (35%) and institutional flow (25%) to capture stocks with real narratives and smart money footprints, not just technical setups. Enhanced fundamental analysis (15-point scale) provides deeper company quality assessment.
 
 ---
 
@@ -363,15 +377,22 @@ The trading system is now split into two independent systems to prevent competit
 
 ---
 
-## Recent Improvements (2026-06)
+## Recent Improvements (2026-08)
 
-1. **Risk Management Enhancement**: Take profit capped at 2.5x risk distance with 6% minimum floor
-2. **Rejection Signal Tracking**: 48-hour cooldown for rejected signals to prevent repeated rejections
-3. **New Fundamental Agents**: Added FUND_MOMENTUM_V1 and QUALITY_GROWTH_V1 for fundamental-based trading
-4. **New Institutional Agent**: Added INST_SWING_V1 for institutional-grade swing trades
-5. **Agent Categorization**: Analyzed and categorized all agents for consolidation (see agent-categorization-report.md)
-6. **Fundamental Momentum Analyzer**: New utility class for institutional flow detection and relative strength scoring
-7. **Previous Improvements (2026-05)**:
+1. **Enhanced Fundamental Analysis**: Multi-API integration for comprehensive company analysis
+   - Added 5 new Alpha Vantage APIs: INCOME_STATEMENT, CASH_FLOW, BALANCE_SHEET, EARNINGS, DIVIDENDS
+   - Added 14 new fundamental metrics: YoY growth, gross/EBITDA margins, FCF, liquidity ratios, earnings surprise, dividend data
+   - Enhanced scoring system: 0-15 points (up from 0-10) with detailed breakdown across growth, quality, cash flow, stability, catalyst
+   - Optimized caching: 90-day TTL for quarterly reports (~85% API call reduction)
+   - Integrated into scan reports with detailed fundamental analysis section
+
+2. **Risk Management Enhancement**: Take profit capped at 2.5x risk distance with 6% minimum floor
+3. **Rejection Signal Tracking**: 48-hour cooldown for rejected signals to prevent repeated rejections
+4. **New Fundamental Agents**: Added FUND_MOMENTUM_V1 and QUALITY_GROWTH_V1 for fundamental-based trading
+5. **New Institutional Agent**: Added INST_SWING_V1 for institutional-grade swing trades
+6. **Agent Categorization**: Analyzed and categorized all agents for consolidation (see agent-categorization-report.md)
+7. **Fundamental Momentum Analyzer**: New utility class for institutional flow detection and relative strength scoring
+8. **Previous Improvements (2026-05)**:
    - Expectancy-Based Ranking: Replaced win rate with expectancy for agent ranking
    - Position Limits: Max 5 positions, sector cap=1, semiconductor cap=1
    - TOP 2 Selection: Only trade the 2 highest-conviction candidates
@@ -410,4 +431,4 @@ For issues or questions, check:
 
 ---
 
-*Last Updated: June 20, 2026*
+*Last Updated: August 22, 2026*

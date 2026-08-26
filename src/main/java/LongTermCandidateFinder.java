@@ -1,7 +1,15 @@
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.*;
+import java.time.Duration;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -293,6 +301,12 @@ public class LongTermCandidateFinder {
     // Docker/Railway: Set DATA_DIR environment variable to appropriate path (e.g., "/app/data")
     private static final String DATA_DIR = System.getenv().getOrDefault("DATA_DIR", "newStrategies");
     private static final Path RS_CACHE_FILE = Paths.get(DATA_DIR, "rs-cache.json");
+    private static final Path TICKER_CACHE_FILE = Paths.get(DATA_DIR, "ticker-cache.json");
+
+    // API ticker list cache
+    private static List<String> apiTickerCache = new ArrayList<>();
+    private static volatile String tickerCacheDate = null;
+    private static volatile boolean useApiTickers = true; // Flag to enable/disable API ticker fetching
 
     /** Persist RS scores to disk so the next cold start also benefits from the filtered universe. */
     public static void persistRSCache() {
@@ -331,6 +345,185 @@ public class LongTermCandidateFinder {
             lastCacheDate = today;
             System.out.println("[LongTermCandidateFinder] RS cache reset for new day: " + today);
         }
+    }
+
+    // ======================= API TICKER FETCHING =======================
+
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+
+    /**
+     * Fetch tickers from Alpha Vantage LISTING_STATUS API with filtering.
+     * Filters for: NYSE/NASDAQ exchanges, Stock asset type, Active status only.
+     * Falls back to static lists if API fails.
+     */
+    private static List<String> fetchTickersFromAPI() {
+        String apiKey = System.getenv().getOrDefault("ALPHAVANTAGE_API_KEY", 
+                System.getenv().getOrDefault("ALPHA_VANTAGE_API_KEY", "demo"));
+        
+        String url = String.format(
+                "https://www.alphavantage.co/query?function=LISTING_STATUS&apikey=%s",
+                apiKey
+        );
+
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(30))
+                    .build();
+
+            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            
+            if (response.statusCode() != 200) {
+                System.err.println("[LongTermCandidateFinder] API request failed with status: " + response.statusCode());
+                return null;
+            }
+
+            String csvData = response.body();
+            List<String> tickers = parseListingStatusCSV(csvData);
+            
+            if (tickers.isEmpty()) {
+                System.err.println("[LongTermCandidateFinder] No tickers found in API response");
+                return null;
+            }
+
+            System.out.println("[LongTermCandidateFinder] Fetched " + tickers.size() + " tickers from API");
+            return tickers;
+            
+        } catch (Exception e) {
+            System.err.println("[LongTermCandidateFinder] Error fetching tickers from API: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Parse Alpha Vantage LISTING_STATUS CSV response.
+     * Filters for: NYSE/NASDAQ exchanges, Stock asset type, Active status only.
+     */
+    private static List<String> parseListingStatusCSV(String csvData) {
+        List<String> tickers = new ArrayList<>();
+        String[] lines = csvData.split("\r?\n");
+        
+        // Skip header row
+        for (int i = 1; i < lines.length; i++) {
+            String line = lines[i].trim();
+            if (line.isEmpty()) continue;
+            
+            String[] fields = line.split(",");
+            if (fields.length < 6) continue;
+            
+            String symbol = fields[0].trim();
+            String exchange = fields[2].trim();
+            String assetType = fields[3].trim();
+            String status = fields[5].trim();
+            
+            // Filter: NYSE or NASDAQ only, Stock only, Active only
+            if ((exchange.equals("NYSE") || exchange.equals("NASDAQ")) && 
+                assetType.equals("Stock") && 
+                status.equals("Active")) {
+                
+                // Skip symbols with special characters (ETFs, preferred shares, warrants, units)
+                if (!symbol.contains("-") && !symbol.contains(".") && 
+                    symbol.length() >= 1 && symbol.length() <= 5) {
+                    tickers.add(symbol.toUpperCase());
+                }
+            }
+        }
+        
+        return tickers;
+    }
+
+    /** Persist ticker cache to disk. */
+    private static void persistTickerCache() {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode node = mapper.createObjectNode();
+            node.put("_lastCacheDate", tickerCacheDate != null ? tickerCacheDate : "");
+            node.put("useApiTickers", useApiTickers);
+            
+            ArrayNode tickersNode = node.putArray("tickers");
+            for (String ticker : apiTickerCache) {
+                tickersNode.add(ticker);
+            }
+            
+            Files.createDirectories(TICKER_CACHE_FILE.getParent());
+            Files.writeString(TICKER_CACHE_FILE, mapper.writeValueAsString(node));
+            System.out.println("[LongTermCandidateFinder] Ticker cache persisted: " + apiTickerCache.size() + " tickers");
+        } catch (Exception e) {
+            System.err.println("[LongTermCandidateFinder] Error persisting ticker cache: " + e.getMessage());
+        }
+    }
+
+    /** Load ticker cache from disk on startup. */
+    private static void loadTickerCache() {
+        try {
+            if (!Files.exists(TICKER_CACHE_FILE)) return;
+            
+            ObjectMapper mapper = new ObjectMapper();
+            var root = mapper.readTree(Files.readString(TICKER_CACHE_FILE));
+            
+            tickerCacheDate = root.has("_lastCacheDate") ? root.get("_lastCacheDate").asText() : null;
+            useApiTickers = root.has("useApiTickers") ? root.get("useApiTickers").asBoolean() : true;
+            
+            apiTickerCache.clear();
+            JsonNode tickersNode = root.path("tickers");
+            if (tickersNode.isArray()) {
+                for (JsonNode ticker : tickersNode) {
+                    apiTickerCache.add(ticker.asText());
+                }
+            }
+            
+            System.out.println("[LongTermCandidateFinder] Ticker cache loaded: " + apiTickerCache.size() + " tickers from " + tickerCacheDate);
+        } catch (Exception e) {
+            System.err.println("[LongTermCandidateFinder] Error loading ticker cache: " + e.getMessage());
+        }
+    }
+
+    /** Check if ticker cache is from a different day and refresh if needed. */
+    private static void checkAndRefreshTickerCache() {
+        String today = LocalDate.now().toString();
+        
+        // Load cache on first call
+        if (tickerCacheDate == null) {
+            loadTickerCache();
+        }
+        
+        // Refresh if cache is old or empty
+        if (tickerCacheDate == null || !tickerCacheDate.equals(today) || apiTickerCache.isEmpty()) {
+            if (useApiTickers) {
+                System.out.println("[LongTermCandidateFinder] Refreshing ticker cache for " + today);
+                List<String> freshTickers = fetchTickersFromAPI();
+                
+                if (freshTickers != null && !freshTickers.isEmpty()) {
+                    apiTickerCache = freshTickers;
+                    tickerCacheDate = today;
+                    persistTickerCache();
+                } else {
+                    System.out.println("[LongTermCandidateFinder] API fetch failed, using existing cache or static lists");
+                    if (apiTickerCache.isEmpty()) {
+                        useApiTickers = false; // Disable API if it fails completely
+                    }
+                }
+            }
+        }
+    }
+
+    /** Enable or disable API ticker fetching. */
+    public static void setUseApiTickers(boolean enable) {
+        useApiTickers = enable;
+        System.out.println("[LongTermCandidateFinder] API ticker fetching " + (enable ? "enabled" : "disabled"));
+    }
+
+    /** Get the API ticker cache (for testing/debugging). */
+    public static List<String> getApiTickerCache() {
+        return new ArrayList<>(apiTickerCache);
+    }
+
+    /** Force refresh of ticker cache regardless of date. */
+    public static void forceRefreshTickerCache() {
+        tickerCacheDate = null; // Reset to force refresh
+        checkAndRefreshTickerCache();
     }
 
     // ======================= ORIGINAL NASDAQ_100 TICKERS =======================
@@ -425,19 +618,32 @@ public class LongTermCandidateFinder {
             }
             System.out.println("[LongTermCandidateFinder] Using custom sector allocation: " + sectorAllocation.keySet() + " -> " + uniq.size() + " tickers");
         } else {
-            // Default: use NASDAQ_100
-            for (String t : ALL_NASDAQ_TICKERS) {
-                if (t == null) continue;
-                String v = t.trim().toUpperCase();
-                if (!v.isBlank()) uniq.add(v);
+            // Default: try API tickers first, fall back to static lists
+            checkAndRefreshTickerCache();
+            
+            if (useApiTickers && !apiTickerCache.isEmpty()) {
+                System.out.println("[LongTermCandidateFinder] Using API ticker cache: " + apiTickerCache.size() + " tickers");
+                for (String t : apiTickerCache) {
+                    if (t == null) continue;
+                    String v = t.trim().toUpperCase();
+                    if (!v.isBlank()) uniq.add(v);
+                }
+            } else {
+                // Fallback to static NASDAQ_100 list
+                System.out.println("[LongTermCandidateFinder] Using static NASDAQ_100 list: " + ALL_NASDAQ_TICKERS.size() + " tickers");
+                for (String t : ALL_NASDAQ_TICKERS) {
+                    if (t == null) continue;
+                    String v = t.trim().toUpperCase();
+                    if (!v.isBlank()) uniq.add(v);
+                }
             }
         }
         return new ArrayList<>(uniq);
     }
 
-    // Throttling and batch size controls to respect Alpha Vantage free-tier limits
+    // Throttling and batch size controls to respect Alpha Vantage Premium 75 limits
     private static boolean ENABLE_THROTTLE = true;
-    private static long THROTTLE_MS = 12_500; // ~5 req/min
+    private static long THROTTLE_MS = 800 ; //  - ~75 req/min (Premium 75 plan)
     private static int MAX_TICKERS = 5; // default analyze 5
     private static int RANDOM_POOL_SIZE = 5; // default random pool size
 

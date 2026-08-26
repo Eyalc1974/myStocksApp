@@ -744,11 +744,11 @@
       "agentId" : "MASTER_7_VIX_MARKET_FILTER",
       "agentName" : "VIX + SPY Market Filter (Master)",
       "type" : "MARKET_FILTER",
-      "cumulativeWins" : 1991,
-      "cumulativeTrades" : 3158,
-      "cumulativeProfitLoss" : 401269.1997411872,
+      "cumulativeWins" : 2073,
+      "cumulativeTrades" : 3288,
+      "cumulativeProfitLoss" : 417380.08264145895,
       "firstSavedDate" : "2026-05-26",
-      "lastUpdatedDate" : "2026-08-17",
+      "lastUpdatedDate" : "2026-08-25",
       "notifyOnTrade" : false,
       "dailySnapshots" : [ {
         "date" : "2026-05-26",
@@ -908,6 +908,12 @@
         "profitLoss" : 16110.882900271716
       }, {
         "date" : "2026-08-17",
+        "wins" : 82,
+        "trades" : 130,
+        "winRate" : 63.07692307692308,
+        "profitLoss" : 16110.882900271716
+      }, {
+        "date" : "2026-08-25",
         "wins" : 82,
         "trades" : 130,
         "winRate" : 63.07692307692308,

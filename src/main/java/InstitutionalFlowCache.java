@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Persistent TTL-based cache for Institutional Flow Layer data.
  *
- * Fundamental data changes rarely (quarterly) → 7-day TTL.
+ * Fundamental data changes quarterly (INCOME_STATEMENT, CASH_FLOW, BALANCE_SHEET) → 90-day TTL.
  * Catalyst (news/sentiment) changes daily → 24-hour TTL.
  *
  * File layout: {DATA_DIR}/institutional-flow-cache/{ticker}_fundamental.json
@@ -22,7 +22,7 @@ public class InstitutionalFlowCache {
     // Docker/Railway: Set DATA_DIR environment variable to appropriate path (e.g., "/app/data")
     private static final String DATA_DIR = System.getenv().getOrDefault("DATA_DIR", "newStrategies");
     private static final Path CACHE_DIR = Paths.get(DATA_DIR, "institutional-flow-cache");
-    private static final long FUNDAMENTAL_TTL_MS = 7L * 24 * 60 * 60 * 1000; // 7 days
+    private static final long FUNDAMENTAL_TTL_MS = 90L * 24 * 60 * 60 * 1000; // 90 days (quarterly reports)
     private static final long CATALYST_TTL_MS    = 24L * 60 * 60 * 1000;     // 24 hours
 
     private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
@@ -98,6 +98,21 @@ public class InstitutionalFlowCache {
             node.put("sector",                 data.sector);
             node.put("industry",               data.industry);
             node.put("lastUpdatedEpochMs",     data.lastUpdatedEpochMs);
+            // Enhanced fields
+            node.put("grossMargin",            data.grossMargin);
+            node.put("ebitdaMargin",           data.ebitdaMargin);
+            node.put("revenueGrowthYoY",       data.revenueGrowthYoY);
+            node.put("epsGrowthYoY",          data.epsGrowthYoY);
+            node.put("freeCashFlow",           data.freeCashFlow);
+            node.put("fcfMargin",              data.fcfMargin);
+            node.put("dividendPayoutRatio",    data.dividendPayoutRatio);
+            node.put("currentRatio",           data.currentRatio);
+            node.put("cashToDebt",             data.cashToDebt);
+            node.put("bookValuePerShare",      data.bookValuePerShare);
+            node.put("earningsSurprisePct",    data.earningsSurprisePct);
+            node.put("consecutiveBeats",       data.consecutiveBeats);
+            node.put("dividendYield",          data.dividendYield);
+            node.put("paysDividend",           data.paysDividend);
             Files.writeString(fundamentalPath(ticker), JSON.writeValueAsString(node));
         } catch (Exception e) {
             // silent — cache is best-effort
@@ -125,6 +140,21 @@ public class InstitutionalFlowCache {
             d.sector               = node.path("sector").asText("");
             d.industry             = node.path("industry").asText("");
             d.lastUpdatedEpochMs   = node.path("lastUpdatedEpochMs").asLong(0);
+            // Enhanced fields
+            d.grossMargin          = node.path("grossMargin").asDouble(0);
+            d.ebitdaMargin         = node.path("ebitdaMargin").asDouble(0);
+            d.revenueGrowthYoY     = node.path("revenueGrowthYoY").asDouble(0);
+            d.epsGrowthYoY        = node.path("epsGrowthYoY").asDouble(0);
+            d.freeCashFlow         = node.path("freeCashFlow").asDouble(0);
+            d.fcfMargin            = node.path("fcfMargin").asDouble(0);
+            d.dividendPayoutRatio = node.path("dividendPayoutRatio").asDouble(0);
+            d.currentRatio         = node.path("currentRatio").asDouble(0);
+            d.cashToDebt           = node.path("cashToDebt").asDouble(0);
+            d.bookValuePerShare    = node.path("bookValuePerShare").asDouble(0);
+            d.earningsSurprisePct = node.path("earningsSurprisePct").asDouble(0);
+            d.consecutiveBeats     = node.path("consecutiveBeats").asInt(0);
+            d.dividendYield        = node.path("dividendYield").asDouble(0);
+            d.paysDividend         = node.path("paysDividend").asBoolean(false);
 
             if (isStale(d.lastUpdatedEpochMs, FUNDAMENTAL_TTL_MS)) return null;
             return d;

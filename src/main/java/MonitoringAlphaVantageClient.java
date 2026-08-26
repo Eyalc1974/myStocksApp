@@ -91,6 +91,14 @@ public class MonitoringAlphaVantageClient {
         return query(Map.of("function", "CASH_FLOW", "symbol", symbol.toUpperCase()));
     }
 
+    public JsonNode balanceSheet(String symbol) throws Exception {
+        return query(Map.of("function", "BALANCE_SHEET", "symbol", symbol.toUpperCase()));
+    }
+
+    public JsonNode earnings(String symbol) throws Exception {
+        return query(Map.of("function", "EARNINGS", "symbol", symbol.toUpperCase()));
+    }
+
     public JsonNode timeSeriesDaily(String symbol) throws Exception {
         return query(Map.of("function", "TIME_SERIES_DAILY", "symbol", symbol.toUpperCase()));
     }

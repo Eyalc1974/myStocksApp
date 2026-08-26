@@ -4064,6 +4064,14 @@ public class AIToolAgent {
         public double riskPct;
         public double rewardPct;
         public double riskReward;
+
+        // Fundamental Analysis (from InstitutionalFlowLayer)
+        public int fundamentalScore;
+        public int catalystScore;
+        public int institutionalFlowScore;
+        public double finalConviction;
+        public FundamentalData fundamentalData;
+        public CatalystData catalystData;
         
         @Override
         public String toString() {
@@ -4109,7 +4117,36 @@ public class AIToolAgent {
             }
             
             sb.append("╠══════════════════════════════════════════════════════════════╣\n");
-            
+
+            // Fundamental Analysis Section
+            sb.append("║  📊 FUNDAMENTAL ANALYSIS (Enhanced)                         ║\n");
+            sb.append("╠══════════════════════════════════════════════════════════════╣\n");
+            if (fundamentalData != null) {
+                sb.append(String.format("║  Fundamental Score: %d/15                                   ║\n", fundamentalScore));
+                sb.append(String.format("║  Catalyst Score: %d/10                                      ║\n", catalystScore));
+                sb.append(String.format("║  Institutional Flow: %d/10                                   ║\n", institutionalFlowScore));
+                sb.append(String.format("║  Final Conviction: %.1f/50                                   ║\n", finalConviction));
+                sb.append("╠══════════════════════════════════════════════════════════════╣\n");
+                sb.append(String.format("║  Market Cap: $%.1fB                                        ║\n", fundamentalData.marketCap / 1e9));
+                sb.append(String.format("║  Revenue Growth YoY: %.1f%%                                   ║\n", fundamentalData.revenueGrowthYoY * 100));
+                sb.append(String.format("║  EPS Growth YoY: %.1f%%                                      ║\n", fundamentalData.epsGrowthYoY * 100));
+                sb.append(String.format("║  Gross Margin: %.1f%%                                         ║\n", fundamentalData.grossMargin * 100));
+                sb.append(String.format("║  EBITDA Margin: %.1f%%                                        ║\n", fundamentalData.ebitdaMargin * 100));
+                sb.append(String.format("║  Free Cash Flow: $%.1fB                                      ║\n", fundamentalData.freeCashFlow / 1e9));
+                sb.append(String.format("║  FCF Margin: %.1f%%                                           ║\n", fundamentalData.fcfMargin * 100));
+                sb.append(String.format("║  Debt/Equity: %.2f                                            ║\n", fundamentalData.debtToEquity));
+                sb.append(String.format("║  Current Ratio: %.2f                                          ║\n", fundamentalData.currentRatio));
+                sb.append(String.format("║  Cash/Debt: %.2f                                              ║\n", fundamentalData.cashToDebt));
+                sb.append(String.format("║  Earnings Surprise: %.1f%%                                     ║\n", fundamentalData.earningsSurprisePct));
+                sb.append(String.format("║  Consecutive Beats: %d                                         ║\n", fundamentalData.consecutiveBeats));
+                sb.append(String.format("║  Dividend Yield: %.2f%%                                       ║\n", fundamentalData.dividendYield));
+                sb.append(String.format("║  Pays Dividend: %s                                            ║\n", fundamentalData.paysDividend ? "Yes" : "No"));
+            } else {
+                sb.append("║  ⚠️  Fundamental data not available                       ║\n");
+            }
+
+            sb.append("╠══════════════════════════════════════════════════════════════╣\n");
+
             if (passed) {
                 sb.append("║  🚀 RESULT: ALL FILTERS PASSED - TRADE SIGNAL!              ║\n");
                 sb.append("╠══════════════════════════════════════════════════════════════╣\n");
@@ -4260,7 +4297,7 @@ public class AIToolAgent {
             report.passed = true;
             report.failedAt = null;
             report.action = "BUY";
-            
+
             // Calculate stop loss and take profit
             double stopLossPct = getDoubleRisk(agent, "stopLossPct", 3.0);
             double takeProfitPct = getDoubleRisk(agent, "takeProfitPct", 6.0);
@@ -4269,7 +4306,34 @@ public class AIToolAgent {
             report.riskPct = stopLossPct;
             report.rewardPct = takeProfitPct;
             report.riskReward = takeProfitPct / stopLossPct;
-            
+
+            // Enhanced: Call InstitutionalFlowLayer for fundamental analysis
+            try {
+                IndicatorData indicatorData = new IndicatorData();
+                indicatorData.ticker = ticker;
+                indicatorData.currentPrice = report.currentPrice;
+                indicatorData.rsi = report.rsi;
+                indicatorData.priceAboveSMA20 = report.currentPrice > report.sma20;
+                indicatorData.priceAboveSMA50 = report.currentPrice > report.sma20; // Using SMA20 as proxy
+                indicatorData.rvol = report.rvol;
+                indicatorData.todayChangePct = 0; // Not calculated in this method
+
+                TradeDecision decision = new TradeDecision();
+                decision.totalScore = 10; // Placeholder score
+                decision.momentumScore = 2; // Placeholder score
+
+                InstitutionalFlowLayer.enrichAndScore(indicatorData, decision, true);
+
+                report.fundamentalScore = decision.fundamentalScore;
+                report.catalystScore = decision.catalystScore;
+                report.institutionalFlowScore = decision.institutionalFlowScore;
+                report.finalConviction = decision.finalConviction;
+                report.fundamentalData = decision.fundamentalData;
+                report.catalystData = decision.catalystData;
+            } catch (Exception e) {
+                System.out.println("[AIToolAgent] Failed to enrich with fundamental data: " + e.getMessage());
+            }
+
             return report;
             
         } catch (Exception e) {
