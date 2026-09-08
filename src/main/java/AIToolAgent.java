@@ -855,17 +855,16 @@ public class AIToolAgent {
 
     /**
      * Get filtered agents for scheduled runs:
-     * Currently only includes MASTER_7_VIX_MARKET_FILTER as the default selection.
+     * Returns empty list - market filters should not generate individual stock signals.
+     * MASTER_7_VIX_MARKET_FILTER is a market regime filter, not a trading agent.
      */
     public static List<String> getFilteredAgentsForScheduledRun() {
         List<String> filtered = new ArrayList<>();
 
         synchronized (LOCK) {
-            // Only include MASTER_7_VIX_MARKET_FILTER by default
-            AgentConfig cfg = systemState != null && systemState.agents != null ? systemState.agents.get("MASTER_7_VIX_MARKET_FILTER") : null;
-            if (cfg != null && !cfg.disabled) {
-                filtered.add("MASTER_7_VIX_MARKET_FILTER");
-            }
+            // Market filter agents (like MASTER_7_VIX_MARKET_FILTER) should NOT be included here
+            // They only filter market conditions, they don't generate individual stock signals
+            // Users should manually select trading agents from the aitool page
         }
 
         return filtered;
@@ -1841,7 +1840,8 @@ public class AIToolAgent {
             agentId.equals("FUND_MOMENTUM_V1") ||
             agentId.equals("MOMENTUM_FUNDAMENTAL_V1") ||
             agentId.contains("SWING") ||
-            agentId.contains("MASTER")) {
+            agentId.contains("MASTER") ||
+            agentId.startsWith("M")) { // Momentum agents
             return "SWING_SYSTEM";
         }
         
@@ -4789,14 +4789,15 @@ public class AIToolAgent {
 
             // === ALL SCAN GATES + ENTRY TRIGGERS PASSED — EXECUTE ===
             // Capture entry diagnostics for post-trade analysis
+            List<Double> s20d = TechnicalAnalysisModel.calculateSMA(prices, 20);
+            double s20v = (s20d != null && !s20d.isEmpty()) ? s20d.get(s20d.size() - 1) : 0;
+            List<Double> s50d = TechnicalAnalysisModel.calculateSMA(prices, 50);
+            double s50v = (s50d != null && !s50d.isEmpty()) ? s50d.get(s50d.size() - 1) : 0;
+            
             try {
                 decision.diagEntryType = agent.entryType != null ? agent.entryType : "AUTO";
                 List<Double> rsiDiag = RSI.calculateRSI(prices, 14);
                 decision.diagRsi = (rsiDiag != null && !rsiDiag.isEmpty()) ? rsiDiag.get(rsiDiag.size() - 1) : 0;
-                List<Double> s20d = TechnicalAnalysisModel.calculateSMA(prices, 20);
-                double s20v = (s20d != null && !s20d.isEmpty()) ? s20d.get(s20d.size() - 1) : 0;
-                List<Double> s50d = TechnicalAnalysisModel.calculateSMA(prices, 50);
-                double s50v = (s50d != null && !s50d.isEmpty()) ? s50d.get(s50d.size() - 1) : 0;
                 if (s20v > 0) decision.diagDistSMA20 = (currentPrice - s20v) / s20v * 100;
                 if (s50v > 0) decision.diagDistSMA50 = (currentPrice - s50v) / s50v * 100;
                 if (volumes != null && volumes.size() >= 21) {
@@ -4809,6 +4810,23 @@ public class AIToolAgent {
 
             decision.shouldTrade = true;
             decision.action = "BUY";
+
+            // ── Institutional Flow Layer: Fundamental & Catalyst Scoring ─────────────────
+            try {
+                IndicatorData indicatorData = new IndicatorData();
+                indicatorData.ticker = ticker;
+                indicatorData.currentPrice = currentPrice;
+                indicatorData.rsi = rsi;
+                indicatorData.priceAboveSMA20 = currentPrice > sma20Current;
+                indicatorData.priceAboveSMA50 = currentPrice > s50v;
+                indicatorData.todayChangePct = prices.size() >= 2 ? ((currentPrice - prices.get(prices.size() - 2)) / prices.get(prices.size() - 2)) * 100 : 0;
+                indicatorData.momentum20d = prices.size() >= 21 ? ((currentPrice - prices.get(prices.size() - 21)) / prices.get(prices.size() - 21)) * 100 : 0;
+                indicatorData.rvol = decision.diagRvol;
+                
+                InstitutionalFlowLayer.enrichAndScore(indicatorData, decision, true);
+            } catch (Exception e) {
+                System.err.println("[AIToolAgent] Failed to enrich Institutional Flow Layer for " + ticker + ": " + e.getMessage());
+            }
 
             // Live price fetch for confirmed entries only (not watchlist candidates)
             if (isMarketHours()) {
@@ -6100,10 +6118,14 @@ public class AIToolAgent {
             if (selectedAgentsForScan != null && !selectedAgentsForScan.isEmpty()) {
                 // Use selected agents — include even if no performance record yet (e.g. new MASTER agents)
                 for (String agentId : selectedAgentsForScan) {
+                    AgentConfig cfg = systemState.agents.get(agentId);
+                    // Skip disabled agents and market filter agents
+                    if (cfg == null || cfg.disabled || "MARKET_FILTER".equals(cfg.type)) {
+                        continue;
+                    }
                     AgentPerformance perf = systemState.performance.get(agentId);
                     if (perf == null) {
                         // Agent exists in agents map but has no trades yet — create a stub perf so it can run
-                        AgentConfig cfg = systemState.agents.get(agentId);
                         if (cfg != null && !cfg.disabled && cfg.strategyType != null) {
                             perf = new AgentPerformance();
                             perf.agentId = agentId;

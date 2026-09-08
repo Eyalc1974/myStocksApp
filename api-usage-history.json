@@ -1,5 +1,73 @@
 {
+  "2026-08-28" : {
+    "TIME_SERIES_DAILY" : 73
+  },
   "2026-08-19" : {
     "TIME_SERIES_DAILY" : 8
+  },
+  "2026-08-22" : {
+    "OVERVIEW" : 2,
+    "EARNINGS" : 2,
+    "INCOME_STATEMENT" : 2,
+    "CASH_FLOW" : 2,
+    "BALANCE_SHEET" : 2,
+    "DIVIDENDS" : 2,
+    "TIME_SERIES_DAILY" : 11,
+    "NEWS_SENTIMENT" : 2
+  },
+  "2026-09-02" : {
+    "NEWS_SENTIMENT" : 9,
+    "TIME_SERIES_DAILY" : 10,
+    "OVERVIEW" : 2,
+    "EARNINGS" : 2,
+    "GLOBAL_QUOTE" : 4,
+    "INCOME_STATEMENT" : 2,
+    "CASH_FLOW" : 2,
+    "BALANCE_SHEET" : 2,
+    "DIVIDENDS" : 2
+  },
+  "2026-09-01" : {
+    "OVERVIEW" : 48,
+    "EARNINGS" : 18,
+    "CASH_FLOW" : 74,
+    "INCOME_STATEMENT" : 47,
+    "BALANCE_SHEET" : 47,
+    "DIVIDENDS" : 18,
+    "TIME_SERIES_DAILY" : 1192,
+    "NEWS_SENTIMENT" : 50,
+    "GLOBAL_QUOTE" : 4
+  },
+  "2026-08-24" : {
+    "OVERVIEW" : 84,
+    "EARNINGS" : 60,
+    "INCOME_STATEMENT" : 61,
+    "CASH_FLOW" : 61,
+    "BALANCE_SHEET" : 61,
+    "DIVIDENDS" : 60,
+    "TIME_SERIES_DAILY" : 1280,
+    "NEWS_SENTIMENT" : 96,
+    "GLOBAL_QUOTE" : 1
+  },
+  "2026-08-25" : {
+    "OVERVIEW" : 19,
+    "EARNINGS" : 15,
+    "INCOME_STATEMENT" : 15,
+    "CASH_FLOW" : 15,
+    "BALANCE_SHEET" : 15,
+    "DIVIDENDS" : 15,
+    "TIME_SERIES_DAILY" : 934,
+    "NEWS_SENTIMENT" : 26,
+    "GLOBAL_QUOTE" : 2
+  },
+  "2026-08-26" : {
+    "OVERVIEW" : 35,
+    "EARNINGS" : 35,
+    "INCOME_STATEMENT" : 35,
+    "CASH_FLOW" : 35,
+    "BALANCE_SHEET" : 35,
+    "DIVIDENDS" : 35,
+    "TIME_SERIES_DAILY" : 906,
+    "NEWS_SENTIMENT" : 72,
+    "GLOBAL_QUOTE" : 2
   }
 }

@@ -8199,10 +8199,7 @@ public class WebServer {
                 sb.append("</div>");
 
                 sb.append("<div style='margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;'>");
-                sb.append("<form method='post' action='/aitool-run-swing' style='margin:0;'><button type='submit' id='runSwingBtn' style='background:#0d9488;border-color:#14b8a6;'>🏏 Run Swing System</button></form>");
-                sb.append("<form method='post' action='/aitool-run-intraday' style='margin:0;'><button type='submit' id='runIntradayBtn' style='background:#7c3aed;border-color:#8b5cf6;'>⚡ Run Intraday System</button></form>");
                 sb.append("<form method='post' action='/aitool-run' style='margin:0;'><button type='submit' id='runBtn'>▶️ Run All Agents</button></form>");
-                sb.append("<form method='post' action='/aitool-monitor' style='margin:0;'><button type='submit' id='monitorBtn' style='background:#0e7490;border-color:#0891b2;'>📡 Monitor Open Positions Now</button></form>");
                 sb.append("<a href='/aitool' style='padding:10px 14px;background:#1f2a44;border-radius:8px;'>🔄 Refresh</a>");
                 sb.append("</div>");
 
@@ -8305,14 +8302,15 @@ public class WebServer {
                     return a.agentId.compareTo(b.agentId);
                 });
                 
-                // Group agents by system type
-                sb.append("<div style='color:#14b8a6;font-size:11px;margin-bottom:4px;'>🏏 Swing System Agents (2-5 day holds):</div>");
+                sb.append("<div style='color:#93c5fd;font-size:11px;margin-bottom:4px;'>🤖 All Available Agents:</div>");
                 for (AIToolAgent.AgentPerformance p : allAgentPerfs) {
                     if (PINNED_MASTERS.contains(p.agentId)) continue;
                     AIToolAgent.AgentConfig pCfg = AIToolAgent.getAgentConfig(p.agentId);
-                    if (pCfg == null || pCfg.disabled || "MOMENTUM".equals(pCfg.type) || pCfg.masterStrategy) continue;
-                    if (!"SWING_SYSTEM".equals(pCfg.systemType)) continue; // Only swing agents
+                    if (pCfg == null || pCfg.disabled || pCfg.masterStrategy) continue;
                     boolean isFilteredAgent = filteredAgentIds.contains(p.agentId);
+                    String systemType = pCfg.systemType != null ? pCfg.systemType : "UNKNOWN";
+                    String typeColor = "SWING_SYSTEM".equals(systemType) ? "#14b8a6" : ("INTRADAY_SYSTEM".equals(systemType) ? "#8b5cf6" : "#9ca3af");
+                    String typeLabel = "SWING_SYSTEM".equals(systemType) ? "SWING" : ("INTRADAY_SYSTEM".equals(systemType) ? "INTRADAY" : systemType);
                     String bgColor = isFilteredAgent ? "#1a2e1a" : (agentIdx % 2 == 0 ? "#0d3d2d" : "#0a2d20");
                     String border = isFilteredAgent ? "border:1px solid #22c55e;" : "border:1px solid transparent;";
                     sb.append("<div style='display:flex;align-items:center;gap:4px;padding:4px 6px;background:").append(bgColor).append(";").append(border).append("border-radius:4px;margin-bottom:2px;'>");
@@ -8322,52 +8320,7 @@ public class WebServer {
                     sb.append("<span style='color:#e5e7eb;font-weight:500;font-size:12px;'>");
                     if (isFilteredAgent) sb.append("✅ ");
                     sb.append(escapeHtml(p.agentId)).append("</span>");
-                    sb.append("<span style='color:#14b8a6;font-size:10px;'>SWING</span>");
-                    if (p.totalTrades > 0) {
-                        double totalPL = 0;
-                        List<AIToolAgent.Trade> agentTrades = AIToolAgent.getAgentTradeHistory(p.agentId);
-                        if (agentTrades != null) {
-                            for (AIToolAgent.Trade t : agentTrades) {
-                                if (t.exitPrice > 0 && t.entryPrice > 0) {
-                                    int shares = (int) (1000.0 / t.entryPrice);
-                                    double plPerShare = (t.exitPrice - t.entryPrice);
-                                    totalPL += plPerShare * shares;
-                                }
-                            }
-                        }
-                        String netPLColor = totalPL >= 0 ? "#22c55e" : "#ef4444";
-                        sb.append("<span style='color:").append(netPLColor).append(";font-weight:600;font-size:11px;'>$").append(String.format("%.0f", totalPL)).append("</span>");
-                        sb.append("<span style='color:#9ca3af;font-size:10px;'>").append(p.wins).append("/").append(p.totalTrades).append(" trades</span>");
-                    } else {
-                        long openCnt = p.recentTrades != null ? p.recentTrades.stream().filter(t -> "OPEN".equals(t.status)).count() : 0;
-                        if (openCnt > 0) {
-                            sb.append("<span style='color:#facc15;font-size:10px;'>🕐 ").append(openCnt).append(" open</span>");
-                        } else {
-                            sb.append("<span style='color:#6b7280;font-size:10px;'>No trades yet</span>");
-                        }
-                    }
-                    sb.append("<a href='/agent-detail?id=").append(urlEncode(p.agentId)).append("' style='color:#60a5fa;font-size:10px;text-decoration:none;' title='Agent detail page'>📋</a>");
-                    sb.append("</div>");
-                    agentIdx++;
-                }
-                
-                sb.append("<div style='color:#8b5cf6;font-size:11px;margin-top:8px;margin-bottom:4px;'>⚡ Intraday System Agents (same-day holds):</div>");
-                for (AIToolAgent.AgentPerformance p : allAgentPerfs) {
-                    if (PINNED_MASTERS.contains(p.agentId)) continue;
-                    AIToolAgent.AgentConfig pCfg = AIToolAgent.getAgentConfig(p.agentId);
-                    if (pCfg == null || pCfg.disabled || "MOMENTUM".equals(pCfg.type) || pCfg.masterStrategy) continue;
-                    if (!"INTRADAY_SYSTEM".equals(pCfg.systemType)) continue; // Only intraday agents
-                    boolean isFilteredAgent = filteredAgentIds.contains(p.agentId);
-                    String bgColor = isFilteredAgent ? "#1a2e1a" : (agentIdx % 2 == 0 ? "#2d1a4e" : "#1e0b3b");
-                    String border = isFilteredAgent ? "border:1px solid #22c55e;" : "border:1px solid transparent;";
-                    sb.append("<div style='display:flex;align-items:center;gap:4px;padding:4px 6px;background:").append(bgColor).append(";").append(border).append("border-radius:4px;margin-bottom:2px;'>");
-                    sb.append("<input type='checkbox' name='agent").append(agentIdx).append("' value='").append(escapeHtml(p.agentId)).append("' style='width:14px;height:14px;'");
-                    if (isFilteredAgent) sb.append(" checked");
-                    sb.append(" />");
-                    sb.append("<span style='color:#e5e7eb;font-weight:500;font-size:12px;'>");
-                    if (isFilteredAgent) sb.append("✅ ");
-                    sb.append(escapeHtml(p.agentId)).append("</span>");
-                    sb.append("<span style='color:#8b5cf6;font-size:10px;'>INTRADAY</span>");
+                    sb.append("<span style='color:").append(typeColor).append(";font-size:10px;'>").append(typeLabel).append("</span>");
                     if (p.totalTrades > 0) {
                         double totalPL = 0;
                         List<AIToolAgent.Trade> agentTrades = AIToolAgent.getAgentTradeHistory(p.agentId);

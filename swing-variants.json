@@ -1,6 +1,6 @@
 {
   "description": "Swing Trading Strategy Variants for A/B Testing - Quality pullback strategies for 1-5 day holds",
-  "enabled": false,
+  "enabled": true,
   "variants": [
     {
       "id": "S1_SWING_PULLBACK",

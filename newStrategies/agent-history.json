@@ -1,5 +1,5 @@
 {
-  "lastUpdated" : "2026-08-17T11:43:52.4890985-04:00[America/New_York]",
+  "lastUpdated" : "2026-09-02T11:05:34.3900369-04:00[America/New_York]",
   "tradeHistory" : {
     "I5_VWAP_RETEST" : [ {
       "id" : "8d4a37e7",
@@ -262,99 +262,21 @@
       "status" : "CLOSED_WIN",
       "entryTime" : "2026-05-04T21:12:24.7913162-04:00[America/New_York]",
       "exitTime" : "2026-05-14T10:58:55.6906916-04:00[America/New_York]"
-    } ],
-    "M1_AGGRESSIVE" : [ ],
-    "M2_CONSERVATIVE" : [ ],
-    "M2_CONSERVATIVE_V2" : [ ],
-    "MASTER_8_STRONG_TREND" : [ {
-      "id" : "f3601377",
-      "ticker" : "MO",
-      "action" : "BUY",
-      "entryPrice" : 70.8328,
-      "exitPrice" : 73.9,
-      "profitLoss" : 306.71999999999997,
-      "profitLossPct" : 4.330197309720919,
-      "status" : "CLOSED_LOSS",
-      "entryTime" : "2026-05-13T10:30:42.977346-04:00[America/New_York]",
-      "exitTime" : "2026-05-26T00:45:16.3427014-04:00[America/New_York]"
     }, {
-      "id" : "50102712",
-      "ticker" : "MAS",
+      "id" : "75673503",
+      "ticker" : "PSX",
       "action" : "BUY",
-      "entryPrice" : 71.865,
-      "exitPrice" : 74.03,
-      "profitLoss" : 216.50000000000063,
-      "profitLossPct" : 3.012593056425251,
-      "status" : "CLOSED_WIN",
-      "entryTime" : "2026-06-09T11:02:10.3088235-04:00[America/New_York]",
-      "exitTime" : "2026-06-13T04:07:22.5687805-04:00[America/New_York]"
-    }, {
-      "id" : "b90ca43b",
-      "ticker" : "CSCO",
-      "action" : "BUY",
-      "entryPrice" : 122.18,
-      "exitPrice" : 119.16,
-      "profitLoss" : -302.000000000001,
-      "profitLossPct" : -2.4717629726632917,
-      "status" : "CLOSED_LOSS",
-      "entryTime" : "2026-06-12T05:42:41.5670851-04:00[America/New_York]",
-      "exitTime" : "2026-06-25T11:52:30.3446039-04:00[America/New_York]"
-    }, {
-      "id" : "b7992d6b",
-      "ticker" : "DELL",
-      "action" : "BUY",
-      "entryPrice" : 423.222,
-      "exitPrice" : 457.68,
-      "profitLoss" : 3445.800000000003,
-      "profitLossPct" : 8.141826275571692,
-      "status" : "CLOSED_WIN",
-      "entryTime" : "2026-06-30T12:06:32.7126635-04:00[America/New_York]",
-      "exitTime" : "2026-07-14T11:17:14.0655882-04:00[America/New_York]"
-    }, {
-      "id" : "3114dba3",
-      "ticker" : "DELL",
-      "action" : "BUY",
-      "entryPrice" : 428.79,
-      "exitPrice" : 421.24,
-      "profitLoss" : -755.0000000000011,
-      "profitLossPct" : -1.7607686746426015,
-      "status" : "CLOSED_LOSS",
-      "entryTime" : "2026-07-08T12:54:13.3006215-04:00[America/New_York]",
-      "exitTime" : "2026-07-27T12:18:26.5286489-04:00[America/New_York]"
-    }, {
-      "id" : "e9144543",
-      "ticker" : "MAS",
-      "action" : "BUY",
-      "entryPrice" : 77.075,
-      "exitPrice" : 73.0901,
-      "profitLoss" : -398.4899999999996,
-      "profitLossPct" : -5.170158936101195,
-      "status" : "CLOSED_LOSS",
-      "entryTime" : "2026-08-04T16:51:36.968252-04:00[America/New_York]",
-      "exitTime" : "2026-08-17T11:42:41.569618-04:00[America/New_York]"
-    }, {
-      "id" : "0b5c5a3a",
-      "ticker" : "MAS",
-      "action" : "BUY",
-      "entryPrice" : 77.08,
-      "exitPrice" : 73.0901,
-      "profitLoss" : -398.98999999999916,
-      "profitLossPct" : -5.176310326933046,
-      "status" : "CLOSED_LOSS",
-      "entryTime" : "2026-08-05T01:10:14.841396-04:00[America/New_York]",
-      "exitTime" : "2026-08-17T11:42:41.8843503-04:00[America/New_York]"
-    }, {
-      "id" : "c4bbc5c2",
-      "ticker" : "ILMN",
-      "action" : "BUY",
-      "entryPrice" : 193.03,
+      "entryPrice" : 246.58,
       "exitPrice" : 0.0,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
-      "entryTime" : "2026-08-17T11:43:48.7116558-04:00[America/New_York]",
+      "entryTime" : "2026-09-02T11:05:32.8497719-04:00[America/New_York]",
       "exitTime" : null
     } ],
+    "M1_AGGRESSIVE" : [ ],
+    "M2_CONSERVATIVE" : [ ],
+    "M2_CONSERVATIVE_V2" : [ ],
     "I2_VWAP_PULLBACK" : [ ],
     "MASTER_7_VIX_MARKET_FILTER" : [ {
       "id" : "233bd0e0",
@@ -1790,6 +1712,16 @@
     "INST_SWING_V1" : [ ],
     "FUND_MOMENTUM_V1" : [ ],
     "QUALITY_GROWTH_V1" : [ ],
-    "MOMENTUM_FUNDAMENTAL_V1" : [ ]
+    "MOMENTUM_FUNDAMENTAL_V1" : [ ],
+    "S1_SWING_PULLBACK" : [ ],
+    "S6_SWING_MOMENTUM_BLEND" : [ ],
+    "S7_SWING_CONSERVATIVE" : [ ],
+    "S8_SWING_OVERSOLD_BOUNCE" : [ ],
+    "S9_SWING_VOLUME_LEADER" : [ ],
+    "S10_SWING_TIGHT_RANGE" : [ ],
+    "S2_SWING_BREAKOUT" : [ ],
+    "S3_SWING_TREND_FOLLOW" : [ ],
+    "S4_SWING_VALUE" : [ ],
+    "S5_SWING_AGGRESSIVE" : [ ]
   }
 }

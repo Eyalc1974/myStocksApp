@@ -1,6 +1,6 @@
 {
   "description": "Intraday VWAP Trend Following Strategy Variants - מבוסס על דיליי 15 דקות ואישור VWAP",
-  "enabled": false,
+  "enabled": true,
   "delayMinutes": 15,
   "vwapCore": {
     "description": "VWAP משמש כמסננת אמינות - אם המחיר מעל VWAP, הקונים שולטים ביום",
@@ -16,7 +16,6 @@
       "nameHe": "פריצת VWAP (מומלץ)",
       "description": "Classic VWAP breakout with CCI>100, high RVOL, RS leader - Best for confirmed momentum",
       "descriptionHe": "פריצה קלאסית מעל VWAP עם CCI>100, נפח חריג ומנהיגות יחסית - לזיהוי מומנטום אמיתי",
-      "disabled": true,
       "stocksPerVariant": 3,
       "entryFilters": {
         "vwapRequired": true,
@@ -61,7 +60,6 @@
       "nameHe": "כניסה בחזרה ל-VWAP",
       "description": "Wait for pullback to VWAP after breakout - Uses 15-min delay as advantage to confirm strength",
       "descriptionHe": "המתנה לחזרה ל-VWAP אחרי פריצה - הדיליי של 15 דקות נותן זמן לראות אם הפריצה אמיתית",
-      "disabled": true,
       "stocksPerVariant": 3,
       "entryFilters": {
         "vwapRequired": true,
@@ -108,7 +106,6 @@
       "nameHe": "רוכב המגמה (שמרני)",
       "description": "Conservative trend following - Requires strong RS, stable above VWAP, wider stops",
       "descriptionHe": "רכיבה שמרנית על המגמה - דורש RS חזק, יציבות מעל VWAP וסטופים רחבים יותר",
-      "disabled": true,
       "stocksPerVariant": 2,
       "entryFilters": {
         "vwapRequired": true,
@@ -151,7 +148,6 @@
       "nameHe": "זינוק נפח + VWAP",
       "description": "High volume breakout with VWAP confirmation - Institutional buying signal",
       "descriptionHe": "פריצה בנפח גבוה מאוד עם אישור VWAP - סימן לקנייה מוסדית",
-      "disabled": true,
       "stocksPerVariant": 2,
       "entryFilters": {
         "vwapRequired": true,
@@ -193,7 +189,6 @@
       "nameHe": "בדיקה חוזרת של VWAP (סינון מלכודות)",
       "description": "Enter only after price retests VWAP and holds - Best for avoiding bull traps with 15-min delay",
       "descriptionHe": "כניסה רק אחרי שהמחיר חזר לבדוק VWAP והחזיק - הדיליי עוזר לסנן מלכודות שוורים",
-      "disabled": true,
       "stocksPerVariant": 2,
       "entryFilters": {
         "vwapRequired": true,
@@ -237,7 +232,6 @@
       "nameHe": "תוך-יומי אגרסיבי (סיכון גבוה)",
       "description": "Looser filters for more trades - Higher risk, for comparison testing only",
       "descriptionHe": "פילטרים רופפים יותר לעסקאות רבות יותר - סיכון גבוה, לבדיקה בלבד",
-      "disabled": true,
       "stocksPerVariant": 1,
       "entryFilters": {
         "vwapRequired": true,

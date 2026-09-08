@@ -29,5 +29,5 @@
     "description" : "Volume-surge(3)+Breakout/30d-resistance(3)+Trend/SMA-alignment(3)+Momentum/RSI+dailyChg(3)=12 max. Buy on break of 30-day resistance. Hold 3-10 days."
   },
   "locked" : true,
-  "disabled" : true
+  "disabled" : false
 }
