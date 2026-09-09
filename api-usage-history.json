@@ -5,6 +5,16 @@
   "2026-08-19" : {
     "TIME_SERIES_DAILY" : 8
   },
+  "2026-09-09" : {
+    "TIME_SERIES_DAILY" : 138,
+    "NEWS_SENTIMENT" : 2,
+    "OVERVIEW" : 2,
+    "EARNINGS" : 2,
+    "INCOME_STATEMENT" : 2,
+    "CASH_FLOW" : 2,
+    "BALANCE_SHEET" : 2,
+    "DIVIDENDS" : 2
+  },
   "2026-08-22" : {
     "OVERVIEW" : 2,
     "EARNINGS" : 2,
@@ -16,15 +26,15 @@
     "NEWS_SENTIMENT" : 2
   },
   "2026-09-02" : {
-    "NEWS_SENTIMENT" : 9,
-    "TIME_SERIES_DAILY" : 10,
     "OVERVIEW" : 2,
     "EARNINGS" : 2,
-    "GLOBAL_QUOTE" : 4,
     "INCOME_STATEMENT" : 2,
     "CASH_FLOW" : 2,
     "BALANCE_SHEET" : 2,
-    "DIVIDENDS" : 2
+    "DIVIDENDS" : 2,
+    "NEWS_SENTIMENT" : 9,
+    "TIME_SERIES_DAILY" : 10,
+    "GLOBAL_QUOTE" : 4
   },
   "2026-09-01" : {
     "OVERVIEW" : 48,

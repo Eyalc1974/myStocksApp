@@ -16,6 +16,11 @@ public class MarketDataCache {
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final String CACHE_FILE = "market_data_cache.json";
     
+    // API rate limit sleep time (milliseconds)
+    // Premium tier: 600 calls/minute = 10 calls/second = 100ms sleep between calls
+    // Free tier: 5 calls/minute = 12 seconds sleep between calls
+    private static final int API_SLEEP_MS = 100;
+    
     /**
      * Cached data structure for a single ticker
      */
@@ -120,9 +125,8 @@ public class MarketDataCache {
                 }
                 
                 // Rate limiting: 3 API calls per ticker (stock data + income + earnings)
-                // Alpha Vantage free tier = 5 calls/min = 12 seconds per call
-                // Sleep 36 seconds between tickers to respect limits
-                Thread.sleep(36000);
+                // Alpha Vantage Premium tier = 600 calls/min = 100ms per call
+                Thread.sleep(API_SLEEP_MS);
                 
             } catch (Exception e) {
                 System.err.println("[MarketDataCache] Error fetching " + ticker + ": " + e.getMessage());

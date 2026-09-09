@@ -1,10 +1,10 @@
 --- 🎯 Daily Nasdaq Top 5 (GREEN) candidates ---
-[daily-green] started (thread will run in background)
-[ScoringConfig] Loaded config: activeMode=LONG_TERM_INVESTOR
-[ScoringConfig] Mode thresholds: green=60, buy=60, strongBuy=80
-[AIToolAgent] Agent MASTER_6_VOLUME_BREAKOUT found 0 signals, selecting top 0
-[AIToolAgent] Full scan with agent: MASTER_5_PULLBACK_MA20
+[AIToolAgent] Daily recommendations appended to: newStrategies\daily-recommendations.txt
+שגיאה בניתוח LITE: חסר נתונים לחישובים מורכבים עבור LITE
+Alpha Vantage: Minute-level rate limit exceed. Please stay under the number of API requests per minute for your premium subscription plan. Please contact support@alphavantage.co if you are targeting a higher API request volume.
+שגיאה בניתוח MNY: חסר נתונים לחישובים מורכבים עבור MNY
+Alpha Vantage: Minute-level rate limit exceed. Please stay under the number of API requests per minute for your premium subscription plan. Please contact support@alphavantage.co if you are targeting a higher API request volume.
 
 | TICKER | PRICE    | טכני (כניסה)    | פונדמנטלי         | ADX (חוזק) |
 |--------|----------|-----------------|-------------------|-----------|
-| AMN   | $32.35    | NEUTRAL         | STRONG BUY (Long Term) | ADX: 34.05 |
+No GREEN candidates found today (based on current filters). Try again later.

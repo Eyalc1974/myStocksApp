@@ -77,6 +77,11 @@ public class AIToolAgent {
     // Note: Alpha Vantage free tier = 5 calls/minute; full scan = ~16 agents x 12 stocks = 192 calls (~40 min)
     private static final int STOCKS_PER_AGENT_RUN = 12;
     
+    // API rate limit sleep time (milliseconds)
+    // Premium tier: 600 calls/minute = 10 calls/second = 100ms sleep between calls
+    // Free tier: 5 calls/minute = 12.5 seconds sleep between calls
+    private static final int API_SLEEP_MS = 100;
+    
     // Track which agents we've already notified about (to avoid spam)
     private static final Set<String> notifiedWinningAgents = ConcurrentHashMap.newKeySet();
     
@@ -1155,7 +1160,7 @@ public class AIToolAgent {
                                             "[EOD HOLD RUNNER 🚀] %s | %s | day %d/%d | P/L=$%+.2f (%.2f%%) | SL=$%.2f | TP=$%.2f",
                                             trade.ticker, agentId, holdDays, maxHold,
                                             currentProfit, profitPct, trade.stopLoss, trade.takeProfit));
-                                        Thread.sleep(12500);
+                                        Thread.sleep(API_SLEEP_MS);
                                         continue;
                                     }
                                 } else {
@@ -1164,7 +1169,7 @@ public class AIToolAgent {
                                         "[EOD CARRY ⏳] %s | %s | day %d/%d | $%.2f | SL=$%.2f | TP=$%.2f",
                                         trade.ticker, agentId, holdDays, maxHold,
                                         currentPrice, trade.stopLoss, trade.takeProfit));
-                                    Thread.sleep(12500);
+                                    Thread.sleep(API_SLEEP_MS);
                                     continue;
                                 }
                             }
@@ -1200,7 +1205,7 @@ public class AIToolAgent {
                             String.format("%.2f", trade.profitLoss) + " (" + trade.status + ")");
                         
                         // Rate limit for API calls
-                        Thread.sleep(12500);
+                        Thread.sleep(API_SLEEP_MS);
                         
                     } catch (Exception e) {
                         System.err.println("[AIToolAgent] Error closing position for " + trade.ticker + ": " + e.getMessage());
@@ -1265,14 +1270,14 @@ public class AIToolAgent {
                 // Fetch live quote for current price + today's high
                 String quoteJson = DataFetcher.fetchGlobalQuote(trade.ticker);
                 if (quoteJson == null || quoteJson.isBlank()) {
-                    Thread.sleep(12500);
+                    Thread.sleep(API_SLEEP_MS);
                     continue;
                 }
 
                 double currentPrice = parseGlobalQuoteField(quoteJson, "05. price");
                 double todayHigh    = parseGlobalQuoteField(quoteJson, "03. high");
                 if (currentPrice <= 0) {
-                    Thread.sleep(12500);
+                    Thread.sleep(API_SLEEP_MS);
                     continue;
                 }
 
@@ -1373,7 +1378,7 @@ public class AIToolAgent {
                         " | TP=$" + String.format("%.2f", trade.takeProfit));
                 }
 
-                Thread.sleep(12500); // Alpha Vantage rate limit: 5 calls/min
+                Thread.sleep(API_SLEEP_MS); // Alpha Vantage rate limit: Premium tier = 600 calls/min
 
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
@@ -2717,8 +2722,8 @@ public class AIToolAgent {
                     }
                 }
                 
-                // Rate limit delay - Alpha Vantage free tier = 5 calls/minute
-                Thread.sleep(12500); // 12.5 seconds between calls = ~5 calls/minute
+                // Rate limit delay - Alpha Vantage Premium tier = 600 calls/minute
+                Thread.sleep(API_SLEEP_MS); // 100ms between calls = ~600 calls/minute
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 break;
@@ -2905,7 +2910,7 @@ public class AIToolAgent {
         try {
             DataFetcher.setTicker("SPY");
             String json = DataFetcher.fetchStockData();
-            Thread.sleep(12500);
+            Thread.sleep(API_SLEEP_MS);
             if (json == null || json.isBlank()) {
                 writeScanLog("[REGIME] SPY data unavailable — proceeding (fail-open)");
                 return RegimeLevel.HEALTHY;
@@ -6218,8 +6223,8 @@ public class AIToolAgent {
                         totalAnalyzed++;
                         topAgentsFullScanProgress = totalAnalyzed;
 
-                        // Rate limit delay - Alpha Vantage free tier = 5 calls/minute
-                        Thread.sleep(12500);
+                        // Rate limit delay - Alpha Vantage Premium tier = 600 calls/minute
+                        Thread.sleep(API_SLEEP_MS);
 
                     } catch (Exception e) {
                         System.err.println("[AIToolAgent] Full scan error for " + ticker + ": " + e.getMessage());
