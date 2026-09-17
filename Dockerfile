@@ -27,6 +27,8 @@ RUN mkdir -p /app/finder-cache \
 COPY --from=builder /app/target/trading-model*.jar app.jar
 # Copy local newStrategies data to seed the container with existing data
 COPY newStrategies/ /app/data/
+# Copy root-level agent configuration files
+COPY *.json /app/
 # Set environment variable for data directory
 ENV DATA_DIR=/app/data
 # Expose port if needed (adjust based on your application)
