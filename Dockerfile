@@ -16,6 +16,13 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 # Create data directory for strategy files
 RUN mkdir -p /app/data
+# Create all runtime cache directories
+RUN mkdir -p /app/finder-cache \
+    && mkdir -p /app/weekly-cache \
+    && mkdir -p /app/analysts-cache \
+    && mkdir -p /app/alpha-agent-cache \
+    && mkdir -p /app/monitoring-cache \
+    && mkdir -p /app/monitoring-data
 # Copy the built JAR from builder stage using wildcard
 COPY --from=builder /app/target/trading-model*.jar app.jar
 # Copy local newStrategies data to seed the container with existing data

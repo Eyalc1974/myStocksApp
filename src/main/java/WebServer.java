@@ -101,6 +101,14 @@ public class WebServer {
     private static final String CACHE_SETTINGS_FILE = "cache_settings.json";
     private static final String CACHE_STATE_FILE = "cache_state.json";
 
+    // Pre-Market Cache refresh status tracking
+    private static final Object preMarketCacheLock = new Object();
+    private static volatile boolean preMarketCacheRunning = false;
+    private static volatile int preMarketCacheProgress = 0;
+    private static volatile int preMarketCacheTotal = 0;
+    private static volatile String preMarketCacheCurrentTicker = "";
+    private static volatile boolean preMarketCacheCompleted = false;
+
     // Market data fetch progress tracking
     private static final Object marketDataFetchLock = new Object();
     private static volatile boolean marketDataFetchRunning = false;
@@ -8201,6 +8209,28 @@ public class WebServer {
                 sb.append("<div style='margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;'>");
                 sb.append("<form method='post' action='/aitool-run' style='margin:0;'><button type='submit' id='runBtn'>▶️ Run All Agents</button></form>");
                 sb.append("<a href='/aitool' style='padding:10px 14px;background:#1f2a44;border-radius:8px;'>🔄 Refresh</a>");
+                sb.append("<button type='button' id='refreshCacheBtn' onclick='refreshPreMarketCache()' style='padding:10px 14px;background:#1f2a44;border-radius:8px;border:1px solid #3b82f6;color:#93c5fd;cursor:pointer;'>📊 Refresh Pre-Market Cache</button>");
+                sb.append("</div>");
+                
+                // Pre-Market Cache Status Panel
+                boolean cacheExists = new java.io.File("pre-market-indicators.json").exists();
+                sb.append("<div style='margin-top:16px;background:#0b1220;border:1px solid #1f2a44;border-radius:12px;padding:14px;' id='cacheStatusPanel'>");
+                sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;'>");
+                sb.append("<span style='font-weight:700;color:#93c5fd;'>📊 Pre-Market Indicator Cache</span>");
+                sb.append("<span id='cacheStatusLabel' style='font-size:12px;color:").append(cacheExists ? "#22c55e" : "#f59e0b").append(";'>").append(cacheExists ? "✓ Cached" : "⚠ Not Cached").append("</span>");
+                sb.append("</div>");
+                sb.append("<div id='cacheProgressSection' style='display:none;margin-top:8px;'>");
+                sb.append("<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;'>");
+                sb.append("<span style='font-size:12px;color:#9ca3af;'>Progress: <span id='cacheProgressText'>0 / 0</span></span>");
+                sb.append("<span style='font-size:12px;color:#22c55e;font-weight:600;'><span id='cachePct'>0</span>%</span>");
+                sb.append("</div>");
+                sb.append("<div style='background:#1f2a44;border-radius:6px;height:8px;overflow:hidden;'>");
+                sb.append("<div id='cacheProgressBar' style='background:linear-gradient(90deg,#3b82f6,#2563eb);height:100%;width:0%;transition:width 0.3s ease;'></div>");
+                sb.append("</div>");
+                sb.append("<div style='margin-top:4px;font-size:11px;color:#6b7280;'>");
+                sb.append("Current: <span id='cacheCurrentTicker' style='color:#fcd34d;'>—</span>");
+                sb.append("</div>");
+                sb.append("</div>");
                 sb.append("</div>");
 
                 // Market Regime Filter Banner — always visible
@@ -8266,6 +8296,70 @@ public class WebServer {
                 sb.append("  if(!polling){polling=true;setTimeout(poll,2000);}");
                 sb.append("});");
                 sb.append("})();");
+                
+                // Pre-Market Cache Refresh JavaScript
+                sb.append("function refreshPreMarketCache(){");
+                sb.append("  var btn=document.getElementById('refreshCacheBtn');");
+                sb.append("  var progressSection=document.getElementById('cacheProgressSection');");
+                sb.append("  var progressText=document.getElementById('cacheProgressText');");
+                sb.append("  var pctLabel=document.getElementById('cachePct');");
+                sb.append("  var progressBar=document.getElementById('cacheProgressBar');");
+                sb.append("  var currentTicker=document.getElementById('cacheCurrentTicker');");
+                sb.append("  var statusLabel=document.getElementById('cacheStatusLabel');");
+                sb.append("  ");
+                sb.append("  btn.disabled=true;");
+                sb.append("  btn.textContent='⏳ Refreshing...';");
+                sb.append("  progressSection.style.display='block';");
+                sb.append("  statusLabel.textContent='⏳ Refreshing...';");
+                sb.append("  statusLabel.style.color='#f59e0b';");
+                sb.append("  ");
+                sb.append("  fetch('/refresh-premarket-cache',{method:'POST'})");
+                sb.append("    .then(function(r){return r.json();})");
+                sb.append("    .then(function(d){");
+                sb.append("      if(d.error){");
+                sb.append("        alert('Error: '+d.error);");
+                sb.append("        btn.disabled=false;");
+                sb.append("        btn.textContent='📊 Refresh Pre-Market Cache';");
+                sb.append("        return;");
+                sb.append("      }");
+                sb.append("      pollCacheProgress();");
+                sb.append("    })");
+                sb.append("    .catch(function(e){");
+                sb.append("      alert('Request failed: '+e);");
+                sb.append("      btn.disabled=false;");
+                sb.append("      btn.textContent='📊 Refresh Pre-Market Cache';");
+                sb.append("    });");
+                sb.append("}");
+                sb.append("function pollCacheProgress(){");
+                sb.append("  fetch('/premarket-cache-status')");
+                sb.append("    .then(function(r){return r.json();})");
+                sb.append("    .then(function(d){");
+                sb.append("      var progressText=document.getElementById('cacheProgressText');");
+                sb.append("      var pctLabel=document.getElementById('cachePct');");
+                sb.append("      var progressBar=document.getElementById('cacheProgressBar');");
+                sb.append("      var currentTicker=document.getElementById('cacheCurrentTicker');");
+                sb.append("      var statusLabel=document.getElementById('cacheStatusLabel');");
+                sb.append("      var btn=document.getElementById('refreshCacheBtn');");
+                sb.append("      ");
+                sb.append("      if(d.running){");
+                sb.append("        var total=d.total||0, prog=d.progress||0;");
+                sb.append("        var pct=total>0?Math.round(prog*100/total):0;");
+                sb.append("        progressText.textContent=prog+' / '+total;");
+                sb.append("        pctLabel.textContent=pct;");
+                sb.append("        progressBar.style.width=pct+'%';");
+                sb.append("        currentTicker.textContent=d.currentTicker||'—';");
+                sb.append("        setTimeout(pollCacheProgress,2000);");
+                sb.append("      }else{");
+                sb.append("        progressSection.style.display='none';");
+                sb.append("        statusLabel.textContent='✓ Cached';");
+                sb.append("        statusLabel.style.color='#22c55e';");
+                sb.append("        btn.disabled=false;");
+                sb.append("        btn.textContent='📊 Refresh Pre-Market Cache';");
+                sb.append("        if(d.completed){alert('Cache refresh completed!');}");
+                sb.append("      }");
+                sb.append("    })");
+                sb.append("    .catch(function(){setTimeout(pollCacheProgress,3000);});");
+                sb.append("}");
                 sb.append("</script>");
                 
                 // Top Agents Full Scan Section
@@ -9449,6 +9543,80 @@ public class WebServer {
                 ex.sendResponseHeaders(200, bytes.length);
                 ex.getResponseBody().write(bytes);
                 ex.close();
+            }
+        });
+
+        // Pre-Market Cache Refresh - Start refresh
+        server.createContext("/refresh-premarket-cache", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                    respondJson(ex, Map.of("error", "POST only"), 405);
+                    return;
+                }
+                if (!isAuthenticated(ex)) {
+                    respondJson(ex, Map.of("error", "Unauthorized"), 401);
+                    return;
+                }
+
+                synchronized (preMarketCacheLock) {
+                    if (preMarketCacheRunning) {
+                        respondJson(ex, Map.of("error", "Cache refresh already running"), 400);
+                        return;
+                    }
+
+                    preMarketCacheRunning = true;
+                    preMarketCacheProgress = 0;
+                    preMarketCacheTotal = 0;
+                    preMarketCacheCurrentTicker = "";
+                    preMarketCacheCompleted = false;
+                }
+
+                // Start cache refresh in background thread
+                new Thread(() -> {
+                    try {
+                        List<String> tickers = LongTermCandidateFinder.getAllSectorTickers();
+                        preMarketCacheTotal = tickers.size();
+
+                        PreMarketIndicatorCache.buildPreMarketCache(tickers, (current, total, ticker) -> {
+                            synchronized (preMarketCacheLock) {
+                                preMarketCacheProgress = current;
+                                preMarketCacheCurrentTicker = ticker;
+                            }
+                        });
+
+                        synchronized (preMarketCacheLock) {
+                            preMarketCacheRunning = false;
+                            preMarketCacheCompleted = true;
+                        }
+                    } catch (Exception e) {
+                        System.err.println("[WebServer] Pre-market cache refresh failed: " + e.getMessage());
+                        synchronized (preMarketCacheLock) {
+                            preMarketCacheRunning = false;
+                        }
+                    }
+                }).start();
+
+                respondJson(ex, Map.of("status", "started"), 200);
+            }
+        });
+
+        // Pre-Market Cache Status - Get current progress
+        server.createContext("/premarket-cache-status", new HttpHandler() {
+            @Override public void handle(HttpExchange ex) throws IOException {
+                ex.getResponseHeaders().add("Content-Type", "application/json");
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+
+                synchronized (preMarketCacheLock) {
+                    String body = "{\"running\":" + preMarketCacheRunning
+                        + ",\"progress\":" + preMarketCacheProgress
+                        + ",\"total\":" + preMarketCacheTotal
+                        + ",\"currentTicker\":\"" + (preMarketCacheCurrentTicker != null ? preMarketCacheCurrentTicker.replace("\"","\\\"") : "") + "\""
+                        + ",\"completed\":" + preMarketCacheCompleted + "}";
+                    byte[] bytes = body.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                    ex.sendResponseHeaders(200, bytes.length);
+                    ex.getResponseBody().write(bytes);
+                    ex.close();
+                }
             }
         });
 

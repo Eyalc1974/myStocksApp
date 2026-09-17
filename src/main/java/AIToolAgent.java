@@ -2954,6 +2954,34 @@ public class AIToolAgent {
     private static IndicatorData computeIndicators(String ticker, String json) {
         IndicatorData d = new IndicatorData();
         d.ticker = ticker;
+        
+        // Try to use pre-market cache for faster calculation
+        try {
+            List<Double> prices = PriceJsonParser.extractClosingPrices(json);
+            List<Double> highPrices = PriceJsonParser.extractHighPrices(json);
+            List<Double> lowPrices = PriceJsonParser.extractLowPrices(json);
+            List<Double> volumes = PriceJsonParser.extractVolumes(json);
+            
+            if (prices != null && !prices.isEmpty() && highPrices != null && !highPrices.isEmpty()) {
+                double todayPrice = prices.get(prices.size() - 1);
+                double todayHigh = highPrices.get(highPrices.size() - 1);
+                double todayLow = lowPrices.get(lowPrices.size() - 1);
+                double todayVolume = (volumes != null && !volumes.isEmpty()) ? volumes.get(volumes.size() - 1) : 0;
+                
+                // Try to use pre-market cache
+                IndicatorData cachedData = PreMarketIndicatorCache.updateWithLiveData(
+                    ticker, todayPrice, todayVolume, todayHigh, todayLow);
+                
+                if (cachedData != null && cachedData.valid) {
+                    return cachedData; // Use cached data - much faster!
+                }
+            }
+        } catch (Exception e) {
+            // Cache lookup failed, fall back to full calculation
+            System.err.println("[AIToolAgent] Cache lookup failed for " + ticker + ", using full calculation");
+        }
+        
+        // Fallback: Full calculation (original logic)
         try {
             List<Double> prices = PriceJsonParser.extractClosingPrices(json);
             if (prices == null || prices.size() < 20) return d;
