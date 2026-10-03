@@ -6,6 +6,8 @@ api-usage-history.json
 daily-trading-sim.json
 favorites.txt
 monitoring-stocks.txt
+trading-config.json
+real-trading.json
 *.log
 *.tmp
 .DS_Store
