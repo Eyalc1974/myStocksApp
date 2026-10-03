@@ -1,5 +1,5 @@
 {
-  "lastUpdated" : "2026-09-02T11:05:34.3900369-04:00[America/New_York]",
+  "lastUpdated" : "2026-10-03T06:48:16.6809126-04:00[America/New_York]",
   "tradeHistory" : {
     "I5_VWAP_RETEST" : [ {
       "id" : "8d4a37e7",
@@ -267,11 +267,88 @@
       "ticker" : "PSX",
       "action" : "BUY",
       "entryPrice" : 246.58,
+      "exitPrice" : 264.58,
+      "profitLoss" : 1799.9999999999973,
+      "profitLossPct" : 7.299862113715617,
+      "status" : "CLOSED_WIN",
+      "entryTime" : "2026-09-02T11:05:32.8497719-04:00[America/New_York]",
+      "exitTime" : "2026-10-03T06:48:15.5364529-04:00[America/New_York]"
+    }, {
+      "id" : "cec914a2",
+      "ticker" : "STM",
+      "action" : "BUY",
+      "entryPrice" : 57.26,
       "exitPrice" : 0.0,
       "profitLoss" : 0.0,
       "profitLossPct" : 0.0,
       "status" : "OPEN",
-      "entryTime" : "2026-09-02T11:05:32.8497719-04:00[America/New_York]",
+      "entryTime" : "2026-10-03T05:29:26.1259724-04:00[America/New_York]",
+      "exitTime" : null
+    }, {
+      "id" : "4ac8e8b0",
+      "ticker" : "QRVO",
+      "action" : "BUY",
+      "entryPrice" : 114.17,
+      "exitPrice" : 0.0,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-10-03T05:29:28.5037555-04:00[America/New_York]",
+      "exitTime" : null
+    }, {
+      "id" : "145cdb10",
+      "ticker" : "NCLH",
+      "action" : "BUY",
+      "entryPrice" : 15.14,
+      "exitPrice" : 0.0,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-10-03T05:29:29.8833768-04:00[America/New_York]",
+      "exitTime" : null
+    }, {
+      "id" : "4b966836",
+      "ticker" : "WOLF",
+      "action" : "BUY",
+      "entryPrice" : 35.28,
+      "exitPrice" : 0.0,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-10-03T05:29:31.6609507-04:00[America/New_York]",
+      "exitTime" : null
+    }, {
+      "id" : "421604a4",
+      "ticker" : "ON",
+      "action" : "BUY",
+      "entryPrice" : 84.89,
+      "exitPrice" : 0.0,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-10-03T05:29:32.6857864-04:00[America/New_York]",
+      "exitTime" : null
+    }, {
+      "id" : "55eb9e6e",
+      "ticker" : "COL",
+      "action" : "BUY",
+      "entryPrice" : 141.04,
+      "exitPrice" : 0.0,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-10-03T05:29:34.5743481-04:00[America/New_York]",
+      "exitTime" : null
+    }, {
+      "id" : "61f98095",
+      "ticker" : "PRO",
+      "action" : "BUY",
+      "entryPrice" : 23.25,
+      "exitPrice" : 0.0,
+      "profitLoss" : 0.0,
+      "profitLossPct" : 0.0,
+      "status" : "OPEN",
+      "entryTime" : "2026-10-03T05:29:36.338187-04:00[America/New_York]",
       "exitTime" : null
     } ],
     "M1_AGGRESSIVE" : [ ],

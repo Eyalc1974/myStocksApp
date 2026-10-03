@@ -17,6 +17,9 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 public class AIToolAgent {
+    
+    // TradingManager integration - switch between simulation and Alpaca paper trading
+    private static boolean tradingManagerInitialized = false;
 
     private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
     
@@ -269,6 +272,7 @@ public class AIToolAgent {
         public String closeReason; // STOP_LOSS, TAKE_PROFIT, EOD_CLOSE, PARTIAL_1R
         public boolean partialExitDone = false; // true after 1R partial exit fires intraday
         public double partialExitPrice = 0;     // price at which partial exit was executed
+        public String alpacaOrderId; // Order ID from Alpaca (when using real trading)
         // Strategy attribution — stored for post-trade performance analysis
         public int entryScore;           // total score at entry (out of 12)
         public int entryVolumeScore;
@@ -570,6 +574,19 @@ public class AIToolAgent {
         
         try {
             Files.createDirectories(NEW_STRATEGIES_DIR);
+            
+            // Initialize TradingManager for Alpaca paper trading integration
+            try {
+                TradingManager.initialize();
+                tradingManagerInitialized = true;
+                System.out.println("[AIToolAgent] TradingManager initialized - Mode: " + 
+                    TradingManager.getTradingMode() + 
+                    (TradingManager.isRealTrading() ? " (Alpaca Paper Trading)" : " (Simulation)"));
+            } catch (Exception e) {
+                System.err.println("[AIToolAgent] Failed to initialize TradingManager: " + e.getMessage());
+                System.err.println("[AIToolAgent] Will use simulation mode only");
+                tradingManagerInitialized = false;
+            }
             
             // Initialize separate position stores for Swing vs Intraday systems
             Path swingCache = Paths.get("finder-cache", "swing-positions.json");
@@ -1076,6 +1093,21 @@ public class AIToolAgent {
                         // Set exit price and time
                         trade.exitPrice = currentPrice;
                         trade.exitTime = ZonedDateTime.now(NY).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
+                        
+                        // Execute real sell via TradingManager if enabled (Alpaca paper trading)
+                        if (tradingManagerInitialized && TradingManager.isRealTrading() && trade.alpacaOrderId != null) {
+                            try {
+                                var tradingManagerTrade = TradingManager.sell(trade.ticker, trade.quantity, currentPrice, "EOD_CLOSE");
+                                if (tradingManagerTrade != null) {
+                                    System.out.println("[AIToolAgent] Alpaca SELL order placed: " + trade.ticker + 
+                                        " | Order ID: " + tradingManagerTrade.orderId);
+                                } else {
+                                    System.err.println("[AIToolAgent] Failed to place Alpaca SELL order for " + trade.ticker);
+                                }
+                            } catch (Exception e) {
+                                System.err.println("[AIToolAgent] Alpaca SELL error for " + trade.ticker + ": " + e.getMessage());
+                            }
+                        }
                         
                         // === PARTIAL EXIT AT 1R (if agent has partialExitAt1R: true) ===
                         // Sell 50% at 1R profit, move stop to break-even, trail the rest
@@ -1817,6 +1849,11 @@ public class AIToolAgent {
     }
 
     private static boolean isMarketHours() {
+        // Allow trading outside market hours for paper trading mode
+        if (tradingManagerInitialized && TradingManager.isRealTrading()) {
+            return true; // Paper trading allows orders anytime (queued for market open)
+        }
+        
         ZonedDateTime now = ZonedDateTime.now(NY);
         int hour = now.getHour();
         int minute = now.getMinute();
@@ -2405,6 +2442,21 @@ public class AIToolAgent {
                             // If this ticker was previously on the watchlist, promote it
                             confirmPendingSignal(ticker, strategy.id);
                             allSignals.add(new RankedSignal(strategy, ticker, d, confluenceCount >= 2));
+                            
+                            // Execute trade via TradingManager (Alpaca paper trading)
+                            if (tradingManagerInitialized && TradingManager.isRealTrading()) {
+                                try {
+                                    Trade trade = executeTrade(strategy, ticker, d);
+                                    if (trade != null) {
+                                        synchronized (LOCK) {
+                                            systemState.tradeHistory.computeIfAbsent(strategy.id, k -> new ArrayList<>()).add(trade);
+                                        }
+                                        System.out.println("[AIToolAgent] Trade executed via TradingManager: " + ticker);
+                                    }
+                                } catch (Exception e) {
+                                    System.err.println("[AIToolAgent] Trade execution error for " + ticker + ": " + e.getMessage());
+                                }
+                            }
                         } else if (d.triggerNotMet) {
                             // Score passed but trigger not yet met → save to watchlist
                             // (already logged as [⏳ TRIGGER-WAIT] inside scoreStrategyForTicker)
@@ -4979,6 +5031,9 @@ public class AIToolAgent {
     }
 
     private static Trade executeTrade(AgentConfig agent, String ticker, TradeDecision decision) {
+        System.out.println("[AIToolAgent] executeTrade called for " + ticker + " | Agent: " + agent.id + 
+            " | tradingManagerInitialized: " + tradingManagerInitialized +
+            " | isRealTrading: " + (tradingManagerInitialized ? TradingManager.isRealTrading() : "N/A"));
         try {
             // Reuse the entry price captured during analysis (avoids a redundant API call).
             // Falls back to fetching only when called outside the normal ticker-centric loop.
@@ -5028,6 +5083,22 @@ public class AIToolAgent {
             trade.entryConfluenceCount = decision.confluenceCount;
             trade.strategyType        = agent.strategyType;
             trade.setupType           = deriveSetupType(agent.strategyType);
+            
+            // Execute real trade via TradingManager if enabled (Alpaca paper trading)
+            if (tradingManagerInitialized && TradingManager.isRealTrading()) {
+                try {
+                    var tradingManagerTrade = TradingManager.buy(ticker, entryPrice, agent.id);
+                    if (tradingManagerTrade != null) {
+                        trade.alpacaOrderId = tradingManagerTrade.orderId;
+                        System.out.println("[AIToolAgent] Alpaca BUY order placed: " + ticker + 
+                            " | Order ID: " + trade.alpacaOrderId);
+                    } else {
+                        System.err.println("[AIToolAgent] Failed to place Alpaca BUY order for " + ticker);
+                    }
+                } catch (Exception e) {
+                    System.err.println("[AIToolAgent] Alpaca BUY error for " + ticker + ": " + e.getMessage());
+                }
+            }
 
             // P/L is 0 until position is closed
             trade.profitLoss = 0;
@@ -6280,7 +6351,13 @@ public class AIToolAgent {
                     double signalEntry = signal.decision.entryPrice > 0 ? signal.decision.entryPrice
                         : signal.decision.suggestedStopLoss / (1 - 0.03);
 
-                    if (hasMinWinRate(agent.id, 65.0)) {
+                    boolean hasMinWinRate = hasMinWinRate(agent.id, 65.0);
+                    System.out.println("[AIToolAgent] Signal " + signal.ticker + " | Agent " + agent.id + 
+                        " | hasMinWinRate(65%): " + hasMinWinRate + 
+                        " | tradingManagerInitialized: " + tradingManagerInitialized +
+                        " | isRealTrading: " + (tradingManagerInitialized ? TradingManager.isRealTrading() : "N/A"));
+
+                    if (hasMinWinRate) {
                         String agentLabel = (agent.name != null && !agent.name.isEmpty())
                             ? agent.name : agent.id;
                         double entryZoneHigh = signalEntry * 1.01;
@@ -6303,7 +6380,27 @@ public class AIToolAgent {
                             + signalCountInfo);
 
                         signalsSentThisRun++;
-                        totalTrades++;
+                        
+                        // Execute trade via TradingManager (Alpaca paper trading)
+                        if (tradingManagerInitialized && TradingManager.isRealTrading()) {
+                            try {
+                                Trade trade = executeTrade(agent, signal.ticker, signal.decision);
+                                if (trade != null) {
+                                    synchronized (LOCK) {
+                                        systemState.tradeHistory.computeIfAbsent(agent.id, k -> new ArrayList<>()).add(trade);
+                                    }
+                                    totalTrades++;
+                                    System.out.println("[AIToolAgent] Trade executed via TradingManager: " + signal.ticker);
+                                }
+                            } catch (Exception e) {
+                                System.err.println("[AIToolAgent] Trade execution error for " + signal.ticker + ": " + e.getMessage());
+                            }
+                        } else {
+                            totalTrades++;
+                        }
+                    } else {
+                        System.out.println("[AIToolAgent] Skipping trade execution for " + signal.ticker + 
+                            " - agent " + agent.id + " does not meet 65% win rate requirement");
                     }
                 }
             }

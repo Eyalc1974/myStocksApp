@@ -1,0 +1,49 @@
+{
+  "description": "Trading configuration - supports both fake/test and real trading modes",
+  "tradingMode": "REAL",
+  "fakeTrading": {
+    "enabled": true,
+    "startingCapital": 5000.0,
+    "positionSize": 1000.0,
+    "maxPositions": 10,
+    "stopLossPct": 2.0,
+    "takeProfitPct": 4.0,
+    "trailingStopPct": 1.5,
+    "maxLossPerStock": 30.0,
+    "storePath": "daily-trading-sim.json"
+  },
+  "realTrading": {
+    "enabled": true,
+    "alpaca": {
+      "apiKey": "PKQMVGFJCRBBIBYGOU52266OC6",
+      "apiSecret": "CibLESKi9uTcBH3xyzBfyhGuebea6TkiVNjkeqmUzPfX",
+      "baseUrl": "https://paper-api.alpaca.markets",
+      "usePaperTrading": true
+    },
+    "startingCapital": 5000.0,
+    "positionSize": 1000.0,
+    "maxPositions": 10,
+    "stopLossPct": 2.0,
+    "takeProfitPct": 4.0,
+    "trailingStopPct": 1.5,
+    "maxLossPerStock": 30.0,
+    "useBracketOrders": true,
+    "storePath": "real-trading.json"
+  },
+  "discord": {
+    "enabled": true,
+    "webhookUrl": "",
+    "channelId": "",
+    "notifyOnBuy": true,
+    "notifyOnSell": true,
+    "notifyOnStopLoss": true,
+    "notifyOnTakeProfit": true,
+    "notifyOnError": true
+  },
+  "riskManagement": {
+    "maxDailyLossPct": 5.0,
+    "maxTotalLossPct": 10.0,
+    "maxPositionSizePct": 20.0,
+    "enableCircuitBreaker": true
+  }
+}
