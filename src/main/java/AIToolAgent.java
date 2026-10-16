@@ -5087,13 +5087,50 @@ public class AIToolAgent {
             // Execute real trade via TradingManager if enabled (Alpaca paper trading)
             if (tradingManagerInitialized && TradingManager.isRealTrading()) {
                 try {
-                    var tradingManagerTrade = TradingManager.buy(ticker, entryPrice, agent.id);
-                    if (tradingManagerTrade != null) {
-                        trade.alpacaOrderId = tradingManagerTrade.orderId;
-                        System.out.println("[AIToolAgent] Alpaca BUY order placed: " + ticker + 
-                            " | Order ID: " + trade.alpacaOrderId);
-                    } else {
-                        System.err.println("[AIToolAgent] Failed to place Alpaca BUY order for " + ticker);
+                    // Check if we already have an open position or pending order for this ticker
+                    boolean alreadyHasPosition = false;
+                    try {
+                        // Get the Alpaca client from TradingManager to check positions
+                        java.lang.reflect.Field alpacaClientField = TradingManager.class.getDeclaredField("alpacaClient");
+                        alpacaClientField.setAccessible(true);
+                        AlpacaTradingClient alpacaClient = (AlpacaTradingClient) alpacaClientField.get(null);
+                        
+                        if (alpacaClient != null) {
+                            // Check for existing position
+                            if (alpacaClient.hasPosition(ticker)) {
+                                System.out.println("[AIToolAgent] Skipping Alpaca BUY for " + ticker + 
+                                    " - already have open position");
+                                alreadyHasPosition = true;
+                            } else {
+                                // Check for pending orders
+                                List<JsonNode> orders = alpacaClient.getAllOrders();
+                                for (JsonNode order : orders) {
+                                    String status = order.path("status").asText();
+                                    String symbol = order.path("symbol").asText();
+                                    if (symbol.equals(ticker) && 
+                                        (status.equals("new") || status.equals("partially_filled") || status.equals("pending"))) {
+                                        System.out.println("[AIToolAgent] Skipping Alpaca BUY for " + ticker + 
+                                            " - already have pending order (status: " + status + ")");
+                                        alreadyHasPosition = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception checkEx) {
+                        System.err.println("[AIToolAgent] Error checking existing positions/orders: " + checkEx.getMessage());
+                        // Continue with order placement if check fails
+                    }
+                    
+                    if (!alreadyHasPosition) {
+                        var tradingManagerTrade = TradingManager.buy(ticker, entryPrice, agent.id);
+                        if (tradingManagerTrade != null) {
+                            trade.alpacaOrderId = tradingManagerTrade.orderId;
+                            System.out.println("[AIToolAgent] Alpaca BUY order placed: " + ticker + 
+                                " | Order ID: " + trade.alpacaOrderId);
+                        } else {
+                            System.err.println("[AIToolAgent] Failed to place Alpaca BUY order for " + ticker);
+                        }
                     }
                 } catch (Exception e) {
                     System.err.println("[AIToolAgent] Alpaca BUY error for " + ticker + ": " + e.getMessage());

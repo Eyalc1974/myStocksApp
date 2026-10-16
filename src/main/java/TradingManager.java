@@ -199,12 +199,26 @@ public class TradingManager {
                 currentCapital = config.realTrading.startingCapital;
                 
                 // Initialize Alpaca client if real trading is enabled
-                if (config.realTrading.enabled && config.realTrading.alpaca.apiKey != null 
-                    && !config.realTrading.alpaca.apiKey.isEmpty()) {
+                String apiKey = config.realTrading.alpaca.apiKey;
+                String apiSecret = config.realTrading.alpaca.apiSecret;
+                boolean usePaperTrading = config.realTrading.alpaca.usePaperTrading;
+                
+                // Fallback to environment variables if config doesn't have credentials
+                if ((apiKey == null || apiKey.isEmpty()) && System.getenv("ALPACA_API_KEY") != null) {
+                    apiKey = System.getenv("ALPACA_API_KEY");
+                    apiSecret = System.getenv("ALPACA_API_SECRET");
+                    String paperTradingEnv = System.getenv("ALPACA_PAPER_TRADING");
+                    if (paperTradingEnv != null) {
+                        usePaperTrading = Boolean.parseBoolean(paperTradingEnv);
+                    }
+                    System.out.println("[TradingManager] Using Alpaca credentials from environment variables");
+                }
+                
+                if (config.realTrading.enabled && apiKey != null && !apiKey.isEmpty()) {
                     alpacaClient = new AlpacaTradingClient(
-                        config.realTrading.alpaca.apiKey,
-                        config.realTrading.alpaca.apiSecret,
-                        config.realTrading.alpaca.usePaperTrading
+                        apiKey,
+                        apiSecret,
+                        usePaperTrading
                     );
                     
                     if (!alpacaClient.initialize()) {
