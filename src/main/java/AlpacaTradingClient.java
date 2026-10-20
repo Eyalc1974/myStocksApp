@@ -100,6 +100,46 @@ public class AlpacaTradingClient {
     }
     
     /**
+     * Get portfolio equity (total account value including positions)
+     */
+    public double getPortfolioValue() {
+        try {
+            JsonNode account = getAccount();
+            String equity = account.path("equity").asText();
+            return equity != null && !equity.isEmpty() ? Double.parseDouble(equity) : 0.0;
+        } catch (Exception e) {
+            System.err.println("[AlpacaTradingClient] Error getting portfolio value: " + e.getMessage());
+            return 0.0;
+        }
+    }
+    
+    /**
+     * Get account summary (cash, equity, buying power)
+     */
+    public String getAccountSummary() {
+        try {
+            JsonNode account = getAccount();
+            double cash = account.path("cash").asDouble();
+            double equity = account.path("equity").asDouble();
+            double buyingPower = account.path("buying_power").asDouble();
+            double longMarketValue = account.path("long_market_value").asDouble();
+            
+            return String.format(
+                "Account Summary:\n" +
+                "  Cash: $%.2f\n" +
+                "  Equity: $%.2f\n" +
+                "  Buying Power: $%.2f\n" +
+                "  Long Market Value: $%.2f\n" +
+                "  P/L: $%.2f",
+                cash, equity, buyingPower, longMarketValue, (equity - cash)
+            );
+        } catch (Exception e) {
+            System.err.println("[AlpacaTradingClient] Error getting account summary: " + e.getMessage());
+            return "Error: " + e.getMessage();
+        }
+    }
+    
+    /**
      * Get all open positions
      */
     public List<JsonNode> getOpenPositions() {

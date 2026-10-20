@@ -2416,26 +2416,24 @@ public class AIToolAgent {
                                 " | Entry=$" + String.format("%.2f", d.entryPrice) +
                                 " SL=$" + String.format("%.2f", d.suggestedStopLoss) +
                                 " TP=$" + String.format("%.2f", d.suggestedTakeProfit));
-                            if (hasMinWinRate(strategy.id, 65.0)) {
-                                String agentLabel = (strategy.name != null && !strategy.name.isEmpty())
-                                    ? strategy.name : strategy.id;
-                                double entryZoneHigh = d.entryPrice * 1.01;
-                                double cappedSL = d.entryPrice * 0.98; // max $20 risk on $1K position
-                                double cappedSLActual = Math.max(d.suggestedStopLoss, cappedSL); // use tighter of the two
-                                sendDiscord("\uD83C\uDFC6 **" + ticker + "** | " + agentLabel + " (`" + strategy.id + "`)"
-                                    + " | Score=" + d.totalScore + "/12" + confluenceTag
-                                    + " (V=" + d.volumeScore + " T=" + d.trendScore
-                                    + " M=" + d.momentumScore + " S=" + d.setupScore + ")"
-                                    + (d.finalConviction > 0
-                                        ? "\n🏦 Conviction=" + String.format("%.1f", d.finalConviction) + "/50"
-                                          + " (F=" + d.fundamentalScore + " C=" + d.catalystScore
-                                          + " I=" + d.institutionalFlowScore + ")"
-                                        : "")
-                                    + "\n📥 **ENTRY ZONE:** $" + String.format("%.2f", d.entryPrice) + " – $" + String.format("%.2f", entryZoneHigh)
-                                    + "  |  🛑 **SL:** $" + String.format("%.2f", cappedSLActual) + " *(max $20 risk)*"
-                                    + "  |  🎯 **TP:** $" + String.format("%.2f", d.suggestedTakeProfit)
-                                    + "\n⏱ **VALID FOR: 10 min**");
-                            }
+                            String agentLabel = (strategy.name != null && !strategy.name.isEmpty())
+                                ? strategy.name : strategy.id;
+                            double entryZoneHigh = d.entryPrice * 1.01;
+                            double cappedSL = d.entryPrice * 0.98; // max $20 risk on $1K position
+                            double cappedSLActual = Math.max(d.suggestedStopLoss, cappedSL); // use tighter of the two
+                            sendDiscord("\uD83C\uDFC6 **" + ticker + "** | " + agentLabel + " (`" + strategy.id + "`)"
+                                + " | Score=" + d.totalScore + "/12" + confluenceTag
+                                + " (V=" + d.volumeScore + " T=" + d.trendScore
+                                + " M=" + d.momentumScore + " S=" + d.setupScore + ")"
+                                + (d.finalConviction > 0
+                                    ? "\n🏦 Conviction=" + String.format("%.1f", d.finalConviction) + "/50"
+                                      + " (F=" + d.fundamentalScore + " C=" + d.catalystScore
+                                      + " I=" + d.institutionalFlowScore + ")"
+                                    : "")
+                                + "\n📥 **ENTRY ZONE:** $" + String.format("%.2f", d.entryPrice) + " – $" + String.format("%.2f", entryZoneHigh)
+                                + "  |  🛑 **SL:** $" + String.format("%.2f", cappedSLActual) + " *(max $20 risk)*"
+                                + "  |  🎯 **TP:** $" + String.format("%.2f", d.suggestedTakeProfit)
+                                + "\n⏱ **VALID FOR: 10 min**");
                             addRecommendation(ticker, strategy.id, d.entryPrice,
                                 d.suggestedStopLoss, d.suggestedTakeProfit, d.totalScore,
                                 d.finalConviction, d.fundamentalScore, d.catalystScore, d.institutionalFlowScore);
@@ -6388,56 +6386,45 @@ public class AIToolAgent {
                     double signalEntry = signal.decision.entryPrice > 0 ? signal.decision.entryPrice
                         : signal.decision.suggestedStopLoss / (1 - 0.03);
 
-                    boolean hasMinWinRate = hasMinWinRate(agent.id, 65.0);
-                    System.out.println("[AIToolAgent] Signal " + signal.ticker + " | Agent " + agent.id + 
-                        " | hasMinWinRate(65%): " + hasMinWinRate + 
-                        " | tradingManagerInitialized: " + tradingManagerInitialized +
-                        " | isRealTrading: " + (tradingManagerInitialized ? TradingManager.isRealTrading() : "N/A"));
+                    String agentLabel = (agent.name != null && !agent.name.isEmpty())
+                        ? agent.name : agent.id;
+                    double entryZoneHigh = signalEntry * 1.01;
+                    double cappedSL = signalEntry * 0.98; // max $20 risk on $1K position
+                    double cappedSLActual = Math.max(signal.decision.suggestedStopLoss, cappedSL); // tighter of the two
 
-                    if (hasMinWinRate) {
-                        String agentLabel = (agent.name != null && !agent.name.isEmpty())
-                            ? agent.name : agent.id;
-                        double entryZoneHigh = signalEntry * 1.01;
-                        double cappedSL = signalEntry * 0.98; // max $20 risk on $1K position
-                        double cappedSLActual = Math.max(signal.decision.suggestedStopLoss, cappedSL); // tighter of the two
+                    // AlphaPoint AI recommendation: Add confirmation guidance
+                    String confirmationAdvice = getConfirmationAdvice(agent.strategyType);
 
-                        // AlphaPoint AI recommendation: Add confirmation guidance
-                        String confirmationAdvice = getConfirmationAdvice(agent.strategyType);
+                    // Visual indicator for run type
+                    String runTypeIndicator = "🔄 SCHEDULED";
+                    String signalCountInfo = "\n\n📊 *Top " + topSignalsPerAgent + " signal for " + agentLabel + "*";
 
-                        // Visual indicator for run type
-                        String runTypeIndicator = "🔄 SCHEDULED";
-                        String signalCountInfo = "\n\n📊 *Top " + topSignalsPerAgent + " signal for " + agentLabel + "*";
+                    sendDiscord("\uD83C\uDFC6 **" + signal.ticker + "** | " + agentLabel + " (`" + agent.id + "`) " + runTypeIndicator
+                        + "\n📥 **ENTRY ZONE:** $" + String.format("%.2f", signalEntry) + " – $" + String.format("%.2f", entryZoneHigh)
+                        + "  |  🛑 **SL:** $" + String.format("%.2f", cappedSLActual) + " *(max $20 risk)*"
+                        + "  |  🎯 **TP:** $" + String.format("%.2f", signal.decision.suggestedTakeProfit)
+                        + "\n⏱ **VALID FOR: 10 min**"
+                        + "\n\n💡 **WAIT FOR CONFIRMATION:** " + confirmationAdvice
+                        + signalCountInfo);
 
-                        sendDiscord("\uD83C\uDFC6 **" + signal.ticker + "** | " + agentLabel + " (`" + agent.id + "`) " + runTypeIndicator
-                            + "\n📥 **ENTRY ZONE:** $" + String.format("%.2f", signalEntry) + " – $" + String.format("%.2f", entryZoneHigh)
-                            + "  |  🛑 **SL:** $" + String.format("%.2f", cappedSLActual) + " *(max $20 risk)*"
-                            + "  |  🎯 **TP:** $" + String.format("%.2f", signal.decision.suggestedTakeProfit)
-                            + "\n⏱ **VALID FOR: 10 min**"
-                            + "\n\n💡 **WAIT FOR CONFIRMATION:** " + confirmationAdvice
-                            + signalCountInfo);
-
-                        signalsSentThisRun++;
-                        
-                        // Execute trade via TradingManager (Alpaca paper trading)
-                        if (tradingManagerInitialized && TradingManager.isRealTrading()) {
-                            try {
-                                Trade trade = executeTrade(agent, signal.ticker, signal.decision);
-                                if (trade != null) {
-                                    synchronized (LOCK) {
-                                        systemState.tradeHistory.computeIfAbsent(agent.id, k -> new ArrayList<>()).add(trade);
-                                    }
-                                    totalTrades++;
-                                    System.out.println("[AIToolAgent] Trade executed via TradingManager: " + signal.ticker);
+                    signalsSentThisRun++;
+                    
+                    // Execute trade via TradingManager (Alpaca paper trading)
+                    if (tradingManagerInitialized && TradingManager.isRealTrading()) {
+                        try {
+                            Trade trade = executeTrade(agent, signal.ticker, signal.decision);
+                            if (trade != null) {
+                                synchronized (LOCK) {
+                                    systemState.tradeHistory.computeIfAbsent(agent.id, k -> new ArrayList<>()).add(trade);
                                 }
-                            } catch (Exception e) {
-                                System.err.println("[AIToolAgent] Trade execution error for " + signal.ticker + ": " + e.getMessage());
+                                totalTrades++;
+                                System.out.println("[AIToolAgent] Trade executed via TradingManager: " + signal.ticker);
                             }
-                        } else {
-                            totalTrades++;
+                        } catch (Exception e) {
+                            System.err.println("[AIToolAgent] Trade execution error for " + signal.ticker + ": " + e.getMessage());
                         }
                     } else {
-                        System.out.println("[AIToolAgent] Skipping trade execution for " + signal.ticker + 
-                            " - agent " + agent.id + " does not meet 65% win rate requirement");
+                        totalTrades++;
                     }
                 }
             }

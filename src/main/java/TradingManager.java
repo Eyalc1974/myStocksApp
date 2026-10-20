@@ -317,19 +317,48 @@ public class TradingManager {
      */
     public static double getCurrentCapital() {
         if (isRealTrading() && alpacaClient != null) {
+            // Use portfolio value (total equity) instead of buying power
+            // Buying power includes margin, equity is actual account value
+            double portfolioValue = alpacaClient.getPortfolioValue();
+            if (portfolioValue > 0) {
+                return portfolioValue;
+            }
+            // Fallback to buying power if portfolio value unavailable
             return alpacaClient.getBuyingPower();
         }
         return currentCapital;
     }
     
     /**
+     * Get account summary for monitoring
+     */
+    public static String getAccountSummary() {
+        if (isRealTrading() && alpacaClient != null) {
+            return alpacaClient.getAccountSummary();
+        }
+        return String.format("Simulation Mode - Capital: $%.2f", currentCapital);
+    }
+    
+    /**
+     * Check if account has sufficient funds for trading
+     * Returns true if account value is above minimum threshold
+     */
+    public static boolean hasSufficientFunds(double minRequired) {
+        double available = getCurrentCapital();
+        boolean sufficient = available >= minRequired;
+        System.out.println("[TradingManager] Funds check: available=$" + available + 
+            ", required=$" + minRequired + ", sufficient=" + sufficient);
+        return sufficient;
+    }
+    
+    /**
      * Get position size for a trade
+     * Uses ScoringConfig.investmentPerStock to sync with /settings page
      */
     public static double getPositionSize() {
-        if (isRealTrading()) {
-            return config.realTrading.positionSize;
-        }
-        return config.fakeTrading.positionSize;
+        // Use the centralized investment per stock setting from ScoringConfig
+        // This ensures /settings page controls both simulation and real trading
+        return ScoringConfig.getInvestmentPerStock();
     }
     
     /**
@@ -400,10 +429,12 @@ public class TradingManager {
         
         // Check capital limit
         double currentCapital = getCurrentCapital();
+        System.out.println("[TradingManager] Account status before buy: " + getAccountSummary());
         if (positionSize > currentCapital) {
             System.err.println("[TradingManager] Insufficient capital: need $" + positionSize + 
                 ", have $" + currentCapital);
-            sendDiscordNotification("❌ **BUY FAILED** - Insufficient capital for " + symbol);
+            sendDiscordNotification("❌ **BUY FAILED** - Insufficient capital for " + symbol + 
+                " (need $" + positionSize + ", have $" + currentCapital + ")");
             return null;
         }
         
