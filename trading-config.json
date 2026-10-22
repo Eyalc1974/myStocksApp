@@ -1,4 +1,4 @@
-{
+﻿{
   "description": "Trading configuration - supports both fake/test and real trading modes",
   "tradingMode": "REAL",
   "fakeTrading": {
@@ -15,8 +15,8 @@
   "realTrading": {
     "enabled": true,
     "alpaca": {
-      "apiKey": "PKQMVGFJCRBBIBYGOU52266OC6",
-      "apiSecret": "CibLESKi9uTcBH3xyzBfyhGuebea6TkiVNjkeqmUzPfX",
+      "apiKey": "PKDBDURHFP4UP3OAZ4MHLSXZCF",
+      "apiSecret": "5oJY1PPwCpFd8GzPxvtymmXRYw4rEH3CfudQtTi54M8i",
       "baseUrl": "https://paper-api.alpaca.markets",
       "usePaperTrading": true
     },
