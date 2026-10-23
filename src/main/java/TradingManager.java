@@ -383,6 +383,11 @@ public class TradingManager {
         double configStopLossPct = isRealTrading() ? config.realTrading.stopLossPct : config.fakeTrading.stopLossPct;
         double finalStopLossPct = Math.min(stopLossPct, configStopLossPct);
         
+        // Ensure stop-loss is always below entry price (positive percentage)
+        if (finalStopLossPct <= 0) {
+            finalStopLossPct = configStopLossPct;
+        }
+        
         double stopLossPrice = entryPrice * (1 - finalStopLossPct / 100.0);
         // Round to 2 decimal places for Alpaca
         return Math.round(stopLossPrice * 100.0) / 100.0;
@@ -443,6 +448,13 @@ public class TradingManager {
         trade.takeProfitPrice = calculateTakeProfitPrice(price);
         
         if (isRealTrading() && alpacaClient != null) {
+            // Validate ticker before placing order
+            if (!alpacaClient.isTickerValid(symbol)) {
+                System.err.println("[TradingManager] Ticker " + symbol + " is not valid or not active on Alpaca");
+                sendDiscordNotification("❌ **BUY FAILED** - Ticker " + symbol + " is not valid or not active on Alpaca");
+                return null;
+            }
+            
             // Execute real trade via Alpaca
             try {
                 JsonNode alpacaOrder;
@@ -475,8 +487,10 @@ public class TradingManager {
                 }
             } catch (Exception e) {
                 trade.status = "FAILED";
-                System.err.println("[TradingManager] Real BUY failed: " + e.getMessage());
-                sendDiscordNotification("❌ **BUY FAILED** - " + symbol + ": " + e.getMessage());
+                String errorMsg = e.getMessage();
+                System.err.println("[TradingManager] Real BUY failed for " + symbol + ": " + errorMsg);
+                System.err.println("[TradingManager] Entry price: $" + price + ", Stop loss: $" + trade.stopLossPrice + ", Take profit: $" + trade.takeProfitPrice);
+                sendDiscordNotification("❌ **BUY FAILED** - " + symbol + ": " + errorMsg);
                 return null;
             }
         } else {

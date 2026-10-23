@@ -433,6 +433,26 @@ public class AlpacaTradingClient {
     }
     
     /**
+     * Check if a ticker is valid and active on Alpaca
+     */
+    public boolean isTickerValid(String symbol) {
+        try {
+            JsonNode asset = get("/v2/assets/" + symbol);
+            if (asset != null && asset.has("status")) {
+                String status = asset.path("status").asText();
+                boolean isActive = "active".equals(status);
+                boolean isTradable = asset.has("tradable") && asset.path("tradable").asBoolean();
+                System.out.println("[AlpacaTradingClient] Ticker " + symbol + " status: " + status + ", tradable: " + isTradable);
+                return isActive && isTradable;
+            }
+            return false;
+        } catch (Exception e) {
+            System.err.println("[AlpacaTradingClient] Error validating ticker " + symbol + ": " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
      * Shutdown the client
      */
     public void shutdown() {
@@ -445,8 +465,8 @@ public class AlpacaTradingClient {
     
     private JsonNode get(String endpoint) throws Exception {
         System.out.println("[AlpacaTradingClient] GET: " + baseUrl + endpoint);
-        System.out.println("[AlpacaTradingClient] API Key: " + apiKey);
-        System.out.println("[AlpacaTradingClient] API Secret: " + apiSecret.substring(0, Math.min(10, apiSecret.length())) + "...");
+        System.out.println("[AlpacaTradingClient] API Key: " + (apiKey != null ? apiKey.substring(0, Math.min(10, apiKey.length())) + "..." : "null"));
+        System.out.println("[AlpacaTradingClient] API Secret: " + (apiSecret != null ? apiSecret.substring(0, Math.min(10, apiSecret.length())) + "..." : "null"));
         
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(baseUrl + endpoint))
