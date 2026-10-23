@@ -1,13 +1,6 @@
 {
-  "2026-09-09" : {
-    "OVERVIEW" : 21,
-    "EARNINGS" : 21,
-    "INCOME_STATEMENT" : 21,
-    "CASH_FLOW" : 21,
-    "BALANCE_SHEET" : 21,
-    "DIVIDENDS" : 21,
-    "TIME_SERIES_DAILY" : 1470,
-    "NEWS_SENTIMENT" : 21
+  "2026-10-20" : {
+    "TIME_SERIES_DAILY" : 22
   },
   "2026-10-03" : {
     "OVERVIEW" : 69,
@@ -19,16 +12,5 @@
     "TIME_SERIES_DAILY" : 3572,
     "NEWS_SENTIMENT" : 122,
     "GLOBAL_QUOTE" : 29
-  },
-  "2026-09-17" : {
-    "OVERVIEW" : 3,
-    "EARNINGS" : 3,
-    "INCOME_STATEMENT" : 3,
-    "CASH_FLOW" : 3,
-    "BALANCE_SHEET" : 3,
-    "DIVIDENDS" : 3,
-    "TIME_SERIES_DAILY" : 1137,
-    "NEWS_SENTIMENT" : 3,
-    "GLOBAL_QUOTE" : 3
   }
 }
