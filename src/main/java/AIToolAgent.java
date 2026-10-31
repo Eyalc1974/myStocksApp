@@ -94,7 +94,7 @@ public class AIToolAgent {
     
     // Track full details of rejected signals for analysis
     private static final List<RejectedSignal> rejectedSignalsLog = new CopyOnWriteArrayList<>();
-    private static final Path REJECTED_SIGNALS_FILE = Paths.get("newStrategies", "rejected-signals.json");
+    private static final Path REJECTED_SIGNALS_FILE = Paths.get(DATA_DIR, "rejected-signals.json");
     
     // Split System Architecture - Separate position stores for Swing vs Intraday
     private static ActivePositionsStore swingPositionsStore;
@@ -589,8 +589,8 @@ public class AIToolAgent {
             }
             
             // Initialize separate position stores for Swing vs Intraday systems
-            Path swingCache = Paths.get("finder-cache", "swing-positions.json");
-            Path intradayCache = Paths.get("finder-cache", "intraday-positions.json");
+            Path swingCache = Paths.get(DATA_DIR, "finder-cache", "swing-positions.json");
+            Path intradayCache = Paths.get(DATA_DIR, "finder-cache", "intraday-positions.json");
             swingPositionsStore = ActivePositionsStore.createWithLimits(swingCache, SWING_MAX_POSITIONS, SWING_MAX_PER_SECTOR);
             intradayPositionsStore = ActivePositionsStore.createWithLimits(intradayCache, INTRADAY_MAX_POSITIONS, INTRADAY_MAX_PER_SECTOR);
             System.out.println("[AIToolAgent] Initialized split position stores: Swing (8 slots, 2 per sector) and Intraday (5 slots, 1 per sector)");

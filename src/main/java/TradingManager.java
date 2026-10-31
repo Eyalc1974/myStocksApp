@@ -38,6 +38,11 @@ public class TradingManager {
     private static JDA discordJda;
     private static boolean initialized = false;
     
+    // Base directory for data files - configurable via environment variable
+    // Default: "." for local Windows development
+    // Docker/Railway: Set DATA_DIR environment variable to appropriate path (e.g., "/data")
+    private static final String DATA_DIR = System.getenv().getOrDefault("DATA_DIR", ".");
+    
     static {
         // Try to find config file in multiple locations
         String[] possiblePaths = {

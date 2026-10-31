@@ -40,6 +40,12 @@ public class WebServer {
     private static final ZoneId NY = ZoneId.of("America/New_York");
 
     private static final ObjectMapper JSON = new ObjectMapper();
+    
+    // Base directory for cache files - configurable via environment variable
+    // Default: "." for local Windows development
+    // Docker/Railway: Set DATA_DIR environment variable to appropriate path (e.g., "/data")
+    private static final String DATA_DIR = System.getenv().getOrDefault("DATA_DIR", ".");
+    private static final Path FINDER_CACHE_BASE = Paths.get(DATA_DIR, "finder-cache");
 
     private static final Object RUN_CAPTURE_LOCK = new Object();
     
@@ -606,11 +612,11 @@ public class WebServer {
     }
 
     private static Path trackingDir() {
-        return Paths.get("finder-cache", "daily-top-tracking");
+        return FINDER_CACHE_BASE.resolve("daily-top-tracking");
     }
 
     private static Path trackingTickersFile() {
-        return Paths.get("finder-cache").resolve("daily-top-tracking-tickers.txt");
+        return FINDER_CACHE_BASE.resolve("daily-top-tracking-tickers.txt");
     }
 
     private static Path trackingFileForNyDate(String nyDate) {
@@ -618,7 +624,7 @@ public class WebServer {
     }
 
     private static Path alphaAgentDir() {
-        return Paths.get("finder-cache", "alpha-agent");
+        return FINDER_CACHE_BASE.resolve("alpha-agent");
     }
 
     private static Path alphaAgentStoreFile() {
@@ -1049,7 +1055,7 @@ public class WebServer {
     private static List<String> bestEffortLoadLastDailyTopTickers() {
         // Source of truth: finder-cache/daily-top-last-tickers.txt
         try {
-            Path t = Paths.get("finder-cache").resolve("daily-top-last-tickers.txt");
+            Path t = FINDER_CACHE_BASE.resolve("daily-top-last-tickers.txt");
             if (!Files.exists(t)) return new ArrayList<>();
             String s = Files.readString(t, StandardCharsets.UTF_8);
             if (s == null || s.isBlank()) return new ArrayList<>();
@@ -1084,7 +1090,7 @@ public class WebServer {
 
     private static void bestEffortPersistTrackedDailyTopTickers(List<String> tickers) {
         try {
-            Files.createDirectories(Paths.get("finder-cache"));
+            Files.createDirectories(FINDER_CACHE_BASE);
             List<String> cleaned = new ArrayList<>();
             if (tickers != null) {
                 for (String x : tickers) {
@@ -1285,7 +1291,7 @@ public class WebServer {
     });
 
     private static final Object dailyGreenLock = new Object();
-    private static final Path dailyGreenPath = Paths.get("finder-cache", "daily-green-recos.json");
+    private static final Path dailyGreenPath = FINDER_CACHE_BASE.resolve("daily-green-recos.json");
     private static final DailyGreenRecommendations dailyGreenState = new DailyGreenRecommendations();
 
     private static void logDailyGreen(String msg) {
@@ -2111,7 +2117,7 @@ public class WebServer {
 
     private static List<String> listCachedDailySymbols() {
         try {
-            Path dir = Paths.get("finder-cache");
+            Path dir = FINDER_CACHE_BASE;
             if (!Files.exists(dir) || !Files.isDirectory(dir)) return new ArrayList<>();
             List<String> out = new ArrayList<>();
             try (java.util.stream.Stream<Path> st = Files.list(dir)) {
@@ -2231,7 +2237,7 @@ public class WebServer {
         Map<String, Double> scoreBySym = new HashMap<>();
         for (String s : syms) {
             try {
-                Path p = Paths.get("finder-cache").resolve("daily-" + s + ".json");
+                Path p = FINDER_CACHE_BASE.resolve("daily-" + s + ".json");
                 if (!Files.exists(p)) continue;
                 String json = Files.readString(p, StandardCharsets.UTF_8);
                 Double sc = scoreAlphaAgentSymbolFromDailyJson(json);
@@ -3219,7 +3225,7 @@ public class WebServer {
                     int monitoringDeleted = 0;
                     
                     // Clear finder-cache/*.json
-                    Path finderDir = Paths.get("finder-cache");
+                    Path finderDir = FINDER_CACHE_BASE;
                     if (Files.exists(finderDir) && Files.isDirectory(finderDir)) {
                         try (java.util.stream.Stream<Path> files = Files.list(finderDir)) {
                             for (Path f : files.toList()) {
@@ -11593,7 +11599,7 @@ public class WebServer {
                 }
 
                 if (result == null) {
-                    Path fdir = Paths.get("finder-cache");
+                    Path fdir = FINDER_CACHE_BASE;
                     try {
                         Path r = fdir.resolve("daily-top-last.txt");
                         if (Files.exists(r)) result = Files.readString(r, StandardCharsets.UTF_8);
@@ -11659,7 +11665,7 @@ public class WebServer {
                 }
                 if (tickers == null) {
                     try {
-                        Path t = Paths.get("finder-cache").resolve("daily-top-last-tickers.txt");
+                        Path t = FINDER_CACHE_BASE.resolve("daily-top-last-tickers.txt");
                         if (Files.exists(t)) {
                             String s = Files.readString(t, StandardCharsets.UTF_8);
                             tickers = java.util.Arrays.asList(s.split(","));
@@ -11810,7 +11816,7 @@ public class WebServer {
                 }
                 // Persist last finder results
                 try {
-                    Path fdir = Paths.get("finder-cache");
+                    Path fdir = FINDER_CACHE_BASE;
                     Files.createDirectories(fdir);
                     Files.writeString(fdir.resolve("last.txt"), result, StandardCharsets.UTF_8);
                     if (recTickers != null && !recTickers.isEmpty()) {
@@ -11854,7 +11860,7 @@ public class WebServer {
         server.createContext("/finder-last", new HttpHandler() {
             @Override public void handle(HttpExchange ex) throws IOException {
                 if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { respondHtml(ex, htmlPage(""), 200); return; }
-                Path fdir = Paths.get("finder-cache");
+                Path fdir = FINDER_CACHE_BASE;
                 String result = null;
                 java.util.List<String> tickers = null;
                 try {
@@ -12619,7 +12625,7 @@ public class WebServer {
 
         // Persist for "last" viewing
         try {
-            Path fdir = Paths.get("finder-cache");
+            Path fdir = FINDER_CACHE_BASE;
             Files.createDirectories(fdir);
             Files.writeString(fdir.resolve("daily-top-last.txt"), computedText, StandardCharsets.UTF_8);
             if (computedTickers != null && !computedTickers.isEmpty()) {

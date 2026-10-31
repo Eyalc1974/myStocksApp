@@ -19,6 +19,12 @@ import java.util.Map;
 public class ActivePositionsStore {
 
     private static final ZoneId NY = ZoneId.of("America/New_York");
+    
+    // Base directory for cache files - configurable via environment variable
+    // Default: "finder-cache" for local Windows development
+    // Docker/Railway: Set DATA_DIR environment variable to appropriate path (e.g., "/data")
+    private static final String DATA_DIR = System.getenv().getOrDefault("DATA_DIR", ".");
+    private static final Path CACHE_BASE = Paths.get(DATA_DIR, "finder-cache");
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Position {
@@ -74,9 +80,8 @@ public class ActivePositionsStore {
     }
 
     public static ActivePositionsStore defaultStore() {
-        Path base = Paths.get("finder-cache");
-        try { Files.createDirectories(base); } catch (Exception ignore) {}
-        return new ActivePositionsStore(base.resolve("active-positions.json"));
+        try { Files.createDirectories(CACHE_BASE); } catch (Exception ignore) {}
+        return new ActivePositionsStore(CACHE_BASE.resolve("active-positions.json"));
     }
 
     public static ActivePositionsStore createWithLimits(Path dataFile, int maxPositions, int maxPerSector) {

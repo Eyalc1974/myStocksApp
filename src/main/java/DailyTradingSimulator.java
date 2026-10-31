@@ -23,7 +23,11 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class DailyTradingSimulator {
 
-    private static final Path STORE_PATH = Paths.get("daily-trading-sim.json");
+    // Base directory for data files - configurable via environment variable
+    // Default: "." for local Windows development
+    // Docker/Railway: Set DATA_DIR environment variable to appropriate path (e.g., "/data")
+    private static final String DATA_DIR = System.getenv().getOrDefault("DATA_DIR", ".");
+    private static final Path STORE_PATH = Paths.get(DATA_DIR, "daily-trading-sim.json");
     // POSITION_SIZE is now configurable via /settings (default $1000)
     private static final int STOCKS_PER_STRATEGY = 4;   // 4 stocks per strategy
     private static final double STOP_LOSS_PCT = 2.0;    // 2% stop loss

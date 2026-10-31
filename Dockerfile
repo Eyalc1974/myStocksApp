@@ -14,24 +14,22 @@ RUN ls -la target/*.jar
 # Runtime stage
 FROM eclipse-temurin:17-jre
 WORKDIR /app
-# Create data directory for strategy files
-RUN mkdir -p /app/data
-# Create all runtime cache directories
-RUN mkdir -p /app/finder-cache \
-    && mkdir -p /app/weekly-cache \
-    && mkdir -p /app/analysts-cache \
-    && mkdir -p /app/alpha-agent-cache \
-    && mkdir -p /app/monitoring-cache \
-    && mkdir -p /app/monitoring-data
+# Create data directory for Railway volume mount
+RUN mkdir -p /data
+# Create seed directory with default files
+RUN mkdir -p /app/seed-data
+# Copy seed files from newStrategies to seed-data directory
+COPY newStrategies/ /app/seed-data/
+# Copy root-level JSON files to seed-data directory
+COPY *.json /app/seed-data/ 2>/dev/null || true
 # Copy the built JAR from builder stage using wildcard
 COPY --from=builder /app/target/trading-model*.jar app.jar
-# Copy local newStrategies data to seed the container with existing data
-COPY newStrategies/ /app/data/
-# Copy root-level agent configuration files
-COPY *.json /app/
-# Set environment variable for data directory
-ENV DATA_DIR=/app/data
+# Copy startup script
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+# Set environment variable for data directory (Railway volume mount point)
+ENV DATA_DIR=/data
 # Expose port if needed (adjust based on your application)
 EXPOSE 8100
-# Run the application
-CMD ["java", "-jar", "app.jar"]
+# Run the application via entrypoint script
+CMD ["/app/entrypoint.sh"]
