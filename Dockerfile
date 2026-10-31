@@ -21,12 +21,12 @@ RUN mkdir -p /app/seed-data
 # Copy seed files from newStrategies to seed-data directory
 COPY newStrategies/ /app/seed-data/
 # Copy root-level JSON files to seed-data directory
-COPY *.json /app/seed-data/ 2>/dev/null || true
+COPY *.json /app/seed-data/
 # Copy the built JAR from builder stage using wildcard
 COPY --from=builder /app/target/trading-model*.jar app.jar
 # Copy startup script
 COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 # Set environment variable for data directory (Railway volume mount point)
 ENV DATA_DIR=/data
 # Expose port if needed (adjust based on your application)
