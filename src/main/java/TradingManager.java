@@ -419,6 +419,16 @@ public class TradingManager {
             return null;
         }
         
+        // Check if we already own this stock (only for real trading)
+        if (isRealTrading() && alpacaClient != null) {
+            List<String> ownedTickers = alpacaClient.getOwnedTickers();
+            if (ownedTickers.contains(symbol)) {
+                System.err.println("[TradingManager] Already own position in " + symbol + ", skipping buy");
+                sendDiscordNotification("⚠️ **BUY SKIPPED** - Already own position in " + symbol);
+                return null;
+            }
+        }
+        
         // Calculate quantity based on position size
         double positionSize = customQuantity != null ? customQuantity : getPositionSize();
         double quantity = positionSize / price;

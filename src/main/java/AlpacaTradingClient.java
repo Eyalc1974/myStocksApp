@@ -421,6 +421,21 @@ public class AlpacaTradingClient {
     }
     
     /**
+     * Get list of ticker symbols for all open positions
+     */
+    public List<String> getOwnedTickers() {
+        List<String> tickers = new ArrayList<>();
+        List<JsonNode> positions = getOpenPositions();
+        for (JsonNode position : positions) {
+            String symbol = position.path("symbol").asText();
+            if (symbol != null && !symbol.isEmpty()) {
+                tickers.add(symbol);
+            }
+        }
+        return tickers;
+    }
+    
+    /**
      * Get order by ID
      */
     public JsonNode getOrder(String orderId) {
