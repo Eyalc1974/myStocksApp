@@ -412,13 +412,87 @@ public class TradingManager {
      * Execute a buy order
      */
     public static TradeRecord buy(String symbol, double price, String strategy) {
-        return buy(symbol, price, strategy, null);
+        return buy(symbol, price, strategy, null, true);
     }
     
     /**
      * Execute a buy order with custom quantity
      */
     public static TradeRecord buy(String symbol, double price, String strategy, Double customQuantity) {
+        return buy(symbol, price, strategy, customQuantity, true);
+    }
+    
+    /**
+     * Execute a swing trade buy with ATR-based risk management
+     * Uses SwingRiskManager for volatility-adjusted sizing and structural stop loss
+     */
+    public static TradeRecord buySwing(String symbol, double currentPrice, double dailyAtr14, 
+                                       double lowestLow3Days, String strategy) {
+        if (!initialized) {
+            System.err.println("[TradingManager] Not initialized");
+            return null;
+        }
+        
+        // Calculate order plan using SwingRiskManager
+        SwingRiskManager.OrderPlan plan = SwingRiskManager.calculateSwingExit(
+            symbol, currentPrice, dailyAtr14, lowestLow3Days
+        );
+        
+        if (!plan.isAccepted()) {
+            System.err.println("[TradingManager] Swing trade rejected for " + symbol + ": " + plan.rejectionReason);
+            sendDiscordNotification("⚠️ **SWING TRADE REJECTED** - " + symbol + ": " + plan.rejectionReason);
+            return null;
+        }
+        
+        System.out.println("[TradingManager] Swing trade plan for " + symbol + ": " + plan.getSummary());
+        
+        // Use limit order at signal candle close (or slight pullback)
+        double limitPrice = SwingRiskManager.calculateLimitBuyPrice(currentPrice, 0.5); // 0.5% pullback
+        
+        // Execute buy with calculated shares and limit order
+        TradeRecord trade = buy(symbol, limitPrice, strategy, (double) plan.shares, true);
+        
+        if (trade != null) {
+            // Override stop loss and take profit with SwingRiskManager values
+            trade.stopLossPrice = plan.stopLossPrice;
+            trade.takeProfitPrice = plan.takeProfitPrice;
+            
+            // Update bracket order if using real trading
+            if (isRealTrading() && alpacaClient != null && config.realTrading.useBracketOrders) {
+                try {
+                    // Cancel original order and place new bracket order
+                    if (trade.orderId != null) {
+                        alpacaClient.cancelOrder(trade.orderId);
+                    }
+                    
+                    double stopLossLimitPrice = Math.round((plan.stopLossPrice * 0.99) * 100.0) / 100.0;
+                    JsonNode alpacaOrder = alpacaClient.buyBracket(
+                        symbol,
+                        plan.shares,
+                        plan.takeProfitPrice,
+                        plan.stopLossPrice,
+                        stopLossLimitPrice
+                    );
+                    
+                    if (alpacaOrder != null) {
+                        trade.orderId = alpacaOrder.path("id").asText();
+                        trade.status = alpacaOrder.path("status").asText();
+                        System.out.println("[TradingManager] Swing bracket order placed: " + trade.orderId);
+                        sendDiscordNotification(buildBuyNotification(trade));
+                    }
+                } catch (Exception e) {
+                    System.err.println("[TradingManager] Failed to place swing bracket order: " + e.getMessage());
+                }
+            }
+        }
+        
+        return trade;
+    }
+    
+    /**
+     * Execute a buy order with custom quantity and option to use limit order
+     */
+    public static TradeRecord buy(String symbol, double price, String strategy, Double customQuantity, boolean useLimitOrder) {
         if (!initialized) {
             System.err.println("[TradingManager] Not initialized");
             return null;
@@ -484,6 +558,10 @@ public class TradingManager {
                         trade.stopLossPrice,
                         stopLossLimitPrice // Stop-limit price slightly below stop price
                     );
+                } else if (useLimitOrder) {
+                    // Use limit order at current price (or slightly below for better fill)
+                    double limitPrice = Math.round((price * 0.995) * 100.0) / 100.0; // 0.5% below current price
+                    alpacaOrder = alpacaClient.buyLimit(symbol, quantity, limitPrice);
                 } else {
                     // Simple market order
                     alpacaOrder = alpacaClient.buyMarket(symbol, quantity);
