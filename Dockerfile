@@ -20,8 +20,8 @@ RUN mkdir -p /data
 RUN mkdir -p /app/seed-data
 # Copy seed files from newStrategies to seed-data directory
 COPY newStrategies/ /app/seed-data/
-# Copy root-level JSON files to seed-data directory
-COPY *.json /app/seed-data/ 2>/dev/null || true
+# Copy root-level JSON files to seed-data directory (if they exist)
+RUN sh -c 'cp *.json /app/seed-data/ 2>/dev/null || true'
 # Copy the built JAR from builder stage using wildcard
 COPY --from=builder /app/target/trading-model*.jar app.jar
 # Copy startup script
